@@ -451,7 +451,8 @@ class EventSaver:
         self.passenger_agent_trajectory[time]['longitude'] = 0
         self.passenger_agent_trajectory[time]['location'] = 'flight_assignment'
 
-    def save_passenger_waiting_room_departure_time(self, agent_id: int,
+    def save_passenger_waiting_room_departure_time(self,
+                                                   agent_id: int,
                                                    waiting_room_id: str,
                                                    agent_type: str = 'passenger'):
         """

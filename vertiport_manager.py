@@ -1,6 +1,7 @@
 import simpy
 import networkx as nx
 from typing import Any, Dict
+from utils.units import sec_to_ms
 from utils.distribution_generator import DistributionGenerator
 from battery_model import BatteryModel
 from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
@@ -18,6 +19,7 @@ class VertiportManager:
                  aircraft_energy_consumption_data: Dict,
                  charging_time_distribution_params: Dict,
                  passenger_distributions: Dict,
+                 max_flight_waiting_time: int,
                  charging_interuption: bool,
                  charger_efficiency: float,
                  charger_max_charge_rate: float,
@@ -32,6 +34,7 @@ class VertiportManager:
         self.aircraft_fleet_specs = aircraft_fleet_specs
         self.charging_time_distribution_params = charging_time_distribution_params
         self.passenger_distributions = passenger_distributions
+        self.max_flight_waiting_time = max_flight_waiting_time
         self.charging_interuption = charging_interuption
         self.charger_efficiency = charger_efficiency
         self.charger_max_charge_rate = charger_max_charge_rate
@@ -41,6 +44,7 @@ class VertiportManager:
         self.aircraft_energy_consumption_data = aircraft_energy_consumption_data
         self.aircraft_battery_models = self.build_aircraft_battery_models(self.aircraft_fleet_specs)
         self.taxi_resource = simpy.Resource(self.env, 1)
+        self.env.process(self.check_passenger_max_waiting_time_threshold())
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
 
@@ -276,6 +280,22 @@ class VertiportManager:
         yield self.env.process(
             self.simulate_aircraft_departure_process(aircraft=aircraft, departing_passengers=departing_passengers)
         )
+
+    def check_passenger_max_waiting_time_threshold(self):
+        """
+        Checks all of the waiting rooms. If there are passengers who are waiting
+        more than max_flight_waiting_time, it creates a flight for those passengers immediately.
+        """
+        while True:
+            # Check the waiting rooms every max_waiting_time/2.
+            yield self.env.timeout(round(sec_to_ms(self.max_flight_waiting_time) / 2))
+
+            if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold():
+                for departing_passengers in departing_passenger_groups:
+                    yield self.env.process(self.reserve_aircraft(departing_passengers))
+                flight_queue = [self.env.process(self.reserve_aircraft(departing_passengers)) for departing_passengers in departing_passenger_groups]
+
+                yield self.env.all_of(flight_queue)
 
     # PASSENGER RELATED METHODS
     # -------------------------

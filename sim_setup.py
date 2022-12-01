@@ -11,7 +11,6 @@ from utils.helpers import set_seed
 from utils.setup_distributions import setup_passenger_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_destination_vertiport_distances
 from utils.bundle_passenger_related_distributions import bundle_distributions
-from waiting_time_threshold import check_passenger_max_waiting_time_threshold
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
 import simpy
 import random
@@ -98,10 +97,6 @@ def sim_setup(sim_params: dict,
                               aircraft_fleet_specs=network_and_demand['aircraft_arrival_process']['aircraft_fleet_specs']
                               )
 
-
-    # TODO:
-    # env.process(check_passenger_max_waiting_time_threshold())
-
     # Create vertiport manager
     vertiport_manager = create_vertiport_manager(
         env=env,
@@ -114,13 +109,13 @@ def sim_setup(sim_params: dict,
         aircraft_energy_consumption_data=aircraft_energy_consumption_data,
         charging_time_distribution_params=aircraft_params['charging_time_dist'],
         passenger_distributions=passenger_distributions,
+        max_flight_waiting_time=sim_params['max_passenger_waiting_time'],
         charging_interuption=sim_params['interuptive_approach'],
         charger_efficiency=vertiport_params['charger_efficiency'],
         charger_max_charge_rate=vertiport_params['charger_max_charge_rate'],
         min_reserve_soc=aircraft_params['min_reserve_soc'],
         event_saver=event_saver
     )
-
 
     # Load or generate aircraft arrival schedule and start the aircraft arrival process
     if network_and_demand['aircraft_arrival_schedule_file_name'] is not None:

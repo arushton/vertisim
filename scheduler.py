@@ -11,7 +11,7 @@ class Scheduler:
         self.env = env
         self.aircraft_fleet_specs = aircraft_fleet_specs
         self.max_flight_waiting_time = sec_to_ms(max_flight_waiting_time)
-        self.vertiport = vertiport,
+        self.vertiport = vertiport
         self.aircraft_capacity = aircraft_capacity
 
     def check_max_waiting_time_threshold(self):
@@ -19,37 +19,18 @@ class Scheduler:
         Checks all of the waiting rooms. If there are passengers who are waiting
         more than max_flight_waiting_time, it creates a flight for those passengers immediately.
         """
-        flying_agents_list = []
-        for waiting_room in self.vertiport_manager.vertiport.waiting_room_stores:
-            num_agents_in_the_wr = len(self.vertiport_manager.vertiport.waiting_room_stores[waiting_room].items)
+        departing_passenger_groups = []
+        for waiting_room, wr_store in self.vertiport.waiting_room_stores.items():
+            num_agents_in_the_wr = len(wr_store.items)
             if num_agents_in_the_wr > 0:
-                # print("num_agents_in_the_wr",num_agents_in_the_wr,"at", self.env.now)
-                for _passenger in self.vertiport_manager.vertiport.waiting_room_stores[waiting_room].items:
+                for _passenger in wr_store.items:
                     if self.env.now - _passenger.waiting_room_arrival_time >= self.max_flight_waiting_time:
-                        # print("total passengers:", len(self.vertiport.WAITINGROOMdic[waitingRoom].items))
-                        # print("Waiting Passengers:", self.vertiport.WAITINGROOMdic[waitingRoom].items)
-                        # print("Wait time:",self.env.now - self.vertiport.departingAgentDic[passenger].enterWaitingRoom)
 
-                        # Collect all of the passengers in the waiting rooms
-                        # that are waited max_flight_waiting_time or more
-                        flying_agents = []
-                        for _ in range(min(self.aircraftCapacity,
-                                           len(self.vertiport.WAITINGROOMdic[waitingRoom].items))):
-                            # print(WAITINGROOMdic[waiting_room].items)
-                            agentName = self.vertiport.WAITINGROOMdic[waitingRoom].items[0]
-                            # print(agent_name)
-                            self.vertiport.WAITINGROOMdic[
-                                waitingRoom].get()  # Gets the value (waiting room store) from dic
-                            flyingAgents.append(agentName)
-                            # self.vertiport.departingAgentDic[agentName].passengerNameCall = self.env.now
-                        flyingAgentsList.append(flyingAgents)
-        flightQueue = []
-        if len(flyingAgentsList) >= 1:
-            for flightList in flyingAgentsList:
-                # print("FLIGHT ASSIGNMENT",flightList, 'Time:',self.env.now)
-                flightQueue.append(self.env.process(self.reserveVTOL(flightList)))
-                # yield self.env.process(self.reserveVTOL(flightList))
-            yield self.env.all_of(flightQueue)
+                        # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
+                        num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
+                        departing_passengers = Scheduler.collect_departing_passengers(wr_store, num_departing_passengers)
+                        departing_passenger_groups.append(departing_passengers)
+        return departing_passenger_groups
 
     def check_waiting_room(self, current_waiting_room):
         """
@@ -57,13 +38,14 @@ class Scheduler:
         aircraft_capacity. If yes then trigger reserve_aircraft
         """
         if len(current_waiting_room.items) >= self.aircraft_capacity:
-            return self.collect_departing_passengers(current_waiting_room)
+            return Scheduler.collect_departing_passengers(current_waiting_room, self.aircraft_capacity)
         else:
             return None
 
-    def collect_departing_passengers(self, current_waiting_room):
+    @staticmethod
+    def collect_departing_passengers(current_waiting_room, num_departing_passengers):
         departing_passengers = []
-        for _ in range(self.aircraft_capacity):
+        for _ in range(num_departing_passengers):
             # Collect agents from the waiting room as FIFO
             departing_passenger = current_waiting_room.items[0]
             # Remove the agent from the currentWaitingRoom

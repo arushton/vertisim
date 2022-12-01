@@ -12,7 +12,7 @@ sim_params = {
     'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 60 * 5,  # 10 mins
+    'max_passenger_waiting_time': 60 * 0.5,  # seconds
     'interuptive_approach': False,   # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,   # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True  # If True, then the simulation will use the default aircraft parameters.
@@ -26,7 +26,7 @@ sim_params = {
 # -----------------
 network_and_demand = {
     'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                   'Simulation/skyportSim_dev/input/vertiport_network_short.csv',
+                                   'Simulation/vertiSim_dev/input/vertiport_network_short.csv',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -51,7 +51,7 @@ network_and_demand = {
                 # 'param4': None
             },
             'max_val_in_dist': 120,  # seconds
-            'num_passengers': 16,  # Number of passengers to be generated
+            'num_passengers': 36,  # Number of passengers to be generated
         }
     },
 
@@ -94,7 +94,7 @@ network_and_demand = {
                 # 'param4': None
             },
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 6,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 20,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
@@ -108,7 +108,7 @@ network_and_demand = {
 # --------------------
 vertiport_params = {
     'vertiport_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                  'Simulation/skyportSim_dev/input/skyport_layouts/skyport_layout.xls',
+                                  'Simulation/vertiSim_dev/input/skyport_layouts/skyport_layout.xls',
     'layout': 'clover_1_fato_4_park',
     'num_security_check_servers': 12,
     'num_chargers': 4,
@@ -207,12 +207,12 @@ aircraft_params = {
         # time distribution generation.
     },
     'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                                  'Simulation/skyportSim_dev/input/aircraft_energy_consumption',
+                                                  'Simulation/vertiSim_dev/input/aircraft_energy_consumption',
     'min_reserve_soc': 20  # %  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/skyportSim_dev/output/1',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/output/1',
     'config_output_file_name': 'config',
     'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     'passenger_trajectory_output_file_name': 'passenger_agent_trajectory'
