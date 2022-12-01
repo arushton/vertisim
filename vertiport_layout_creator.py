@@ -1,0 +1,136 @@
+import pandas as pd
+import networkx as nx
+import numpy as np
+import matplotlib.pyplot as plt
+from utils.layout_layer_for_unfolded import save_vertiport_layout_layer_for_unfolded
+from utils.read_files import read_input_file
+from utils.helpers import check_if_dataframe_is_empty
+
+
+class VertiportLayout:
+    def __init__(self, file_path: str, layout_type: str):
+        self.file_path = file_path
+        self.layout_type = layout_type
+        self.G = nx.Graph()
+        self.node_pos = {}
+        self.edge_list = []
+        self.node_sizes = []
+        self.color_map = []
+
+        self.read_vertiport_layout()
+        self.add_fato_nodes_to_graph()
+        self.add_parking_pad_nodes_to_graph()
+        self.add_taxiway_nodes_to_graph()
+        self.add_nodes_to_graph()
+        self.edge_ids = self.add_edges_to_graph()
+        self.node_distances = self.calculate_distances_matrix()
+        self.num_fato = self.get_num_fato()
+        self.num_parking_pad = self.get_num_parking_pad()
+        self.num_taxiway_nodes = self.get_num_taxi_nodes()
+        self.num_edges = self.get_num_edges()
+        save_vertiport_layout_layer_for_unfolded(self.fato_lat_lngs,
+                                                 self.park_lat_lngs,
+                                                 self.inters_lat_lngs,
+                                                 self.layout_type)
+
+    def import_vertiport_layout(self) -> pd.DataFrame:
+        """
+        Imports the vertiport layout
+        """
+        vertiport_layout_file = read_input_file(file_path=self.file_path, sheet_name=self.layout_type)
+        if check_if_dataframe_is_empty(vertiport_layout_file):
+            raise IOError('Vertiport layout file is empty')
+        return vertiport_layout_file
+
+    def read_vertiport_layout(self) -> None:
+        """
+        Get values from input file
+        """
+        df = self.import_vertiport_layout()
+        self.fato_ids = np.array(df[df['fato_nodes'].notna()]['fato_nodes'])
+        self.fato_nodes = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_x', 'fato_y', 'fato_diameter_ft']]
+        self.approach_fix_lat_lng = df[df['fato_nodes'].notna()][['fato_nodes', 'approach_fix_lat', 'approach_fix_lng']]
+        self.departure_fix_lat_lng = df[df['fato_nodes'].notna()][
+            ['fato_nodes', 'departure_fix_lat', 'departure_fix_lng']]
+
+        self.parking_pad_ids = np.array(df[df['parking_pad_nodes'].notna()]['parking_pad_nodes'])
+        self.parking_pad_nodes = df[df['parking_pad_nodes'].notna()][
+            ['parking_pad_nodes', 'parking_pad_x', 'parking_pad_y', 'parking_pad_diameter_ft']]
+        self.taxiway_node_ids = np.array(df[df['taxi_ramp_intersection_nodes'].notna()]['taxi_ramp_intersection_nodes'])
+        self.taxiway_nodes = df[df['taxi_ramp_intersection_nodes'].notna()][
+            ['taxi_ramp_intersection_nodes', 'inters_x', 'inters_y', 'inters_diameter_ft']]
+        self.edges = df[df['origin_node'].notna()][['origin_node', 'destination_node']]
+
+        self.fato_lat_lngs = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_lat', 'fato_lng', 'fato_diameter_ft']]
+        self.fato_lat_lngs.set_index('fato_nodes', inplace=True)
+
+        self.park_lat_lngs = df[df['parking_pad_nodes'].notna()][[
+            'parking_pad_nodes', 'parking_pad_lat', 'parking_pad_lng', 'parking_pad_diameter_ft']]
+        self.park_lat_lngs.set_index('parking_pad_nodes', inplace=True)
+
+        self.inters_lat_lngs = df[df['taxi_ramp_intersection_nodes'].notna()][[
+            'taxi_ramp_intersection_nodes', 'inters_lat', 'inters_lng', 'inters_diameter_ft']]
+        self.inters_lat_lngs.set_index('taxi_ramp_intersection_nodes', inplace=True)
+
+    def get_num_fato(self) -> int:
+        return len(self.fato_ids)
+
+    def get_num_parking_pad(self) -> int:
+        return len(self.parking_pad_ids)
+
+    def get_num_taxi_nodes(self) -> int:
+        return len(self.taxiway_nodes)
+
+    def get_num_edges(self) -> int:
+        return len(self.edges)
+
+    def add_fato_nodes_to_graph(self):
+        # Add all of the nodes to the Graph G.
+        for node in self.fato_nodes.values:
+            self.node_pos[node[0]] = (node[1], node[2])
+            self.node_sizes.append(node[3] * 200 * 108 / 60)
+            self.color_map.append('C8')
+
+    def add_parking_pad_nodes_to_graph(self):
+        for node in self.parking_pad_nodes.values:
+            self.node_pos[node[0]] = (node[1], node[2])
+            self.node_sizes.append(node[3] * 200)
+            self.color_map.append('C2')
+
+    def add_taxiway_nodes_to_graph(self):
+        for node in self.taxiway_nodes.values:
+            self.node_pos[node[0]] = (node[1], node[2])
+            self.node_sizes.append(10)
+            self.color_map.append('C1')
+
+    def add_nodes_to_graph(self):
+        self.G.add_nodes_from(self.node_pos)
+
+    def add_edges_to_graph(self):
+        # Add edges to the Graph G.
+        for node in self.edges.values:
+            self.edge_list.append((node[0], node[1]))
+            distance = np.sqrt((self.node_pos[node[0]][0] - self.node_pos[node[1]][0]) ** 2 +
+                               (self.node_pos[node[0]][1] - self.node_pos[node[1]][1]) ** 2)
+            self.G.add_edge(node[0], node[1], weight=distance)
+        return list(self.G.edges)
+
+    def calculate_distances_matrix(self):
+        # Calculate the distances matrix
+        node_distances = pd.DataFrame(index=self.G.nodes, columns=self.G.nodes)
+        for source in self.G.nodes:
+            for target in self.G.nodes:
+                try:
+                    node_distances.loc[source, target] = round(nx.shortest_path_length(
+                        self.G, source=source, target=target, weight='weight'), 2)
+                except:
+                    continue
+        return node_distances
+
+    def plot_vertiport_layout(self):
+        fig, ax = plt.subplots(figsize=(20, 6))
+        nx.draw_networkx(self.G, pos=self.node_pos, node_size=self.node_sizes, node_color=self.color_map, ax=ax)
+        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+        plt.grid('on')
+        plt.axis('on')
+        plt.show()

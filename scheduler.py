@@ -1,0 +1,171 @@
+from typing import Dict, Union, Callable, Optional
+from utils.units import sec_to_ms
+
+
+class Scheduler:
+    def __init__(self, env: object,
+                 max_flight_waiting_time: int,
+                 vertiport: object,
+                 aircraft_capacity: Optional[int] = None,
+                 aircraft_fleet_specs: Optional[Dict] = None):
+        self.env = env
+        self.aircraft_fleet_specs = aircraft_fleet_specs
+        self.max_flight_waiting_time = sec_to_ms(max_flight_waiting_time)
+        self.vertiport = vertiport,
+        self.aircraft_capacity = aircraft_capacity
+
+    def check_max_waiting_time_threshold(self):
+        """
+        Checks all of the waiting rooms. If there are passengers who are waiting
+        more than max_flight_waiting_time, it creates a flight for those passengers immediately.
+        """
+        flying_agents_list = []
+        for waiting_room in self.vertiport_manager.vertiport.waiting_room_stores:
+            num_agents_in_the_wr = len(self.vertiport_manager.vertiport.waiting_room_stores[waiting_room].items)
+            if num_agents_in_the_wr > 0:
+                # print("num_agents_in_the_wr",num_agents_in_the_wr,"at", self.env.now)
+                for _passenger in self.vertiport_manager.vertiport.waiting_room_stores[waiting_room].items:
+                    if self.env.now - _passenger.waiting_room_arrival_time >= self.max_flight_waiting_time:
+                        # print("total passengers:", len(self.vertiport.WAITINGROOMdic[waitingRoom].items))
+                        # print("Waiting Passengers:", self.vertiport.WAITINGROOMdic[waitingRoom].items)
+                        # print("Wait time:",self.env.now - self.vertiport.departingAgentDic[passenger].enterWaitingRoom)
+
+                        # Collect all of the passengers in the waiting rooms
+                        # that are waited max_flight_waiting_time or more
+                        flying_agents = []
+                        for _ in range(min(self.aircraftCapacity,
+                                           len(self.vertiport.WAITINGROOMdic[waitingRoom].items))):
+                            # print(WAITINGROOMdic[waiting_room].items)
+                            agentName = self.vertiport.WAITINGROOMdic[waitingRoom].items[0]
+                            # print(agent_name)
+                            self.vertiport.WAITINGROOMdic[
+                                waitingRoom].get()  # Gets the value (waiting room store) from dic
+                            flyingAgents.append(agentName)
+                            # self.vertiport.departingAgentDic[agentName].passengerNameCall = self.env.now
+                        flyingAgentsList.append(flyingAgents)
+        flightQueue = []
+        if len(flyingAgentsList) >= 1:
+            for flightList in flyingAgentsList:
+                # print("FLIGHT ASSIGNMENT",flightList, 'Time:',self.env.now)
+                flightQueue.append(self.env.process(self.reserveVTOL(flightList)))
+                # yield self.env.process(self.reserveVTOL(flightList))
+            yield self.env.all_of(flightQueue)
+
+    def check_waiting_room(self, current_waiting_room):
+        """
+        Checks the departing_passenger's waiting room if that reached the
+        aircraft_capacity. If yes then trigger reserve_aircraft
+        """
+        if len(current_waiting_room.items) >= self.aircraft_capacity:
+            return self.collect_departing_passengers(current_waiting_room)
+        else:
+            return None
+
+    def collect_departing_passengers(self, current_waiting_room):
+        departing_passengers = []
+        for _ in range(self.aircraft_capacity):
+            # Collect agents from the waiting room as FIFO
+            departing_passenger = current_waiting_room.items[0]
+            # Remove the agent from the currentWaitingRoom
+            current_waiting_room.get()
+            # Save the agent name in a list
+            departing_passengers.append(departing_passenger)
+        return departing_passengers
+
+
+def noninteruptive_aircraft_assignment_strategy(current_waiting_room,
+                                                mission_length,
+                                                available_aircraft_store):
+    """
+    Check only available aircraft. Aircraft can become available after they finish their charging process.
+    """
+    aircraft_can_complete_mission = get_available_aircraft_can_complete_mission(current_waiting_room,
+                                                                                available_aircraft_store,
+                                                                                mission_length)
+    if any_available_aircraft(available_aircraft_store):
+        # Get the aircraft that has the least passenger_capacity. TODO: This can maximize the aircraft throughput but
+        #  not the passenger throughput
+        return get_min_passenger_capacity_aircraft(aircraft_can_complete_mission)
+    else:
+        return None
+
+
+def get_min_passenger_capacity_aircraft(aircraft_can_complete_mission):
+    """
+    Returns the aircraft with the least passenger capacity
+    """
+    return min(aircraft_can_complete_mission, key=lambda x: x.passenger_capacity)
+
+
+def any_available_aircraft(available_aircraft_store):
+    """
+    Checks if there is any available aircraft in the available aircraft store
+    :return:
+    """
+    return len(available_aircraft_store.items) > 0
+
+
+def get_available_aircraft_can_complete_mission(current_waiting_room, available_aircraft_store, mission_length):
+    """
+    Returns the available aircraft that can fly the mission range
+    """
+    aircraft_can_complete_mission = []
+    for aircraft in available_aircraft_store.items:
+        if len(current_waiting_room.items) >= aircraft.passenger_capacity and aircraft.max_range >= mission_length:
+            aircraft_can_complete_mission.append(aircraft)
+    return aircraft_can_complete_mission
+
+
+    # def aircraft_assignment_strategy(self,
+    #                                  current_waiting_room,
+    #                                  available_aircraft_store,
+    #                                  mission_length):
+    #     """
+    #
+    #     """
+    #     if not self.dynamic_assignment:
+    #
+    #
+    #
+    #     if not self.interuptive_approach:
+    #         return self.noninteruptive_aircraft_assignment_strategy(current_waiting_room, available_aircraft_store,
+    #                                                            mission_length)
+    #     else:
+    #         aircraft_can_complete_mission = []
+
+    # def get_active_aircraft_can_complete_mission(self, current_waiting_room, active_aircraft_store, mission_length):
+    #     """
+    #     Returns the active aircraft that can fly the mission range. NOT USED
+    #     """
+    #     aircraft_can_complete_mission = []
+    #     for aircraft in active_aircraft_store.items:
+    #         if len(current_waiting_room.items) >= aircraft.passenger_capacity and aircraft.max_range >= mission_length:
+    #             aircraft_can_complete_mission.append(aircraft)
+    #     return aircraft_can_complete_mission
+
+    # def interuptive_aircraft_assignment_strategy(self, current_waiting_room, active_aircraft_store,
+    #                                              available_aircraft_store, mission_length):
+    #     """
+    #     First check the active aircraft (aircraft under charging). If there is no active aircraft that can complete the
+    #     mission, check the available aircraft. INCOMPLETE
+    #     """
+    #     active_aircraft_can_complete_mission = self.get_active_aircraft_can_complete_mission(current_waiting_room,
+    #                                                                                     active_aircraft_store,
+    #                                                                                     mission_length)
+    #     if len(active_aircraft_can_complete_mission) == 0:
+    #         available_aircraft_can_complete_mission = self.get_available_aircraft_can_complete_mission(current_waiting_room,
+    #                                                                                         available_aircraft_store,
+    #                                                                                         mission_length)
+    #
+    #         # Check the aircrafts' current SOC and check whether they can complete the mission
+    #         for aircraft in aircraft_can_complete_mission:
+    #             mission_required_energy = self.get_required_energy_for_mission(aircraft, pax, mission_length)
+    #             if (env.now - aircraft.charging_start_time) >= calc_required_charge_time_from_required_energy(
+    #                     mission_required_energy,
+    #                     aircraft.initial_soc,
+    #                     min_reserve_soc,
+    #                     aircraft_battery_models[aircraft.aircraft_model])
+    #
+    #     if not aircraft_can_complete_mission:
+    #         return noninteruptive_aircraft_assignment_strategy(current_waiting_room, available_aircraft_store,
+    #                                                            mission_length)

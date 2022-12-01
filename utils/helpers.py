@@ -1,0 +1,207 @@
+import random
+import numpy as np
+from utils.units import sec_to_ms, min_to_sec
+from typing import List, Union
+
+
+def set_seed(seed):
+    """
+    Sets the seed for random number generation.
+    :param seed:
+    :return:
+    """
+    try:
+        random.seed(seed)
+    except Exception:
+        random.seed(42)
+
+
+def compute_interarrival_times_from_schedule(schedule):
+    """
+    Computes interarrival times from a schedule.
+    :param schedule:
+    :return:
+    """
+    return sec_to_ms(np.diff(schedule, prepend=0))
+
+
+def cumulative_sum_array(array: Union[np.ndarray, List]) -> np.ndarray:
+    """
+    Cumulative sum of an array.
+    :param array:
+    :return: np.ndarray
+    """
+    return np.cumsum(array)
+
+
+def flatten(t):
+    """
+    Flatten a nested list structure.
+    :param t:
+    :return:
+    """
+    return [item for sublist in t for item in sublist]
+
+
+def get_key_from_value(dictionary, search_val):
+    """
+    Get key from value in a dictionary.
+    :param dictionary:
+    :param search_val:
+    :return:
+    """
+    return [key for key, value in dictionary.items() if search_val == value][0]
+
+
+def get_key(my_dict, key):
+    """
+    Function that returns None if the key is not found, if found return value
+    :param my_dict:
+    :param key:
+    :return:
+    """
+    return my_dict[key] if key in my_dict else None
+
+
+def none_checker(val):
+    """
+    Checks if a value is None. If None returns None, else returns the value.
+    :param val:
+    :return:
+    """
+    return None if val is None else val
+
+
+def timestamp_to_datetime(sim_start_time, sim_time):
+    """
+    Converts a timestamp to a datetime.
+    :param sim_start_time:
+    :param sim_time:
+    :return:
+    """
+    # date_time = datetime.fromtimestamp(current_timestamp)
+    # return date_time.strftime('%Y:%m:%d:%H:%M:%S.%f')
+    return sim_start_time + sim_time
+
+
+def create_num_charger_list(layouts_list, shared_charger_sets):
+    """
+    Create a list of number of chargers for each layout
+    :param layouts_list:
+    :param shared_charger_sets:
+    :return:
+    """
+    return [len(shared_charger_sets) for _ in layouts_list]
+
+
+def is_shared_charger(shared_charger_sets) -> bool:
+    """
+    Check if the vertiport has shared chargers
+    :param shared_charger_sets:
+    :return:
+    """
+    return shared_charger_sets is not None
+
+
+def check_if_dataframe_is_empty(df):
+    """
+    Check if a dataframe is empty.
+    :param df:
+    :return:
+    """
+    return df.empty
+
+
+def map_nested_dict_keys_to_values_from_list(dictionary, list_of_keys, last_key):
+    """
+    Map nested dictionary keys to values from a list input.
+    :param dictionary:
+    :param list_of_keys:
+    :param last_key:
+    :return:
+    """
+    return [dictionary[key][last_key] for key in list_of_keys]
+
+
+def nested_dict_all_values(d, depth):
+    """
+    Usage:
+        list(nested_dict_values({1: {2: 3, 4: 5}}, 2))
+        list(nested_dict_values(vertipad_PARK,2))
+    """
+    if depth == 1:
+        for i in d.values():
+            yield i
+    else:
+        for v in d.values():
+            if isinstance(v, dict):
+                for i in nested_dict_all_values(v, depth - 1):
+                    yield i
+
+
+def nested_dict_all_keys(d, depth):
+    """
+    Usage:
+        list(nested_dict_keys({1: {2: 3, 4: 5}}, 2))
+        list(nested_dict_keys(vertipad_PARK,2))
+    """
+    if depth == 1:
+        for i in d.keys():
+            yield i
+    else:
+        for v in d.values():
+            if isinstance(v, dict):
+                for i in nested_dict_all_keys(v, depth - 1):
+                    yield i
+
+
+def nested_dict_filter_keys(d, depth, key):
+    """
+    Usage:
+        list(nested_dict_keys({1: {2: 3, 4: 5}}, 2))
+        list(nested_dict_keys(vertipad_PARK,2))
+    """
+    if depth == 1:
+        for i in d.keys():
+            if i == key:
+                yield d[key]
+    else:
+        for v in d.values():
+            if isinstance(v, dict):
+                for i in nested_dict_filter_keys(v, depth - 1, key):
+                    yield i
+
+
+def get_str_before_first_occurrence_of_char(string, char):
+    """
+    Get string before first occurrence of a character.
+    :param string:
+    :param char:
+    :return:
+    """
+    return string.split(char)[0]
+
+# def nested_dict_filter_values(d, depth, value):
+#     """
+#     Usage:
+#         list(nested_dict_values({1: {2: 3, 4: 5}}, 2))
+#         list(nested_dict_values(vertipad_PARK,2))
+#     """
+#     if depth == 1:
+#         for i in d.values():
+#             if d[i] == value:
+#                 yield i
+#
+#     else:
+#         for v in d.values():
+#             if isinstance(v, dict):
+#                 for i in nested_dict_filter_values(v, depth - 1, value):
+#                     yield i
+
+# def inverse_cumcum(cumsum_array: np.ndarray) -> np.ndarray:
+#     """
+#     Inverse of cumulative sum array.
+#     :param cumsum_array:
+#     :return:
+#     """
+#     return np.diff(cumsum_array, prepend=0)
