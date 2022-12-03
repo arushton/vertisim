@@ -252,9 +252,7 @@ class VertiportManager:
         return self.vertiport.vertiport_distances[dest_vertiport_id]
 
     def trigger_scheduler(self, dest_vertiport_id: int, passengers_waiting_room: simpy.Store):
-        # mission_length = self.get_mission_length(dest_vertiport_id)
-        departing_passengers = self.scheduler.check_waiting_room(current_waiting_room=passengers_waiting_room)
-        if departing_passengers:
+        if departing_passengers := self.scheduler.check_waiting_room(current_waiting_room=passengers_waiting_room):
             # Save passenger group completion time
             for passenger in departing_passengers:
                 self.event_saver.save_passenger_waiting_room_departure_time(agent_id=passenger.passenger_id,
@@ -263,9 +261,17 @@ class VertiportManager:
             yield self.env.process(self.reserve_aircraft(departing_passengers))
             # yield self.env.process(self.simulate_passenger_departure(departing_passengers))
 
-    def reserve_aircraft(self, departing_passengers):
+    def reserve_aircraft(self, departing_passengers: list):
         # Get the first available aircraft
         aircraft = yield self.vertiport.available_aircraft_store.get()
+
+        # After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight
+        # list
+        if len(departing_passengers) < self.scheduler.aircraft_capacity and \
+                len(departing_passengers[0].waiting_room_store.items) > 0:
+            departing_passengers.extend(self.scheduler.last_call_check(
+                current_waiting_room=departing_passengers[0].waiting_room_store,
+                num_departing_passengers=len(departing_passengers)))
 
         # Save the aircraft allocation time
         self.event_saver.save_aircraft_allocation_time(parking_pad_id=aircraft.parking_space_id,
@@ -318,6 +324,7 @@ class VertiportManager:
 
         passengers_waiting_room = self.vertiport.waiting_room_stores[f'waiting_room_{passenger.dest_vertiport_id}']
         passengers_waiting_room.put(passenger)
+        passenger.waiting_room_store = passengers_waiting_room
         yield self.env.process(self.trigger_scheduler(passenger.dest_vertiport_id, passengers_waiting_room))
 
     def simulate_passenger_arrival(self, passenger):

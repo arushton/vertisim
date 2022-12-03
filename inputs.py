@@ -51,7 +51,7 @@ network_and_demand = {
                 # 'param4': None
             },
             'max_val_in_dist': 120,  # seconds
-            'num_passengers': 36,  # Number of passengers to be generated
+            'num_passengers': 45,  # Number of passengers to be generated
         }
     },
 
@@ -94,7 +94,7 @@ network_and_demand = {
                 # 'param4': None
             },
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 20,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 30,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport

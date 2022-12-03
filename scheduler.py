@@ -41,6 +41,15 @@ class Scheduler:
             return Scheduler.collect_departing_passengers(current_waiting_room, self.aircraft_capacity)
         else:
             return None
+    
+    def last_call_check(self, current_waiting_room, num_departing_passengers):
+        """
+         After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight list
+        """
+        print("Last call check")
+        return Scheduler.collect_departing_passengers(current_waiting_room, 
+                                                      self.aircraft_capacity - num_departing_passengers
+                                                      )
 
     @staticmethod
     def collect_departing_passengers(current_waiting_room, num_departing_passengers):

@@ -32,6 +32,7 @@ class Passenger:
         self.randomize_constants = randomize_constants
         self.vertiport_manager = vertiport_manager
         self.waiting_room_arrival_time = None
+        self.waiting_room_store = None
 
     def walk_to_entrance(self):
         """ From car to the exit gate."""
