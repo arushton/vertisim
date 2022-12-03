@@ -46,7 +46,6 @@ class Scheduler:
         """
          After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight list
         """
-        print("Last call check")
         return Scheduler.collect_departing_passengers(current_waiting_room, 
                                                       self.aircraft_capacity - num_departing_passengers
                                                       )
@@ -54,7 +53,7 @@ class Scheduler:
     @staticmethod
     def collect_departing_passengers(current_waiting_room, num_departing_passengers):
         departing_passengers = []
-        for _ in range(num_departing_passengers):
+        for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
             # Collect agents from the waiting room as FIFO
             departing_passenger = current_waiting_room.items[0]
             # Remove the agent from the currentWaitingRoom
