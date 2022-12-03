@@ -214,8 +214,10 @@ aircraft_params = {
 output_params = {
     'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/output/1',
     'config_output_file_name': 'config',
-    'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
-    'passenger_trajectory_output_file_name': 'passenger_agent_trajectory'
+    # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
+    # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
+    # 'flight_schedule_output_file_name': 'flight_schedule',
+    'performance_metrics_output_file_name': 'performance_metrics'
 }
 
 # ----------------------------------------------------------

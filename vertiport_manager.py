@@ -3,6 +3,7 @@ import networkx as nx
 from typing import Any, Dict
 from utils.units import sec_to_ms
 from utils.distribution_generator import DistributionGenerator
+from utils.helpers import get_passenger_ids_from_passenger_list
 from battery_model import BatteryModel
 from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
 
@@ -275,6 +276,10 @@ class VertiportManager:
         for passenger in departing_passengers:
             self.event_saver.save_passenger_flight_assignment_time(passenger_id=passenger.passenger_id,
                                                                    agent_type='passenger')
+        self.event_saver.save_flight_info(tail_number=aircraft.tail_number,
+                                          passengers=get_passenger_ids_from_passenger_list(departing_passengers),
+                                          aircraft_model=aircraft.aircraft_model,
+                                          event_type='flight_assignment')
 
         # Simulate aircraft departure process
         yield self.env.process(
@@ -293,7 +298,8 @@ class VertiportManager:
             if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold():
                 for departing_passengers in departing_passenger_groups:
                     yield self.env.process(self.reserve_aircraft(departing_passengers))
-                flight_queue = [self.env.process(self.reserve_aircraft(departing_passengers)) for departing_passengers in departing_passenger_groups]
+                flight_queue = [self.env.process(self.reserve_aircraft(departing_passengers)) for departing_passengers
+                                in departing_passenger_groups]
 
                 yield self.env.all_of(flight_queue)
 
@@ -335,14 +341,12 @@ class VertiportManager:
     #         yield self.env.process(passenger.waiting_room_to_boarding_gate())
     #         self.event_saver.save_passenger_boarding_gate_arrival_time(agent_id=passenger.passenger_id)
 
+    # Add the passenger to a flight
+    # yield self.env.process(FlightGeneration(self.env, maxWaitingTime, aircraftCapacity,
+    #                           self.vertiport).checkWaitingRoom(currentWaitingRoom))
 
-
-        # Add the passenger to a flight
-        # yield self.env.process(FlightGeneration(self.env, maxWaitingTime, aircraftCapacity,
-        #                           self.vertiport).checkWaitingRoom(currentWaitingRoom))
-
-        # AIRCRAFT RELATED METHODS
-        # -------------------------
+    # AIRCRAFT RELATED METHODS
+    # -------------------------
 
     def get_taxi_instructions(self, assigned_fato_id, parking_space_id):
         # Get the taxi route nodes from vertiport manager
@@ -491,6 +495,11 @@ class VertiportManager:
             )
         )
 
+        # Save take-off info
+        self.event_saver.save_flight_info(tail_number=aircraft.tail_number,
+                                          passengers=get_passenger_ids_from_passenger_list(departing_passengers),
+                                          aircraft_model=aircraft.aircraft_model,
+                                          event_type='take_off')
         # Take-off process
         yield self.env.process(
             aircraft.aircraft_take_off_process(

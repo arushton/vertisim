@@ -35,6 +35,7 @@ class EventSaver:
         self.sim_start_timestamp = sim_start_timestamp
         self.aircraft_agent_trajectory = defaultdict(dict)
         self.passenger_agent_trajectory = defaultdict(dict)
+        self.flight_schedule = defaultdict(dict)
 
     def save_agent_creation_time(self, agent_id: int,
                                  agent_type: str,
@@ -377,6 +378,23 @@ class EventSaver:
             self.vertiport_layout.park_lat_lngs.loc[pushback_location]['parking_pad_lng']
         self.aircraft_agent_trajectory[time]['location'] = 'Pushback_time'
         self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model
+
+    def save_flight_info(self, tail_number: int, passengers: list, aircraft_model: str, event_type: str):
+        """
+        Saves the flight information
+        :param tail_number:
+        :param passengers:
+        :param aircraft_model:
+        :param event_type:
+        :return:
+        """
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='aircraft')
+        self.flight_schedule[time]['tail_number'] = f'aircraft{tail_number}'
+        self.flight_schedule[time]['passengers'] = passengers
+        self.flight_schedule[time]['aircraft_model'] = aircraft_model
+        self.flight_schedule[time]['event'] = event_type
 
     def save_passenger_vertiport_entrance_arrival_time(self, passenger_id: int) -> None:
         """

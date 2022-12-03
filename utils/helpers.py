@@ -181,6 +181,15 @@ def get_str_before_first_occurrence_of_char(string, char):
     """
     return string.split(char)[0]
 
+
+def get_passenger_ids_from_passenger_list(passenger_list):
+    """
+    Get passenger ids from a passenger list.
+    :param passenger_list:
+    :return:
+    """
+    return [passenger.passenger_id for passenger in passenger_list]
+
 # def nested_dict_filter_values(d, depth, value):
 #     """
 #     Usage:

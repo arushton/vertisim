@@ -176,10 +176,11 @@ def sim_setup(sim_params: dict,
     # Save the results
     save_output(
         trackers={
-            # 'aircraft_dict': event_saver.aircraft_dict,
-            # 'aircraft_dict_w_sim_time': event_saver.aircraft_dict_w_sim_time,
             'aircraft_agent_trajectory': event_saver.aircraft_agent_trajectory,
-            'passenger_agent_trajectory': event_saver.passenger_agent_trajectory
+            'passenger_agent_trajectory': event_saver.passenger_agent_trajectory,
+            # 'aircraft_queue_count': event_saver.aircraft_queue_count,
+            # 'passenger_queue_count': event_saver.passenger_queue_count,
+            'flight_schedule': event_saver.flight_schedule,
         },
         simulation_params={
             'sim_params': sim_params,
@@ -191,6 +192,8 @@ def sim_setup(sim_params: dict,
         },
         output_dir=output_params['output_folder_path'],
         config_output_file_name=output_params['config_output_file_name'],
-        aircraft_trajectory_output_file_name=output_params['aircraft_trajectory_output_file_name'],
-        passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name']
+        # aircraft_trajectory_output_file_name=output_params['aircraft_trajectory_output_file_name'],
+        # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
+        # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
+        performance_metrics_output_file_name=output_params['performance_metrics_output_file_name'],
     )

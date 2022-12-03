@@ -9,16 +9,20 @@ def save_output(trackers,
                 simulation_params,
                 output_dir,
                 config_output_file_name,
-                aircraft_trajectory_output_file_name,
-                passenger_trajectory_output_file_name):
+                # aircraft_trajectory_output_file_name,
+                # passenger_trajectory_output_file_name,
+                # flight_schedule_output_file_name,
+                performance_metrics_output_file_name):
     """
     Saves simulation configuration and sim output to a JSON file and also saves agent trajectories to csv.
-    :param trackers: Dictionary of trackers
-    :param simulation_params: Nested dictionary of simulation parameters
-    :param output_dir: Output directory
-    :param config_output_file_name:
-    :param aircraft_trajectory_output_file_name
-    :param passenger_trajectory_output_file_name
+    :param trackers : Dictionary of trackers
+    :param simulation_params : Nested dictionary of simulation parameters
+    :param output_dir : Output directory
+    :param config_output_file_name : Name of the config output file
+    # :param aircraft_trajectory_output_file_name : Name of the aircraft trajectory output file
+    # :param passenger_trajectory_output_file_name : Name of the passenger trajectory output file
+    # :param flight_schedule_output_file_name : Name of the flight schedule output file
+    :param performance_metrics_output_file_name : Name of the performance metrics output file
     """
     # Create output directory if it does not exist
     if not os.path.exists(output_dir):
@@ -47,11 +51,12 @@ def save_output(trackers,
         trajectory_output_file_name = os.path.join(output_dir, key)
         df.to_csv(trajectory_output_file_name+'.csv')
 
-        # Convert trajectory df to geoJSON and save
-        agent_type = get_str_before_first_occurrence_of_char(key, '_')
-        json_trajectory = create_trajectory_json(df=df, agent_type=agent_type)
-        with open(trajectory_output_file_name+'.geojson', 'w') as f:
-            json.dump(json_trajectory, f)
+        if key != 'flight_schedule':
+            # Convert trajectory df to geoJSON and save
+            agent_type = get_str_before_first_occurrence_of_char(key, '_')
+            json_trajectory = create_trajectory_json(df=df, agent_type=agent_type)
+            with open(trajectory_output_file_name+'.geojson', 'w') as f:
+                json.dump(json_trajectory, f)
 
 
 
