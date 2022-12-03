@@ -43,14 +43,14 @@ network_and_demand = {
     # depending on the distribution you use.
     'passenger_arrival_process': {
         'passenger_arrival_distribution': {
-            'distribution_name': 'expon',
+            'distribution_name': 'poisson',
             'parameters': {
-                'loc': 60,
-                'scale': 1,
+                'mu': 60 * 1  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
-            'max_val_in_dist': 120,  # seconds
+            'distribution_type': 'discrete',  # 'discrete' or 'continuous'
+            'max_val_in_dist': 120,  # seconds  # UNUSED
             'num_passengers': 45,  # Number of passengers to be generated
         }
     },
@@ -86,13 +86,13 @@ network_and_demand = {
             # }
         },
         'aircraft_arrival_distribution': {
-            'distribution_name': 'expon',
+            'distribution_name': 'poisson',
             'parameters': {
-                'loc': 60,
-                'scale': 1,
+                'mu': 60
                 # 'param3': None,
                 # 'param4': None
             },
+            'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
             'num_aircraft': 30,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
@@ -196,13 +196,13 @@ aircraft_params = {
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
     'charging_time_dist': {
-        'distribution_name': 'expon',
+        'distribution_name': 'poisson',
         'parameters': {
-            'loc': 120,
-            'scale': 1,
+            'mu': 120
             # 'param3': None,
             # 'param4': None
         },
+        'distribution_type': 'discrete',  # 'discrete' or 'continuous'
         'max_charge_duration': 60 * 60 * 30,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },

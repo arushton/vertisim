@@ -56,8 +56,7 @@ class VertiportManager:
         if self.charging_time_distribution_params is None:
             return None
         return DistributionGenerator(self.charging_time_distribution_params,
-                                     self.charging_time_distribution_params['max_charge_duration']
-                                     )
+                                     self.charging_time_distribution_params['max_charge_duration'])
 
     def build_aircraft_battery_models(self, aircraft_fleet_specs):
         """
@@ -267,11 +266,11 @@ class VertiportManager:
 
         # After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight
         # list
-        if len(departing_passengers) < self.scheduler.aircraft_capacity and \
-                len(departing_passengers[0].waiting_room_store.items) > 0:
-            departing_passengers.extend(self.scheduler.last_call_check(
-                current_waiting_room=departing_passengers[0].waiting_room_store,
-                num_departing_passengers=len(departing_passengers)))
+        if len(departing_passengers) < self.scheduler.aircraft_capacity:
+            if len(departing_passengers[0].waiting_room_store.items) > 0:
+                departing_passengers.extend(self.scheduler.last_call_check(
+                    current_waiting_room=departing_passengers[0].waiting_room_store,
+                    num_departing_passengers=len(departing_passengers)))
 
         # Save the aircraft allocation time
         self.event_saver.save_aircraft_allocation_time(parking_pad_id=aircraft.parking_space_id,
