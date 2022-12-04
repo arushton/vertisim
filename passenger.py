@@ -118,30 +118,3 @@ class Passenger:
             yield self.env.timeout(distribution.pick_number_from_distribution())
         else:
             raise ValueError("No boarding gate to aircraft time distribution or constant defined.")
-
-    # THIS SHOULD BE IN VERTIPORT MANAGER
-    # def simulate_passenger(self):
-    #     """ Simulate passenger."""
-    #     self.event_saver.save_agent_creation_time(agent_id=self.passenger_id,
-    #                                               agent_type='passenger')
-    #
-    #     # Simulate agent's walk from car to the vertiport entrance
-    #     yield self.env.process(self.walk_to_entrance())
-    #     # Save the time when the passenger arrives at the vertiport entrance
-    #     self.event_saver.save_passenger_vertiport_entrance_arrival_time(agent_id=self.passenger_id)
-    #     # Simulate agent's security check
-    #     yield self.env.process(self.security_check())
-    #     # Save the time when the passenger finishes the security check
-    #     self.event_saver.save_passenger_security_check_time(agent_id=self.passenger_id)
-
-        # Passenger enters the waiting room based on their flight destination
-
-    # OLD CODE
-        # # Puts agent to a waiting room wrt their destination.
-        # currentWaitingRoom = self.vertiport.WAITINGROOMdic[
-        #     list(self.vertiport.WAITINGROOMdic)[departingAgent.agentFlightDirection]]
-        # yield currentWaitingRoom.put(departingAgent.agentID)
-        #
-        # # Check if there are any eligible flights.
-        # yield self.env.process(FlightGeneration(self.env, maxWaitingTime, aircraftCapacity,
-        #                                         self.vertiport).checkWaitingRoom(currentWaitingRoom))

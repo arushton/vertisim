@@ -49,6 +49,9 @@ class VertiportManager:
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
 
+    # AIRCRAFT RELATED METHODS
+    # -------------------------
+
     def build_charging_time_distribution(self):
         """
         Builds the charging time distribution with the given parameters
@@ -114,6 +117,35 @@ class VertiportManager:
         else:
             raise ValueError("Operation type is not valid. Operation type should be 'arrival' or 'departure'.")
         return assigned_fato_resource.fato_resource.request(priority=priority)
+
+    def call_fato_resource(self, assigned_fato_id: str) -> object:
+        """
+        Calls the assigned fato pad resource from fato_store of vertiport manager
+
+        Parameters
+        ----------
+        assigned_fato_id : str
+            Assigned TLOF pad ID by the vertiport manager.
+        priority : int
+            Priority for using the TLOF pad resource. Lower value prioritized
+
+        Returns
+        -------
+        FatoResource class
+            Class object that provides the FATO resource by request.
+        """
+        fato_list = [fato.fato_id for fato in self.vertiport.fato_store.items]
+        fato_index = fato_list.index(assigned_fato_id)
+        return self.vertiport.fato_store.items[fato_index]
+
+    def get_taxi_instructions(self, assigned_fato_id, parking_space_id):
+        # Get the taxi route nodes from vertiport manager
+        taxi_route, _ = self.generate_taxi_route_nodes(
+            assigned_fato_id, parking_space_id)
+
+        # Get the taxi route edges from vertiport manager
+        taxi_route_edges = self.generate_taxi_route_edges(taxi_route)
+        return taxi_route, taxi_route_edges
 
     def request_taxi_resource(self):
         if self.taxi_config.is_simultaneous_taxi_and_take_off_allowed == False:
@@ -250,24 +282,6 @@ class VertiportManager:
         """
         return self.vertiport.vertiport_distances[dest_vertiport_id]
 
-    def trigger_scheduler(self, dest_vertiport_id: int, passengers_waiting_room: simpy.Store):
-        if departing_passengers := self.scheduler.check_waiting_room(current_waiting_room=passengers_waiting_room):
-            # Save passenger group completion time
-            for passenger in departing_passengers:
-                self.event_saver.save_passenger_waiting_room_departure_time(agent_id=passenger.passenger_id,
-                                                                            waiting_room_id=dest_vertiport_id,
-                                                                            agent_type='passenger')
-
-            # Save passenger consolidation time
-            self.event_saver.save_passenger_group_consolidation_time(
-                passenger_ids=get_passenger_ids_from_passenger_list(departing_passengers),
-                wr_number=dest_vertiport_id,
-                consolidation_time=calculate_passenger_consolidation_time(departing_passengers)
-            )
-
-            yield self.env.process(self.reserve_aircraft(departing_passengers, dest_vertiport_id))
-            # yield self.env.process(self.simulate_passenger_departure(departing_passengers))
-
     def reserve_aircraft(self, departing_passengers: list, dest_vertiport_id: int):
 
         # Get the first available aircraft
@@ -305,6 +319,23 @@ class VertiportManager:
         yield self.env.process(
             self.simulate_aircraft_departure_process(aircraft=aircraft, departing_passengers=departing_passengers)
         )
+
+    def trigger_scheduler(self, dest_vertiport_id: int, passengers_waiting_room: simpy.Store):
+        if departing_passengers := self.scheduler.check_waiting_room(current_waiting_room=passengers_waiting_room):
+            # Save passenger group completion time
+            for passenger in departing_passengers:
+                self.event_saver.save_passenger_waiting_room_departure_time(agent_id=passenger.passenger_id,
+                                                                            waiting_room_id=dest_vertiport_id,
+                                                                            agent_type='passenger')
+
+            # Save passenger consolidation time
+            self.event_saver.save_passenger_group_consolidation_time(
+                passenger_ids=get_passenger_ids_from_passenger_list(departing_passengers),
+                wr_number=dest_vertiport_id,
+                consolidation_time=calculate_passenger_consolidation_time(departing_passengers)
+            )
+
+            yield self.env.process(self.reserve_aircraft(departing_passengers, dest_vertiport_id))
 
     def check_passenger_max_waiting_time_threshold(self):
         """
@@ -366,43 +397,6 @@ class VertiportManager:
     #         yield self.env.process(passenger.waiting_room_to_boarding_gate())
     #         self.event_saver.save_passenger_boarding_gate_arrival_time(agent_id=passenger.passenger_id)
 
-    # Add the passenger to a flight
-    # yield self.env.process(FlightGeneration(self.env, maxWaitingTime, aircraftCapacity,
-    #                           self.vertiport).checkWaitingRoom(currentWaitingRoom))
-
-    # AIRCRAFT RELATED METHODS
-    # -------------------------
-
-    def get_taxi_instructions(self, assigned_fato_id, parking_space_id):
-        # Get the taxi route nodes from vertiport manager
-        taxi_route, _ = self.generate_taxi_route_nodes(
-            assigned_fato_id, parking_space_id)
-
-        # Get the taxi route edges from vertiport manager
-        taxi_route_edges = self.generate_taxi_route_edges(taxi_route)
-        return taxi_route, taxi_route_edges
-
-    def call_fato_resource(self, assigned_fato_id: str) -> object:
-        """
-        Calls the assigned fato pad resource from fato_store of vertiport manager
-
-        Parameters
-        ----------
-        assigned_fato_id : str
-            Assigned TLOF pad ID by the vertiport manager.
-        priority : int
-            Priority for using the TLOF pad resource. Lower value prioritized
-
-        Returns
-        -------
-        FatoResource class
-            Class object that provides the FATO resource by request.
-        """
-        fato_list = [fato.fato_id for fato in self.vertiport.fato_store.items]
-        fato_index = fato_list.index(assigned_fato_id)
-        return self.vertiport.fato_store.items[fato_index]
-
-    # TODO: Check all
     def simulate_aircraft_arrival_process(self, aircraft):
         self.event_saver.save_agent_creation_time(agent_id=aircraft.tail_number,
                                                   agent_type='aircraft',
