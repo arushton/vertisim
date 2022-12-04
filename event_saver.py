@@ -36,6 +36,61 @@ class EventSaver:
         self.aircraft_agent_trajectory = defaultdict(dict)
         self.passenger_agent_trajectory = defaultdict(dict)
         self.flight_schedule = defaultdict(dict)
+        self.passenger_consolidation_time = defaultdict(dict)
+        self.aircraft_arrival_queue_count = defaultdict(dict)
+        self.aircraft_arrival_queue_count[self.sim_start_timestamp] = 0
+        self.passenger_departure_queue_count = defaultdict(dict)
+        self.passenger_departure_queue_count[self.sim_start_timestamp] = 0
+        self.aircraft_departure_queue_count = defaultdict(dict)
+        self.aircraft_departure_queue_count[self.sim_start_timestamp] = 0
+        self.passenger_waiting_time = defaultdict(dict)
+        self.passenger_transfer_time = defaultdict(dict)
+
+    def save_passenger_group_consolidation_time(self, passenger_ids, wr_number, consolidation_time):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='passenger')
+        self.passenger_consolidation_time[time]['passenger_ids'] = passenger_ids
+        self.passenger_consolidation_time[time]['wr_number'] = wr_number
+        self.passenger_consolidation_time[time]['consolidation_time'] = consolidation_time
+
+    def save_passenger_waiting_time(self, passenger_id, waiting_time):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='passenger')
+        self.passenger_waiting_time[time]['passenger_id'] = passenger_id
+        self.passenger_waiting_time[time]['waiting_time'] = waiting_time
+
+    def save_passenger_transfer_time(self, passenger_id, transfer_time):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='passenger')
+        self.passenger_transfer_time[time]['passenger_id'] = passenger_id
+        self.passenger_transfer_time[time]['transfer_time'] = transfer_time
+
+    def update_passenger_departure_queue_counter(self, queue_update: int) -> None:
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='passenger')
+        # Get the last value from the dictionary and add the queue_update to it
+        last_value = list(self.passenger_departure_queue_count.values())[-1]
+        self.passenger_departure_queue_count[time] = last_value + queue_update
+
+    def update_aircraft_arrival_queue_counter(self, queue_update: int) -> None:
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='aircraft')
+        # Get the last value from the dictionary and add the queue_update to it
+        last_value = list(self.aircraft_arrival_queue_count.values())[-1]
+        self.aircraft_arrival_queue_count[time] = last_value + queue_update
+
+    def update_aircraft_departure_queue_counter(self, queue_update: int) -> None:
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='aircraft')
+        # Get the last value from the dictionary and add the queue_update to it
+        last_value = list(self.aircraft_departure_queue_count.values())[-1]
+        self.aircraft_departure_queue_count[time] = last_value + queue_update
 
     def save_agent_creation_time(self, agent_id: int,
                                  agent_type: str,
@@ -391,7 +446,7 @@ class EventSaver:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.flight_schedule[time]['tail_number'] = f'aircraft{tail_number}'
+        self.flight_schedule[time]['tail_number'] = f'aircraft_{tail_number}'
         self.flight_schedule[time]['passengers'] = passengers
         self.flight_schedule[time]['aircraft_model'] = aircraft_model
         self.flight_schedule[time]['event'] = event_type

@@ -12,7 +12,7 @@ sim_params = {
     'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 60 * 0.5,  # seconds
+    'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,   # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,   # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True  # If True, then the simulation will use the default aircraft parameters.
@@ -88,13 +88,13 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60
+                'mu': 60 * 2.5  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 30,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 15,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
@@ -198,12 +198,12 @@ aircraft_params = {
     'charging_time_dist': {
         'distribution_name': 'poisson',
         'parameters': {
-            'mu': 120
+            'mu': 60 * 5
             # 'param3': None,
             # 'param4': None
         },
         'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-        'max_charge_duration': 60 * 60 * 30,  # sec. This parameter is used as the max charge time for the charging
+        'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
     'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '

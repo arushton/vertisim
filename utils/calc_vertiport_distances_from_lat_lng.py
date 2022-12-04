@@ -24,7 +24,7 @@ def calc_haversine_dist(lat1: float, lon1: float, lat2: float, lon2: float) -> f
 
 def calc_destination_vertiport_distances(vertiport_network_file_path: str) -> Dict:
     # Calculate the distance between origin vertiport and destination vertiports and create a dictionary of distances
-    # for each origin vertiport. key should be vertiport_id and value should be haversine distance
+    # for each origin vertiport. key should be vertiport_id and value should be haversine distance. Unit is miles/km.
     vertiport_network = read_input_file(vertiport_network_file_path)
     vertiport_distances = {}
     for _, row in vertiport_network.iterrows():

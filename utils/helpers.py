@@ -190,6 +190,31 @@ def get_passenger_ids_from_passenger_list(passenger_list):
     """
     return [passenger.passenger_id for passenger in passenger_list]
 
+
+def calculate_passenger_consolidation_time(departing_passengers):
+    """
+    Find the consolidation time by substracting the waiting room arrival time of the last passenger from the first passenger
+    """
+    return departing_passengers[-1].waiting_room_arrival_time - departing_passengers[0].waiting_room_arrival_time
+
+
+def remove_larger_keys(dic1, dic2):
+    # Deletes all the keys in dic1 that are greater than the highest key of dic2
+    for key in list(dic1.keys()):
+        if key > max(list(dic2.keys())):
+            del dic1[key]
+    return dic1
+    
+
+def get_values_from_nested_dict(dictionary, key):
+    """
+    Get values from a nested dictionary given second level key.
+    :param dictionary:
+    :param key:
+    :return:
+    """
+    return [v[key] for v in dictionary.values()]
+
 # def nested_dict_filter_values(d, depth, value):
 #     """
 #     Usage:

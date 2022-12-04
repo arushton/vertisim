@@ -4,27 +4,26 @@ from utils.units import sec_to_ms
 
 class Scheduler:
     def __init__(self, env: object,
-                 max_flight_waiting_time: int,
                  vertiport: object,
                  aircraft_capacity: Optional[int] = None,
                  aircraft_fleet_specs: Optional[Dict] = None):
         self.env = env
         self.aircraft_fleet_specs = aircraft_fleet_specs
-        self.max_flight_waiting_time = sec_to_ms(max_flight_waiting_time)
         self.vertiport = vertiport
         self.aircraft_capacity = aircraft_capacity
 
-    def check_max_waiting_time_threshold(self):
+    def check_max_waiting_time_threshold(self, max_flight_waiting_time):
         """
         Checks all of the waiting rooms. If there are passengers who are waiting
         more than max_flight_waiting_time, it creates a flight for those passengers immediately.
         """
+        # TODO: Solve what happens if there are more than aircaft_capacity passengers in the waiting room
         departing_passenger_groups = []
         for waiting_room, wr_store in self.vertiport.waiting_room_stores.items():
             num_agents_in_the_wr = len(wr_store.items)
             if num_agents_in_the_wr > 0:
-                for _passenger in wr_store.items:
-                    if self.env.now - _passenger.waiting_room_arrival_time >= self.max_flight_waiting_time:
+                for waiting_passenger in wr_store.items:
+                    if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_flight_waiting_time:
 
                         # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
                         num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
@@ -55,11 +54,9 @@ class Scheduler:
         departing_passengers = []
         for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
             # Collect agents from the waiting room as FIFO
-            departing_passenger = current_waiting_room.items[0]
-            # Remove the agent from the currentWaitingRoom
+            departing_passengers.append(current_waiting_room.items[0])
+            # Remove the agent from the current_waiting_room
             current_waiting_room.get()
-            # Save the agent name in a list
-            departing_passengers.append(departing_passenger)
         return departing_passengers
 
 

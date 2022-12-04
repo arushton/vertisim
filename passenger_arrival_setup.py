@@ -55,8 +55,10 @@ class PassengerArrivalSetup:
         return passenger_arrival_schedule
 
     def create_passenger_arrival(self):
-        # Create passenger arrival process.
+        # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
+
+        # Create passenger arrival process.
         for passenger_id in passenger_arrival_schedule.passenger_id:
             # Get the passenger's interarrival time
             interarrival_time = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'interarrival_time'].values[0]

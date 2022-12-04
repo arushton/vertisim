@@ -31,6 +31,7 @@ class Passenger:
         self.deboard_aircraft_and_walk_to_exit_constant = deboard_aircraft_and_walk_to_exit_constant
         self.randomize_constants = randomize_constants
         self.vertiport_manager = vertiport_manager
+        self.vertiport_arrival_time = None
         self.waiting_room_arrival_time = None
         self.waiting_room_store = None
 

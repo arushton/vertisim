@@ -27,7 +27,7 @@ class VertiportConfig:
         self.edge_store = self.add_edges_to_store()
         self.charger_resource = simpy.Resource(self.env, capacity=num_chargers)
         self.waiting_room_stores = self.create_waiting_room_stores()
-        self.available_aircraft_store = simpy.FilterStore(self.env)
+        self.available_aircraft_store = simpy.Store(self.env)
 
     def check_charger_resource_type(self):
         # Based on the charger resource specification, this method changes the structure of the parking pads.

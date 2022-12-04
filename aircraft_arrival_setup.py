@@ -96,6 +96,7 @@ class AircraftArrivalSetup:
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
         aircraft_arrival_schedule = self.setup_aircraft_arrival()
+
         # Tail numbers start from 0 and ends at the number of aircraft -1.
         for tail_number in aircraft_arrival_schedule.tail_number:
             # Get the arrival time of the aircraft.
@@ -108,8 +109,7 @@ class AircraftArrivalSetup:
             # Get the aircraft type of the aircraft.
             aircraft_model = \
                 aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'aircraft_model'].values[
-                    0]
+                    aircraft_arrival_schedule.tail_number == tail_number, 'aircraft_model'].values[0]
             # Get the passenger capacity of the aircraft.
             passenger_capacity = self.vertiport_manager.aircraft_fleet_specs[aircraft_model]['pax']
 
@@ -127,7 +127,7 @@ class AircraftArrivalSetup:
         aircraft = Aircraft(env=self.env,
                             tail_number=tail_number,
                             aircraft_model=aircraft_model,
-                            aircraft_specs= self.vertiport_manager.aircraft_fleet_specs[aircraft_model],
+                            aircraft_specs=self.vertiport_manager.aircraft_fleet_specs[aircraft_model],
                             passenger_capacity=passenger_capacity,
                             max_range=self.vertiport_manager.aircraft_fleet_specs[aircraft_model]['range'],
                             initial_soc=initial_soc,

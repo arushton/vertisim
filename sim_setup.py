@@ -4,6 +4,7 @@ from passenger_arrival_setup import PassengerArrivalSetup
 from scheduler import Scheduler
 from event_saver import EventSaver
 from save_output import save_output
+from performance_metrics import PerformanceMetrics
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.units import sec_to_ms
 from utils.helpers import is_shared_charger
@@ -85,16 +86,15 @@ def sim_setup(sim_params: dict,
     if sim_params['default_aircraft']:
         # Create scheduler
         scheduler = Scheduler(env=env,
-                              max_flight_waiting_time=sim_params['max_passenger_waiting_time'],
                               vertiport=vertiport,
                               aircraft_capacity=aircraft_params['pax']
                               )
     else:
         # Create scheduler
         scheduler = Scheduler(env=env,
-                              max_flight_waiting_time=sim_params['max_passenger_waiting_time'],
                               vertiport=vertiport,
-                              aircraft_fleet_specs=network_and_demand['aircraft_arrival_process']['aircraft_fleet_specs']
+                              aircraft_fleet_specs=network_and_demand['aircraft_arrival_process'][
+                                  'aircraft_fleet_specs']
                               )
 
     # Create vertiport manager
@@ -197,3 +197,13 @@ def sim_setup(sim_params: dict,
         # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
         performance_metrics_output_file_name=output_params['performance_metrics_output_file_name'],
     )
+
+    # Print and save performance metrics
+    performance_metrics = PerformanceMetrics(passenger_consolidation_time=event_saver.passenger_consolidation_time,
+                                             passenger_departure_queue_count=event_saver.passenger_departure_queue_count,
+                                             aircraft_arrival_queue_count=event_saver.aircraft_arrival_queue_count,
+                                             aircraft_departure_queue_count=event_saver.aircraft_departure_queue_count,
+                                             passenger_waiting_time=event_saver.passenger_waiting_time,
+                                             passenger_transfer_time=event_saver.passenger_transfer_time,
+                                             flight_schedule=event_saver.flight_schedule)
+

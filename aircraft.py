@@ -167,6 +167,10 @@ class Aircraft:
             if operation_type == 'arrival':
                 # Release the TLOF pad resource after reaching to the parking space
                 assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
+
+                # Decrease the aircraft arrival queue counter
+                self.event_saver.update_aircraft_arrival_queue_counter(queue_update=-1)
+                
             # Put back the only edge on the taxi route
             self.vertiport_manager.vertiport.edge_store.put(taxiway_edges.pop(0))
             if operation_type == 'departure':
@@ -207,6 +211,9 @@ class Aircraft:
             if operation_type == 'arrival':
                 # Release the FATO pad resource after reaching to the nextNode
                 assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
+
+                # Decrease the aircraft arrival queue counter
+                self.event_saver.update_aircraft_arrival_queue_counter(queue_update=-1)
 
             if operation_type == 'departure':
                 # Release the parking space of the departing aircraft
@@ -318,7 +325,7 @@ class Aircraft:
 
     def get_charging_time(self):
         charge_time = self.vertiport_manager.charging_time_distribution.pick_number_from_distribution()
-        return sec_to_ms(round(max(0, charge_time)))
+        return max(0, charge_time)
 
     def charge_aircraft(self, charge_time: float, time_passenger_embark_disembark: float, parking_space: object,
                         time_pre_charging_processes: int, time_post_charging_processes: int,
