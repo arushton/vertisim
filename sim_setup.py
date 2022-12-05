@@ -199,7 +199,8 @@ def sim_setup(sim_params: dict,
     )
 
     # Print and save performance metrics
-    performance_metrics = PerformanceMetrics(passenger_consolidation_time=event_saver.passenger_consolidation_time,
+    performance_metrics = PerformanceMetrics(sim_start_timestamp=sim_start_timestamp,
+                                             passenger_consolidation_time=event_saver.passenger_consolidation_time,
                                              passenger_departure_queue_count=event_saver.passenger_departure_queue_count,
                                              aircraft_arrival_queue_count=event_saver.aircraft_arrival_queue_count,
                                              aircraft_departure_queue_count=event_saver.aircraft_departure_queue_count,

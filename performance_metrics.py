@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 
 class PerformanceMetrics:
 
-    def __init__(self, passenger_consolidation_time, passenger_departure_queue_count, aircraft_arrival_queue_count,
+    def __init__(self, sim_start_timestamp, passenger_consolidation_time, passenger_departure_queue_count, aircraft_arrival_queue_count,
                  aircraft_departure_queue_count, passenger_waiting_time, passenger_transfer_time, flight_schedule,
                  fato_usage_tracker):
+        self.sim_start_timestamp = sim_start_timestamp
         self.passenger_consolidation_time = passenger_consolidation_time
         self.passenger_departure_queue_count = passenger_departure_queue_count
         self.aircraft_arrival_queue_count = aircraft_arrival_queue_count
@@ -18,6 +19,7 @@ class PerformanceMetrics:
         self.passenger_transfer_time = passenger_transfer_time
         self.flight_schedule = flight_schedule
         self.fato_usage_tracker = fato_usage_tracker
+        self.hour = 60*60*1000
 
         self.aircraft_arrival_queue_count = remove_larger_keys(self.aircraft_arrival_queue_count, self.flight_schedule)
 
@@ -28,7 +30,11 @@ class PerformanceMetrics:
         self.print_aircraft_arrival_queue_count_stats()
         self.print_aircraft_departure_queue_count_stats()
         self.print_avg_load_factor()
-        self.compute_fato_utilization()
+        self.print_total_aircraft_throughput()
+        self.print_average_aircarft_throughput()
+        self.print_total_passenger_throughput()
+        self.print_average_passenger_throughput()
+        self.print_fato_utilization()
         # print("passenger_consolidation_time: ", self.passenger_consolidation_time)
         # print("passenger_departure_queue_count: ", self.passenger_departure_queue_count)
         # print("aircraft_arrival_queue_count: ", self.aircraft_arrival_queue_count)
@@ -37,20 +43,6 @@ class PerformanceMetrics:
         # print("passenger_transfer_time: ", self.passenger_transfer_time)
         # print("flight_schedule: ", self.flight_schedule)
         # self.plot_aircraft_arrival_queue_count()
-
-    def compute_fato_utilization(self):
-        # Sums the difference between keys when the first value is 0 and the next value is 1.
-        keys = list(self.fato_usage_tracker.keys())
-        values = list(self.fato_usage_tracker.values())
-        time_fato_empty = 0
-        for i in range(len(keys)-1):
-            if values[i] == 0:
-                if values[i+1] == 1:
-                    time_fato_empty += keys[i+1] - keys[i]
-
-        total_sim_time = keys[-1] - keys[0]
-        fato_utilization = round((total_sim_time - time_fato_empty) / total_sim_time * 100, 2)
-        print(f'FATO utilization: {fato_utilization}')
 
     def calculate_passenger_consolidation_time_stats(self):
         # Creates a dataframe for passenger consolidation time statistics including mean, median, standard deviation,
@@ -143,6 +135,30 @@ class PerformanceMetrics:
         total_passengers = sum(len(flight) for flight in flight_list)
         return total_passengers / len(flight_list)
 
+    def compute_total_passenger_throughput(self):
+        # Computes the total passenger throughput
+        return sum(len(flight) for flight in get_values_from_nested_dict(self.flight_schedule, 'passengers'))/2
+
+    def compute_average_passenger_throughput(self):
+        # Computes the passenger throughput skipping the first 1 hour of the simulation
+        total_passengers = 0
+        for key, value in self.flight_schedule.items():
+            if self.sim_start_timestamp + self.hour <= key <= self.sim_start_timestamp + 2*self.hour:
+                total_passengers += len(self.flight_schedule[key]['passengers'])
+        return total_passengers
+
+    def compute_aircraft_throughput(self):
+        return len(self.flight_schedule) / 2
+
+    def compute_average_aircraft_throughput(self):
+        # Computes the passenger throughput
+        total_aircraft = 0
+        for key, value in self.flight_schedule.items():
+            if self.sim_start_timestamp + self.hour <= key <= self.sim_start_timestamp + 2*self.hour:
+                if self.flight_schedule[key]['event'] == 'take_off':
+                    total_aircraft += 1
+        return total_aircraft
+
     def print_passenger_consolidation_time_stats(self):
         print("Passenger consolidation time statistics in minutes:")
         print("-----------------------------")
@@ -181,7 +197,33 @@ class PerformanceMetrics:
 
     def print_avg_load_factor(self):
         print(f"Average load factor: {round(self.compute_avg_load_factor(), 2)}")
-        print("")
+
+    def print_total_aircraft_throughput(self):
+        print(f"Total aircraft throughput: {self.compute_aircraft_throughput()}")
+
+    def print_average_aircarft_throughput(self):
+        print(f"Average aircraft throughput in 1 hour: {self.compute_average_aircraft_throughput()}")
+
+    def print_total_passenger_throughput(self):
+        print(f"Total passenger throughput: {self.compute_total_passenger_throughput()}")
+
+    def print_average_passenger_throughput(self):
+        print(f"Average passenger throughput: {self.compute_average_passenger_throughput()}")
+
+    def print_fato_utilization(self):
+        # Sums the difference between keys when the first value is 0 and the next value is 1.
+        keys = list(self.fato_usage_tracker.keys())
+        values = list(self.fato_usage_tracker.values())
+        time_fato_empty = 0
+        for i in range(2, len(keys)-1):
+            if values[i] == 0:
+                if values[i+1] == 1:
+                    time_fato_empty += keys[i+1] - keys[i]
+
+        total_sim_time = keys[-1] - keys[2]
+        fato_utilization = round((total_sim_time - time_fato_empty) / total_sim_time * 100, 2)
+        print(f'FATO utilization: {fato_utilization}')
+
 
 # def print_passenger_consolidation_time_stats(self):
 #     print("Passenger consolidation time stats:")

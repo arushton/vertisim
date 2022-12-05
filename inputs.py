@@ -45,13 +45,13 @@ network_and_demand = {
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 0.5  # seconds
+                'mu': 60 * 1  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_val_in_dist': 120,  # seconds  # UNUSED
-            'num_passengers': 120,  # Number of passengers to be generated
+            'num_passengers': 300,  # Number of passengers to be generated
         }
     },
 
@@ -88,13 +88,13 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 3  # seconds
+                'mu': 60 * 2.5  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 50,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
