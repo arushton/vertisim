@@ -8,3 +8,7 @@ Despite operational similarities to commencial airlines, Urban Air Mobility (UAM
 4. After you create your environment activate your environment by writing `conda activate vertisim` to your terminal.
 5. Install the requirements with `pip install -r requirements.txt`
 6. Done!
+
+
+https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
+
