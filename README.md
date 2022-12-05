@@ -11,7 +11,7 @@ Despite operational similarities to commencial airlines, Urban Air Mobility (UAM
 
 
 # Demo
-Below we used 1 FATO (Final Approach and Take-off Area) and 4 parking pad vertiport configuration. FATO utilization is 100%. Small circular shapes are parking pads and large circular shape is the FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden.
+Below we used 1 FATO (Final Approach and Take-off Area) and 4 parking pad vertiport configuration. FATO utilization is 100%. Small circular shapes are parking pads and large circular shape is the FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden. Aircraft are approaching from right to left and departing from FATO to left.
 
 https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
 
