@@ -205,5 +205,6 @@ def sim_setup(sim_params: dict,
                                              aircraft_departure_queue_count=event_saver.aircraft_departure_queue_count,
                                              passenger_waiting_time=event_saver.passenger_waiting_time,
                                              passenger_transfer_time=event_saver.passenger_transfer_time,
-                                             flight_schedule=event_saver.flight_schedule)
+                                             flight_schedule=event_saver.flight_schedule,
+                                             fato_usage_tracker=event_saver.fato_usage_tracker)
 

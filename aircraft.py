@@ -163,6 +163,9 @@ class Aircraft:
                 # Release the TLOF pad resource after reaching to the parking space
                 assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
 
+                # Save FATO usage finish time
+                self.event_saver.update_fato_usage_tracker(fato_usage=-1)
+
                 # Decrease the aircraft arrival queue counter
                 self.event_saver.update_aircraft_arrival_queue_counter(queue_update=-1)
                 
@@ -211,6 +214,9 @@ class Aircraft:
             if operation_type == 'arrival':
                 # Release the FATO pad resource after reaching to the nextNode
                 assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
+
+                # Save FATO usage finish time
+                self.event_saver.update_fato_usage_tracker(fato_usage=-1)
 
                 # Decrease the aircraft arrival queue counter
                 self.event_saver.update_aircraft_arrival_queue_counter(queue_update=-1)

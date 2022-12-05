@@ -425,6 +425,9 @@ class VertiportManager:
         )
         yield aircraft_fato_usage_request
 
+        # Save FATO usage start time
+        self.event_saver.update_fato_usage_tracker(fato_usage=1)
+
         # Landing process
         yield self.env.process(
             aircraft.aircraft_landing_process(
@@ -478,7 +481,7 @@ class VertiportManager:
         # Save passenger boarding time
         for passenger in departing_passengers:
             self.event_saver.save_passenger_boarding_finish_time(passenger_id=passenger.passenger_id,
-                                                                 aircraft_id=aircraft.tail_number)
+                                                                 aircraft=aircraft)
         # Aircraft take off request
         assigned_fato_id = self.assign_fato(aircraft.parking_space_id)
 
@@ -497,6 +500,9 @@ class VertiportManager:
 
         # Decrease the aircraft departure queue counter
         self.event_saver.update_aircraft_departure_queue_counter(queue_update=-1)
+
+        # Save FATO usage start time
+        self.event_saver.update_fato_usage_tracker(fato_usage=1)
 
         taxi_usage_request = self.request_taxi_resource()
         if taxi_usage_request is not None:
@@ -550,3 +556,6 @@ class VertiportManager:
         self.release_taxi_usage_request(taxi_usage_request)
         # Release the FATO
         assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
+
+        # Save FATO usage finish time
+        self.event_saver.update_fato_usage_tracker(fato_usage=-1)
