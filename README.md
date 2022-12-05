@@ -19,4 +19,5 @@ https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-
 # TODO
 1. Charging process interruption.
 2. Passenger - aircraft assignment problem in the case of more than one type of aircraft.
+3. Documentation
 
