@@ -107,8 +107,8 @@ class EventSaver:
         time = self.is_time_overlapping(time=time, agent_type=agent_type)
         if agent_type == 'aircraft':
             self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
-            self.aircraft_agent_trajectory[time]['latitude'] = 0
-            self.aircraft_agent_trajectory[time]['longitude'] = 0
+            self.aircraft_agent_trajectory[time]['latitude'] = 37.629771
+            self.aircraft_agent_trajectory[time]['longitude'] = -122.370966
             self.aircraft_agent_trajectory[time]['location'] = 'created_in_voa'
             self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model
         elif agent_type == 'passenger':

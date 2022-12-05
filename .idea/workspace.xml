@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="d2ed3d13-b3c3-4975-b05f-e20d57263e9e" name="Changes" comment="added performance metrics and bug fixes">
-      <change beforePath="$PROJECT_DIR$/passenger.py" beforeDir="false" afterPath="$PROJECT_DIR$/passenger.py" afterDir="false" />
+    <list default="true" id="d2ed3d13-b3c3-4975-b05f-e20d57263e9e" name="Changes" comment="some rearrangements">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aircraft.py" beforeDir="false" afterPath="$PROJECT_DIR$/aircraft.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aircraft_arrival_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/aircraft_arrival_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_saver.py" beforeDir="false" afterPath="$PROJECT_DIR$/event_saver.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/input/skyport_layouts/skyport_layout.xls" beforeDir="false" afterPath="$PROJECT_DIR$/input/skyport_layouts/skyport_layout.xls" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/passenger_arrival_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/passenger_arrival_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/units.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/units.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +42,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="TODO_SCOPE" value="All Places" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="reference.settingsdialog.IDE.editor.colors.Language Defaults" />
   </component>
@@ -104,7 +111,14 @@
       <option name="project" value="LOCAL" />
       <updated>1670171816307</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="some rearrangements">
+      <created>1670172200773</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1670172200773</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -127,6 +141,7 @@
     <MESSAGE value="changed the distribution generation" />
     <MESSAGE value="bug fix for &lt; aircraft_capacity passenger assignment" />
     <MESSAGE value="added performance metrics and bug fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="added performance metrics and bug fixes" />
+    <MESSAGE value="some rearrangements" />
+    <option name="LAST_COMMIT_MESSAGE" value="some rearrangements" />
   </component>
 </project>

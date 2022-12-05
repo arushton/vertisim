@@ -3,6 +3,7 @@ import pandas as pd
 from utils.read_files import read_input_file
 from utils.helpers import compute_interarrival_times_from_schedule
 from utils.generate_artificial_supply_demand import generate_artificial_passenger_demand
+from utils.units import sec_to_ms
 from passenger import Passenger
 
 
@@ -79,12 +80,12 @@ class PassengerArrivalSetup:
             env=self.env,
             passenger_id=passenger_id,
             dest_vertiport_id=dest_vertiport_id,
-            car_to_entrance_walking_time_constant=self.passenger_params['car_to_entrance_walking_time_constant'],
-            security_check_time_constant=self.passenger_params['security_check_time_constant'],
-            waiting_room_to_boarding_gate_walking_time_constant=self.passenger_params['waiting_room_to_boarding_gate_walking_time_constant'],
-            boarding_gate_to_aircraft_time_constant=self.passenger_params['boarding_gate_to_aircraft_time_constant'],
-            embark_disembark_time_constant=self.passenger_params['embark_disembark_time_constant'],
-            deboard_aircraft_and_walk_to_exit_constant=self.passenger_params['deboard_aircraft_and_walk_to_exit_constant'],
+            car_to_entrance_walking_time_constant=sec_to_ms(self.passenger_params['car_to_entrance_walking_time_constant']),
+            security_check_time_constant=sec_to_ms(self.passenger_params['security_check_time_constant']),
+            waiting_room_to_boarding_gate_walking_time_constant=sec_to_ms(self.passenger_params['waiting_room_to_boarding_gate_walking_time_constant']),
+            boarding_gate_to_aircraft_time_constant=sec_to_ms(self.passenger_params['boarding_gate_to_aircraft_time_constant']),
+            embark_disembark_time_constant=sec_to_ms(self.passenger_params['embark_disembark_time_constant']),
+            deboard_aircraft_and_walk_to_exit_constant=sec_to_ms(self.passenger_params['deboard_aircraft_and_walk_to_exit_constant']),
             randomize_constants=self.passenger_params['randomize_constants'],
             vertiport_manager=self.vertiport_manager
         )

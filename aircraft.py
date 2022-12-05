@@ -159,11 +159,6 @@ class Aircraft:
 
         if len(taxi_route) == 0:
             # Case that the FATO pad and parking space directly connected
-            node_to_node_move_time = int(round(self.vertiport_manager.vertiport.vertiport_layout.
-                                               node_distances.loc[
-                                                   first_node, last_node] / self.ground_taxi_speed * 1000))
-            yield self.env.timeout(node_to_node_move_time)
-
             if operation_type == 'arrival':
                 # Release the TLOF pad resource after reaching to the parking space
                 assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
@@ -176,6 +171,11 @@ class Aircraft:
             if operation_type == 'departure':
                 # Release the parking space of the departing aircraft. FATO nodes handled by the vertiport manager.
                 self.vertiport_manager.release_parking_space(parking_space)
+
+            node_to_node_move_time = int(round(self.vertiport_manager.vertiport.vertiport_layout.
+                                               node_distances.loc[
+                                                   first_node, last_node] / self.ground_taxi_speed * 1000))
+            yield self.env.timeout(node_to_node_move_time)
 
             # Save park time
             if operation_type == 'arrival':
