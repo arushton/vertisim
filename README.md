@@ -12,5 +12,6 @@ Despite operational similarities to commencial airlines, Urban Air Mobility (UAM
 
 # Demo
 Below we used 1 FATO (Final Approach and Take-off Area) and 4 parking pad vertiport configuration. FATO utilization is 100%.
+
 https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
 
