@@ -42,7 +42,7 @@ class PerformanceMetrics:
         # print("passenger_waiting_time: ", self.passenger_waiting_time)
         # print("passenger_transfer_time: ", self.passenger_transfer_time)
         # print("flight_schedule: ", self.flight_schedule)
-        # self.plot_aircraft_arrival_queue_count()
+        self.plot_aircraft_arrival_queue_count()
 
     def calculate_passenger_consolidation_time_stats(self):
         # Creates a dataframe for passenger consolidation time statistics including mean, median, standard deviation,
@@ -123,7 +123,9 @@ class PerformanceMetrics:
 
     def plot_aircraft_arrival_queue_count(self):
         # Plots aircraft arrival queue count
-        plt.plot(list(self.aircraft_arrival_queue_count.keys()), list(self.aircraft_arrival_queue_count.values()))
+        plt.plot(list(self.aircraft_arrival_queue_count.keys()),
+                    list(self.aircraft_arrival_queue_count.values()),
+                    alpha=0.4)
         plt.xlabel('Time (min)')
         plt.ylabel('Aircraft Arrival Queue Count')
         plt.title('Aircraft Arrival Queue Count Over Time')

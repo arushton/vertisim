@@ -335,6 +335,9 @@ class VertiportManager:
                 consolidation_time=calculate_passenger_consolidation_time(departing_passengers)
             )
 
+            # Increase passenger queue count
+            self.event_saver.update_passenger_departure_queue_counter(queue_update=1)
+
             yield self.env.process(self.reserve_aircraft(departing_passengers, dest_vertiport_id))
 
     def check_passenger_max_waiting_time_threshold(self):
@@ -350,6 +353,10 @@ class VertiportManager:
                     sec_to_ms(self.max_flight_waiting_time)):
                 # for departing_passengers in departing_passenger_groups:
                 #     yield self.env.process(self.reserve_aircraft(departing_passengers))
+
+                # Increase passenger queue count
+                self.event_saver.update_passenger_departure_queue_counter(queue_update=len(departing_passenger_groups))
+
                 flight_queue = [self.env.process(
                     self.reserve_aircraft(departing_passengers, departing_passengers[0].dest_vertiport_id))
                                 for departing_passengers
@@ -500,6 +507,9 @@ class VertiportManager:
 
         # Decrease the aircraft departure queue counter
         self.event_saver.update_aircraft_departure_queue_counter(queue_update=-1)
+
+        # Decrease the passenger departure queue counter
+        self.event_saver.update_passenger_departure_queue_counter(queue_update=-1)
 
         # Save FATO usage start time
         self.event_saver.update_fato_usage_tracker(fato_usage=1)
