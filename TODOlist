@@ -1,3 +1,0 @@
-DONE: User needs to input either a dataframe path or provide input arguments for generate_artificial_supply_demand.py file
-DONE: Correct AircraftArrivalSetup class to be able to read in a dataframe and parse it correctly or generate a dataframe from the input arguments for arrival process
-
