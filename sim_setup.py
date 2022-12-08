@@ -14,6 +14,7 @@ from utils.calc_vertiport_distances_from_lat_lng import calc_destination_vertipo
 from utils.bundle_passenger_related_distributions import bundle_distributions
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
 import simpy
+import time
 import random
 from typing import Dict, List
 
@@ -23,7 +24,8 @@ def sim_setup(sim_params: dict,
               vertiport_params: dict,
               passenger_params: dict,
               aircraft_params: dict,
-              output_params: dict):
+              output_params: dict,
+              sim_start_time: int):
     sim_start_timestamp = sec_to_ms(1625065200)  # Wednesday, June 30, 2021 8:00:00 AM PT
 
     set_seed(sim_params['random_seed'])
@@ -173,6 +175,23 @@ def sim_setup(sim_params: dict,
     max_sim_time = sec_to_ms(sim_params['sim_time'])
     env.run(until=max_sim_time)
 
+    end_time = time.time()
+    time_taken = end_time - sim_start_time
+    print(f'Total time to run: {round(time_taken, 2)} seconds')
+
+    # Print and save performance metrics
+    performance_metrics = PerformanceMetrics(sim_start_timestamp=sim_start_timestamp,
+                                             passenger_consolidation_time=event_saver.passenger_consolidation_time,
+                                             passenger_departure_queue_count=event_saver.passenger_departure_queue_count,
+                                             aircraft_arrival_queue_count=event_saver.aircraft_arrival_queue_count,
+                                             aircraft_departure_queue_count=event_saver.aircraft_departure_queue_count,
+                                             passenger_waiting_time=event_saver.passenger_waiting_time,
+                                             passenger_transfer_time=event_saver.passenger_transfer_time,
+                                             flight_schedule=event_saver.flight_schedule,
+                                             fato_usage_tracker=event_saver.fato_usage_tracker,
+                                             verbose=sim_params['verbose'])
+
+
     # Save the results
     save_output(
         trackers={
@@ -196,16 +215,5 @@ def sim_setup(sim_params: dict,
         # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
         # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
         performance_metrics_output_file_name=output_params['performance_metrics_output_file_name'],
+        performance_metrics=performance_metrics.performance_metrics
     )
-
-    # Print and save performance metrics
-    performance_metrics = PerformanceMetrics(sim_start_timestamp=sim_start_timestamp,
-                                             passenger_consolidation_time=event_saver.passenger_consolidation_time,
-                                             passenger_departure_queue_count=event_saver.passenger_departure_queue_count,
-                                             aircraft_arrival_queue_count=event_saver.aircraft_arrival_queue_count,
-                                             aircraft_departure_queue_count=event_saver.aircraft_departure_queue_count,
-                                             passenger_waiting_time=event_saver.passenger_waiting_time,
-                                             passenger_transfer_time=event_saver.passenger_transfer_time,
-                                             flight_schedule=event_saver.flight_schedule,
-                                             fato_usage_tracker=event_saver.fato_usage_tracker)
-

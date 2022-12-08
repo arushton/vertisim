@@ -12,10 +12,11 @@ sim_params = {
     'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 60 * 10,  # seconds
+    'max_passenger_waiting_time': 60 * 30,  # seconds
     'interuptive_approach': False,   # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,   # If True, then the simulation will only simulate aircraft turnaround.
-    'default_aircraft': True  # If True, then the simulation will use the default aircraft parameters.
+    'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
+    'verbose': True    # If True, then the simulation will print the simulation output and performance metrics.
     # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
     #                                      # Assign the least capacity aircraft that can complete the mission)
     # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (
@@ -45,7 +46,7 @@ network_and_demand = {
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 1  # seconds
+                'mu': 60 * 0.5  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -88,13 +89,13 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 3.85  # seconds
+                'mu': 60 * 3.9  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 84,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 180,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
@@ -143,11 +144,11 @@ passenger_params = {
     #     },
     #     'max_val_in_dist': 60
     # },
-    'waiting_room_to_boarding_gate_walking_time_constant': 20,  # secs
+    'waiting_room_to_boarding_gate_walking_time_constant': 30,  # secs
     'waiting_room_to_boarding_gate_walking_time_dist': None,
-    'boarding_gate_to_aircraft_time_constant': 90,  # secs
+    'boarding_gate_to_aircraft_time_constant': 60,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
-    'embark_disembark_time_constant': 60 * 4.5,  # secs
+    'embark_disembark_time_constant': 60 * 3,  # secs
     'embark_disembark_time_dist': None,
     'deboard_aircraft_and_walk_to_exit_constant': 120,  # secs
     'deboard_aircraft_and_walk_to_exit_dist': None,
@@ -166,20 +167,20 @@ aircraft_params = {
 
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
     # ------------------------------------------------
-    'ground_taxi_speed': 5,  # ft/s
-    'time_passenger_embark_disembark': 60 * 4.5,  # secs
-    'time_pre_charging_processes': 128,  # sec
-    'time_charging_plug_disconnection': 21,  # sec
-    'time_post_charging_processes': 152,  # sec
-    'time_descend_transition': 40,  # sec
-    'time_hover_descend': 20,  # sec
+    'ground_taxi_speed': 3.67,  # ft/s
+    'time_passenger_embark_disembark': 60 * 3,  # secs
+    'time_pre_charging_processes': 120,  # sec
+    'time_charging_plug_disconnection': 0,  # sec
+    'time_post_charging_processes': 120,  # sec
+    'time_descend_transition': 30,  # sec
+    'time_hover_descend': 10,  # sec
     'time_rotor_spin_down': 5,  # sec
     'time_post_landing_safety_checks': 15,  # sec
-    'time_tug_connection': 30,  # sec
-    'time_tug_disconnection': 30,  # sec
-    'time_pre_take_off_check_list': 30,  # sec
+    'time_tug_connection': 0,  # sec
+    'time_tug_disconnection': 0,  # sec
+    'time_pre_take_off_check_list': 15,  # sec
     'time_rotor_spin_up': 5,  # sec
-    'time_hover_climb': 12,  # sec
+    'time_hover_climb': 10,  # sec
     'time_climb_transition': 30,  # sec
 
     # AIRCRAFT CHARGING TIME PARAMETERS
@@ -228,9 +229,6 @@ sim_setup(sim_params=sim_params,
           vertiport_params=vertiport_params,
           passenger_params=passenger_params,
           aircraft_params=aircraft_params,
-          output_params=output_params
+          output_params=output_params,
+          sim_start_time=start_time
           )
-
-end_time = time.time()
-time_taken = end_time - start_time
-print(f'Total time to run: {round(time_taken, 2)} seconds')

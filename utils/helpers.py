@@ -215,6 +215,28 @@ def get_values_from_nested_dict(dictionary, key):
     """
     return [v[key] for v in dictionary.values()]
 
+
+def get_length_of_longest_list(lst):
+    return len(max(lst, key=len))
+
+
+def get_length_of_shortest_list(lst):
+    return len(min(lst, key=len))
+
+
+def is_sqlite3(filename):
+    from os.path import isfile, getsize
+
+    if not isfile(filename):
+        return False
+    if getsize(filename) < 100: # SQLite database file header is 100 bytes
+        return False
+
+    with open(filename, 'rb') as fd:
+        header = fd.read(100)
+
+    return header[:16] == "SQLite format 3\x00"
+
 # def nested_dict_filter_values(d, depth, value):
 #     """
 #     Usage:

@@ -3,6 +3,7 @@ import os
 from utils.json_formatter import create_trajectory_json
 from utils.helpers import is_shared_charger, none_checker, get_str_before_first_occurrence_of_char
 import json
+import sqlite3
 
 
 def save_output(trackers,
@@ -12,7 +13,8 @@ def save_output(trackers,
                 # aircraft_trajectory_output_file_name,
                 # passenger_trajectory_output_file_name,
                 # flight_schedule_output_file_name,
-                performance_metrics_output_file_name):
+                performance_metrics_output_file_name,
+                performance_metrics):
     """
     Saves simulation configuration and sim output to a JSON file and also saves agent trajectories to csv.
     :param trackers : Dictionary of trackers
@@ -40,7 +42,7 @@ def save_output(trackers,
     }
 
     # Save simulation configuration to JSON file
-    with open(config_output_file_name+'.json', 'w') as outfile:
+    with open(config_output_file_name + '.json', 'w') as outfile:
         json.dump(config_output, outfile, indent=4)
 
     # Save agent trajectories to csv
@@ -49,17 +51,162 @@ def save_output(trackers,
         df.reset_index(inplace=True)
         df.rename(columns={'index': 'time'}, inplace=True)
         trajectory_output_file_name = os.path.join(output_dir, key)
-        df.to_csv(trajectory_output_file_name+'.csv')
+        df.to_csv(trajectory_output_file_name + '.csv')
 
         if key != 'flight_schedule':
             # Convert trajectory df to geoJSON and save
             agent_type = get_str_before_first_occurrence_of_char(key, '_')
             json_trajectory = create_trajectory_json(df=df, agent_type=agent_type)
-            with open(trajectory_output_file_name+'.geojson', 'w') as f:
+            with open(trajectory_output_file_name + '.geojson', 'w') as f:
                 json.dump(json_trajectory, f)
 
+    # Save performance metrics to SQLite Database
+    performance_metrics_output_file_name = os.path.join(output_dir, performance_metrics_output_file_name)
+    conn = sqlite3.connect(performance_metrics_output_file_name + '.db')
+    c = conn.cursor()
 
+    # Create table
+    c.execute('''CREATE TABLE IF NOT EXISTS performance_metrics
+    (arrival_priority INTEGER, 
+    departure_priority INTEGER, 
+    simultaneous_taxi_and_take_off INTEGER,
+    only_aircraft_simulation INTEGER, 
+    max_passenger_waiting_time_threshold REAL, 
+    passenger_arrival_schedule_file_name,
+    randomize_passenger_constants INTEGER, 
+    car_to_entrance_walking_time_constant REAL, 
+    security_check_time_constant REAL,
+    waiting_room_to_boarding_gate_walking_time_constant REAL, 
+    boarding_gate_to_aircraft_time_constant REAL,
+    embark_disembark_time_constant REAL, 
+    passenger_arrival_process_param REAL, 
+    num_passengers INTEGER, 
+    aircraft_arrival_schedule_file_name, 
+    aircraft_arrival_process_param REAL, 
+    num_aircraft INTEGER, 
+    aircraft_model TEXT, 
+    aircraft_pax INTEGER, 
+    aircraft_range INTEGER, 
+    aircraft_battery_capacity INTEGER, 
+    ground_taxi_speed REAL,
+    time_passenger_embark_disembark REAL, 
+    time_pre_charging_processes REAL, 
+    time_charging_plug_disconnection REAL,
+    time_post_charging_processes REAL, 
+    time_descend_transition REAL, 
+    time_hover_descend REAL, 
+    time_rotor_spin_down REAL,
+    time_post_landing_safety_checks REAL, 
+    time_tug_connection REAL, 
+    time_tug_disconnection REAL, 
+    time_pre_take_off_check_list REAL, 
+    time_rotor_spin_up REAL, 
+    time_hover_climb REAL, 
+    time_climb_transition REAL,
+    time_charging, 
+    charging_time_param_distribution TEXT, 
+    charging_time_param_mu REAL, 
+    vertiport_layout TEXT,
+    mean_passenger_consolidation_time REAL, 
+    max_passenger_consolidation_time REAL, 
+    min_passenger_consolidation_time REAL, 
+    mean_passenger_waiting_time REAL, 
+    max_passenger_waiting_time REAL, 
+    min_passenger_waiting_time REAL,
+    mean_passenger_departure_queue_count REAL, 
+    max_passenger_departure_queue_count REAL,
+    min_passenger_departure_queue_count REAL,
+    mean_aircraft_arrival_queue_count REAL, 
+    max_aircraft_arrival_queue_count REAL, 
+    min_aircraft_arrival_queue_count REAL,
+    mean_aircraft_departure_queue_count REAL, 
+    max_aircraft_departure_queue_count REAL, 
+    min_aircraft_departure_queue_count REAL,
+    mean_load_factor REAL, 
+    max_load_factor REAL, 
+    min_load_factor REAL, 
+    mean_aircraft_throughput REAL, 
+    total_aircraft_throughput INTEGER,
+    mean_passenger_throughput REAL, 
+    total_passenger_throughput REAL, 
+    fato_utilization REAL)''')
 
+    values = [(simulation_params['sim_params']['arrival_priority'],
+              simulation_params['sim_params']['departure_priority'],
+              simulation_params['sim_params']['simultaneous_taxi_and_take_off'],
+              simulation_params['sim_params']['only_aircraft_simulation'],
+              simulation_params['sim_params']['max_passenger_waiting_time'],
+              simulation_params['network_and_demand']['passenger_arrival_schedule_file_name'],
+              simulation_params['passenger_params']['randomize_constants'],
+              simulation_params['passenger_params']['car_to_entrance_walking_time_constant'],
+              simulation_params['passenger_params']['security_check_time_constant'],
+              simulation_params['passenger_params']['waiting_room_to_boarding_gate_walking_time_constant'],
+              simulation_params['passenger_params']['boarding_gate_to_aircraft_time_constant'],
+              simulation_params['passenger_params']['embark_disembark_time_constant'],
+              simulation_params['network_and_demand']['passenger_arrival_process'][
+                  'passenger_arrival_distribution']['parameters']['mu'],
+              simulation_params['network_and_demand']['passenger_arrival_process']['passenger_arrival_distribution'][
+                  'num_passengers'],
+              simulation_params['network_and_demand']['aircraft_arrival_schedule_file_name'],
+              simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
+                  'parameters']['mu'],
+              simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
+                  'num_aircraft'],
+              simulation_params['aircraft_params']['aircraft_model'],
+              simulation_params['aircraft_params']['pax'],
+              simulation_params['aircraft_params']['range'],
+              simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_fleet_specs'][
+                  'jobyS4']['battery_capacity'],
+              simulation_params['aircraft_params']['ground_taxi_speed'],
+              simulation_params['aircraft_params']['time_passenger_embark_disembark'],
+              simulation_params['aircraft_params']['time_pre_charging_processes'],
+              simulation_params['aircraft_params']['time_charging_plug_disconnection'],
+              simulation_params['aircraft_params']['time_post_charging_processes'],
+              simulation_params['aircraft_params']['time_descend_transition'],
+              simulation_params['aircraft_params']['time_hover_descend'],
+              simulation_params['aircraft_params']['time_rotor_spin_down'],
+              simulation_params['aircraft_params']['time_post_landing_safety_checks'],
+              simulation_params['aircraft_params']['time_tug_connection'],
+              simulation_params['aircraft_params']['time_tug_disconnection'],
+              simulation_params['aircraft_params']['time_pre_take_off_check_list'],
+              simulation_params['aircraft_params']['time_rotor_spin_up'],
+              simulation_params['aircraft_params']['time_hover_climb'],
+              simulation_params['aircraft_params']['time_climb_transition'],
+              simulation_params['aircraft_params']['time_charging'],
+              simulation_params['aircraft_params']['charging_time_dist']['distribution_name'],
+              simulation_params['aircraft_params']['charging_time_dist']['parameters']['mu'],
+              simulation_params['vertiport_params']['layout'],
+              performance_metrics['passenger_consolidation_time']['mean'],
+              performance_metrics['passenger_consolidation_time']['max'],
+              performance_metrics['passenger_consolidation_time']['min'],
+              performance_metrics['passenger_waiting_time']['mean'],
+              performance_metrics['passenger_waiting_time']['max'],
+              performance_metrics['passenger_waiting_time']['min'],
+              performance_metrics['passenger_departure_queue_count']['mean'],
+              performance_metrics['passenger_departure_queue_count']['max'],
+              performance_metrics['passenger_departure_queue_count']['min'],
+              performance_metrics['aircraft_arrival_queue_count']['mean'],
+              performance_metrics['aircraft_arrival_queue_count']['max'],
+              performance_metrics['aircraft_arrival_queue_count']['min'],
+              performance_metrics['aircraft_departure_queue_count']['mean'],
+              performance_metrics['aircraft_departure_queue_count']['max'],
+              performance_metrics['aircraft_departure_queue_count']['min'],
+              performance_metrics['load_factor']['mean'],
+              performance_metrics['load_factor']['max'],
+              performance_metrics['load_factor']['min'],
+              performance_metrics['aircraft_throughput']['mean'],
+              performance_metrics['aircraft_throughput']['total'],
+              performance_metrics['passenger_throughput']['mean'],
+              performance_metrics['passenger_throughput']['total'],
+              performance_metrics['fato_utilization'])]
+
+    query = '''INSERT INTO performance_metrics 
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,?,?,?,?,?);'''
+    c.executemany(query, values)
+
+    conn.commit()
+    conn.close()
 
     # if not shared_charger_sets:
     #     save_folder = f"output/{layout_type}_dist_{time_aircraft_arrival_interval_parameters['distribution']}_low_{time_aircraft_arrival_interval_parameters['low']}_high_{time_aircraft_arrival_interval_parameters['high']}_scale_{time_aircraft_arrival_interval_parameters['scale']}"
