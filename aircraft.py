@@ -329,9 +329,9 @@ class Aircraft:
         """
         return self.vertiport_manager.vertiport.charger_resource.request()
 
-    def get_charging_time(self):
+    def get_charging_time(self, time_passenger_embark_disembark):
         charge_time = self.vertiport_manager.charging_time_distribution.pick_number_from_distribution()
-        return max(0, charge_time)
+        return max(time_passenger_embark_disembark, charge_time)
 
     def charge_aircraft(self, charge_time: float, time_passenger_embark_disembark: float, parking_space: object,
                         time_pre_charging_processes: int, time_post_charging_processes: int,
@@ -375,7 +375,7 @@ class Aircraft:
         self.charging_start_time = self.env.now
 
         # Actual charging happens here
-        yield self.env.timeout(self.get_charging_time())
+        yield self.env.timeout(self.get_charging_time(time_passenger_embark_disembark))
 
         self.event_saver.save_charging_finish_time(charging_location=parking_space.parking_space_id,
                                                    agent_id=self.tail_number,

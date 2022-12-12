@@ -12,7 +12,7 @@ sim_params = {
     'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 60 * 30,  # seconds
+    'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,   # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,   # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
@@ -46,7 +46,7 @@ network_and_demand = {
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 0.5  # seconds
+                'mu': 60 * 5  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -89,13 +89,13 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 3.9  # seconds
+                'mu': 60 * 1  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 180,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 300,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
@@ -168,7 +168,7 @@ aircraft_params = {
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
     # ------------------------------------------------
     'ground_taxi_speed': 3.67,  # ft/s
-    'time_passenger_embark_disembark': 60 * 3,  # secs
+    'time_passenger_embark_disembark': 60 * 4,  # secs
     'time_pre_charging_processes': 120,  # sec
     'time_charging_plug_disconnection': 0,  # sec
     'time_post_charging_processes': 120,  # sec
@@ -213,7 +213,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/output/1',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/output',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

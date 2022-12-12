@@ -50,7 +50,7 @@ class PassengerArrivalSetup:
                 passenger_arrival_process=self.artificial_passenger_arrival_process,
                 flight_destination_ids=self.flight_destination_ids
             )
-            print("Success: Passenger arrival schedule is generated from the given distribution.")
+            # print("Success: Passenger arrival schedule is generated from the given distribution.")
         else:
             raise ValueError('Passenger arrival schedule or passenger arrival distribution must be defined.')
         return passenger_arrival_schedule

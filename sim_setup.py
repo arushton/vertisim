@@ -15,7 +15,7 @@ from utils.bundle_passenger_related_distributions import bundle_distributions
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
 import simpy
 import time
-import random
+import random, string
 from typing import Dict, List
 
 
@@ -38,13 +38,15 @@ def sim_setup(sim_params: dict,
         file_path=vertiport_params['vertiport_layout_file_path'],
         layout_type=vertiport_params['layout']
     )
-    print("Success: Vertiport layout created.")
+    if sim_params['verbose']:
+        print("Success: Vertiport layout created.")
     # Create the EventSaver object
     event_saver = EventSaver(env, vertiport_layout, sim_start_timestamp)
 
     # Import vertiport network
     vertiport_distances = calc_destination_vertiport_distances(network_and_demand['vertiport_network_file_path'])
-    print("Success: Vertiport network imported.")
+    if sim_params['verbose']:
+        print("Success: Vertiport network imported.")
 
     # Set vertiport configurations
     vertiport = vertiport_config(
@@ -60,7 +62,8 @@ def sim_setup(sim_params: dict,
     taxi_config = set_taxi_operations_config(
         is_simultaneous_taxi_and_take_off_allowed=sim_params['simultaneous_taxi_and_take_off']
     )
-    print("Success: Vertiport configuration is set.")
+    if sim_params['verbose']:
+        print("Success: Vertiport configuration is set.")
 
     # Import aircraft energy consumption data
     if aircraft_params['aircraft_energy_consumption_data_folder_path'] is not None:
@@ -68,7 +71,8 @@ def sim_setup(sim_params: dict,
             folder_path=aircraft_params['aircraft_energy_consumption_data_folder_path'],
             aircraft_models=network_and_demand['aircraft_arrival_process']['aircraft_fleet_specs'].keys(),
             ranges=list(vertiport_distances.values()))
-        print("Success: Aircraft energy consumption data imported.")
+        if sim_params['verbose']:
+            print("Success: Aircraft energy consumption data imported.")
     else:
         aircraft_energy_consumption_data = None
 
@@ -143,7 +147,8 @@ def sim_setup(sim_params: dict,
     env.process(
         aircraft_arrival_process.create_aircraft_arrival()
     )
-    print("Success: Aircraft arrival process is created.")
+    if sim_params['verbose']:
+        print("Success: Aircraft arrival process is created.")
 
     if sim_params['only_aircraft_simulation'] is False:
         # Load or generate passenger arrival schedule and start the passenger arrival process
@@ -169,7 +174,8 @@ def sim_setup(sim_params: dict,
         env.process(
             passenger_arrival_process.create_passenger_arrival()
         )
-        print("Success: Passenger arrival process is created.")
+        if sim_params['verbose']:
+            print("Success: Passenger arrival process is created.")
 
     # Run the simulation
     max_sim_time = sec_to_ms(sim_params['sim_time'])
@@ -178,6 +184,10 @@ def sim_setup(sim_params: dict,
     end_time = time.time()
     time_taken = end_time - sim_start_time
     print(f'Total time to run: {round(time_taken, 2)} seconds')
+
+    # Save results
+    random.seed(round(time.time()))
+    sim_id = ''.join(random.choices(string.ascii_uppercase, k=8))
 
     # Print and save performance metrics
     performance_metrics = PerformanceMetrics(sim_start_timestamp=sim_start_timestamp,
@@ -189,6 +199,7 @@ def sim_setup(sim_params: dict,
                                              passenger_transfer_time=event_saver.passenger_transfer_time,
                                              flight_schedule=event_saver.flight_schedule,
                                              fato_usage_tracker=event_saver.fato_usage_tracker,
+                                             sim_id=sim_id,
                                              verbose=sim_params['verbose'])
 
 
@@ -215,5 +226,6 @@ def sim_setup(sim_params: dict,
         # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
         # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
         performance_metrics_output_file_name=output_params['performance_metrics_output_file_name'],
-        performance_metrics=performance_metrics.performance_metrics
+        performance_metrics=performance_metrics.performance_metrics,
+        sim_id=sim_id
     )

@@ -12,7 +12,7 @@ class PerformanceMetrics:
     def __init__(self, sim_start_timestamp, passenger_consolidation_time, passenger_departure_queue_count,
                  aircraft_arrival_queue_count,
                  aircraft_departure_queue_count, passenger_waiting_time, passenger_transfer_time, flight_schedule,
-                 fato_usage_tracker, verbose=False):
+                 fato_usage_tracker, sim_id, verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
         self.passenger_consolidation_time = passenger_consolidation_time
         self.passenger_departure_queue_count = passenger_departure_queue_count
@@ -22,6 +22,7 @@ class PerformanceMetrics:
         self.passenger_transfer_time = passenger_transfer_time
         self.flight_schedule = flight_schedule
         self.fato_usage_tracker = fato_usage_tracker
+        self.sim_id = sim_id
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(dict)
 
@@ -44,7 +45,9 @@ class PerformanceMetrics:
         self.compute_fato_utilization()
 
         if verbose:
-            self.print_performance_metrics()
+            self.print_verbose_performance_metrics()
+        # else:
+        #     self.print_performance_metrics()
 
     def calculate_passenger_consolidation_time_stats(self):
         # Creates a dataframe for passenger consolidation time statistics including mean, median, standard deviation,
@@ -52,16 +55,23 @@ class PerformanceMetrics:
         consolidation_times = [x['consolidation_time'] for x in
                                list(nested_dict_all_values(self.passenger_consolidation_time, 1))]
 
-        self.performance_metrics['passenger_consolidation_time']['mean'] = round(
-            ms_to_min(np.mean(consolidation_times)), 2)
-        self.performance_metrics['passenger_consolidation_time']['median'] = round(
-            ms_to_min(np.median(consolidation_times)), 2)
-        self.performance_metrics['passenger_consolidation_time']['std'] = round(ms_to_min(np.std(consolidation_times)),
-                                                                                2)
-        self.performance_metrics['passenger_consolidation_time']['max'] = round(ms_to_min(np.max(consolidation_times)),
-                                                                                2)
-        self.performance_metrics['passenger_consolidation_time']['min'] = round(ms_to_min(np.min(consolidation_times)),
-                                                                                2)
+        if consolidation_times:
+            self.performance_metrics['passenger_consolidation_time']['mean'] = round(
+                ms_to_min(np.mean(consolidation_times)), 2)
+            self.performance_metrics['passenger_consolidation_time']['median'] = round(
+                ms_to_min(np.median(consolidation_times)), 2)
+            self.performance_metrics['passenger_consolidation_time']['std'] = round(ms_to_min(np.std(consolidation_times)),
+                                                                                    2)
+            self.performance_metrics['passenger_consolidation_time']['max'] = round(ms_to_min(np.max(consolidation_times)),
+                                                                                    2)
+            self.performance_metrics['passenger_consolidation_time']['min'] = round(ms_to_min(np.min(consolidation_times)),
+                                                                                    2)
+        else:
+            self.performance_metrics['passenger_consolidation_time']['mean'] = -1
+            self.performance_metrics['passenger_consolidation_time']['median'] = -1
+            self.performance_metrics['passenger_consolidation_time']['std'] = -1
+            self.performance_metrics['passenger_consolidation_time']['max'] = -1
+            self.performance_metrics['passenger_consolidation_time']['min'] = -1
 
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
@@ -93,10 +103,8 @@ class PerformanceMetrics:
             np.median(list(self.passenger_departure_queue_count.values())), 2)
         self.performance_metrics['passenger_departure_queue_count']['std'] = round(
             np.std(list(self.passenger_departure_queue_count.values())), 2)
-        self.performance_metrics['passenger_departure_queue_count']['max'] = round(
-            np.max(list(self.passenger_departure_queue_count.values())), 2)
-        self.performance_metrics['passenger_departure_queue_count']['min'] = round(
-            np.min(list(self.passenger_departure_queue_count.values())), 2)
+        self.performance_metrics['passenger_departure_queue_count']['max'] = max(list(self.passenger_departure_queue_count.values()))
+        self.performance_metrics['passenger_departure_queue_count']['min'] = min(list(self.passenger_departure_queue_count.values()))
 
     def calculate_aircraft_arrival_queue_count_stats(self):
         # Creates a dataframe for aircraft arrival queue count statistics including mean, median, standard deviation,
@@ -106,10 +114,8 @@ class PerformanceMetrics:
             np.median(list(self.aircraft_arrival_queue_count.values())), 2)
         self.performance_metrics['aircraft_arrival_queue_count']['std'] = round(
             np.std(list(self.aircraft_arrival_queue_count.values())), 2)
-        self.performance_metrics['aircraft_arrival_queue_count']['max'] = round(
-            np.max(list(self.aircraft_arrival_queue_count.values())), 2)
-        self.performance_metrics['aircraft_arrival_queue_count']['min'] = round(
-            np.min(list(self.aircraft_arrival_queue_count.values())), 2)
+        self.performance_metrics['aircraft_arrival_queue_count']['max'] = max(list(self.aircraft_arrival_queue_count.values()))
+        self.performance_metrics['aircraft_arrival_queue_count']['min'] = min(list(self.aircraft_arrival_queue_count.values()))
 
     def calculate_aircraft_departure_queue_count_stats(self):
         # Creates a dataframe for aircraft departure queue count statistics including mean, median, standard deviation,
@@ -119,21 +125,8 @@ class PerformanceMetrics:
             np.median(list(self.aircraft_departure_queue_count.values())), 2)
         self.performance_metrics['aircraft_departure_queue_count']['std'] = round(
             np.std(list(self.aircraft_departure_queue_count.values())), 2)
-        self.performance_metrics['aircraft_departure_queue_count']['max'] = round(
-            np.max(list(self.aircraft_departure_queue_count.values())), 2)
-        self.performance_metrics['aircraft_departure_queue_count']['min'] = round(
-            np.min(list(self.aircraft_departure_queue_count.values())), 2)
-
-    def plot_aircraft_arrival_queue_count(self):
-        # Plots aircraft arrival queue count
-        plt.plot(
-            np.round((np.array(list(self.aircraft_arrival_queue_count.keys())) - self.sim_start_timestamp) / 60000),
-            list(self.aircraft_arrival_queue_count.values()),
-            alpha=0.4)
-        plt.xlabel('Time (min)')
-        plt.ylabel('Aircraft Arrival Queue Count')
-        plt.title('Aircraft Arrival Queue Count Over Time')
-        plt.show()
+        self.performance_metrics['aircraft_departure_queue_count']['max'] = max(list(self.aircraft_departure_queue_count.values()))
+        self.performance_metrics['aircraft_departure_queue_count']['min'] = min(list(self.aircraft_departure_queue_count.values()))
 
     def compute_load_factor_stats(self):
         # Computes load factor statistics
@@ -154,13 +147,25 @@ class PerformanceMetrics:
 
     def compute_average_passenger_throughput(self):
         # Computes the passenger throughput skipping the first 1 hour of the simulation
+        total_sim_time = self.calculate_total_simulated_time()
+        first, second = self.get_time_interval(total_sim_time)
         total_passengers = 0
         for key, value in self.flight_schedule.items():
-            if self.sim_start_timestamp + self.hour <= key <= self.sim_start_timestamp + 2 * self.hour:
+            if self.sim_start_timestamp + self.hour * first <= key <= self.sim_start_timestamp + second * self.hour:
                 total_passengers += len(self.flight_schedule[key]['passengers'])
 
         self.performance_metrics['passenger_throughput']['mean'] = total_passengers / 2
         return total_passengers / 2
+
+    def get_time_interval(self, total_sim_time):
+        if total_sim_time < 4:
+            raise ValueError(f'Simulation time is less than 3 hours. Simulation ID: {self.sim_id}')
+        elif 4 <= total_sim_time <= 5:
+            return 1, 2
+        elif 5 < total_sim_time <= 7:
+            return 2, 3
+        else:
+            return 3, 4
 
     def compute_aircraft_throughput(self):
         # Computes the aircraft throughput
@@ -169,9 +174,11 @@ class PerformanceMetrics:
 
     def compute_average_aircraft_throughput(self):
         # Computes the passenger throughput
+        total_sim_time = self.calculate_total_simulated_time()
+        first, second = self.get_time_interval(total_sim_time)
         total_aircraft = 0
         for key, value in self.flight_schedule.items():
-            if self.sim_start_timestamp + self.hour <= key <= self.sim_start_timestamp + 2 * self.hour:
+            if self.sim_start_timestamp + self.hour * first <= key <= self.sim_start_timestamp + second * self.hour:
                 if self.flight_schedule[key]['event'] == 'take_off':
                     total_aircraft += 1
         self.performance_metrics['aircraft_throughput']['mean'] = total_aircraft
@@ -182,12 +189,14 @@ class PerformanceMetrics:
         keys = list(self.fato_usage_tracker.keys())
         values = list(self.fato_usage_tracker.values())
         time_fato_empty = 0
-        for i in range(2, len(keys) - 1):
-            if values[i] == 0:
-                if values[i + 1] == 1:
+        after_hour = []
+        for i in range(len(keys) - 1):
+            if keys[i] >= self.sim_start_timestamp + self.hour:
+                after_hour.append(keys[i])
+                if values[i] == 0 and values[i + 1] == 1:
                     time_fato_empty += keys[i + 1] - keys[i]
 
-        total_sim_time = keys[-1] - keys[2]
+        total_sim_time = after_hour[-1] - after_hour[0]
         fato_utilization = round((total_sim_time - time_fato_empty) / total_sim_time * 100, 2)
         self.performance_metrics['fato_utilization'] = fato_utilization
 
@@ -254,12 +263,6 @@ class PerformanceMetrics:
     def print_aircraft_arrival_queue_count_stats(self):
         print("Aircraft arrival queue count statistics:")
         print("-----------------------------")
-        print(self.calculate_aircraft_arrival_queue_count_stats())
-        print("")
-
-    def print_aircraft_departure_queue_count_stats(self):
-        print("Aircraft departure queue count statistics:")
-        print("-----------------------------")
         df = pd.DataFrame(
             {
                 'mean': [self.performance_metrics['aircraft_arrival_queue_count']['mean']],
@@ -272,9 +275,38 @@ class PerformanceMetrics:
         print(df)
         print("")
 
+    def print_aircraft_departure_queue_count_stats(self):
+        print("Aircraft departure queue count statistics:")
+        print("-----------------------------")
+        df = pd.DataFrame(
+            {
+                'mean': [self.performance_metrics['aircraft_departure_queue_count']['mean']],
+                'median': [self.performance_metrics['aircraft_departure_queue_count']['median']],
+                'std': [self.performance_metrics['aircraft_departure_queue_count']['std']],
+                'max': [self.performance_metrics['aircraft_departure_queue_count']['max']],
+                'min': [self.performance_metrics['aircraft_departure_queue_count']['min']]
+            }
+        )
+        print(df)
+        print("")
+
+    def plot_aircraft_arrival_queue_count(self):
+        # Plots aircraft arrival queue count
+        plt.plot(
+            np.round((np.array(list(self.aircraft_arrival_queue_count.keys())) - self.sim_start_timestamp) / 60000),
+            list(self.aircraft_arrival_queue_count.values()),
+            alpha=0.4)
+        plt.xlabel('Time (min)')
+        plt.ylabel('Aircraft Arrival Queue Count')
+        plt.title('Aircraft Arrival Queue Count Over Time')
+        plt.show()
+
+    def calculate_total_simulated_time(self):
+        # Calculates total simulated time
+        return round((list(self.flight_schedule.keys())[-1] - self.sim_start_timestamp)/self.hour, 2)
+
     def print_total_simulated_time(self):
-        total_simulated_time = round((list(self.flight_schedule.keys())[-1] - self.sim_start_timestamp)/self.hour, 2)
-        print(f"{total_simulated_time} hours simulated")
+        print(f"{self.calculate_total_simulated_time()} hours simulated")
 
     def print_avg_load_factor(self):
         print(f"Average load factor: {self.performance_metrics['load_factor']['mean']}")
@@ -294,7 +326,7 @@ class PerformanceMetrics:
     def print_fato_utilization(self):
         print(f"FATO utilization: {self.performance_metrics['fato_utilization']}%")
 
-    def print_performance_metrics(self):
+    def print_verbose_performance_metrics(self):
         self.print_passenger_consolidation_time_stats()
         self.print_passenger_waiting_time_stats()
         self.print_passenger_transfer_time_stats()
@@ -308,6 +340,17 @@ class PerformanceMetrics:
         self.print_total_passenger_throughput()
         self.print_average_passenger_throughput()
         self.print_fato_utilization()
+        # self.plot_aircraft_arrival_queue_count()
+
+    def print_performance_metrics(self):
+        self.print_total_simulated_time()
+        self.print_avg_load_factor()
+        self.print_total_aircraft_throughput()
+        self.print_average_aircarft_throughput()
+        self.print_total_passenger_throughput()
+        self.print_average_passenger_throughput()
+        self.print_fato_utilization()
+        # self.plot_aircraft_arrival_queue_count()
 
 # def print_passenger_consolidation_time_stats(self):
 #     print("Passenger consolidation time stats:")

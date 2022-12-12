@@ -51,7 +51,6 @@ class VertiportManager:
 
     # AIRCRAFT RELATED METHODS
     # -------------------------
-
     def build_charging_time_distribution(self):
         """
         Builds the charging time distribution with the given parameters
