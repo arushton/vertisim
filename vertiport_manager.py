@@ -346,13 +346,19 @@ class VertiportManager:
         """
         while True:
             # Check the waiting rooms every max_waiting_time/2.
-            yield self.env.timeout(round(sec_to_ms(self.max_flight_waiting_time) / 2))
+            yield self.env.timeout(round(sec_to_ms(self.max_flight_waiting_time) / 4))
 
             if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold(
                     sec_to_ms(self.max_flight_waiting_time)):
                 # for departing_passengers in departing_passenger_groups:
                 #     yield self.env.process(self.reserve_aircraft(departing_passengers))
 
+                # Save passenger waiting room departure time
+                for departing_passengers in departing_passenger_groups:
+                    for passenger in departing_passengers:
+                        self.event_saver.save_passenger_waiting_room_departure_time(agent_id=passenger.passenger_id,
+                                                                                    waiting_room_id=passenger.dest_vertiport_id,
+                                                                                    agent_type='passenger')
                 # Increase passenger queue count
                 self.event_saver.update_passenger_departure_queue_counter(queue_update=len(departing_passenger_groups))
 

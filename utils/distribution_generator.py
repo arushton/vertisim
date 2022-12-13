@@ -21,26 +21,26 @@ class DistributionGenerator:
     def __init__(self, distribution_params: Dict, max_val_in_dist: Union[float, int]):
         self.distribution_params = distribution_params
         self.max_val_in_dist = max_val_in_dist
+        self.distribution = getattr(stats, self.distribution_params['distribution_name'])
         # self.population, self.probabilities = self.generate_distribution()
 
-    def generate_distribution(self) -> int:
-        """
-        Generates a distribution given distribution name and parameters.
-        :param distribution_params
-        :param max_val_in_dist
-        :return:
-        population: np.ndarray of values in the distribution
-        probabilities: np.ndarray of probabilities of values in the distribution
-        """
-        dist = getattr(stats, self.distribution_params['distribution_name'])
-        return dist.rvs(**self.distribution_params['parameters'], size=1)[0]
+    # def generate_distribution(self) -> int:
+    #     """
+    #     Generates a distribution given distribution name and parameters.
+    #     :param distribution_params
+    #     :param max_val_in_dist
+    #     :return:
+    #     population: np.ndarray of values in the distribution
+    #     probabilities: np.ndarray of probabilities of values in the distribution
+    #     """
+    #     return self.distribution.rvs(**self.distribution_params['parameters'], size=1)[0]
 
     def pick_number_from_distribution(self):
         """
         Picks a number from the distribution.
         :return:
         """
-        time = self.generate_distribution()
+        time = self.distribution.rvs(**self.distribution_params['parameters'], size=1)[0]
         time_sec = round(max(0, time))
         return sec_to_ms(time_sec)
 
