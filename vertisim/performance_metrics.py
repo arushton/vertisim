@@ -142,7 +142,7 @@ class PerformanceMetrics:
     def compute_total_passenger_throughput(self):
         # Computes the total passenger throughput
         total_passengers = sum(
-            len(flight) for flight in get_values_from_nested_dict(self.flight_schedule, 'passengers')) / 2
+            len(flight) for flight in get_values_from_nested_dict(self.flight_schedule, 'passengers'))
         self.performance_metrics['passenger_throughput']['total'] = total_passengers
         return total_passengers
 
@@ -150,39 +150,63 @@ class PerformanceMetrics:
         # Computes the passenger throughput skipping the first 1 hour of the simulation
         total_sim_time = self.calculate_total_simulated_time()
         first, second = self.get_time_interval(total_sim_time)
+        interval_length = second - first
         total_passengers = 0
         for key, value in self.flight_schedule.items():
             if self.sim_start_timestamp + self.hour * first <= key <= self.sim_start_timestamp + second * self.hour:
                 total_passengers += len(self.flight_schedule[key]['passengers'])
 
-        self.performance_metrics['passenger_throughput']['mean'] = total_passengers / 2
-        return total_passengers / 2
+        self.performance_metrics['passenger_throughput']['mean'] = total_passengers / interval_length
+        return total_passengers / interval_length
 
-    def get_time_interval(self, total_sim_time):
+    def get_time_interval(self, total_sim_time: int) -> [int, int, int]:
+        """
+        Returns the time interval for the result indexing.
+        :param total_sim_time: Total simulation time
+        :return: Start of interval, end of interval
+        """
         if total_sim_time < 4:
             raise ValueError(f'Simulation time is less than 3 hours. Simulation ID: {self.sim_id}')
-        elif 4 <= total_sim_time <= 5:
-            return 1, 2
-        elif 5 < total_sim_time <= 7:
-            return 2, 3
+        elif 3 <= total_sim_time <= 4:
+            return 1, 3
+        elif 4 < total_sim_time <= 5:
+            return 2, 4
+        elif 5 < total_sim_time <= 6:
+            return 2, 5
+        elif 6 < total_sim_time <= 7:
+            return 2, 5
+        elif 7 < total_sim_time <= 8:
+            return 3, 6
+        elif 8 < total_sim_time <= 9:
+            return 3, 7
+        elif 9 < total_sim_time <= 10:
+            return 3, 8
+        elif 10 < total_sim_time <= 11:
+            return 4, 9
+        elif 11 < total_sim_time <= 12:
+            return 4, 9
+        elif 12 < total_sim_time <= 13:
+            return 4, 10
+        elif 13 < total_sim_time <= 14:
+            return 4, 10
         else:
-            return 3, 4
+            return 4, round(total_sim_time) - 5
 
     def compute_aircraft_throughput(self):
         # Computes the aircraft throughput
-        self.performance_metrics['aircraft_throughput']['total'] = len(self.flight_schedule) / 2
-        return len(self.flight_schedule) / 2
+        self.performance_metrics['aircraft_throughput']['total'] = len(self.flight_schedule)
+        return len(self.flight_schedule)
 
     def compute_average_aircraft_throughput(self):
         # Computes the passenger throughput
         total_sim_time = self.calculate_total_simulated_time()
         first, second = self.get_time_interval(total_sim_time)
+        interval_length = second - first
         total_aircraft = 0
         for key, value in self.flight_schedule.items():
             if self.sim_start_timestamp + self.hour * first <= key <= self.sim_start_timestamp + second * self.hour:
-                if self.flight_schedule[key]['event'] == 'take_off':
-                    total_aircraft += 1
-        self.performance_metrics['aircraft_throughput']['mean'] = total_aircraft
+                total_aircraft += 1
+        self.performance_metrics['aircraft_throughput']['mean'] = total_aircraft / interval_length
         return total_aircraft
 
     def compute_fato_utilization(self):

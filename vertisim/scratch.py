@@ -71,12 +71,12 @@ plt.show()
 
 
 
-# Merge the "performance_metrics" tables from performance_metrics.db and performance_metrics_2.db. Keep the column names the same.
+# Merge the "performance_metrics" tables from performance_metrics_3.db and performance_metrics_2.db. Keep the column names the same.
 import sqlite3
 import pandas as pd
 
 # Connect to the database
-conn = sqlite3.connect('performance_metrics.db')
+conn = sqlite3.connect('performance_metrics_3.db')
 
 # Read the "performance_metrics" table into a pandas dataframe
 df = pd.read_sql_query("SELECT * FROM performance_metrics", conn)
@@ -106,12 +106,12 @@ conn.close()
 
 
 
-# Remove the rows in performance_metrics table in performance_metrics.db where passenger_arrival_process_param is 90
+# Remove the rows in performance_metrics table in performance_metrics_3.db where passenger_arrival_process_param is 90
 import sqlite3
 import pandas as pd
 
 # Connect to the database
-conn = sqlite3.connect('performance_metrics.db')
+conn = sqlite3.connect('performance_metrics_3.db')
 
 # Create a cursor
 c = conn.cursor()

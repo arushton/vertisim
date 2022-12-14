@@ -309,10 +309,10 @@ class VertiportManager:
         for passenger in departing_passengers:
             self.event_saver.save_passenger_flight_assignment_time(passenger_id=passenger.passenger_id,
                                                                    agent_type='passenger')
-        self.event_saver.save_flight_info(tail_number=aircraft.tail_number,
-                                          passengers=get_passenger_ids_from_passenger_list(departing_passengers),
-                                          aircraft_model=aircraft.aircraft_model,
-                                          event_type='flight_assignment')
+        # self.event_saver.save_flight_info(tail_number=aircraft.tail_number,
+        #                                   passengers=get_passenger_ids_from_passenger_list(departing_passengers),
+        #                                   aircraft_model=aircraft.aircraft_model,
+        #                                   event_type='flight_assignment')
 
         # Simulate aircraft departure process
         yield self.env.process(

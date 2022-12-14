@@ -26,7 +26,9 @@ def loop_input(passenger_arrival_mu,
         'only_aircraft_simulation': only_aircraft_sim,
         # If True, then the simulation will only simulate aircraft turnaround.
         'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
-        'verbose': False  # If True, then the simulation will print the simulation output and performance metrics.
+        'verbose': False,  # If True, then the simulation will print the simulation output and performance metrics.
+        'battery_model_sim': False  # If True, then the simulation will use the battery model.
+
         # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
         #                                      # Assign the least capacity aircraft that can complete the mission)
         # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (
@@ -62,7 +64,7 @@ def loop_input(passenger_arrival_mu,
                     # 'param3': None
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-                'num_passengers': 400,  # Number of passengers to be generated
+                'num_passengers': 1500,  # Number of passengers to be generated
                 'max_val_in_dist': 120  # seconds  # UNUSED
             }
         },
@@ -106,7 +108,7 @@ def loop_input(passenger_arrival_mu,
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
                 'max_interarrival_time': 180,  # seconds
-                'num_aircraft': 400,
+                'num_aircraft': 1500,
                 # Number of aircraft in the simulation. If None, then the required number of aircraft
                 # will be estimated from the num_passengers.
                 'num_passengers': None,

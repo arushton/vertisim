@@ -11,7 +11,8 @@
         "interuptive_approach": false,
         "only_aircraft_simulation": false,
         "default_aircraft": true,
-        "verbose": false
+        "verbose": false,
+        "battery_model_sim": false
     },
     "network_and_demand": {
         "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv",
@@ -21,10 +22,10 @@
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 180
+                    "mu": 120
                 },
                 "distribution_type": "discrete",
-                "num_passengers": 400,
+                "num_passengers": 1500,
                 "max_val_in_dist": 120
             }
         },
@@ -39,11 +40,11 @@
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 210
+                    "mu": 180
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180,
-                "num_aircraft": 400,
+                "num_aircraft": 1500,
                 "num_passengers": null,
                 "min_init_soc": 20,
                 "max_init_soc": 50
@@ -52,15 +53,15 @@
     },
     "vertiport_params": {
         "vertiport_layout_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls",
-        "layout": "clover_1_fato_8_park",
+        "layout": "clover_1_fato_4_park",
         "num_security_check_servers": 20,
-        "num_chargers": 8,
+        "num_chargers": 4,
         "charger_max_charge_rate": 480,
         "charger_efficiency": 0.9,
         "shared_charger_sets": null
     },
     "passenger_params": {
-        "randomize_constants": true,
+        "randomize_constants": false,
         "car_to_entrance_walking_time_constant": 40,
         "car_to_entrance_walking_time_dist": null,
         "security_check_time_constant": 20,
