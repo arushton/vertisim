@@ -67,6 +67,7 @@ class PerformanceMetrics:
             self.performance_metrics['passenger_consolidation_time']['min'] = round(ms_to_min(np.min(consolidation_times)),
                                                                                     2)
         else:
+            # If all the passengers are flying on a different flight, then there is no consolidation timeß
             self.performance_metrics['passenger_consolidation_time']['mean'] = -1
             self.performance_metrics['passenger_consolidation_time']['median'] = -1
             self.performance_metrics['passenger_consolidation_time']['std'] = -1

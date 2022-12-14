@@ -14,14 +14,14 @@
         "verbose": false
     },
     "network_and_demand": {
-        "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/input/vertiport_network_full.csv",
+        "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv",
         "passenger_arrival_schedule_file_name": null,
         "aircraft_arrival_schedule_file_name": null,
         "passenger_arrival_process": {
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 90
+                    "mu": 180
                 },
                 "distribution_type": "discrete",
                 "num_passengers": 400,
@@ -51,10 +51,10 @@
         }
     },
     "vertiport_params": {
-        "vertiport_layout_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/input/skyport_layouts/skyport_layout.xls",
-        "layout": "clover_1_fato_2_park",
+        "vertiport_layout_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls",
+        "layout": "clover_1_fato_8_park",
         "num_security_check_servers": 20,
-        "num_chargers": 2,
+        "num_chargers": 8,
         "charger_max_charge_rate": 480,
         "charger_efficiency": 0.9,
         "shared_charger_sets": null
@@ -98,16 +98,16 @@
         "charging_time_dist": {
             "distribution_name": "poisson",
             "parameters": {
-                "mu": 300
+                "mu": 900
             },
             "distribution_type": "discrete",
             "max_charge_duration": 1800
         },
-        "aircraft_energy_consumption_data_folder_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/input/aircraft_energy_consumption",
+        "aircraft_energy_consumption_data_folder_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption",
         "min_reserve_soc": 20
     },
     "output_params": {
-        "output_folder_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/output",
+        "output_folder_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output",
         "config_output_file_name": "config",
         "performance_metrics_output_file_name": "performance_metrics"
     }

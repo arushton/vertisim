@@ -71,36 +71,38 @@ plt.show()
 
 
 
-# Merge the "performance_metrics" tables from performance_metrics.db and performance_metrics_2.db
+# Merge the "performance_metrics" tables from performance_metrics.db and performance_metrics_2.db. Keep the column names the same.
 import sqlite3
 import pandas as pd
 
 # Connect to the database
 conn = sqlite3.connect('performance_metrics.db')
-conn_2 = sqlite3.connect('performance_metrics_2.db')
 
-# Create a cursor
-c = conn.cursor()
-c_2 = conn_2.cursor()
-
-# Query the database
-c.execute("SELECT * FROM performance_metrics")
-c_2.execute("SELECT * FROM performance_metrics")
-
-# Fetch the results
-results = c.fetchall()
-results_2 = c_2.fetchall()
-
-# Create a dataframe
-df = pd.DataFrame(results)
-df_2 = pd.DataFrame(results_2)
+# Read the "performance_metrics" table into a pandas dataframe
+df = pd.read_sql_query("SELECT * FROM performance_metrics", conn)
 
 # Close the connection
 conn.close()
-conn_2.close()
+
+# Connect to the database
+conn = sqlite3.connect('performance_metrics_2.db')
+
+# Read the "performance_metrics" table into a pandas dataframe
+df_2 = pd.read_sql_query("SELECT * FROM performance_metrics", conn)
+
+# Close the connection
+conn.close()
 
 # Merge the two dataframes
-df = pd.concat([df, df_2], ignore_index=True)
+df = pd.concat([df, df_2])
+
+# Create a new database and save the merged dataframe to the new database
+conn = sqlite3.connect('performance_metrics_merged.db')
+df.to_sql('performance_metrics', conn, index=False)
+conn.close()
+
+
+
 
 
 

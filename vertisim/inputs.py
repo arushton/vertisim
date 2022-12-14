@@ -1,5 +1,5 @@
 import time
-from sim_setup import sim_setup
+from sim_setup import SimSetup
 
 # ------------------------ Inputs ------------------------
 # Simulation parameters
@@ -13,10 +13,12 @@ sim_params = {
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 60 * 10,  # seconds
-    'interuptive_approach': False,   # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': False,   # If True, then the simulation will only simulate aircraft turnaround.
+    'interuptive_approach': False,
+    # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
+    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
-    'verbose': True    # If True, then the simulation will print the simulation output and performance metrics.
+    'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
+    'battery_model_sim': False  # If True, then the simulation will use the battery model.
     # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
     #                                      # Assign the least capacity aircraft that can complete the mission)
     # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (
@@ -104,7 +106,6 @@ network_and_demand = {
     }
 }
 
-
 # Vertiport parameters
 # --------------------
 vertiport_params = {
@@ -128,7 +129,7 @@ vertiport_params = {
 # --------------------
 # Time parameters should be a constant or a distribution. One should be None, the other should be provided.
 passenger_params = {
-    'randomize_constants': True,  # If true, the constants will be randomized. If false, the constants will be used as
+    'randomize_constants': False,  # If true, the constants will be randomized. If false, the constants will be used as
     # it is.
     'car_to_entrance_walking_time_constant': 40,  # secs
     'car_to_entrance_walking_time_dist': None,
@@ -208,12 +209,13 @@ aircraft_params = {
         # time distribution generation.
     },
     'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                                  'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
-    'min_reserve_soc': 20  # %  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
+                                                    'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
+    'min_reserve_soc': 20
+    # %  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/test',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
@@ -224,11 +226,11 @@ output_params = {
 # ----------------------------------------------------------
 start_time = time.time()
 
-sim_setup(sim_params=sim_params,
-          network_and_demand=network_and_demand,
-          vertiport_params=vertiport_params,
-          passenger_params=passenger_params,
-          aircraft_params=aircraft_params,
-          output_params=output_params,
-          sim_start_time=start_time
-          )
+SimSetup(sim_params=sim_params,
+         network_and_demand=network_and_demand,
+         vertiport_params=vertiport_params,
+         passenger_params=passenger_params,
+         aircraft_params=aircraft_params,
+         output_params=output_params,
+         sim_start_time=start_time
+         )

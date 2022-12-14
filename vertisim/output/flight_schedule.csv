@@ -1,305 +1,565 @@
 ,time,tail_number,passengers,aircraft_model,event
-0,1625066100001,aircraft_0,"[0, 1]",jobyS4,flight_assignment
-1,1625066130395,aircraft_0,"[0, 1]",jobyS4,take_off
-2,1625066340396,aircraft_1,"[3, 4, 5]",jobyS4,flight_assignment
-3,1625066370447,aircraft_1,"[3, 4, 5]",jobyS4,take_off
-4,1625066545793,aircraft_2,"[2, 14]",jobyS4,flight_assignment
-5,1625066576185,aircraft_2,"[2, 14]",jobyS4,take_off
-6,1625066826502,aircraft_3,"[6, 8, 12, 13]",jobyS4,flight_assignment
-7,1625066856551,aircraft_3,"[6, 8, 12, 13]",jobyS4,take_off
-8,1625067034583,aircraft_4,"[7, 10, 17]",jobyS4,flight_assignment
-9,1625067064975,aircraft_4,"[7, 10, 17]",jobyS4,take_off
-10,1625067268606,aircraft_5,"[9, 21]",jobyS4,flight_assignment
-11,1625067298655,aircraft_5,"[9, 21]",jobyS4,take_off
-12,1625067527373,aircraft_6,"[15, 16, 19, 23]",jobyS4,flight_assignment
-13,1625067557765,aircraft_6,"[15, 16, 19, 23]",jobyS4,take_off
-14,1625067755710,aircraft_7,"[11, 22, 25]",jobyS4,flight_assignment
-15,1625067785759,aircraft_7,"[11, 22, 25]",jobyS4,take_off
-16,1625068014163,aircraft_8,"[18, 20]",jobyS4,flight_assignment
-17,1625068044555,aircraft_8,"[18, 20]",jobyS4,take_off
-18,1625068254556,aircraft_9,"[24, 27, 28]",jobyS4,flight_assignment
-19,1625068284607,aircraft_9,"[24, 27, 28]",jobyS4,take_off
-20,1625068483953,aircraft_10,"[26, 29, 34]",jobyS4,flight_assignment
-21,1625068514345,aircraft_10,"[26, 29, 34]",jobyS4,take_off
-22,1625068717662,aircraft_11,"[31, 35, 36, 37]",jobyS4,flight_assignment
-23,1625068747711,aircraft_11,"[31, 35, 36, 37]",jobyS4,take_off
-24,1625068940743,aircraft_12,"[30, 39]",jobyS4,flight_assignment
-25,1625068971135,aircraft_12,"[30, 39]",jobyS4,take_off
-26,1625069181136,aircraft_13,"[33, 40]",jobyS4,flight_assignment
-27,1625069211187,aircraft_13,"[33, 40]",jobyS4,take_off
-28,1625069415533,aircraft_14,"[32, 43, 44]",jobyS4,flight_assignment
-29,1625069445925,aircraft_14,"[32, 43, 44]",jobyS4,take_off
-30,1625069664242,aircraft_15,[41],jobyS4,flight_assignment
-31,1625069694291,aircraft_15,[41],jobyS4,take_off
-32,1625069928323,aircraft_16,[38],jobyS4,flight_assignment
-33,1625069958715,aircraft_16,[38],jobyS4,take_off
-34,1625070168716,aircraft_17,"[47, 52]",jobyS4,flight_assignment
-35,1625070198767,aircraft_17,"[47, 52]",jobyS4,take_off
-36,1625070397113,aircraft_18,"[45, 55]",jobyS4,flight_assignment
-37,1625070427505,aircraft_18,"[45, 55]",jobyS4,take_off
-38,1625070659822,aircraft_19,"[42, 46, 58, 59]",jobyS4,flight_assignment
-39,1625070689871,aircraft_19,"[42, 46, 58, 59]",jobyS4,take_off
-40,1625070899872,aircraft_20,[48],jobyS4,flight_assignment
-41,1625070930266,aircraft_20,[48],jobyS4,take_off
-42,1625071144926,aircraft_21,"[54, 64]",jobyS4,flight_assignment
-43,1625071174975,aircraft_21,"[54, 64]",jobyS4,take_off
-44,1625071349664,aircraft_22,"[49, 50]",jobyS4,flight_assignment
-45,1625071380056,aircraft_22,"[49, 50]",jobyS4,take_off
-46,1625071620030,aircraft_23,"[53, 56, 65, 66]",jobyS4,flight_assignment
-47,1625071650079,aircraft_23,"[53, 56, 65, 66]",jobyS4,take_off
-48,1625071825454,aircraft_24,"[51, 60, 62, 67]",jobyS4,flight_assignment
-49,1625071855846,aircraft_24,"[51, 60, 62, 67]",jobyS4,take_off
-50,1625072090134,aircraft_25,"[63, 74]",jobyS4,flight_assignment
-51,1625072120183,aircraft_25,"[63, 74]",jobyS4,take_off
-52,1625072279244,aircraft_26,"[68, 72]",jobyS4,flight_assignment
-53,1625072309636,aircraft_26,"[68, 72]",jobyS4,take_off
-54,1625072561238,aircraft_27,"[57, 61, 75]",jobyS4,flight_assignment
-55,1625072591287,aircraft_27,"[57, 61, 75]",jobyS4,take_off
-56,1625072801288,aircraft_28,"[69, 71, 73]",jobyS4,flight_assignment
-57,1625072831682,aircraft_28,"[69, 71, 73]",jobyS4,take_off
-58,1625073037342,aircraft_29,"[70, 80]",jobyS4,flight_assignment
-59,1625073067391,aircraft_29,"[70, 80]",jobyS4,take_off
-60,1625073265080,aircraft_30,"[76, 77, 83]",jobyS4,flight_assignment
-61,1625073295472,aircraft_30,"[76, 77, 83]",jobyS4,take_off
-62,1625073538446,aircraft_31,"[78, 81, 82, 86]",jobyS4,flight_assignment
-63,1625073568495,aircraft_31,"[78, 81, 82, 86]",jobyS4,take_off
-64,1625073709870,aircraft_32,[79],jobyS4,flight_assignment
-65,1625073740262,aircraft_32,[79],jobyS4,take_off
-66,1625074016550,aircraft_33,"[84, 89, 94]",jobyS4,flight_assignment
-67,1625074046599,aircraft_33,"[84, 89, 94]",jobyS4,take_off
-68,1625074167660,aircraft_34,"[85, 87, 90]",jobyS4,flight_assignment
-69,1625074198052,aircraft_34,"[85, 87, 90]",jobyS4,take_off
-70,1625074526654,aircraft_35,[88],jobyS4,flight_assignment
-71,1625074556703,aircraft_35,[88],jobyS4,take_off
-72,1625074664450,aircraft_36,"[92, 97, 98, 102]",jobyS4,flight_assignment
-73,1625074707098,aircraft_36,"[92, 97, 98, 102]",jobyS4,take_off
-74,1625074995758,aircraft_37,[95],jobyS4,flight_assignment
-75,1625075025807,aircraft_37,[95],jobyS4,take_off
-76,1625075146496,aircraft_38,"[91, 93, 96]",jobyS4,flight_assignment
-77,1625075176888,aircraft_38,"[91, 93, 96]",jobyS4,take_off
-78,1625075477862,aircraft_39,"[99, 101, 105, 106]",jobyS4,flight_assignment
-79,1625075507911,aircraft_39,"[99, 101, 105, 106]",jobyS4,take_off
-80,1625075618286,aircraft_40,"[100, 107, 113]",jobyS4,flight_assignment
-81,1625075658306,aircraft_40,"[100, 107, 113]",jobyS4,take_off
-82,1625075948966,aircraft_41,"[104, 111, 116]",jobyS4,flight_assignment
-83,1625075979015,aircraft_41,"[104, 111, 116]",jobyS4,take_off
-84,1625076060704,aircraft_42,"[103, 109]",jobyS4,flight_assignment
-85,1625076129410,aircraft_42,"[103, 109]",jobyS4,take_off
-86,1625076426070,aircraft_43,"[108, 112, 115, 117]",jobyS4,flight_assignment
-87,1625076456119,aircraft_43,"[108, 112, 115, 117]",jobyS4,take_off
-88,1625076575808,aircraft_44,[114],jobyS4,flight_assignment
-89,1625076606514,aircraft_44,[114],jobyS4,take_off
-90,1625076883174,aircraft_45,"[110, 127]",jobyS4,flight_assignment
-91,1625076913223,aircraft_45,"[110, 127]",jobyS4,take_off
-92,1625077054912,aircraft_46,"[119, 120, 124, 126]",jobyS4,flight_assignment
-93,1625077085304,aircraft_46,"[119, 120, 124, 126]",jobyS4,take_off
-94,1625077347278,aircraft_47,"[118, 122, 132]",jobyS4,flight_assignment
-95,1625077377327,aircraft_47,"[118, 122, 132]",jobyS4,take_off
-96,1625077541702,aircraft_48,[121],jobyS4,flight_assignment
-97,1625077572094,aircraft_48,[121],jobyS4,take_off
-98,1625077871382,aircraft_49,"[123, 128, 134, 137]",jobyS4,flight_assignment
-99,1625077901431,aircraft_49,"[123, 128, 134, 137]",jobyS4,take_off
-100,1625078032492,aircraft_50,"[129, 130, 133, 141]",jobyS4,flight_assignment
-101,1625078062884,aircraft_50,"[129, 130, 133, 141]",jobyS4,take_off
-102,1625078371486,aircraft_51,"[125, 131, 140, 144]",jobyS4,flight_assignment
-103,1625078401535,aircraft_51,"[125, 131, 140, 144]",jobyS4,take_off
-104,1625078535282,aircraft_52,"[135, 139]",jobyS4,flight_assignment
-105,1625078565674,aircraft_52,"[135, 139]",jobyS4,take_off
-106,1625078901590,aircraft_53,"[138, 146, 149]",jobyS4,flight_assignment
-107,1625078931639,aircraft_53,"[138, 146, 149]",jobyS4,take_off
-108,1625079017072,aircraft_54,"[136, 142]",jobyS4,flight_assignment
-109,1625079082034,aircraft_54,"[136, 142]",jobyS4,take_off
-110,1625079379694,aircraft_55,"[143, 151]",jobyS4,flight_assignment
-111,1625079409743,aircraft_55,"[143, 151]",jobyS4,take_off
-112,1625079545432,aircraft_56,"[145, 148]",jobyS4,flight_assignment
-113,1625079575824,aircraft_56,"[145, 148]",jobyS4,take_off
-114,1625079850798,aircraft_57,"[147, 152, 153, 159]",jobyS4,flight_assignment
-115,1625079880847,aircraft_57,"[147, 152, 153, 159]",jobyS4,take_off
-116,1625080090848,aircraft_58,"[154, 162]",jobyS4,flight_assignment
-117,1625080121242,aircraft_58,"[154, 162]",jobyS4,take_off
-118,1625080305902,aircraft_59,"[157, 164]",jobyS4,flight_assignment
-119,1625080335951,aircraft_59,"[157, 164]",jobyS4,take_off
-120,1625080570640,aircraft_60,"[150, 155, 163, 169]",jobyS4,flight_assignment
-121,1625080601032,aircraft_60,"[150, 155, 163, 169]",jobyS4,take_off
-122,1625080800006,aircraft_61,"[156, 158, 165]",jobyS4,flight_assignment
-123,1625080830055,aircraft_61,"[156, 158, 165]",jobyS4,take_off
-124,1625081050430,aircraft_62,"[161, 168, 170, 172]",jobyS4,flight_assignment
-125,1625081080822,aircraft_62,"[161, 168, 170, 172]",jobyS4,take_off
-126,1625081306110,aircraft_63,[166],jobyS4,flight_assignment
-127,1625081336159,aircraft_63,[166],jobyS4,take_off
-128,1625081570220,aircraft_64,"[167, 177]",jobyS4,flight_assignment
-129,1625081600612,aircraft_64,"[167, 177]",jobyS4,take_off
-130,1625081807214,aircraft_65,"[160, 171, 174, 178]",jobyS4,flight_assignment
-131,1625081837263,aircraft_65,"[160, 171, 174, 178]",jobyS4,take_off
-132,1625082053010,aircraft_66,"[173, 182, 185]",jobyS4,flight_assignment
-133,1625082083402,aircraft_66,"[173, 182, 185]",jobyS4,take_off
-134,1625082257318,aircraft_67,"[175, 176, 187]",jobyS4,flight_assignment
-135,1625082287367,aircraft_67,"[175, 176, 187]",jobyS4,take_off
-136,1625082562800,aircraft_68,"[179, 181]",jobyS4,flight_assignment
-137,1625082593192,aircraft_68,"[179, 181]",jobyS4,take_off
-138,1625082803193,aircraft_69,[186],jobyS4,flight_assignment
-139,1625082833244,aircraft_69,[186],jobyS4,take_off
-140,1625083035590,aircraft_70,"[180, 184]",jobyS4,flight_assignment
-141,1625083065982,aircraft_70,"[180, 184]",jobyS4,take_off
-142,1625083291299,aircraft_71,"[183, 188]",jobyS4,flight_assignment
-143,1625083321348,aircraft_71,"[183, 188]",jobyS4,take_off
-144,1625083503380,aircraft_72,"[194, 196, 197, 201]",jobyS4,flight_assignment
-145,1625083533772,aircraft_72,"[194, 196, 197, 201]",jobyS4,take_off
-146,1625083762403,aircraft_73,"[189, 198, 199, 202]",jobyS4,flight_assignment
-147,1625083792452,aircraft_73,"[189, 198, 199, 202]",jobyS4,take_off
-148,1625083984170,aircraft_74,[191],jobyS4,flight_assignment
-149,1625084014562,aircraft_74,[191],jobyS4,take_off
-150,1625084220507,aircraft_75,[195],jobyS4,flight_assignment
-151,1625084250556,aircraft_75,[195],jobyS4,take_off
-152,1625084453960,aircraft_76,"[190, 192, 193]",jobyS4,flight_assignment
-153,1625084484352,aircraft_76,"[190, 192, 193]",jobyS4,take_off
-154,1625084744611,aircraft_77,"[200, 205, 207, 211]",jobyS4,flight_assignment
-155,1625084774660,aircraft_77,"[200, 205, 207, 211]",jobyS4,take_off
-156,1625084937750,aircraft_78,"[208, 215]",jobyS4,flight_assignment
-157,1625084968142,aircraft_78,"[208, 215]",jobyS4,take_off
-158,1625085222715,aircraft_79,"[203, 204, 206]",jobyS4,flight_assignment
-159,1625085252764,aircraft_79,"[203, 204, 206]",jobyS4,take_off
-160,1625085442540,aircraft_80,"[210, 214, 219, 221]",jobyS4,flight_assignment
-161,1625085472932,aircraft_80,"[210, 214, 219, 221]",jobyS4,take_off
-162,1625085712819,aircraft_81,"[213, 216, 223, 225]",jobyS4,flight_assignment
-163,1625085742868,aircraft_81,"[213, 216, 223, 225]",jobyS4,take_off
-164,1625085937330,aircraft_82,"[209, 217, 229]",jobyS4,flight_assignment
-165,1625085967722,aircraft_82,"[209, 217, 229]",jobyS4,take_off
-166,1625086187923,aircraft_83,"[212, 224, 230]",jobyS4,flight_assignment
-167,1625086217972,aircraft_83,"[212, 224, 230]",jobyS4,take_off
-168,1625086406120,aircraft_84,"[218, 220, 226, 231]",jobyS4,flight_assignment
-169,1625086436512,aircraft_84,"[218, 220, 226, 231]",jobyS4,take_off
-170,1625086658027,aircraft_85,"[222, 236]",jobyS4,flight_assignment
-171,1625086688076,aircraft_85,"[222, 236]",jobyS4,take_off
-172,1625086885910,aircraft_86,"[228, 239]",jobyS4,flight_assignment
-173,1625086916302,aircraft_86,"[228, 239]",jobyS4,take_off
-174,1625087121131,aircraft_87,"[227, 235]",jobyS4,flight_assignment
-175,1625087151180,aircraft_87,"[227, 235]",jobyS4,take_off
-176,1625087407700,aircraft_88,"[237, 241, 243, 244]",jobyS4,flight_assignment
-177,1625087438092,aircraft_88,"[237, 241, 243, 244]",jobyS4,take_off
-178,1625087610235,aircraft_89,"[238, 240]",jobyS4,flight_assignment
-179,1625087640284,aircraft_89,"[238, 240]",jobyS4,take_off
-180,1625087870490,aircraft_90,"[232, 234, 250]",jobyS4,flight_assignment
-181,1625087900882,aircraft_90,"[232, 234, 250]",jobyS4,take_off
-182,1625088068339,aircraft_91,"[233, 242]",jobyS4,flight_assignment
-183,1625088098388,aircraft_91,"[233, 242]",jobyS4,take_off
-184,1625088363280,aircraft_92,"[248, 249, 251]",jobyS4,flight_assignment
-185,1625088393672,aircraft_92,"[248, 249, 251]",jobyS4,take_off
-186,1625088501443,aircraft_93,"[246, 256]",jobyS4,flight_assignment
-187,1625088543724,aircraft_93,"[246, 256]",jobyS4,take_off
-188,1625088867070,aircraft_94,"[247, 252]",jobyS4,flight_assignment
-189,1625088897462,aircraft_94,"[247, 252]",jobyS4,take_off
-190,1625089000779,aircraft_95,[245],jobyS4,flight_assignment
-191,1625089047514,aircraft_95,[245],jobyS4,take_off
-192,1625089340860,aircraft_96,"[257, 264]",jobyS4,flight_assignment
-193,1625089371252,aircraft_96,"[257, 264]",jobyS4,take_off
-194,1625089506569,aircraft_97,"[253, 254]",jobyS4,flight_assignment
-195,1625089536618,aircraft_97,"[253, 254]",jobyS4,take_off
-196,1625089876650,aircraft_98,"[255, 258, 263]",jobyS4,flight_assignment
-197,1625089907042,aircraft_98,"[255, 258, 263]",jobyS4,take_off
-198,1625089979673,aircraft_99,"[259, 260, 261, 266]",jobyS4,flight_assignment
-199,1625090057094,aircraft_99,"[259, 260, 261, 266]",jobyS4,take_off
-200,1625090345440,aircraft_100,"[265, 268, 270, 273]",jobyS4,flight_assignment
-201,1625090375832,aircraft_100,"[265, 268, 270, 273]",jobyS4,take_off
-202,1625090530149,aircraft_101,"[262, 276]",jobyS4,flight_assignment
-203,1625090560198,aircraft_101,"[262, 276]",jobyS4,take_off
-204,1625090839230,aircraft_102,"[267, 284]",jobyS4,flight_assignment
-205,1625090869622,aircraft_102,"[267, 284]",jobyS4,take_off
-206,1625090994253,aircraft_103,"[269, 271, 274, 279]",jobyS4,flight_assignment
-207,1625091024302,aircraft_103,"[269, 271, 274, 279]",jobyS4,take_off
-208,1625091337020,aircraft_104,[272],jobyS4,flight_assignment
-209,1625091367412,aircraft_104,[272],jobyS4,take_off
-210,1625091493357,aircraft_105,[275],jobyS4,flight_assignment
-211,1625091523406,aircraft_105,[275],jobyS4,take_off
-212,1625091832810,aircraft_106,"[278, 290]",jobyS4,flight_assignment
-213,1625091863202,aircraft_106,"[278, 290]",jobyS4,take_off
-214,1625091949461,aircraft_107,"[280, 285, 289, 294]",jobyS4,flight_assignment
-215,1625092013254,aircraft_107,"[280, 285, 289, 294]",jobyS4,take_off
-216,1625092299600,aircraft_108,"[277, 282, 286, 298]",jobyS4,flight_assignment
-217,1625092329992,aircraft_108,"[277, 282, 286, 298]",jobyS4,take_off
-218,1625092478309,aircraft_109,"[281, 283, 291, 292]",jobyS4,flight_assignment
-219,1625092508358,aircraft_109,"[281, 283, 291, 292]",jobyS4,take_off
-220,1625092776390,aircraft_110,"[293, 296, 297]",jobyS4,flight_assignment
-221,1625092806782,aircraft_110,"[293, 296, 297]",jobyS4,take_off
-222,1625092961413,aircraft_111,"[287, 306]",jobyS4,flight_assignment
-223,1625092991462,aircraft_111,"[287, 306]",jobyS4,take_off
-224,1625093292180,aircraft_112,"[288, 300, 302, 303]",jobyS4,flight_assignment
-225,1625093322572,aircraft_112,"[288, 300, 302, 303]",jobyS4,take_off
-226,1625093444517,aircraft_113,"[295, 299, 304, 308]",jobyS4,flight_assignment
-227,1625093474566,aircraft_113,"[295, 299, 304, 308]",jobyS4,take_off
-228,1625093770970,aircraft_114,"[307, 310]",jobyS4,flight_assignment
-229,1625093801362,aircraft_114,"[307, 310]",jobyS4,take_off
-230,1625093931621,aircraft_115,"[305, 312, 317, 319]",jobyS4,flight_assignment
-231,1625093961670,aircraft_115,"[305, 312, 317, 319]",jobyS4,take_off
-232,1625094259760,aircraft_116,"[301, 311, 315, 320]",jobyS4,flight_assignment
-233,1625094290152,aircraft_116,"[301, 311, 315, 320]",jobyS4,take_off
-234,1625094411725,aircraft_117,"[309, 324]",jobyS4,flight_assignment
-235,1625094441774,aircraft_117,"[309, 324]",jobyS4,take_off
-236,1625094733550,aircraft_118,"[314, 321, 323, 325]",jobyS4,flight_assignment
-237,1625094763942,aircraft_118,"[314, 321, 323, 325]",jobyS4,take_off
-238,1625094941829,aircraft_119,"[313, 327, 329]",jobyS4,flight_assignment
-239,1625094971878,aircraft_119,"[313, 327, 329]",jobyS4,take_off
-240,1625095219340,aircraft_120,"[318, 331]",jobyS4,flight_assignment
-241,1625095249732,aircraft_120,"[318, 331]",jobyS4,take_off
-242,1625095447933,aircraft_121,"[316, 332, 335]",jobyS4,flight_assignment
-243,1625095477982,aircraft_121,"[316, 332, 335]",jobyS4,take_off
-244,1625095715130,aircraft_122,"[322, 330]",jobyS4,flight_assignment
-245,1625095745522,aircraft_122,"[322, 330]",jobyS4,take_off
-246,1625095909037,aircraft_123,"[326, 333, 340]",jobyS4,flight_assignment
-247,1625095939086,aircraft_123,"[326, 333, 340]",jobyS4,take_off
-248,1625096192920,aircraft_124,"[328, 339]",jobyS4,flight_assignment
-249,1625096223312,aircraft_124,"[328, 339]",jobyS4,take_off
-250,1625096433313,aircraft_125,"[336, 347]",jobyS4,flight_assignment
-251,1625096463364,aircraft_125,"[336, 347]",jobyS4,take_off
-252,1625096678710,aircraft_126,"[334, 338, 344, 350]",jobyS4,flight_assignment
-253,1625096709102,aircraft_126,"[334, 338, 344, 350]",jobyS4,take_off
-254,1625096914419,aircraft_127,"[337, 341, 352]",jobyS4,flight_assignment
-255,1625096944468,aircraft_127,"[337, 341, 352]",jobyS4,take_off
-256,1625097170500,aircraft_128,"[345, 349]",jobyS4,flight_assignment
-257,1625097200892,aircraft_128,"[345, 349]",jobyS4,take_off
-258,1625097403523,aircraft_129,"[343, 348]",jobyS4,flight_assignment
-259,1625097433572,aircraft_129,"[343, 348]",jobyS4,take_off
-260,1625097635290,aircraft_130,"[342, 353]",jobyS4,flight_assignment
-261,1625097665682,aircraft_130,"[342, 353]",jobyS4,take_off
-262,1625097883627,aircraft_131,"[346, 351, 359]",jobyS4,flight_assignment
-263,1625097913676,aircraft_131,"[346, 351, 359]",jobyS4,take_off
-264,1625098123677,aircraft_132,"[356, 357]",jobyS4,flight_assignment
-265,1625098154071,aircraft_132,"[356, 357]",jobyS4,take_off
-266,1625098357731,aircraft_133,"[354, 360, 361]",jobyS4,flight_assignment
-267,1625098387780,aircraft_133,"[354, 360, 361]",jobyS4,take_off
-268,1625098600469,aircraft_134,"[355, 363, 368]",jobyS4,flight_assignment
-269,1625098630861,aircraft_134,"[355, 363, 368]",jobyS4,take_off
-270,1625098862835,aircraft_135,"[358, 373]",jobyS4,flight_assignment
-271,1625098892884,aircraft_135,"[358, 373]",jobyS4,take_off
-272,1625099072259,aircraft_136,"[364, 367, 369, 372]",jobyS4,flight_assignment
-273,1625099102651,aircraft_136,"[364, 367, 369, 372]",jobyS4,take_off
-274,1625099320939,aircraft_137,[370],jobyS4,flight_assignment
-275,1625099350988,aircraft_137,[370],jobyS4,take_off
-276,1625099570049,aircraft_138,"[362, 376, 379]",jobyS4,flight_assignment
-277,1625099600441,aircraft_138,"[362, 376, 379]",jobyS4,take_off
-278,1625099782043,aircraft_139,"[366, 375, 380, 382]",jobyS4,flight_assignment
-279,1625099812092,aircraft_139,"[366, 375, 380, 382]",jobyS4,take_off
-280,1625100053839,aircraft_140,"[365, 371, 377, 378]",jobyS4,flight_assignment
-281,1625100084231,aircraft_140,"[365, 371, 377, 378]",jobyS4,take_off
-282,1625100294232,aircraft_141,"[374, 384]",jobyS4,flight_assignment
-283,1625100324283,aircraft_141,"[374, 384]",jobyS4,take_off
-284,1625100525629,aircraft_142,"[381, 388, 390]",jobyS4,flight_assignment
-285,1625100556021,aircraft_142,"[381, 388, 390]",jobyS4,take_off
-286,1625100787338,aircraft_143,"[383, 394]",jobyS4,flight_assignment
-287,1625100817387,aircraft_143,"[383, 394]",jobyS4,take_off
-288,1625101038419,aircraft_144,"[387, 391, 395, 397]",jobyS4,flight_assignment
-289,1625101068811,aircraft_144,"[387, 391, 395, 397]",jobyS4,take_off
-290,1625101260442,aircraft_145,"[392, 393]",jobyS4,flight_assignment
-291,1625101290491,aircraft_145,"[392, 393]",jobyS4,take_off
-292,1625101498209,aircraft_146,[386],jobyS4,flight_assignment
-293,1625101528601,aircraft_146,[386],jobyS4,take_off
-294,1625101782546,aircraft_147,[385],jobyS4,flight_assignment
-295,1625101812595,aircraft_147,[385],jobyS4,take_off
-296,1625101970999,aircraft_148,[389],jobyS4,flight_assignment
-297,1625102001391,aircraft_148,[389],jobyS4,take_off
-298,1625102226650,aircraft_149,[398],jobyS4,flight_assignment
-299,1625102256699,aircraft_149,[398],jobyS4,take_off
-300,1625102445789,aircraft_150,[396],jobyS4,flight_assignment
-301,1625102476181,aircraft_150,[396],jobyS4,take_off
-302,1625102694754,aircraft_151,[399],jobyS4,flight_assignment
-303,1625102724803,aircraft_151,[399],jobyS4,take_off
+0,1625066373398,aircraft_0,"[0, 1]",jobyS4,flight_assignment
+1,1625066403790,aircraft_0,"[0, 1]",jobyS4,take_off
+2,1625066621055,aircraft_1,"[3, 4, 5]",jobyS4,flight_assignment
+3,1625066651104,aircraft_1,"[3, 4, 5]",jobyS4,take_off
+4,1625066800346,aircraft_2,[2],jobyS4,flight_assignment
+5,1625066830686,aircraft_2,[2],jobyS4,take_off
+6,1625067190687,aircraft_3,"[6, 8]",jobyS4,flight_assignment
+7,1625067220738,aircraft_3,"[6, 8]",jobyS4,take_off
+8,1625067430739,aircraft_4,"[7, 10]",jobyS4,flight_assignment
+9,1625067461133,aircraft_4,"[7, 10]",jobyS4,take_off
+10,1625067671134,aircraft_5,[9],jobyS4,flight_assignment
+11,1625067701185,aircraft_5,[9],jobyS4,take_off
+12,1625068061186,aircraft_6,[11],jobyS4,flight_assignment
+13,1625068092817,aircraft_6,[11],jobyS4,take_off
+14,1625068302818,aircraft_7,"[12, 13]",jobyS4,flight_assignment
+15,1625068333694,aircraft_7,"[12, 13]",jobyS4,take_off
+16,1625068543695,aircraft_8,[14],jobyS4,flight_assignment
+17,1625068574089,aircraft_8,[14],jobyS4,take_off
+18,1625068784090,aircraft_9,"[15, 16, 19]",jobyS4,flight_assignment
+19,1625068814141,aircraft_9,"[15, 16, 19]",jobyS4,take_off
+20,1625069174142,aircraft_10,[17],jobyS4,flight_assignment
+21,1625069204484,aircraft_10,[17],jobyS4,take_off
+22,1625069414485,aircraft_11,"[18, 20]",jobyS4,flight_assignment
+23,1625069444536,aircraft_11,"[18, 20]",jobyS4,take_off
+24,1625069804537,aircraft_12,[21],jobyS4,flight_assignment
+25,1625069834931,aircraft_12,[21],jobyS4,take_off
+26,1625070044932,aircraft_13,"[22, 25]",jobyS4,flight_assignment
+27,1625070074983,aircraft_13,"[22, 25]",jobyS4,take_off
+28,1625070284984,aircraft_14,"[24, 27]",jobyS4,flight_assignment
+29,1625070284985,aircraft_15,"[23, 26]",jobyS4,flight_assignment
+30,1625070316615,aircraft_14,"[24, 27]",jobyS4,take_off
+31,1625070407492,aircraft_15,"[23, 26]",jobyS4,take_off
+32,1625071067493,aircraft_16,[28],jobyS4,flight_assignment
+33,1625071097887,aircraft_16,[28],jobyS4,take_off
+34,1625071307888,aircraft_17,[29],jobyS4,flight_assignment
+35,1625071337939,aircraft_17,[29],jobyS4,take_off
+36,1625071547940,aircraft_18,[30],jobyS4,flight_assignment
+37,1625071578282,aircraft_18,[30],jobyS4,take_off
+38,1625071788283,aircraft_19,[32],jobyS4,flight_assignment
+39,1625071788284,aircraft_20,"[31, 35]",jobyS4,flight_assignment
+40,1625071818334,aircraft_19,[32],jobyS4,take_off
+41,1625071908729,aircraft_20,"[31, 35]",jobyS4,take_off
+42,1625072118730,aircraft_21,[33],jobyS4,flight_assignment
+43,1625072148781,aircraft_21,[33],jobyS4,take_off
+44,1625072358782,aircraft_22,[34],jobyS4,flight_assignment
+45,1625072390413,aircraft_22,[34],jobyS4,take_off
+46,1625072600414,aircraft_23,"[36, 37]",jobyS4,flight_assignment
+47,1625072631290,aircraft_23,"[36, 37]",jobyS4,take_off
+48,1625072991291,aircraft_24,[38],jobyS4,flight_assignment
+49,1625073021685,aircraft_24,[38],jobyS4,take_off
+50,1625073231686,aircraft_25,[40],jobyS4,flight_assignment
+51,1625073231687,aircraft_26,[39],jobyS4,flight_assignment
+52,1625073261737,aircraft_25,[40],jobyS4,take_off
+53,1625073352080,aircraft_26,[39],jobyS4,take_off
+54,1625073562081,aircraft_27,[41],jobyS4,flight_assignment
+55,1625073592132,aircraft_27,[41],jobyS4,take_off
+56,1625073802133,aircraft_28,"[43, 44]",jobyS4,flight_assignment
+57,1625073802134,aircraft_29,"[42, 46]",jobyS4,flight_assignment
+58,1625073832527,aircraft_28,"[43, 44]",jobyS4,take_off
+59,1625073922579,aircraft_29,"[42, 46]",jobyS4,take_off
+60,1625074132580,aircraft_30,[45],jobyS4,flight_assignment
+61,1625074164211,aircraft_30,[45],jobyS4,take_off
+62,1625074524212,aircraft_31,[47],jobyS4,flight_assignment
+63,1625074555088,aircraft_31,[47],jobyS4,take_off
+64,1625074765089,aircraft_32,[48],jobyS4,flight_assignment
+65,1625074795483,aircraft_32,[48],jobyS4,take_off
+66,1625075005484,aircraft_33,"[49, 50]",jobyS4,flight_assignment
+67,1625075035535,aircraft_33,"[49, 50]",jobyS4,take_off
+68,1625075245536,aircraft_34,[51],jobyS4,flight_assignment
+69,1625075275878,aircraft_34,[51],jobyS4,take_off
+70,1625075485879,aircraft_35,"[52, 54]",jobyS4,flight_assignment
+71,1625075515930,aircraft_35,"[52, 54]",jobyS4,take_off
+72,1625075725931,aircraft_36,"[53, 56]",jobyS4,flight_assignment
+73,1625075756325,aircraft_36,"[53, 56]",jobyS4,take_off
+74,1625075966326,aircraft_37,"[55, 57]",jobyS4,flight_assignment
+75,1625075996377,aircraft_37,"[55, 57]",jobyS4,take_off
+76,1625076506378,aircraft_38,"[58, 59]",jobyS4,flight_assignment
+77,1625076538009,aircraft_38,"[58, 59]",jobyS4,take_off
+78,1625076898010,aircraft_39,"[60, 62]",jobyS4,flight_assignment
+79,1625076928886,aircraft_39,"[60, 62]",jobyS4,take_off
+80,1625077138887,aircraft_40,[61],jobyS4,flight_assignment
+81,1625077169281,aircraft_40,[61],jobyS4,take_off
+82,1625077529282,aircraft_41,[63],jobyS4,flight_assignment
+83,1625077559333,aircraft_41,[63],jobyS4,take_off
+84,1625077769334,aircraft_42,"[64, 68]",jobyS4,flight_assignment
+85,1625077799676,aircraft_42,"[64, 68]",jobyS4,take_off
+86,1625078009677,aircraft_43,"[65, 66]",jobyS4,flight_assignment
+87,1625078039728,aircraft_43,"[65, 66]",jobyS4,take_off
+88,1625078249729,aircraft_44,[67],jobyS4,flight_assignment
+89,1625078280123,aircraft_44,[67],jobyS4,take_off
+90,1625078640124,aircraft_45,"[69, 71, 73]",jobyS4,flight_assignment
+91,1625078670175,aircraft_45,"[69, 71, 73]",jobyS4,take_off
+92,1625078880176,aircraft_46,[70],jobyS4,flight_assignment
+93,1625078911807,aircraft_46,[70],jobyS4,take_off
+94,1625079121808,aircraft_47,[72],jobyS4,flight_assignment
+95,1625079152684,aircraft_47,[72],jobyS4,take_off
+96,1625079512685,aircraft_48,[74],jobyS4,flight_assignment
+97,1625079543079,aircraft_48,[74],jobyS4,take_off
+98,1625079753080,aircraft_49,[75],jobyS4,flight_assignment
+99,1625079783131,aircraft_49,[75],jobyS4,take_off
+100,1625079993132,aircraft_50,"[76, 77]",jobyS4,flight_assignment
+101,1625080023474,aircraft_50,"[76, 77]",jobyS4,take_off
+102,1625080233475,aircraft_51,"[78, 81]",jobyS4,flight_assignment
+103,1625080263526,aircraft_51,"[78, 81]",jobyS4,take_off
+104,1625080473527,aircraft_52,[79],jobyS4,flight_assignment
+105,1625080503921,aircraft_52,[79],jobyS4,take_off
+106,1625080713922,aircraft_53,[80],jobyS4,flight_assignment
+107,1625080743973,aircraft_53,[80],jobyS4,take_off
+108,1625080953974,aircraft_54,[82],jobyS4,flight_assignment
+109,1625080985605,aircraft_54,[82],jobyS4,take_off
+110,1625081195606,aircraft_55,[83],jobyS4,flight_assignment
+111,1625081226482,aircraft_55,[83],jobyS4,take_off
+112,1625081436483,aircraft_56,[84],jobyS4,flight_assignment
+113,1625081436484,aircraft_57,"[85, 87]",jobyS4,flight_assignment
+114,1625081466877,aircraft_56,[84],jobyS4,take_off
+115,1625081556929,aircraft_57,"[85, 87]",jobyS4,take_off
+116,1625081766930,aircraft_58,[86],jobyS4,flight_assignment
+117,1625081797272,aircraft_58,[86],jobyS4,take_off
+118,1625082007273,aircraft_59,[88],jobyS4,flight_assignment
+119,1625082037324,aircraft_59,[88],jobyS4,take_off
+120,1625082247325,aircraft_60,[89],jobyS4,flight_assignment
+121,1625082277719,aircraft_60,[89],jobyS4,take_off
+122,1625082487720,aircraft_61,[90],jobyS4,flight_assignment
+123,1625082517771,aircraft_61,[90],jobyS4,take_off
+124,1625082727772,aircraft_62,"[91, 93]",jobyS4,flight_assignment
+125,1625082727773,aircraft_63,[92],jobyS4,flight_assignment
+126,1625082759403,aircraft_62,"[91, 93]",jobyS4,take_off
+127,1625082850280,aircraft_63,[92],jobyS4,take_off
+128,1625083060281,aircraft_64,[94],jobyS4,flight_assignment
+129,1625083090675,aircraft_64,[94],jobyS4,take_off
+130,1625083300676,aircraft_65,[95],jobyS4,flight_assignment
+131,1625083330727,aircraft_65,[95],jobyS4,take_off
+132,1625083540728,aircraft_66,[96],jobyS4,flight_assignment
+133,1625083540729,aircraft_67,"[97, 98]",jobyS4,flight_assignment
+134,1625083571070,aircraft_66,[96],jobyS4,take_off
+135,1625083661122,aircraft_67,"[97, 98]",jobyS4,take_off
+136,1625083871123,aircraft_68,"[99, 101]",jobyS4,flight_assignment
+137,1625083901517,aircraft_68,"[99, 101]",jobyS4,take_off
+138,1625084111518,aircraft_69,[100],jobyS4,flight_assignment
+139,1625084141569,aircraft_69,[100],jobyS4,take_off
+140,1625084501570,aircraft_70,"[102, 104]",jobyS4,flight_assignment
+141,1625084533201,aircraft_70,"[102, 104]",jobyS4,take_off
+142,1625084743202,aircraft_71,[103],jobyS4,flight_assignment
+143,1625084774078,aircraft_71,[103],jobyS4,take_off
+144,1625084984079,aircraft_72,"[105, 106]",jobyS4,flight_assignment
+145,1625085014473,aircraft_72,"[105, 106]",jobyS4,take_off
+146,1625085374474,aircraft_73,[107],jobyS4,flight_assignment
+147,1625085404525,aircraft_73,[107],jobyS4,take_off
+148,1625085614526,aircraft_74,"[108, 112]",jobyS4,flight_assignment
+149,1625085644868,aircraft_74,"[108, 112]",jobyS4,take_off
+150,1625085854869,aircraft_75,[109],jobyS4,flight_assignment
+151,1625085884920,aircraft_75,[109],jobyS4,take_off
+152,1625086094921,aircraft_76,[111],jobyS4,flight_assignment
+153,1625086094922,aircraft_77,[110],jobyS4,flight_assignment
+154,1625086125315,aircraft_76,[111],jobyS4,take_off
+155,1625086215367,aircraft_77,[110],jobyS4,take_off
+156,1625086425368,aircraft_78,[113],jobyS4,flight_assignment
+157,1625086456999,aircraft_78,[113],jobyS4,take_off
+158,1625086667000,aircraft_79,[114],jobyS4,flight_assignment
+159,1625086697876,aircraft_79,[114],jobyS4,take_off
+160,1625086907877,aircraft_80,"[115, 117]",jobyS4,flight_assignment
+161,1625086938271,aircraft_80,"[115, 117]",jobyS4,take_off
+162,1625087148272,aircraft_81,[116],jobyS4,flight_assignment
+163,1625087178323,aircraft_81,[116],jobyS4,take_off
+164,1625087388324,aircraft_82,"[118, 122]",jobyS4,flight_assignment
+165,1625087418666,aircraft_82,"[118, 122]",jobyS4,take_off
+166,1625087628667,aircraft_83,"[119, 120]",jobyS4,flight_assignment
+167,1625087658718,aircraft_83,"[119, 120]",jobyS4,take_off
+168,1625087868719,aircraft_84,[121],jobyS4,flight_assignment
+169,1625087899113,aircraft_84,[121],jobyS4,take_off
+170,1625088109114,aircraft_85,[123],jobyS4,flight_assignment
+171,1625088139165,aircraft_85,[123],jobyS4,take_off
+172,1625088349166,aircraft_86,"[124, 126]",jobyS4,flight_assignment
+173,1625088380797,aircraft_86,"[124, 126]",jobyS4,take_off
+174,1625088590798,aircraft_87,[125],jobyS4,flight_assignment
+175,1625088621674,aircraft_87,[125],jobyS4,take_off
+176,1625088831675,aircraft_88,"[127, 129, 130]",jobyS4,flight_assignment
+177,1625088862069,aircraft_88,"[127, 129, 130]",jobyS4,take_off
+178,1625089072070,aircraft_89,[128],jobyS4,flight_assignment
+179,1625089102121,aircraft_89,[128],jobyS4,take_off
+180,1625089612122,aircraft_90,[131],jobyS4,flight_assignment
+181,1625089642464,aircraft_90,[131],jobyS4,take_off
+182,1625089852465,aircraft_91,[132],jobyS4,flight_assignment
+183,1625089882516,aircraft_91,[132],jobyS4,take_off
+184,1625090092517,aircraft_92,[133],jobyS4,flight_assignment
+185,1625090092518,aircraft_93,"[134, 137]",jobyS4,flight_assignment
+186,1625090122911,aircraft_92,[133],jobyS4,take_off
+187,1625090212963,aircraft_93,"[134, 137]",jobyS4,take_off
+188,1625090422964,aircraft_94,"[135, 139]",jobyS4,flight_assignment
+189,1625090454595,aircraft_94,"[135, 139]",jobyS4,take_off
+190,1625090664596,aircraft_95,[136],jobyS4,flight_assignment
+191,1625090695472,aircraft_95,[136],jobyS4,take_off
+192,1625090905473,aircraft_96,[138],jobyS4,flight_assignment
+193,1625090935867,aircraft_96,[138],jobyS4,take_off
+194,1625091295868,aircraft_97,[140],jobyS4,flight_assignment
+195,1625091325919,aircraft_97,[140],jobyS4,take_off
+196,1625091535920,aircraft_98,[142],jobyS4,flight_assignment
+197,1625091535921,aircraft_99,"[141, 143]",jobyS4,flight_assignment
+198,1625091566262,aircraft_98,[142],jobyS4,take_off
+199,1625091656314,aircraft_99,"[141, 143]",jobyS4,take_off
+200,1625092016315,aircraft_100,[144],jobyS4,flight_assignment
+201,1625092046709,aircraft_100,[144],jobyS4,take_off
+202,1625092256710,aircraft_101,"[146, 149]",jobyS4,flight_assignment
+203,1625092256711,aircraft_102,"[145, 148]",jobyS4,flight_assignment
+204,1625092286761,aircraft_101,"[146, 149]",jobyS4,take_off
+205,1625092378393,aircraft_102,"[145, 148]",jobyS4,take_off
+206,1625092588394,aircraft_103,[147],jobyS4,flight_assignment
+207,1625092619270,aircraft_103,[147],jobyS4,take_off
+208,1625092979271,aircraft_104,[150],jobyS4,flight_assignment
+209,1625093009665,aircraft_104,[150],jobyS4,take_off
+210,1625093219666,aircraft_105,[151],jobyS4,flight_assignment
+211,1625093249717,aircraft_105,[151],jobyS4,take_off
+212,1625093459718,aircraft_106,"[152, 153]",jobyS4,flight_assignment
+213,1625093490060,aircraft_106,"[152, 153]",jobyS4,take_off
+214,1625093700061,aircraft_107,[154],jobyS4,flight_assignment
+215,1625093730112,aircraft_107,[154],jobyS4,take_off
+216,1625093940113,aircraft_108,[155],jobyS4,flight_assignment
+217,1625093970507,aircraft_108,[155],jobyS4,take_off
+218,1625094180508,aircraft_109,[157],jobyS4,flight_assignment
+219,1625094180509,aircraft_110,"[156, 158]",jobyS4,flight_assignment
+220,1625094210559,aircraft_109,[157],jobyS4,take_off
+221,1625094302191,aircraft_110,"[156, 158]",jobyS4,take_off
+222,1625094662192,aircraft_111,"[159, 160]",jobyS4,flight_assignment
+223,1625094693068,aircraft_111,"[159, 160]",jobyS4,take_off
+224,1625095053069,aircraft_112,[161],jobyS4,flight_assignment
+225,1625095083463,aircraft_112,[161],jobyS4,take_off
+226,1625095293464,aircraft_113,"[162, 166]",jobyS4,flight_assignment
+227,1625095293465,aircraft_114,[163],jobyS4,flight_assignment
+228,1625095323515,aircraft_113,"[162, 166]",jobyS4,take_off
+229,1625095413858,aircraft_114,[163],jobyS4,take_off
+230,1625095623859,aircraft_115,[164],jobyS4,flight_assignment
+231,1625095623860,aircraft_116,[165],jobyS4,flight_assignment
+232,1625095653910,aircraft_115,[164],jobyS4,take_off
+233,1625095744305,aircraft_116,[165],jobyS4,take_off
+234,1625095954306,aircraft_117,[167],jobyS4,flight_assignment
+235,1625095984357,aircraft_117,[167],jobyS4,take_off
+236,1625096194358,aircraft_118,"[168, 170, 172]",jobyS4,flight_assignment
+237,1625096225989,aircraft_118,"[168, 170, 172]",jobyS4,take_off
+238,1625096435990,aircraft_119,[169],jobyS4,flight_assignment
+239,1625096466866,aircraft_119,[169],jobyS4,take_off
+240,1625096676867,aircraft_120,"[171, 174]",jobyS4,flight_assignment
+241,1625096707261,aircraft_120,"[171, 174]",jobyS4,take_off
+242,1625097067262,aircraft_121,[173],jobyS4,flight_assignment
+243,1625097097313,aircraft_121,[173],jobyS4,take_off
+244,1625097307314,aircraft_122,"[175, 176]",jobyS4,flight_assignment
+245,1625097337656,aircraft_122,"[175, 176]",jobyS4,take_off
+246,1625097697657,aircraft_123,[177],jobyS4,flight_assignment
+247,1625097727708,aircraft_123,[177],jobyS4,take_off
+248,1625097937709,aircraft_124,"[178, 179, 181]",jobyS4,flight_assignment
+249,1625097968103,aircraft_124,"[178, 179, 181]",jobyS4,take_off
+250,1625098328104,aircraft_125,[180],jobyS4,flight_assignment
+251,1625098358155,aircraft_125,[180],jobyS4,take_off
+252,1625098718156,aircraft_126,"[182, 185]",jobyS4,flight_assignment
+253,1625098749787,aircraft_126,"[182, 185]",jobyS4,take_off
+254,1625098959788,aircraft_127,[184],jobyS4,flight_assignment
+255,1625098959789,aircraft_128,[183],jobyS4,flight_assignment
+256,1625098990664,aircraft_127,[184],jobyS4,take_off
+257,1625099081059,aircraft_128,[183],jobyS4,take_off
+258,1625099291060,aircraft_129,[186],jobyS4,flight_assignment
+259,1625099321111,aircraft_129,[186],jobyS4,take_off
+260,1625099531112,aircraft_130,"[187, 190]",jobyS4,flight_assignment
+261,1625099561454,aircraft_130,"[187, 190]",jobyS4,take_off
+262,1625099771455,aircraft_131,[188],jobyS4,flight_assignment
+263,1625099801506,aircraft_131,[188],jobyS4,take_off
+264,1625100011507,aircraft_132,[189],jobyS4,flight_assignment
+265,1625100041901,aircraft_132,[189],jobyS4,take_off
+266,1625100251902,aircraft_133,[191],jobyS4,flight_assignment
+267,1625100281953,aircraft_133,[191],jobyS4,take_off
+268,1625100491954,aircraft_134,"[192, 193]",jobyS4,flight_assignment
+269,1625100523585,aircraft_134,"[192, 193]",jobyS4,take_off
+270,1625100883586,aircraft_135,"[194, 196, 197]",jobyS4,flight_assignment
+271,1625100914462,aircraft_135,"[194, 196, 197]",jobyS4,take_off
+272,1625101124463,aircraft_136,[195],jobyS4,flight_assignment
+273,1625101154857,aircraft_136,[195],jobyS4,take_off
+274,1625101514858,aircraft_137,"[198, 199]",jobyS4,flight_assignment
+275,1625101544909,aircraft_137,"[198, 199]",jobyS4,take_off
+276,1625101904910,aircraft_138,[200],jobyS4,flight_assignment
+277,1625101935252,aircraft_138,[200],jobyS4,take_off
+278,1625102145253,aircraft_139,[201],jobyS4,flight_assignment
+279,1625102175304,aircraft_139,[201],jobyS4,take_off
+280,1625102385305,aircraft_140,"[203, 204, 206]",jobyS4,flight_assignment
+281,1625102385306,aircraft_141,[202],jobyS4,flight_assignment
+282,1625102415699,aircraft_140,"[203, 204, 206]",jobyS4,take_off
+283,1625102505751,aircraft_141,[202],jobyS4,take_off
+284,1625102865752,aircraft_142,"[205, 207]",jobyS4,flight_assignment
+285,1625102897383,aircraft_142,"[205, 207]",jobyS4,take_off
+286,1625103257384,aircraft_143,[208],jobyS4,flight_assignment
+287,1625103288260,aircraft_143,[208],jobyS4,take_off
+288,1625103498261,aircraft_144,[209],jobyS4,flight_assignment
+289,1625103528655,aircraft_144,[209],jobyS4,take_off
+290,1625103738656,aircraft_145,"[210, 214]",jobyS4,flight_assignment
+291,1625103768707,aircraft_145,"[210, 214]",jobyS4,take_off
+292,1625103978708,aircraft_146,"[211, 212]",jobyS4,flight_assignment
+293,1625104009050,aircraft_146,"[211, 212]",jobyS4,take_off
+294,1625104219051,aircraft_147,"[213, 216]",jobyS4,flight_assignment
+295,1625104249102,aircraft_147,"[213, 216]",jobyS4,take_off
+296,1625104459103,aircraft_148,[215],jobyS4,flight_assignment
+297,1625104489497,aircraft_148,[215],jobyS4,take_off
+298,1625104849498,aircraft_149,[217],jobyS4,flight_assignment
+299,1625104879549,aircraft_149,[217],jobyS4,take_off
+300,1625105089550,aircraft_150,"[218, 220]",jobyS4,flight_assignment
+301,1625105121181,aircraft_150,"[218, 220]",jobyS4,take_off
+302,1625105331182,aircraft_151,"[219, 221]",jobyS4,flight_assignment
+303,1625105362058,aircraft_151,"[219, 221]",jobyS4,take_off
+304,1625105722059,aircraft_152,[222],jobyS4,flight_assignment
+305,1625105752453,aircraft_152,[222],jobyS4,take_off
+306,1625105962454,aircraft_153,"[223, 225]",jobyS4,flight_assignment
+307,1625105992505,aircraft_153,"[223, 225]",jobyS4,take_off
+308,1625106202506,aircraft_154,[224],jobyS4,flight_assignment
+309,1625106232848,aircraft_154,[224],jobyS4,take_off
+310,1625106442849,aircraft_155,[226],jobyS4,flight_assignment
+311,1625106472900,aircraft_155,[226],jobyS4,take_off
+312,1625106682901,aircraft_156,[227],jobyS4,flight_assignment
+313,1625106713295,aircraft_156,[227],jobyS4,take_off
+314,1625106923296,aircraft_157,[228],jobyS4,flight_assignment
+315,1625106953347,aircraft_157,[228],jobyS4,take_off
+316,1625107163348,aircraft_158,"[229, 232]",jobyS4,flight_assignment
+317,1625107163349,aircraft_159,"[230, 233]",jobyS4,flight_assignment
+318,1625107194979,aircraft_158,"[229, 232]",jobyS4,take_off
+319,1625107285856,aircraft_159,"[230, 233]",jobyS4,take_off
+320,1625107495857,aircraft_160,[231],jobyS4,flight_assignment
+321,1625107526251,aircraft_160,[231],jobyS4,take_off
+322,1625107886252,aircraft_161,[234],jobyS4,flight_assignment
+323,1625107916303,aircraft_161,[234],jobyS4,take_off
+324,1625108126304,aircraft_162,[235],jobyS4,flight_assignment
+325,1625108156646,aircraft_162,[235],jobyS4,take_off
+326,1625108366647,aircraft_163,[236],jobyS4,flight_assignment
+327,1625108396698,aircraft_163,[236],jobyS4,take_off
+328,1625108606699,aircraft_164,"[237, 241]",jobyS4,flight_assignment
+329,1625108637093,aircraft_164,"[237, 241]",jobyS4,take_off
+330,1625108847094,aircraft_165,"[238, 240]",jobyS4,flight_assignment
+331,1625108847095,aircraft_166,[239],jobyS4,flight_assignment
+332,1625108877145,aircraft_165,"[238, 240]",jobyS4,take_off
+333,1625108968777,aircraft_166,[239],jobyS4,take_off
+334,1625109478778,aircraft_167,[242],jobyS4,flight_assignment
+335,1625109509654,aircraft_167,[242],jobyS4,take_off
+336,1625109719655,aircraft_168,"[243, 244]",jobyS4,flight_assignment
+337,1625109750049,aircraft_168,"[243, 244]",jobyS4,take_off
+338,1625109960050,aircraft_169,[245],jobyS4,flight_assignment
+339,1625109990101,aircraft_169,[245],jobyS4,take_off
+340,1625110200102,aircraft_170,[246],jobyS4,flight_assignment
+341,1625110230444,aircraft_170,[246],jobyS4,take_off
+342,1625110440445,aircraft_171,"[248, 249, 251]",jobyS4,flight_assignment
+343,1625110440446,aircraft_172,[247],jobyS4,flight_assignment
+344,1625110470496,aircraft_171,"[248, 249, 251]",jobyS4,take_off
+345,1625110560891,aircraft_172,[247],jobyS4,take_off
+346,1625110920892,aircraft_173,"[250, 253, 254]",jobyS4,flight_assignment
+347,1625110950943,aircraft_173,"[250, 253, 254]",jobyS4,take_off
+348,1625111160944,aircraft_174,[252],jobyS4,flight_assignment
+349,1625111192575,aircraft_174,[252],jobyS4,take_off
+350,1625111702576,aircraft_175,"[255, 258]",jobyS4,flight_assignment
+351,1625111733452,aircraft_175,"[255, 258]",jobyS4,take_off
+352,1625111943453,aircraft_176,"[256, 259, 260]",jobyS4,flight_assignment
+353,1625111973847,aircraft_176,"[256, 259, 260]",jobyS4,take_off
+354,1625112183848,aircraft_177,[257],jobyS4,flight_assignment
+355,1625112213899,aircraft_177,[257],jobyS4,take_off
+356,1625112873900,aircraft_178,[261],jobyS4,flight_assignment
+357,1625112904242,aircraft_178,[261],jobyS4,take_off
+358,1625113114243,aircraft_179,[262],jobyS4,flight_assignment
+359,1625113144294,aircraft_179,[262],jobyS4,take_off
+360,1625113354295,aircraft_180,"[264, 267]",jobyS4,flight_assignment
+361,1625113354296,aircraft_181,[263],jobyS4,flight_assignment
+362,1625113384689,aircraft_180,"[264, 267]",jobyS4,take_off
+363,1625113474741,aircraft_181,[263],jobyS4,take_off
+364,1625113684742,aircraft_182,[266],jobyS4,flight_assignment
+365,1625113684743,aircraft_183,"[265, 268]",jobyS4,flight_assignment
+366,1625113716373,aircraft_182,[266],jobyS4,take_off
+367,1625113807250,aircraft_183,"[265, 268]",jobyS4,take_off
+368,1625114317251,aircraft_184,"[269, 271]",jobyS4,flight_assignment
+369,1625114347645,aircraft_184,"[269, 271]",jobyS4,take_off
+370,1625114557646,aircraft_185,"[270, 273]",jobyS4,flight_assignment
+371,1625114587697,aircraft_185,"[270, 273]",jobyS4,take_off
+372,1625114797698,aircraft_186,[272],jobyS4,flight_assignment
+373,1625114828040,aircraft_186,[272],jobyS4,take_off
+374,1625115188041,aircraft_187,[274],jobyS4,flight_assignment
+375,1625115218092,aircraft_187,[274],jobyS4,take_off
+376,1625115428093,aircraft_188,[275],jobyS4,flight_assignment
+377,1625115458487,aircraft_188,[275],jobyS4,take_off
+378,1625115668488,aircraft_189,[276],jobyS4,flight_assignment
+379,1625115668489,aircraft_190,[277],jobyS4,flight_assignment
+380,1625115698539,aircraft_189,[276],jobyS4,take_off
+381,1625115790171,aircraft_190,[277],jobyS4,take_off
+382,1625116000172,aircraft_191,[278],jobyS4,flight_assignment
+383,1625116031048,aircraft_191,[278],jobyS4,take_off
+384,1625116241049,aircraft_192,"[279, 281, 283]",jobyS4,flight_assignment
+385,1625116241050,aircraft_193,[280],jobyS4,flight_assignment
+386,1625116271443,aircraft_192,"[279, 281, 283]",jobyS4,take_off
+387,1625116361495,aircraft_193,[280],jobyS4,take_off
+388,1625116571496,aircraft_194,[282],jobyS4,flight_assignment
+389,1625116601838,aircraft_194,[282],jobyS4,take_off
+390,1625116961839,aircraft_195,[284],jobyS4,flight_assignment
+391,1625116991890,aircraft_195,[284],jobyS4,take_off
+392,1625117201891,aircraft_196,"[285, 289]",jobyS4,flight_assignment
+393,1625117232285,aircraft_196,"[285, 289]",jobyS4,take_off
+394,1625117442286,aircraft_197,[287],jobyS4,flight_assignment
+395,1625117442287,aircraft_198,[286],jobyS4,flight_assignment
+396,1625117472337,aircraft_197,[287],jobyS4,take_off
+397,1625117563969,aircraft_198,[286],jobyS4,take_off
+398,1625117773970,aircraft_199,[288],jobyS4,flight_assignment
+399,1625117804846,aircraft_199,[288],jobyS4,take_off
+400,1625118014847,aircraft_200,[290],jobyS4,flight_assignment
+401,1625118045241,aircraft_200,[290],jobyS4,take_off
+402,1625118255242,aircraft_201,"[291, 292]",jobyS4,flight_assignment
+403,1625118285293,aircraft_201,"[291, 292]",jobyS4,take_off
+404,1625118495294,aircraft_202,"[293, 296]",jobyS4,flight_assignment
+405,1625118525636,aircraft_202,"[293, 296]",jobyS4,take_off
+406,1625118735637,aircraft_203,[294],jobyS4,flight_assignment
+407,1625118765688,aircraft_203,[294],jobyS4,take_off
+408,1625118975689,aircraft_204,[295],jobyS4,flight_assignment
+409,1625119006083,aircraft_204,[295],jobyS4,take_off
+410,1625119366084,aircraft_205,[297],jobyS4,flight_assignment
+411,1625119396135,aircraft_205,[297],jobyS4,take_off
+412,1625119606136,aircraft_206,[298],jobyS4,flight_assignment
+413,1625119637767,aircraft_206,[298],jobyS4,take_off
+414,1625119847768,aircraft_207,"[300, 302, 303]",jobyS4,flight_assignment
+415,1625119847769,aircraft_208,"[299, 304]",jobyS4,flight_assignment
+416,1625119878644,aircraft_207,"[300, 302, 303]",jobyS4,take_off
+417,1625119969039,aircraft_208,"[299, 304]",jobyS4,take_off
+418,1625120179040,aircraft_209,[301],jobyS4,flight_assignment
+419,1625120209091,aircraft_209,[301],jobyS4,take_off
+420,1625120719092,aircraft_210,[305],jobyS4,flight_assignment
+421,1625120749434,aircraft_210,[305],jobyS4,take_off
+422,1625120959435,aircraft_211,[306],jobyS4,flight_assignment
+423,1625120989486,aircraft_211,[306],jobyS4,take_off
+424,1625121199487,aircraft_212,"[307, 310]",jobyS4,flight_assignment
+425,1625121229881,aircraft_212,"[307, 310]",jobyS4,take_off
+426,1625121439882,aircraft_213,[308],jobyS4,flight_assignment
+427,1625121439883,aircraft_214,[309],jobyS4,flight_assignment
+428,1625121469933,aircraft_213,[308],jobyS4,take_off
+429,1625121561565,aircraft_214,[309],jobyS4,take_off
+430,1625121771566,aircraft_215,[311],jobyS4,flight_assignment
+431,1625121802442,aircraft_215,[311],jobyS4,take_off
+432,1625122012443,aircraft_216,[312],jobyS4,flight_assignment
+433,1625122042837,aircraft_216,[312],jobyS4,take_off
+434,1625122252838,aircraft_217,[313],jobyS4,flight_assignment
+435,1625122282889,aircraft_217,[313],jobyS4,take_off
+436,1625122492890,aircraft_218,[314],jobyS4,flight_assignment
+437,1625122492891,aircraft_219,[315],jobyS4,flight_assignment
+438,1625122523232,aircraft_218,[314],jobyS4,take_off
+439,1625122613284,aircraft_219,[315],jobyS4,take_off
+440,1625122823285,aircraft_220,"[317, 319]",jobyS4,flight_assignment
+441,1625122823286,aircraft_221,[316],jobyS4,flight_assignment
+442,1625122853679,aircraft_220,"[317, 319]",jobyS4,take_off
+443,1625122943731,aircraft_221,[316],jobyS4,take_off
+444,1625123153732,aircraft_222,[318],jobyS4,flight_assignment
+445,1625123185363,aircraft_222,[318],jobyS4,take_off
+446,1625123395364,aircraft_223,[320],jobyS4,flight_assignment
+447,1625123426240,aircraft_223,[320],jobyS4,take_off
+448,1625123636241,aircraft_224,[322],jobyS4,flight_assignment
+449,1625123636242,aircraft_225,"[321, 323, 325]",jobyS4,flight_assignment
+450,1625123666635,aircraft_224,[322],jobyS4,take_off
+451,1625123756687,aircraft_225,"[321, 323, 325]",jobyS4,take_off
+452,1625124116688,aircraft_226,[324],jobyS4,flight_assignment
+453,1625124147030,aircraft_226,[324],jobyS4,take_off
+454,1625124507031,aircraft_227,[326],jobyS4,flight_assignment
+455,1625124537082,aircraft_227,[326],jobyS4,take_off
+456,1625124747083,aircraft_228,"[327, 329]",jobyS4,flight_assignment
+457,1625124777477,aircraft_228,"[327, 329]",jobyS4,take_off
+458,1625124987478,aircraft_229,[328],jobyS4,flight_assignment
+459,1625125017529,aircraft_229,[328],jobyS4,take_off
+460,1625125227530,aircraft_230,[330],jobyS4,flight_assignment
+461,1625125259161,aircraft_230,[330],jobyS4,take_off
+462,1625125469162,aircraft_231,[331],jobyS4,flight_assignment
+463,1625125469163,aircraft_232,"[332, 335]",jobyS4,flight_assignment
+464,1625125500038,aircraft_231,[331],jobyS4,take_off
+465,1625125590433,aircraft_232,"[332, 335]",jobyS4,take_off
+466,1625125800434,aircraft_233,[333],jobyS4,flight_assignment
+467,1625125830485,aircraft_233,[333],jobyS4,take_off
+468,1625126040486,aircraft_234,"[334, 338]",jobyS4,flight_assignment
+469,1625126070828,aircraft_234,"[334, 338]",jobyS4,take_off
+470,1625126280829,aircraft_235,[336],jobyS4,flight_assignment
+471,1625126310880,aircraft_235,[336],jobyS4,take_off
+472,1625126520881,aircraft_236,"[337, 341]",jobyS4,flight_assignment
+473,1625126551275,aircraft_236,"[337, 341]",jobyS4,take_off
+474,1625126761276,aircraft_237,[339],jobyS4,flight_assignment
+475,1625126791327,aircraft_237,[339],jobyS4,take_off
+476,1625127001328,aircraft_238,"[340, 343]",jobyS4,flight_assignment
+477,1625127032959,aircraft_238,"[340, 343]",jobyS4,take_off
+478,1625127242960,aircraft_239,[342],jobyS4,flight_assignment
+479,1625127273836,aircraft_239,[342],jobyS4,take_off
+480,1625127633837,aircraft_240,[344],jobyS4,flight_assignment
+481,1625127664231,aircraft_240,[344],jobyS4,take_off
+482,1625127874232,aircraft_241,"[345, 349]",jobyS4,flight_assignment
+483,1625127904283,aircraft_241,"[345, 349]",jobyS4,take_off
+484,1625128114284,aircraft_242,[347],jobyS4,flight_assignment
+485,1625128114285,aircraft_243,[346],jobyS4,flight_assignment
+486,1625128144626,aircraft_242,[347],jobyS4,take_off
+487,1625128234678,aircraft_243,[346],jobyS4,take_off
+488,1625128444679,aircraft_244,[348],jobyS4,flight_assignment
+489,1625128475073,aircraft_244,[348],jobyS4,take_off
+490,1625128685074,aircraft_245,[350],jobyS4,flight_assignment
+491,1625128715125,aircraft_245,[350],jobyS4,take_off
+492,1625128925126,aircraft_246,[351],jobyS4,flight_assignment
+493,1625128956757,aircraft_246,[351],jobyS4,take_off
+494,1625129166758,aircraft_247,[352],jobyS4,flight_assignment
+495,1625129166759,aircraft_248,[353],jobyS4,flight_assignment
+496,1625129197634,aircraft_247,[352],jobyS4,take_off
+497,1625129288029,aircraft_248,[353],jobyS4,take_off
+498,1625129498030,aircraft_249,[354],jobyS4,flight_assignment
+499,1625129528081,aircraft_249,[354],jobyS4,take_off
+500,1625129738082,aircraft_250,"[356, 357]",jobyS4,flight_assignment
+501,1625129738083,aircraft_251,[355],jobyS4,flight_assignment
+502,1625129768424,aircraft_250,"[356, 357]",jobyS4,take_off
+503,1625129858476,aircraft_251,[355],jobyS4,take_off
+504,1625130068477,aircraft_252,[358],jobyS4,flight_assignment
+505,1625130098871,aircraft_252,[358],jobyS4,take_off
+506,1625130308872,aircraft_253,[359],jobyS4,flight_assignment
+507,1625130338923,aircraft_253,[359],jobyS4,take_off
+508,1625130548924,aircraft_254,"[360, 361]",jobyS4,flight_assignment
+509,1625130580555,aircraft_254,"[360, 361]",jobyS4,take_off
+510,1625130790556,aircraft_255,[362],jobyS4,flight_assignment
+511,1625130821432,aircraft_255,[362],jobyS4,take_off
+512,1625131031433,aircraft_256,[363],jobyS4,flight_assignment
+513,1625131061827,aircraft_256,[363],jobyS4,take_off
+514,1625131271828,aircraft_257,"[364, 367]",jobyS4,flight_assignment
+515,1625131271829,aircraft_258,[365],jobyS4,flight_assignment
+516,1625131301879,aircraft_257,"[364, 367]",jobyS4,take_off
+517,1625131392222,aircraft_258,[365],jobyS4,take_off
+518,1625131602223,aircraft_259,[366],jobyS4,flight_assignment
+519,1625131632274,aircraft_259,[366],jobyS4,take_off
+520,1625131842275,aircraft_260,[368],jobyS4,flight_assignment
+521,1625131872669,aircraft_260,[368],jobyS4,take_off
+522,1625132082670,aircraft_261,"[369, 372]",jobyS4,flight_assignment
+523,1625132112721,aircraft_261,"[369, 372]",jobyS4,take_off
+524,1625132322722,aircraft_262,[370],jobyS4,flight_assignment
+525,1625132354353,aircraft_262,[370],jobyS4,take_off
+526,1625132564354,aircraft_263,[371],jobyS4,flight_assignment
+527,1625132595230,aircraft_263,[371],jobyS4,take_off
+528,1625132805231,aircraft_264,[373],jobyS4,flight_assignment
+529,1625132835625,aircraft_264,[373],jobyS4,take_off
+530,1625133045626,aircraft_265,[374],jobyS4,flight_assignment
+531,1625133075677,aircraft_265,[374],jobyS4,take_off
+532,1625133285678,aircraft_266,"[376, 379]",jobyS4,flight_assignment
+533,1625133285679,aircraft_267,[375],jobyS4,flight_assignment
+534,1625133316020,aircraft_266,"[376, 379]",jobyS4,take_off
+535,1625133406072,aircraft_267,[375],jobyS4,take_off
+536,1625133616073,aircraft_268,"[377, 378]",jobyS4,flight_assignment
+537,1625133646467,aircraft_268,"[377, 378]",jobyS4,take_off
+538,1625134006468,aircraft_269,"[380, 382, 383]",jobyS4,flight_assignment
+539,1625134036519,aircraft_269,"[380, 382, 383]",jobyS4,take_off
+540,1625134246520,aircraft_270,[381],jobyS4,flight_assignment
+541,1625134278151,aircraft_270,[381],jobyS4,take_off
+542,1625134788152,aircraft_271,[384],jobyS4,flight_assignment
+543,1625134819028,aircraft_271,[384],jobyS4,take_off
+544,1625135029029,aircraft_272,[386],jobyS4,flight_assignment
+545,1625135029030,aircraft_273,[385],jobyS4,flight_assignment
+546,1625135059423,aircraft_272,[386],jobyS4,take_off
+547,1625135149475,aircraft_273,[385],jobyS4,take_off
+548,1625135359476,aircraft_274,"[387, 391]",jobyS4,flight_assignment
+549,1625135389818,aircraft_274,"[387, 391]",jobyS4,take_off
+550,1625135599819,aircraft_275,"[388, 390]",jobyS4,flight_assignment
+551,1625135599820,aircraft_276,[389],jobyS4,flight_assignment
+552,1625135629870,aircraft_275,"[388, 390]",jobyS4,take_off
+553,1625135720265,aircraft_276,[389],jobyS4,take_off
+554,1625136230266,aircraft_277,"[392, 393]",jobyS4,flight_assignment
+555,1625136260317,aircraft_277,"[392, 393]",jobyS4,take_off
+556,1625136620318,aircraft_278,[394],jobyS4,flight_assignment
+557,1625136651949,aircraft_278,[394],jobyS4,take_off
+558,1625136861950,aircraft_279,[396],jobyS4,flight_assignment
+559,1625136861951,aircraft_280,"[395, 397, 399]",jobyS4,flight_assignment
+560,1625136892826,aircraft_279,[396],jobyS4,take_off
+561,1625136983221,aircraft_280,"[395, 397, 399]",jobyS4,take_off
+562,1625137193222,aircraft_281,[398],jobyS4,flight_assignment
+563,1625137223273,aircraft_281,[398],jobyS4,take_off
