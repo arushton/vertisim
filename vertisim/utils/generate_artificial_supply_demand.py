@@ -1,10 +1,10 @@
-from typing import Dict, List
+from typing import List
 import numpy as np
 import random
 import pandas as pd
 from utils.distribution_generator import DistributionGenerator
 from utils.helpers import cumulative_sum_array, nested_dict_filter_keys
-from typing import Dict, Union
+from typing import Dict
 
 
 def generate_artificial_aircraft_aircraft_supply(aircraft_fleet_specs: Dict, aircraft_arrival_process: Dict):

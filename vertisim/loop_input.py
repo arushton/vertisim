@@ -36,7 +36,7 @@ def loop_input(passenger_arrival_mu,
     # -----------------
     network_and_demand = {
         'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                       'Simulation/vertiSim_dev/input/vertiport_network_full.csv',
+                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv',
 
         # DEMAND FILES.
         # ---------------------------------------------------------------
@@ -120,7 +120,7 @@ def loop_input(passenger_arrival_mu,
     # --------------------
     vertiport_params = {
         'vertiport_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                      'Simulation/vertiSim_dev/input/skyport_layouts/skyport_layout.xls',
+                                      'Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls',
         'layout': vertiport_layout,
         'num_security_check_servers': 20,
         'num_chargers': int(re.findall(r'\d+', vertiport_layout)[-1]),
@@ -220,13 +220,13 @@ def loop_input(passenger_arrival_mu,
             # time distribution generation.
         },
         'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                                        'Simulation/vertiSim_dev/input/aircraft_energy_consumption',
+                                                        'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
         'min_reserve_soc': 20
         # %  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
     }
 
     output_params = {
-        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/output',
+        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output',
         'config_output_file_name': 'config',
         # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
         # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

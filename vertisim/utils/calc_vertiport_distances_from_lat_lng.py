@@ -1,5 +1,5 @@
 import numpy as np
-from math import sin, cos, sqrt, atan2, radians
+from math import sin, cos, sqrt, atan2
 from typing import Dict
 from utils.read_files import read_input_file
 

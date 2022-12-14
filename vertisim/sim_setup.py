@@ -183,7 +183,7 @@ def sim_setup(sim_params: dict,
 
     end_time = time.time()
     time_taken = end_time - sim_start_time
-    print(f'Total time to run: {round(time_taken, 2)} seconds')
+    # print(f'Total time to run: {round(time_taken, 2)} seconds')
 
     # Save results
     random.seed(round(time.time()))

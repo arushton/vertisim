@@ -1,8 +1,6 @@
 import scipy.stats as stats
-import numpy as np
 from typing import Dict, Union
-from utils.units import min_to_sec, sec_to_ms
-import random
+from utils.units import sec_to_ms
 
 
 # def pick_number(population, probabilities):

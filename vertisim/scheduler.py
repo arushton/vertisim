@@ -17,14 +17,12 @@ class Scheduler:
         Checks all of the waiting rooms. If there are passengers who are waiting
         more than max_flight_waiting_time, it creates a flight for those passengers immediately.
         """
-        # TODO: Solve what happens if there are more than aircaft_capacity passengers in the waiting room
         departing_passenger_groups = []
         for waiting_room, wr_store in self.vertiport.waiting_room_stores.items():
             num_agents_in_the_wr = len(wr_store.items)
             if num_agents_in_the_wr > 0:
                 for waiting_passenger in wr_store.items:
                     if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_flight_waiting_time:
-
                         # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
                         num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
                         departing_passengers = Scheduler.collect_departing_passengers(wr_store, num_departing_passengers)
