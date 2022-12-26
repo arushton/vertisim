@@ -2,6 +2,7 @@ import random
 import numpy as np
 from utils.units import sec_to_ms
 from typing import List, Union
+import re
 
 
 def set_seed(seed):
@@ -236,6 +237,20 @@ def is_sqlite3(filename):
         header = fd.read(100)
 
     return header[:16] == "SQLite format 3\x00"
+
+
+def find_first_int(string):
+    """
+    Find the first integer in a string.
+    """
+    return int(re.findall(r'\d+', string)[0])
+
+
+def find_second_int(string):
+    """
+    Find the second integer in a string.
+    """
+    return int(re.findall(r'\d+', string)[1])
 
 # def nested_dict_filter_values(d, depth, value):
 #     """

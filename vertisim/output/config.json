@@ -9,7 +9,7 @@
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
         "interuptive_approach": false,
-        "only_aircraft_simulation": false,
+        "only_aircraft_simulation": true,
         "default_aircraft": true,
         "verbose": false,
         "battery_model_sim": false
@@ -22,7 +22,7 @@
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 180
+                    "mu": 0
                 },
                 "distribution_type": "discrete",
                 "num_passengers": 600,
@@ -40,7 +40,7 @@
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 300
+                    "mu": 60.0
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180,

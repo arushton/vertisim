@@ -91,7 +91,7 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 4  # seconds
+                'mu': 60 / (30 / 60)  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -111,7 +111,7 @@ network_and_demand = {
 vertiport_params = {
     'vertiport_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
                                   'Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls',
-    'layout': 'clover_1_fato_4_park',
+    'layout': 'clover_1_fato_3_park',
     'num_security_check_servers': 12,
     'num_chargers': 4,
     'charger_max_charge_rate': 480,  # kW # TODO: Utilize this parameter when creating battery model.
@@ -169,20 +169,20 @@ aircraft_params = {
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
     # ------------------------------------------------
     'ground_taxi_speed': 3.67,  # ft/s
-    'time_passenger_embark_disembark': 60 * 4,  # secs
-    'time_pre_charging_processes': 120,  # sec
+    'time_passenger_embark_disembark': 60 * 0,  # secs
+    'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
-    'time_post_charging_processes': 120,  # sec
-    'time_descend_transition': 30,  # sec
-    'time_hover_descend': 10,  # sec
-    'time_rotor_spin_down': 5,  # sec
-    'time_post_landing_safety_checks': 15,  # sec
+    'time_post_charging_processes': 0,  # sec
+    'time_descend_transition': 60,  # sec
+    'time_hover_descend': 0,  # sec
+    'time_rotor_spin_down': 0,  # sec
+    'time_post_landing_safety_checks': 0,  # sec
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
-    'time_pre_take_off_check_list': 15,  # sec
-    'time_rotor_spin_up': 5,  # sec
-    'time_hover_climb': 10,  # sec
-    'time_climb_transition': 30,  # sec
+    'time_pre_take_off_check_list': 0,  # sec
+    'time_rotor_spin_up': 0,  # sec
+    'time_hover_climb': 0,  # sec
+    'time_climb_transition': 60,  # sec
 
     # AIRCRAFT CHARGING TIME PARAMETERS
     # ----------------------------
@@ -200,7 +200,7 @@ aircraft_params = {
     'charging_time_dist': {
         'distribution_name': 'poisson',
         'parameters': {
-            'mu': 60 * 5
+            'mu': 60 * 3
             # 'param3': None,
             # 'param4': None
         },
@@ -215,7 +215,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/test',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

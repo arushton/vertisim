@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 from utils.json_formatter import create_trajectory_json
-from utils.helpers import is_shared_charger, none_checker, get_str_before_first_occurrence_of_char
+from utils.helpers import is_shared_charger, none_checker, get_str_before_first_occurrence_of_char, find_first_int, \
+    find_second_int
 import json
 import sqlite3
 
@@ -58,7 +59,8 @@ def save_output(trackers,
             # Convert trajectory df to geoJSON and save
             agent_type = get_str_before_first_occurrence_of_char(key, '_')
             if json_trajectory := create_trajectory_json(
-                df=df, agent_type=agent_type, only_aircraft_simulation=simulation_params['sim_params']['only_aircraft_simulation']
+                    df=df, agent_type=agent_type,
+                    only_aircraft_simulation=simulation_params['sim_params']['only_aircraft_simulation']
             ):
                 with open(trajectory_output_file_name + '.geojson', 'w') as f:
                     json.dump(json_trajectory, f)
@@ -111,6 +113,8 @@ def save_output(trackers,
     charging_time_param_distribution TEXT, 
     charging_time_param_mu REAL, 
     vertiport_layout TEXT,
+    num_parking_pads INTEGER,
+    num_fato INTEGER,
     mean_passenger_consolidation_time REAL, 
     max_passenger_consolidation_time REAL, 
     min_passenger_consolidation_time REAL, 
@@ -183,6 +187,8 @@ def save_output(trackers,
                    simulation_params['aircraft_params']['charging_time_dist']['distribution_name'],
                    simulation_params['aircraft_params']['charging_time_dist']['parameters']['mu'],
                    simulation_params['vertiport_params']['layout'],
+                   find_first_int(simulation_params['vertiport_params']['layout']),
+                   find_second_int(simulation_params['vertiport_params']['layout']),
                    -1,
                    -1,
                    -1,
@@ -222,7 +228,8 @@ def save_output(trackers,
                    simulation_params['passenger_params']['embark_disembark_time_constant'],
                    simulation_params['network_and_demand']['passenger_arrival_process'][
                        'passenger_arrival_distribution']['parameters']['mu'],
-                   simulation_params['network_and_demand']['passenger_arrival_process']['passenger_arrival_distribution'][
+                   simulation_params['network_and_demand']['passenger_arrival_process'][
+                       'passenger_arrival_distribution'][
                        'num_passengers'],
                    simulation_params['network_and_demand']['aircraft_arrival_schedule_file_name'],
                    simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
@@ -253,6 +260,8 @@ def save_output(trackers,
                    simulation_params['aircraft_params']['charging_time_dist']['distribution_name'],
                    simulation_params['aircraft_params']['charging_time_dist']['parameters']['mu'],
                    simulation_params['vertiport_params']['layout'],
+                   find_first_int(simulation_params['vertiport_params']['layout']),
+                   find_second_int(simulation_params['vertiport_params']['layout']),
                    performance_metrics['passenger_consolidation_time']['mean'],
                    performance_metrics['passenger_consolidation_time']['max'],
                    performance_metrics['passenger_consolidation_time']['min'],
@@ -279,7 +288,7 @@ def save_output(trackers,
 
     query = '''INSERT INTO performance_metrics 
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-        ?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?, ?);'''
     c.executemany(query, values)
 
     conn.commit()

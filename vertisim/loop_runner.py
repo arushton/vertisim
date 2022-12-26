@@ -4,21 +4,23 @@ from tqdm.contrib.itertools import product
 
 
 def run_vertisim():
-    passenger_arrival_process = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]  # [30, 60, 120, 180] # [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]  # [30, 60, 120, 180]
-    aircraft_arrival_process = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300] # [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300]  # [60, 120, 180, 240, 300] [45, 75, 90, 105, 135, 150, 210]
+    # passenger_arrival_process = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]  # [30, 60, 120, 180] # [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]  # [30, 60, 120, 180]
+    # passenger_arrival_process = []
+    aircraft_arrival_process = [60 / (6 / 60), 60 / (10 / 60), 60 / (15 / 60), 60 / (20 / 60), 60 / (30 / 60),
+                                60 / (40 / 60), 60 / (48 / 60), 60 / (60 / 60)] # [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300]  # [60, 120, 180, 240, 300] [45, 75, 90, 105, 135, 150, 210]
     max_passenger_waiting_time = [600]
-    charging_time = [60 * 5, 60 * 7, 60 * 10, 60 * 15]
-    # layouts = ['clover_1_fato_4_park']
-    layouts = ['clover_1_fato_1_park', 'clover_1_fato_2_park', 'clover_1_fato_3_park',
-               'clover_1_fato_5_park', 'clover_1_fato_6_park', 'clover_1_fato_7_park', 'clover_1_fato_8_park']
-    only_aircraft_sim = False
-    for passenger_arrival_mu, aircraft_arrival_mu, waiting_time_threshold, charge_time, vertiport_layout in \
-            product(passenger_arrival_process, aircraft_arrival_process, max_passenger_waiting_time, charging_time, layouts):
+    charging_time = [60 * 3, 60 * 5, 60 * 7, 60 * 10, 60 * 15]
+    layouts = ['clover_1_fato_4_park']
+    # layouts = ['clover_1_fato_1_park', 'clover_1_fato_2_park', 'clover_1_fato_3_park',
+    #            'clover_1_fato_5_park', 'clover_1_fato_6_park', 'clover_1_fato_7_park', 'clover_1_fato_8_park']
+    only_aircraft_sim = True
+    for aircraft_arrival_mu, waiting_time_threshold, charge_time, vertiport_layout in \
+            product( aircraft_arrival_process, max_passenger_waiting_time, charging_time, layouts):
         # print("Running simulation for: ", vertiport_layout, " with passenger arrival mu: ",
         #       passenger_arrival_mu, " aircraft arrival mu: ", aircraft_arrival_mu,
         #       " waiting time threshold: ", waiting_time_threshold, " charging time: ", charge_time)
         # Run the simulation
-        loop_input(passenger_arrival_mu, aircraft_arrival_mu,
+        loop_input(0, aircraft_arrival_mu,
                    waiting_time_threshold, charge_time, vertiport_layout, only_aircraft_sim)
 
 
