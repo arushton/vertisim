@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="d2ed3d13-b3c3-4975-b05f-e20d57263e9e" name="Changes" comment="restructured sim_setup.py">
+    <list default="true" id="d2ed3d13-b3c3-4975-b05f-e20d57263e9e" name="Changes" comment="performance metrics improvement">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/inputs.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/inputs.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/loop_input.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/loop_input.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/loop_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/loop_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/module_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/module_setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.csv" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.geojson" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.geojson" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/flight_schedule.csv" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/flight_schedule.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.csv" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.geojson" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.geojson" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vertisim/output/performance_metrics.db" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/performance_metrics_3.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/performance_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/performance_metrics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vertisim/scratch.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/scratch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/save_output.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/save_output.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/sim_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/sim_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/utils/json_formatter.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/utils/json_formatter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/vertiport_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/vertiport_manager.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -51,7 +53,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="TODO_SCOPE" value="All Places" />
-    <property name="com.google.cloudcode.ide_session_index" value="20221214_0000" />
+    <property name="com.google.cloudcode.ide_session_index" value="20221225_0001" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
@@ -203,7 +205,14 @@
       <option name="project" value="LOCAL" />
       <updated>1671003308735</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="performance metrics improvement">
+      <created>1671041469603</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1671041469603</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -236,6 +245,7 @@
     <MESSAGE value="passenger trajectory record improvement" />
     <MESSAGE value="restructured the repo" />
     <MESSAGE value="restructured sim_setup.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="restructured sim_setup.py" />
+    <MESSAGE value="performance metrics improvement" />
+    <option name="LAST_COMMIT_MESSAGE" value="performance metrics improvement" />
   </component>
 </project>

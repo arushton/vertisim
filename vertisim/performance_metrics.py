@@ -9,11 +9,12 @@ import matplotlib.pyplot as plt
 
 class PerformanceMetrics:
 
-    def __init__(self, sim_start_timestamp, passenger_consolidation_time, passenger_departure_queue_count,
-                 aircraft_arrival_queue_count,
-                 aircraft_departure_queue_count, passenger_waiting_time, passenger_transfer_time, flight_schedule,
+    def __init__(self, sim_start_timestamp, only_aircraft_simulation, passenger_consolidation_time,
+                 passenger_departure_queue_count, aircraft_arrival_queue_count, aircraft_departure_queue_count,
+                 passenger_waiting_time, passenger_transfer_time, flight_schedule,
                  fato_usage_tracker, sim_id, verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
+        self.only_aircraft_simulation = only_aircraft_simulation
         self.passenger_consolidation_time = passenger_consolidation_time
         self.passenger_departure_queue_count = passenger_departure_queue_count
         self.aircraft_arrival_queue_count = aircraft_arrival_queue_count
@@ -28,18 +29,16 @@ class PerformanceMetrics:
 
         self.aircraft_arrival_queue_count = remove_larger_keys(self.aircraft_arrival_queue_count, self.flight_schedule)
 
-        self.compute_load_factor_stats()
-        self.compute_aircraft_throughput()
-
-        self.calculate_passenger_consolidation_time_stats()
-        self.calculate_passenger_waiting_time_stats()
-        self.calculate_passenger_transfer_time_stats()
-        self.calculate_passenger_departure_queue_count_stats()
+        if not self.only_aircraft_simulation:
+            self.calculate_passenger_consolidation_time_stats()
+            self.calculate_passenger_waiting_time_stats()
+            self.calculate_passenger_transfer_time_stats()
+            self.calculate_passenger_departure_queue_count_stats()
+            self.compute_total_passenger_throughput()
+            self.compute_average_passenger_throughput()
+            self.compute_load_factor_stats()
         self.calculate_aircraft_arrival_queue_count_stats()
         self.calculate_aircraft_departure_queue_count_stats()
-        self.compute_load_factor_stats()
-        self.compute_total_passenger_throughput()
-        self.compute_average_passenger_throughput()
         self.compute_aircraft_throughput()
         self.compute_average_aircraft_throughput()
         self.compute_fato_utilization()
@@ -352,28 +351,30 @@ class PerformanceMetrics:
         print(f"FATO utilization: {self.performance_metrics['fato_utilization']}%")
 
     def print_verbose_performance_metrics(self):
-        self.print_passenger_consolidation_time_stats()
-        self.print_passenger_waiting_time_stats()
-        self.print_passenger_transfer_time_stats()
-        self.print_passenger_departure_queue_count_stats()
+        if not self.only_aircraft_simulation:
+            self.print_passenger_consolidation_time_stats()
+            self.print_passenger_waiting_time_stats()
+            self.print_passenger_transfer_time_stats()
+            self.print_passenger_departure_queue_count_stats()
+            self.print_avg_load_factor()
+            self.print_total_passenger_throughput()
+            self.print_average_passenger_throughput()
         self.print_aircraft_arrival_queue_count_stats()
         self.print_aircraft_departure_queue_count_stats()
         self.print_total_simulated_time()
-        self.print_avg_load_factor()
         self.print_total_aircraft_throughput()
         self.print_average_aircarft_throughput()
-        self.print_total_passenger_throughput()
-        self.print_average_passenger_throughput()
         self.print_fato_utilization()
         # self.plot_aircraft_arrival_queue_count()
 
     def print_performance_metrics(self):
+        if not self.only_aircraft_simulation:
+            self.print_avg_load_factor()
+            self.print_total_passenger_throughput()
+            self.print_average_passenger_throughput()
         self.print_total_simulated_time()
-        self.print_avg_load_factor()
         self.print_total_aircraft_throughput()
         self.print_average_aircarft_throughput()
-        self.print_total_passenger_throughput()
-        self.print_average_passenger_throughput()
         self.print_fato_utilization()
         # self.plot_aircraft_arrival_queue_count()
 

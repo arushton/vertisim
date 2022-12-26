@@ -64,7 +64,7 @@ def loop_input(passenger_arrival_mu,
                     # 'param3': None
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-                'num_passengers': 1500,  # Number of passengers to be generated
+                'num_passengers': 600,  # Number of passengers to be generated
                 'max_val_in_dist': 120  # seconds  # UNUSED
             }
         },
@@ -108,7 +108,7 @@ def loop_input(passenger_arrival_mu,
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
                 'max_interarrival_time': 180,  # seconds
-                'num_aircraft': 1500,
+                'num_aircraft': 600,
                 # Number of aircraft in the simulation. If None, then the required number of aircraft
                 # will be estimated from the num_passengers.
                 'num_passengers': None,

@@ -16,6 +16,7 @@ class VertiportManager:
                  arrival_priority: int,
                  departure_priority: int,
                  taxi_config: object,
+                 only_aircraft_simulation: bool,
                  aircraft_fleet_specs: Dict,
                  aircraft_energy_consumption_data: Dict,
                  charging_time_distribution_params: Dict,
@@ -32,6 +33,7 @@ class VertiportManager:
         self.arrival_priority = arrival_priority
         self.departure_priority = departure_priority
         self.taxi_config = taxi_config
+        self.only_aircraft_simulation = only_aircraft_simulation
         self.aircraft_fleet_specs = aircraft_fleet_specs
         self.charging_time_distribution_params = charging_time_distribution_params
         self.passenger_distributions = passenger_distributions
@@ -364,8 +366,8 @@ class VertiportManager:
 
                 flight_queue = [self.env.process(
                     self.reserve_aircraft(departing_passengers, departing_passengers[0].dest_vertiport_id))
-                                for departing_passengers
-                                in departing_passenger_groups]
+                    for departing_passengers
+                    in departing_passenger_groups]
                 yield self.env.all_of(flight_queue)
 
     # PASSENGER RELATED METHODS
@@ -489,6 +491,11 @@ class VertiportManager:
         # self.active_aircraft_store.get(lambda filt: filt == aircraft.tail_number)
         self.put_aircraft_into_available_aircraft_store(aircraft)
 
+        if self.only_aircraft_simulation:
+            yield self.env.process(
+                self.simulate_aircraft_departure_process(aircraft=aircraft, departing_passengers=[])
+            )
+
     def simulate_aircraft_departure_process(self, aircraft, departing_passengers):
         # Save passenger boarding time
         for passenger in departing_passengers:
@@ -513,8 +520,9 @@ class VertiportManager:
         # Decrease the aircraft departure queue counter
         self.event_saver.update_aircraft_departure_queue_counter(queue_update=-1)
 
-        # Decrease the passenger departure queue counter
-        self.event_saver.update_passenger_departure_queue_counter(queue_update=-1)
+        if not self.only_aircraft_simulation:
+            # Decrease the passenger departure queue counter
+            self.event_saver.update_passenger_departure_queue_counter(queue_update=-1)
 
         # Save FATO usage start time
         self.event_saver.update_fato_usage_tracker(fato_usage=1)

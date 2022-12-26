@@ -188,6 +188,7 @@ class SimSetup:
             arrival_priority=self.sim_params['arrival_priority'],
             departure_priority=self.sim_params['departure_priority'],
             taxi_config=self.taxi_config,
+            only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
             aircraft_fleet_specs=self.network_and_demand['aircraft_arrival_process']['aircraft_fleet_specs'],
             aircraft_energy_consumption_data=self.aircraft_energy_consumption_data,
             charging_time_distribution_params=self.aircraft_params['charging_time_dist'],
@@ -274,6 +275,7 @@ class SimSetup:
     def calculate_performance_metrics(self):
         # Print and save performance metrics
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
+                                  only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
                                   passenger_consolidation_time=self.event_saver.passenger_consolidation_time,
                                   passenger_departure_queue_count=self.event_saver.passenger_departure_queue_count,
                                   aircraft_arrival_queue_count=self.event_saver.aircraft_arrival_queue_count,

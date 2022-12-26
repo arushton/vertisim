@@ -30,7 +30,7 @@ def create_agent_template():
     return agent_temp
 
 
-def create_trajectory_json(df: pd.DataFrame, agent_type: str) -> dict:
+def create_trajectory_json(df: pd.DataFrame, agent_type: str, only_aircraft_simulation: False) -> dict:
     """
     Function that creates a geoJSON file from a pandas dataframe
     :param df: 
@@ -39,7 +39,10 @@ def create_trajectory_json(df: pd.DataFrame, agent_type: str) -> dict:
     """
     collection = create_collection_template()
     df['alt_m'] = 0
-    
+
+    if only_aircraft_simulation:
+        return None
+
     if agent_type == 'aircraft':
         df1_grouped = df.groupby(by='tail_number')
     elif agent_type == 'passenger':

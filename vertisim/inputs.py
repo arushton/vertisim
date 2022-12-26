@@ -15,7 +15,7 @@ sim_params = {
     'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
+    'only_aircraft_simulation': True,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.

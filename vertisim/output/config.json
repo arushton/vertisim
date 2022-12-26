@@ -22,10 +22,10 @@
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 120
+                    "mu": 180
                 },
                 "distribution_type": "discrete",
-                "num_passengers": 1500,
+                "num_passengers": 600,
                 "max_val_in_dist": 120
             }
         },
@@ -40,11 +40,11 @@
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 180
+                    "mu": 300
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180,
-                "num_aircraft": 1500,
+                "num_aircraft": 600,
                 "num_passengers": null,
                 "min_init_soc": 20,
                 "max_init_soc": 50
