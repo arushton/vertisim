@@ -13,6 +13,12 @@ Aircraft State Machine
 ![passenger_state](https://user-images.githubusercontent.com/55157858/209735125-18b65e96-a061-4004-a979-1de6bcafa02b.png)
 Passenger State Machine
 
+
+# Demo
+Below we used 1 FATO (Final Approach and Take-off Area) and 4 parking pad vertiport configuration. FATO utilization is ~100%. Small circular shapes are parking pads and large circular shape is the FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden. Aircraft are approaching from right to left and departing from FATO to left.
+
+https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
+
 # Installation
 1. Download all of the files.
 2. Open your terminal and cd to vertisim folder
@@ -21,12 +27,7 @@ Passenger State Machine
 5. Install the requirements with `pip install -r requirements.txt`
 6. Done!
 
-
-# Demo
-Below we used 1 FATO (Final Approach and Take-off Area) and 4 parking pad vertiport configuration. FATO utilization is ~100%. Small circular shapes are parking pads and large circular shape is the FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden. Aircraft are approaching from right to left and departing from FATO to left.
-
-https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
-
+For questions and collaborations, please email eminburak_onat@berkeley.edu. Thanks!
 
 # TODO
 1. Charging process interruption.
