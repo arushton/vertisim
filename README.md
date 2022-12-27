@@ -31,14 +31,15 @@ For questions and collaborations, please email eminburak_onat@berkeley.edu. Than
 
 # How To Run
 1. Activate the vertisim environment (for conda users `conda activate vertisim`)
-2. There are three ways of running vertisim.
- 2.1. Run a single configuration: `python3 inputs.py`
- 2.2. Run many configuration serially: `python3 loop_runner.py`
- 2.3. Run many configuration in parallel (CPU parallelization by multiprocessing): python3 loop_runner_multiprocess.py`
+2. There are three ways of running vertisim. <br>
+a) Run a single configuration: `python3 inputs.py` <br>
+b) Run many configuration serially: `python3 loop_runner.py` <br>
+c) Run many configuration in parallel (CPU parallelization by multiprocessing): `python3 loop_runner_multiprocess.py`
 
 
 # TODO
 1. Charging process interruption.
-2. Passenger - aircraft assignment problem in the case of more than one type of aircraft.
-3. Documentation
+2. Battery charging model for multi-aircraft type scenario.
+3. Passenger - aircraft assignment problem in the case of more than one type of aircraft.
+4. Documentation
 
