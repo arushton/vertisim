@@ -126,3 +126,118 @@ conn.commit()
 conn.close()
 
 
+
+def find_first_int(string):
+    """
+    Find the first integer in a string.
+    """
+    return int(re.findall(r'\d+', string)[0])
+
+
+def find_second_int(string):
+    """
+    Find the second integer in a string.
+    """
+    return int(re.findall(r'\d+', string)[1])
+
+
+# Using the find_first_int function get the first integer from the "vertiport_layout" column and save the result to a new column called "num_parking_pads"
+df['num_parking_pads'] = df['vertiport_layout'].apply(find_first_int)
+
+# function that takes dataframe name and column names to apply filter on the dataframe. Column names and filter values will inputted as dictionary. User should be able to filter the values by using operators like ">", "<", ">=", "<=", "==", "!=" for each of the items in the dictionary. The filter dictionary should be like {"column_name_1": ["operator_1", value1], "column_name_2": ["operator_2", "string"], ...}. Then sort values by the first two columns in the filter dictionary. The function should return the filtered dataframe.
+def filter_dataframe(df, filter_dict, sorting_columns=None):
+    """
+    Filter a pandas dataframe using a dictionary of column names and filter values.
+    """
+    # Create a list to store the filter expressions
+    filter_expressions = []
+
+    # Loop over the filter dictionary
+    for column_name, filter_value in filter_dict.items():
+        # Get the operator and the value
+        operator, value = filter_value
+
+        if type(value) == str:
+            # Create the filter expression
+            filter_expression = f"{column_name} {operator} '{value}'"
+        else:
+            # Create the filter expression
+            filter_expression = f"{column_name} {operator} {value}"
+
+        # Append the filter expression to the list
+        filter_expressions.append(filter_expression)
+
+    # Join the filter expressions with the "and" keyword
+    filter_expression = " and ".join(filter_expressions)
+
+    # Filter the dataframe
+    df = df.query(filter_expression)
+
+    # Sort the dataframe
+    if sorting_columns != None:
+        df = df.sort_values(sorting_columns)
+
+    # Return the dataframe
+    return df.reset_index(drop=True)
+
+
+# Set the plot size of a seaborn plot
+def set_plot_size(width, height):
+    """
+    Set the size of a seaborn plot.
+    """
+    # Set the size of the plots
+    plt.rcParams['figure.figsize'] = (width, height)
+
+# Set the font size of a seaborn plot
+def set_font_size(size):
+    """
+    Set the font size of a seaborn plot.
+    """
+    # Set the font size of the plots
+    plt.rcParams['font.size'] = size
+
+
+# Filter a dataframe column using a list of values
+def filter_column(df, column_name, values):
+
+    # Create a list to store the filter expressions
+    filter_expressions = []
+
+    # Loop over the values
+    for value in values:
+        # Create the filter expression
+        filter_expression = f"{column_name} == {value}"
+
+        # Append the filter expression to the list
+        filter_expressions.append(filter_expression)
+
+    # Join the filter expressions with the "or" keyword
+    filter_expression = " or ".join(filter_expressions)
+
+    # Filter the dataframe
+    df = df.query(filter_expression)
+
+    # Return the dataframe
+    return df
+
+
+# Terminal code to extract a zip file
+import zipfile
+
+# Extract the zip file
+with zipfile.ZipFile('performance_metrics.zip', 'r') as zip_ref:
+    zip_ref.extractall()
+
+# Import the os module
+import os
+
+# Get the current working directory
+cwd = os.getcwd()
+
+# Print the current working directory
+print(cwd)
+
+# Import the os module
+import os
+

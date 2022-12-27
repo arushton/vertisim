@@ -9,7 +9,7 @@
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
         "interuptive_approach": false,
-        "only_aircraft_simulation": true,
+        "only_aircraft_simulation": false,
         "default_aircraft": true,
         "verbose": false,
         "battery_model_sim": false
@@ -22,7 +22,7 @@
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 0
+                    "mu": 15
                 },
                 "distribution_type": "discrete",
                 "num_passengers": 600,
@@ -40,7 +40,7 @@
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 60.0
+                    "mu": 45
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180,
@@ -53,9 +53,9 @@
     },
     "vertiport_params": {
         "vertiport_layout_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls",
-        "layout": "clover_1_fato_4_park",
+        "layout": "clover_1_fato_2_park",
         "num_security_check_servers": 20,
-        "num_chargers": 4,
+        "num_chargers": 2,
         "charger_max_charge_rate": 480,
         "charger_efficiency": 0.9,
         "shared_charger_sets": null
@@ -99,7 +99,7 @@
         "charging_time_dist": {
             "distribution_name": "poisson",
             "parameters": {
-                "mu": 900
+                "mu": 180
             },
             "distribution_type": "discrete",
             "max_charge_duration": 1800

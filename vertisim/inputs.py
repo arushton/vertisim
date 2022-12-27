@@ -12,10 +12,10 @@ sim_params = {
     'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 60 * 10,  # seconds
+    'max_passenger_waiting_time': 60 * 100,  # seconds
     'interuptive_approach': False,
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': True,  # If True, then the simulation will only simulate aircraft turnaround.
+    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.
@@ -48,7 +48,7 @@ network_and_demand = {
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 2  # seconds
+                'mu': 75  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -91,7 +91,7 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 / (30 / 60)  # seconds
+                'mu': 300  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -200,7 +200,7 @@ aircraft_params = {
     'charging_time_dist': {
         'distribution_name': 'poisson',
         'parameters': {
-            'mu': 60 * 3
+            'mu': 60 * 5
             # 'param3': None,
             # 'param4': None
         },
@@ -215,7 +215,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/test',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
