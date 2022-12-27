@@ -4,7 +4,7 @@ Despite operational similarities to commencial airlines, Urban Air Mobility (UAM
 ## VertiSim Architecture
 VertiSim is driven by an event queue for which events are processed in chronological sequence. In process-based simulations every activity is modeled by a process. In other words, processes requires an activity that involves in time. VertiSim has five main modules to simulate processes at a vertiport: Passenger, Aircraft, Vertiport Manager, Scheduler, and Vertiport Layout Creator. Below VertiSim architecture presented.
 
- ![vertisim_arch](https://user-images.githubusercontent.com/55157858/209735048-48767ca7-3d69-43a6-88b0-f430a6b004ae.png)
+![vertisim_arch](https://user-images.githubusercontent.com/55157858/209736749-40c8de9b-f0ab-402b-a11e-1f20c247fb7f.png)
  Vertisim Architecture
  
 ![aircraft_state](https://user-images.githubusercontent.com/55157858/209735096-e9860468-2bd7-4e27-92bb-d098fe1cb362.png)
