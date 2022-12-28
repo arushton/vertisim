@@ -165,9 +165,7 @@ class PerformanceMetrics:
         :return: Start of interval, end of interval
         """
         if total_sim_time < 4:
-            raise ValueError(f'Simulation time is less than 3 hours. Simulation ID: {self.sim_id}')
-        elif 3 <= total_sim_time <= 4:
-            return 1, 3
+            raise ValueError(f'Simulation time is less than 4 hours. Simulation ID: {self.sim_id}')
         elif 4 < total_sim_time <= 5:
             return 2, 4
         elif 5 < total_sim_time <= 6:
@@ -207,6 +205,19 @@ class PerformanceMetrics:
                 total_aircraft += 1
         self.performance_metrics['aircraft_throughput']['mean'] = total_aircraft / interval_length
         return total_aircraft
+
+    def compute_aircraft_throughput_for_each_hour(self):
+        # Computes the aircraft throughput for each hour
+        total_sim_time = self.calculate_total_simulated_time()
+        first, second = self.get_time_interval(total_sim_time)
+        interval_length = second - first
+        total_aircraft_at_each_hour = defaultdict(dict)
+        for time_interval in range(first, second):
+            total_aircraft_at_each_hour[time_interval] = 0
+            for key, value in self.flight_schedule.items():
+                if self.sim_start_timestamp + self.hour * time_interval <= key <= self.sim_start_timestamp + self.hour * (time_interval + 1):
+                    total_aircraft_at_each_hour[time_interval] += 1
+        return total_aircraft_at_each_hour
 
     def compute_fato_utilization(self):
         # Sums the difference between keys when the first value is 0 and the next value is 1.
@@ -314,6 +325,15 @@ class PerformanceMetrics:
         print(df)
         print("")
 
+    def print_aircraft_throughput_stats_for_each_hr(self):
+        print("Aircraft throughput statistics for each hour:")
+        print("-----------------------------")
+        total_aircraft_at_each_hour = self.compute_aircraft_throughput_for_each_hour()
+        total_aircraft_at_each_hour = list(total_aircraft_at_each_hour.values())
+        print(f'Max number of throughput during any 1-hr interval: {round(np.max(total_aircraft_at_each_hour), 2)}')
+        print(f'Min number of throughput during any 1-hr interval: {round(np.min(total_aircraft_at_each_hour), 2)}')
+        print(f'Std of throughput during 1 hr interval: {round(np.std(total_aircraft_at_each_hour), 2)}')
+
     def plot_aircraft_arrival_queue_count(self):
         # Plots aircraft arrival queue count
         plt.plot(
@@ -333,13 +353,13 @@ class PerformanceMetrics:
         print(f"{self.calculate_total_simulated_time()} hours simulated")
 
     def print_avg_load_factor(self):
-        print(f"Average load factor: {self.performance_metrics['load_factor']['mean']}")
+        print(f"Average load factor: {round(self.performance_metrics['load_factor']['mean'], 2)}")
 
     def print_total_aircraft_throughput(self):
-        print(f"Total aircraft throughput: {self.performance_metrics['aircraft_throughput']['total']}")
+        print(f"Total aircraft throughput: {round(self.performance_metrics['aircraft_throughput']['total'], 2)}")
 
-    def print_average_aircarft_throughput(self):
-        print(f"Average aircraft throughput in 1 hour: {self.performance_metrics['aircraft_throughput']['mean']}")
+    def print_average_aircraft_throughput(self):
+        print(f"Average aircraft throughput in 1 hour: {round(self.performance_metrics['aircraft_throughput']['mean'], 2)}")
 
     def print_total_passenger_throughput(self):
         print(f"Total passenger throughput: {self.performance_metrics['passenger_throughput']['total']}")
@@ -363,7 +383,8 @@ class PerformanceMetrics:
         self.print_aircraft_departure_queue_count_stats()
         self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
-        self.print_average_aircarft_throughput()
+        self.print_aircraft_throughput_stats_for_each_hr()
+        self.print_average_aircraft_throughput()
         self.print_fato_utilization()
         # self.plot_aircraft_arrival_queue_count()
 
@@ -374,7 +395,8 @@ class PerformanceMetrics:
             self.print_average_passenger_throughput()
         self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
-        self.print_average_aircarft_throughput()
+        self.print_average_aircraft_throughput()
+        self.print_aircraft_throughput_stats_for_each_hr()
         self.print_fato_utilization()
         # self.plot_aircraft_arrival_queue_count()
 
