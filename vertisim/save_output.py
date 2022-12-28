@@ -43,27 +43,28 @@ def save_output(trackers,
         'output_params': simulation_params['output_params']
     }
 
-    # Save simulation configuration to JSON file
-    with open(config_output_file_name + '.json', 'w') as outfile:
-        json.dump(config_output, outfile, indent=4)
+    if simulation_params['sim_params']['verbose']:
+        # Save simulation configuration to JSON file
+        with open(config_output_file_name + '.json', 'w') as outfile:
+            json.dump(config_output, outfile, indent=4)
 
-    # Save agent trajectories to csv
-    for key, value in trackers.items():
-        df = pd.DataFrame.from_dict(value, orient='index')
-        df.reset_index(inplace=True)
-        df.rename(columns={'index': 'time'}, inplace=True)
-        trajectory_output_file_name = os.path.join(output_dir, key)
-        df.to_csv(trajectory_output_file_name + '.csv')
+        # Save agent trajectories to csv
+        for key, value in trackers.items():
+            df = pd.DataFrame.from_dict(value, orient='index')
+            df.reset_index(inplace=True)
+            df.rename(columns={'index': 'time'}, inplace=True)
+            trajectory_output_file_name = os.path.join(output_dir, key)
+            df.to_csv(trajectory_output_file_name + '.csv')
 
-        if key != 'flight_schedule':
-            # Convert trajectory df to geoJSON and save
-            agent_type = get_str_before_first_occurrence_of_char(key, '_')
-            if json_trajectory := create_trajectory_json(
-                    df=df, agent_type=agent_type,
-                    only_aircraft_simulation=simulation_params['sim_params']['only_aircraft_simulation']
-            ):
-                with open(trajectory_output_file_name + '.geojson', 'w') as f:
-                    json.dump(json_trajectory, f)
+            if key != 'flight_schedule':
+                # Convert trajectory df to geoJSON and save
+                agent_type = get_str_before_first_occurrence_of_char(key, '_')
+                if json_trajectory := create_trajectory_json(
+                        df=df, agent_type=agent_type,
+                        only_aircraft_simulation=simulation_params['sim_params']['only_aircraft_simulation']
+                ):
+                    with open(trajectory_output_file_name + '.geojson', 'w') as f:
+                        json.dump(json_trajectory, f)
 
     # Save performance metrics to SQLite Database
     performance_metrics_output_file_name = os.path.join(output_dir, performance_metrics_output_file_name)
