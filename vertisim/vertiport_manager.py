@@ -47,7 +47,8 @@ class VertiportManager:
         self.aircraft_energy_consumption_data = aircraft_energy_consumption_data
         self.aircraft_battery_models = self.build_aircraft_battery_models(self.aircraft_fleet_specs)
         self.taxi_resource = simpy.Resource(self.env, 1)
-        self.env.process(self.check_passenger_max_waiting_time_threshold())
+        if not self.only_aircraft_simulation:
+            self.env.process(self.check_passenger_max_waiting_time_threshold())
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
 
