@@ -330,6 +330,11 @@ class Aircraft:
         return self.vertiport_manager.vertiport.charger_resource.request()
 
     def get_charging_time(self, time_passenger_embark_disembark):
+        """
+        Get charging time - Two options: Constant charging time or draw a number from distribution
+        """
+        if self.vertiport_manager.charging_time_distribution is None:
+            return max(time_passenger_embark_disembark, self.time_charging)
         charge_time = self.vertiport_manager.charging_time_distribution.pick_number_from_distribution()
         return max(time_passenger_embark_disembark, charge_time)
 
