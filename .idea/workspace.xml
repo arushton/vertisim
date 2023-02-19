@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="d2ed3d13-b3c3-4975-b05f-e20d57263e9e" name="Changes" comment="new outputs">
+    <list default="true" id="d2ed3d13-b3c3-4975-b05f-e20d57263e9e" name="Changes" comment="constant charging time added">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/aircraft.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/aircraft.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/input/skyport_layouts/skyport_layout.xls" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/input/skyport_layouts/skyport_layout.xls" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/inputs.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/inputs.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/loop_input.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/loop_input.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/loop_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/loop_runner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.csv" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.geojson" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/aircraft_agent_trajectory.geojson" afterDir="false" />
@@ -12,8 +14,8 @@
       <change beforePath="$PROJECT_DIR$/vertisim/output/flight_schedule.csv" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/flight_schedule.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.csv" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.geojson" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/output/passenger_agent_trajectory.geojson" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vertisim/performance_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/performance_metrics.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vertisim/save_output.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/save_output.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vertisim/scratch.py" beforeDir="false" afterPath="$PROJECT_DIR$/vertisim/scratch.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,7 +51,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="TODO_SCOPE" value="All Places" />
-    <property name="com.google.cloudcode.ide_session_index" value="20221225_0001" />
+    <property name="com.google.cloudcode.ide_session_index" value="20230125_0000" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
@@ -222,7 +224,49 @@
       <option name="project" value="LOCAL" />
       <updated>1672036773908</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="updated requirements.txt">
+      <created>1672118985873</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1672118985873</updated>
+    </task>
+    <task id="LOCAL-00024" summary="updated requirements.txt">
+      <created>1672268764830</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1672268764830</updated>
+    </task>
+    <task id="LOCAL-00025" summary="bug fix for an edge case of only aircraft sim">
+      <created>1672269894352</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1672269894352</updated>
+    </task>
+    <task id="LOCAL-00026" summary="verbose output changes">
+      <created>1672270009175</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1672270009175</updated>
+    </task>
+    <task id="LOCAL-00027" summary="unnecessary check removed">
+      <created>1672270033857</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1672270033857</updated>
+    </task>
+    <task id="LOCAL-00028" summary="constant charging time added">
+      <created>1673827350227</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1673827350227</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -258,6 +302,11 @@
     <MESSAGE value="performance metrics improvement" />
     <MESSAGE value="only aircraft simulation capability" />
     <MESSAGE value="new outputs" />
-    <option name="LAST_COMMIT_MESSAGE" value="new outputs" />
+    <MESSAGE value="updated requirements.txt" />
+    <MESSAGE value="bug fix for an edge case of only aircraft sim" />
+    <MESSAGE value="verbose output changes" />
+    <MESSAGE value="unnecessary check removed" />
+    <MESSAGE value="constant charging time added" />
+    <option name="LAST_COMMIT_MESSAGE" value="constant charging time added" />
   </component>
 </project>

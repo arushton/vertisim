@@ -330,9 +330,15 @@ class PerformanceMetrics:
         print("-----------------------------")
         total_aircraft_at_each_hour = self.compute_aircraft_throughput_for_each_hour()
         total_aircraft_at_each_hour = list(total_aircraft_at_each_hour.values())
-        print(f'Max number of throughput during any 1-hr interval: {round(np.max(total_aircraft_at_each_hour), 2)}')
-        print(f'Min number of throughput during any 1-hr interval: {round(np.min(total_aircraft_at_each_hour), 2)}')
-        print(f'Std of throughput during 1 hr interval: {round(np.std(total_aircraft_at_each_hour), 2)}')
+
+    def print_aircraft_throughput_stats_for_each_hr_verbose(self):
+        print("Aircraft throughput statistics for each hour:")
+        print("-----------------------------")
+        total_aircraft_at_each_hour = self.compute_aircraft_throughput_for_each_hour()
+        total_aircraft_at_each_hour = list(total_aircraft_at_each_hour.values())
+        print(f'Max number of departures during any 1-hr interval: {round(np.max(total_aircraft_at_each_hour), 2)}')
+        print(f'Min number of departures during any 1-hr interval: {round(np.min(total_aircraft_at_each_hour), 2)}')
+        print(f'Std of departures during 1 hr interval: {round(np.std(total_aircraft_at_each_hour), 2)}')
 
     def plot_aircraft_arrival_queue_count(self):
         # Plots aircraft arrival queue count
@@ -383,7 +389,7 @@ class PerformanceMetrics:
         self.print_aircraft_departure_queue_count_stats()
         self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
-        self.print_aircraft_throughput_stats_for_each_hr()
+        self.print_aircraft_throughput_stats_for_each_hr_verbose()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
         # self.plot_aircraft_arrival_queue_count()

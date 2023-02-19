@@ -7,7 +7,7 @@
         "initial_parking_occupancy_%": 0,
         "num_initial_passengers": 0,
         "random_seed": 42,
-        "max_passenger_waiting_time": 600,
+        "max_passenger_waiting_time": 1800,
         "interuptive_approach": false,
         "only_aircraft_simulation": false,
         "default_aircraft": true,
@@ -22,10 +22,10 @@
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 15
+                    "mu": 180
                 },
                 "distribution_type": "discrete",
-                "num_passengers": 600,
+                "num_passengers": 450,
                 "max_val_in_dist": 120
             }
         },
@@ -40,11 +40,11 @@
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 45
+                    "mu": 300
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180,
-                "num_aircraft": 600,
+                "num_aircraft": 450,
                 "num_passengers": null,
                 "min_init_soc": 20,
                 "max_init_soc": 50
@@ -53,9 +53,9 @@
     },
     "vertiport_params": {
         "vertiport_layout_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls",
-        "layout": "clover_1_fato_2_park",
+        "layout": "clover_1_fato_8_park",
         "num_security_check_servers": 20,
-        "num_chargers": 2,
+        "num_chargers": 8,
         "charger_max_charge_rate": 480,
         "charger_efficiency": 0.9,
         "shared_charger_sets": null
@@ -81,25 +81,25 @@
         "range": 150,
         "initial_soc": 20,
         "ground_taxi_speed": 3.67,
-        "time_passenger_embark_disembark": 240,
-        "time_pre_charging_processes": 120,
+        "time_passenger_embark_disembark": 0,
+        "time_pre_charging_processes": 0,
         "time_charging_plug_disconnection": 0,
-        "time_post_charging_processes": 120,
-        "time_descend_transition": 30,
-        "time_hover_descend": 10,
-        "time_rotor_spin_down": 5,
-        "time_post_landing_safety_checks": 15,
+        "time_post_charging_processes": 0,
+        "time_descend_transition": 60,
+        "time_hover_descend": 0,
+        "time_rotor_spin_down": 0,
+        "time_post_landing_safety_checks": 0,
         "time_tug_connection": 0,
         "time_tug_disconnection": 0,
-        "time_pre_take_off_check_list": 15,
-        "time_rotor_spin_up": 5,
-        "time_hover_climb": 10,
-        "time_climb_transition": 30,
+        "time_pre_take_off_check_list": 0,
+        "time_rotor_spin_up": 0,
+        "time_hover_climb": 0,
+        "time_climb_transition": 60,
         "time_charging": null,
         "charging_time_dist": {
             "distribution_name": "poisson",
             "parameters": {
-                "mu": 180
+                "mu": 900
             },
             "distribution_type": "discrete",
             "max_charge_duration": 1800

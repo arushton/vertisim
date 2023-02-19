@@ -64,7 +64,7 @@ def loop_input(passenger_arrival_mu,
                     # 'param3': None
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-                'num_passengers': 600,  # Number of passengers to be generated
+                'num_passengers': 450,  # Number of passengers to be generated
                 'max_val_in_dist': 120  # seconds  # UNUSED
             }
         },
@@ -108,7 +108,7 @@ def loop_input(passenger_arrival_mu,
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
                 'max_interarrival_time': 180,  # seconds
-                'num_aircraft': 600,
+                'num_aircraft': 450,
                 # Number of aircraft in the simulation. If None, then the required number of aircraft
                 # will be estimated from the num_passengers.
                 'num_passengers': None,
@@ -183,20 +183,20 @@ def loop_input(passenger_arrival_mu,
         # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
         # ------------------------------------------------
         'ground_taxi_speed': 3.67,  # ft/s
-        'time_passenger_embark_disembark': 60 * 4,  # secs
-        'time_pre_charging_processes': 120,  # sec
+        'time_passenger_embark_disembark': 60 * 0,  # secs
+        'time_pre_charging_processes': 0,  # sec
         'time_charging_plug_disconnection': 0,  # sec
-        'time_post_charging_processes': 120,  # sec
-        'time_descend_transition': 30,  # sec
-        'time_hover_descend': 10,  # sec
-        'time_rotor_spin_down': 5,  # sec
-        'time_post_landing_safety_checks': 15,  # sec
+        'time_post_charging_processes': 0,  # sec
+        'time_descend_transition': 60,  # sec
+        'time_hover_descend': 0,  # sec
+        'time_rotor_spin_down': 0,  # sec
+        'time_post_landing_safety_checks': 0,  # sec
         'time_tug_connection': 0,  # sec
         'time_tug_disconnection': 0,  # sec
-        'time_pre_take_off_check_list': 15,  # sec
-        'time_rotor_spin_up': 5,  # sec
-        'time_hover_climb': 10,  # sec
-        'time_climb_transition': 30,  # sec
+        'time_pre_take_off_check_list': 0,  # sec
+        'time_rotor_spin_up': 0,  # sec
+        'time_hover_climb': 0,  # sec
+        'time_climb_transition': 60,  # sec
 
         # AIRCRAFT CHARGING TIME PARAMETERS
         # ----------------------------
@@ -207,21 +207,20 @@ def loop_input(passenger_arrival_mu,
         # complete the mission. To use this feature, battery model parameters and aircraft energy consumption data need to
         # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
-        'time_charging': None,  # constant sec  # If None charging_time_dist will be used.
+        'time_charging': charge_time,  # constant sec  # If None charging_time_dist will be used.
         # Prob. dist. name and the parameter variable names should be consistent with the reference:
         # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
         # depending on the distribution you use.
-        'charging_time_dist': {
-            'distribution_name': 'poisson',
-            'parameters': {
-                'mu': charge_time
-                # 'param3': None,
-                # 'param4': None
-            },
-            'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-            'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
-            # time distribution generation.
-        },
+        'charging_time_dist': None,
+        # 'distribution_name': 'poisson',
+        # 'parameters': {
+        #     'mu': 60 * 11
+        #     # 'param3': None,
+        #     # 'param4': None
+        # },
+        # 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
+        # 'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
+        # # time distribution generation.
         'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
                                                         'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
         'min_reserve_soc': 20
@@ -229,7 +228,7 @@ def loop_input(passenger_arrival_mu,
     }
 
     output_params = {
-        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output',
+        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/supernal',
         'config_output_file_name': 'config',
         # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
         # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
