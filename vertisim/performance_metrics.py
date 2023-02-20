@@ -5,6 +5,7 @@ from utils.units import ms_to_min
 from utils.helpers import nested_dict_all_values, remove_larger_keys, get_values_from_nested_dict, \
     get_length_of_longest_list, get_length_of_shortest_list
 import matplotlib.pyplot as plt
+from typing import List
 
 
 class PerformanceMetrics:
@@ -158,14 +159,14 @@ class PerformanceMetrics:
         self.performance_metrics['passenger_throughput']['mean'] = total_passengers / interval_length
         return total_passengers / interval_length
 
-    def get_time_interval(self, total_sim_time: int) -> [int, int, int]:
+    def get_time_interval(self, total_sim_time: int) -> List(int, int):
         """
         Returns the time interval for the result indexing.
         :param total_sim_time: Total simulation time
         :return: Start of interval, end of interval
         """
         if total_sim_time < 4:
-            raise ValueError(f'Simulation time is less than 4 hours. Simulation ID: {self.sim_id}')
+            raise ValueError(f'Simulation time is less than 4 hours ({total_sim_time} hrs). Simulation ID: {self.sim_id}')
         elif 4 < total_sim_time <= 5:
             return 2, 4
         elif 5 < total_sim_time <= 6:
