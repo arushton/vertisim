@@ -210,9 +210,7 @@ aircraft_params = {
     },
     'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
                                                     'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
-    'min_reserve_soc': 20
-    # %  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
-    
+    'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 
 output_params = {
