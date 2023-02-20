@@ -14,13 +14,22 @@ class PassengerArrivalSetup:
                  passenger_arrival_schedule_file_path: Union[str, None],
                  passenger_params: Dict,
                  flight_destination_ids: List,
-                 vertiport_manager: int):
+                 vertiport_manager: int,
+                 aircraft_params: Dict = None,
+                 num_parking_pad: int = None,
+                 charging_param: int = None,
+                 initial_parking_occupancy: int = None
+                 ):
         self.env = env
         self.passenger_arrival_schedule_file_path = passenger_arrival_schedule_file_path
         self.artificial_passenger_arrival_process = artificial_passenger_arrival_process
         self.passenger_params = passenger_params
         self.flight_destination_ids = flight_destination_ids
         self.vertiport_manager = vertiport_manager
+        self.aircraft_params = aircraft_params
+        self.num_parking_pad = num_parking_pad
+        self.charging_param = charging_param
+        self.initial_parking_occupancy = initial_parking_occupancy
 
     @staticmethod
     def check_passenger_arrival_schedule(passenger_arrival_schedule: pd.DataFrame):
@@ -59,6 +68,20 @@ class PassengerArrivalSetup:
         # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
 
+        if self.aircraft_params['time_charging']:
+            charging_time = self.aircraft_params['time_charging']
+        else:
+            charging_time = self.charging_param
+
+        # Time to fill the vertiport with aircraft. This number is inputed in sim_params['initial_parking_occupancy']
+        time_to_fill_vertiport = int(self.num_parking_pad*self.initial_parking_occupancy) * (
+            self.aircraft_params['time_descend_transition'] +
+            self.aircraft_params['time_hover_descend'] +
+            self.aircraft_params['time_rotor_spin_down'] +
+            22) + charging_time
+
+        yield self.env.timeout(sec_to_ms(time_to_fill_vertiport))
+
         # Create passenger arrival process.
         for passenger_id in passenger_arrival_schedule.passenger_id:
             # Get the passenger's interarrival time
@@ -67,6 +90,7 @@ class PassengerArrivalSetup:
             dest_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'dest_vertiport_id'].values[0]
 
             yield self.env.timeout(interarrival_time)
+            # print(f'Passenger {passenger_id} arrives at {int((self.env.now)/1000/60)}')
             # Simulate passenger.
             self.initiate_passenger_arrival(
                     passenger_id=passenger_id,

@@ -250,7 +250,11 @@ class SimSetup:
                     passenger_arrival_schedule_file_path=None,
                     passenger_params=self.passenger_params,
                     flight_destination_ids=list(self.vertiport_distances.keys()),
-                    vertiport_manager=self.vertiport_manager
+                    vertiport_manager=self.vertiport_manager,
+                    aircraft_params=self.aircraft_params,
+                    num_parking_pad=self.vertiport_layout.num_parking_pad,
+                    charging_param=self.aircraft_params['charging_time_dist']['parameters']['mu'],
+                    initial_parking_occupancy=self.sim_params['initial_parking_occupancy']
                 )
             self.env.process(
                 passenger_arrival_process.create_passenger_arrival()

@@ -349,7 +349,7 @@ class VertiportManager:
         """
         while True:
             # Check the waiting rooms every max_waiting_time/2.
-            yield self.env.timeout(round(sec_to_ms(self.max_flight_waiting_time) / 4))
+            yield self.env.timeout(round(sec_to_ms(self.max_flight_waiting_time) / 2))
 
             if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold(
                     sec_to_ms(self.max_flight_waiting_time)):
@@ -539,6 +539,11 @@ class VertiportManager:
             aircraft_model=aircraft.aircraft_model
         )
 
+        # Save total transfer time of a passenger
+        for passenger in departing_passengers:
+            self.event_saver.save_passenger_transfer_time(passenger_id=passenger.passenger_id,
+                                                          transfer_time=self.env.now - passenger.vertiport_arrival_time)
+
         # Taxi-out process
         taxi_route, taxi_route_edges = self.get_taxi_instructions(aircraft.parking_space_id, assigned_fato_id)
         yield self.env.process(
@@ -554,10 +559,6 @@ class VertiportManager:
             )
         )
 
-        # Save total transfer time of a passenger
-        for passenger in departing_passengers:
-            self.event_saver.save_passenger_transfer_time(passenger_id=passenger.passenger_id,
-                                                          transfer_time=self.env.now - passenger.vertiport_arrival_time)
 
         # Save take-off info
         self.event_saver.save_flight_info(tail_number=aircraft.tail_number,

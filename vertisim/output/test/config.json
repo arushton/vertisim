@@ -4,18 +4,18 @@
         "arrival_priority": 1,
         "departure_priority": 1,
         "simultaneous_taxi_and_take_off": true,
-        "initial_parking_occupancy_%": 0,
+        "initial_parking_occupancy": 0.5,
         "num_initial_passengers": 0,
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
         "interuptive_approach": false,
-        "only_aircraft_simulation": true,
+        "only_aircraft_simulation": false,
         "default_aircraft": true,
         "verbose": true,
         "battery_model_sim": false
     },
     "network_and_demand": {
-        "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv",
+        "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv",
         "passenger_arrival_schedule_file_name": null,
         "aircraft_arrival_schedule_file_name": null,
         "passenger_arrival_process": {
@@ -40,11 +40,11 @@
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 0
+                    "mu": 360
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180,
-                "num_aircraft": 200,
+                "num_aircraft": 100,
                 "num_passengers": null,
                 "min_init_soc": 20,
                 "max_init_soc": 50
@@ -62,15 +62,15 @@
     },
     "passenger_params": {
         "randomize_constants": false,
-        "car_to_entrance_walking_time_constant": 40,
+        "car_to_entrance_walking_time_constant": 0,
         "car_to_entrance_walking_time_dist": null,
-        "security_check_time_constant": 20,
+        "security_check_time_constant": 30,
         "security_check_time_dist": null,
-        "waiting_room_to_boarding_gate_walking_time_constant": 30,
+        "waiting_room_to_boarding_gate_walking_time_constant": 31.9,
         "waiting_room_to_boarding_gate_walking_time_dist": null,
-        "boarding_gate_to_aircraft_time_constant": 60,
+        "boarding_gate_to_aircraft_time_constant": 19.7,
         "boarding_gate_to_aircraft_time_dist": null,
-        "embark_disembark_time_constant": 180,
+        "embark_disembark_time_constant": 70,
         "embark_disembark_time_dist": null,
         "deboard_aircraft_and_walk_to_exit_constant": 120,
         "deboard_aircraft_and_walk_to_exit_dist": null
@@ -80,23 +80,30 @@
         "pax": 4,
         "range": 150,
         "initial_soc": 20,
-        "ground_taxi_speed": 3.67,
-        "time_passenger_embark_disembark": 0,
+        "ground_taxi_speed": 5,
+        "time_passenger_embark_disembark": 70,
         "time_pre_charging_processes": 0,
         "time_charging_plug_disconnection": 0,
         "time_post_charging_processes": 0,
-        "time_descend_transition": 60,
-        "time_hover_descend": 0,
-        "time_rotor_spin_down": 0,
+        "time_descend_transition": 46.3,
+        "time_hover_descend": 22.9,
+        "time_rotor_spin_down": 5,
         "time_post_landing_safety_checks": 0,
         "time_tug_connection": 0,
         "time_tug_disconnection": 0,
         "time_pre_take_off_check_list": 0,
-        "time_rotor_spin_up": 0,
-        "time_hover_climb": 0,
-        "time_climb_transition": 60,
+        "time_rotor_spin_up": 4.5,
+        "time_hover_climb": 13.5,
+        "time_climb_transition": 28.7,
         "time_charging": 720,
-        "charging_time_dist": null,
+        "charging_time_dist": {
+            "distribution_name": "poisson",
+            "parameters": {
+                "mu": 660
+            },
+            "distribution_type": "discrete",
+            "max_charge_duration": 1800
+        },
         "aircraft_energy_consumption_data_folder_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption",
         "min_reserve_soc": 20
     },

@@ -9,13 +9,13 @@ sim_params = {
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
-    'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
+    'initial_parking_occupancy': 0.5,  # Initially ... rate of the parking spaces are occupied with aircraft.
     'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': True,  # If True, then the simulation will only simulate aircraft turnaround.
+    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.
@@ -29,7 +29,7 @@ sim_params = {
 # -----------------
 network_and_demand = {
     'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                   'Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv',
+                                   'Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -91,13 +91,13 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 0  # seconds
+                'mu': 60 * 6  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 200,  # Number of aircraft in the simulation. If None, then the required number of aircraft
+            'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft
             # will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
@@ -131,9 +131,9 @@ vertiport_params = {
 passenger_params = {
     'randomize_constants': False,  # If true, the constants will be randomized. If false, the constants will be used as
     # it is.
-    'car_to_entrance_walking_time_constant': 40,  # secs
+    'car_to_entrance_walking_time_constant': 0,  # secs
     'car_to_entrance_walking_time_dist': None,
-    'security_check_time_constant': 20,  # secs
+    'security_check_time_constant': 30,  # secs
     'security_check_time_dist': None,
     # 'security_check_time_dist': {
     #     'distribution_name': 'expon',
@@ -145,11 +145,11 @@ passenger_params = {
     #     },
     #     'max_val_in_dist': 60
     # },
-    'waiting_room_to_boarding_gate_walking_time_constant': 30,  # secs
+    'waiting_room_to_boarding_gate_walking_time_constant': 31.9,  # secs
     'waiting_room_to_boarding_gate_walking_time_dist': None,
-    'boarding_gate_to_aircraft_time_constant': 60,  # secs
+    'boarding_gate_to_aircraft_time_constant': 19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
-    'embark_disembark_time_constant': 60 * 3,  # secs
+    'embark_disembark_time_constant': 70,  # secs
     'embark_disembark_time_dist': None,
     'deboard_aircraft_and_walk_to_exit_constant': 120,  # secs
     'deboard_aircraft_and_walk_to_exit_dist': None,
@@ -168,21 +168,21 @@ aircraft_params = {
 
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
     # ------------------------------------------------
-    'ground_taxi_speed': 3.67,  # ft/s
-    'time_passenger_embark_disembark': 60 * 0,  # secs
+    'ground_taxi_speed': 5,  # ft/s
+    'time_passenger_embark_disembark': 70,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
     'time_post_charging_processes': 0,  # sec
-    'time_descend_transition': 60,  # sec
-    'time_hover_descend': 0,  # sec
-    'time_rotor_spin_down': 0,  # sec
+    'time_descend_transition': 46.3,  # sec
+    'time_hover_descend': 22.9,  # sec
+    'time_rotor_spin_down': 5,  # sec
     'time_post_landing_safety_checks': 0,  # sec
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
-    'time_rotor_spin_up': 0,  # sec
-    'time_hover_climb': 0,  # sec
-    'time_climb_transition': 60,  # sec
+    'time_rotor_spin_up': 4.5,  # sec
+    'time_hover_climb': 13.5,  # sec
+    'time_climb_transition': 28.7,  # sec
 
     # AIRCRAFT CHARGING TIME PARAMETERS
     # ----------------------------
@@ -197,21 +197,22 @@ aircraft_params = {
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
-    'charging_time_dist': None
-        # 'distribution_name': 'poisson',
-        # 'parameters': {
-        #     'mu': 60 * 11
-        #     # 'param3': None,
-        #     # 'param4': None
-        # },
-        # 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-        # 'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
-        # # time distribution generation.
-    ,
+    'charging_time_dist': {
+        'distribution_name': 'poisson',
+        'parameters': {
+            'mu': 60 * 11
+            # 'param3': None,
+            # 'param4': None
+        },
+        'distribution_type': 'discrete',  # 'discrete' or 'continuous'
+        'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
+        # time distribution generation.
+    },
     'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
                                                     'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
     'min_reserve_soc': 20
     # %  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
+    
 }
 
 output_params = {
