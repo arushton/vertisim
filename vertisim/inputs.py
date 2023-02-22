@@ -9,8 +9,8 @@ sim_params = {
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
-    'initial_parking_occupancy': 0.5,  # Initially ... rate of the parking spaces are occupied with aircraft.
-    'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
+    'initial_parking_occupancy': 0.5,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
+    'num_initial_passengers': 0,   # TODO: of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,
@@ -48,7 +48,7 @@ network_and_demand = {
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 180  # seconds
+                'mu': 30  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -88,10 +88,11 @@ network_and_demand = {
             #     'battery_capacity': 287,  # kWh
             # }
         },
+        'aircraft_interarrival_constant': None,  # If not None, then the aircraft arrival process will be created by the constant.
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 6  # seconds
+                'mu': 60 * 0.5  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -168,7 +169,7 @@ aircraft_params = {
 
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
     # ------------------------------------------------
-    'ground_taxi_speed': 5,  # ft/s
+    'ground_taxi_speed': 3.78,  # ft/s
     'time_passenger_embark_disembark': 70,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
