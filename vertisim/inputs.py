@@ -45,6 +45,8 @@ network_and_demand = {
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
     'passenger_arrival_process': {
+        'passenger_interarrival_constant': 60,  # If not None, then the passenger arrival process will be created by the constant.
+        'num_passengers': 300,  # Number of passengers to be generated
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
@@ -54,7 +56,6 @@ network_and_demand = {
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_val_in_dist': 120,  # seconds  # UNUSED
-            'num_passengers': 300,  # Number of passengers to be generated
         }
     },
 
@@ -88,7 +89,11 @@ network_and_demand = {
             #     'battery_capacity': 287,  # kWh
             # }
         },
-        'aircraft_interarrival_constant': None,  # If not None, then the aircraft arrival process will be created by the constant.
+        'aircraft_interarrival_constant': 60,  # If not None, then the aircraft arrival process will be created by the constant.
+        'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
+        'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
+        'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
+        'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
@@ -98,11 +103,6 @@ network_and_demand = {
             },
             'distribution_type': 'discrete',  # 'discrete' or 'continuous'
             'max_interarrival_time': 180,  # seconds
-            'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft
-            # will be estimated from the num_passengers.
-            'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
-            'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
-            'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
         }
     }
 }
@@ -169,21 +169,21 @@ aircraft_params = {
 
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
     # ------------------------------------------------
-    'ground_taxi_speed': 3.78,  # ft/s
-    'time_passenger_embark_disembark': 70,  # secs
+    'ground_taxi_speed': 3.67,  # ft/s
+    'time_passenger_embark_disembark': 60 * 0,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
     'time_post_charging_processes': 0,  # sec
-    'time_descend_transition': 46.3,  # sec
-    'time_hover_descend': 22.9,  # sec
-    'time_rotor_spin_down': 5,  # sec
+    'time_descend_transition': 60,  # sec
+    'time_hover_descend': 0,  # sec
+    'time_rotor_spin_down': 0,  # sec
     'time_post_landing_safety_checks': 0,  # sec
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
-    'time_rotor_spin_up': 4.5,  # sec
-    'time_hover_climb': 13.5,  # sec
-    'time_climb_transition': 28.7,  # sec
+    'time_rotor_spin_up': 0,  # sec
+    'time_hover_climb': 0,  # sec
+    'time_climb_transition': 60,  # sec
 
     # AIRCRAFT CHARGING TIME PARAMETERS
     # ----------------------------
@@ -215,7 +215,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/test',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/supernal',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
