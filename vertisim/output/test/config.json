@@ -4,7 +4,7 @@
         "arrival_priority": 1,
         "departure_priority": 1,
         "simultaneous_taxi_and_take_off": true,
-        "initial_parking_occupancy": 0.5,
+        "initial_parking_occupancy": 0,
         "num_initial_passengers": 0,
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
@@ -38,7 +38,7 @@
                     "battery_capacity": 160
                 }
             },
-            "aircraft_interarrival_constant": 360.0,
+            "aircraft_interarrival_constant": 3600.0,
             "num_aircraft": 100,
             "num_passengers": null,
             "min_init_soc": 20,

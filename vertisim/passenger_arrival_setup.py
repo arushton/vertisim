@@ -94,7 +94,7 @@ class PassengerArrivalSetup:
             # Get the passenger's destination vertiport id
             dest_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'dest_vertiport_id'].values[0]
 
-            yield self.env.timeout(interarrival_time)
+            yield self.env.timeout(sec_to_ms(interarrival_time))
             # print(f'Passenger {passenger_id} arrives at {int((self.env.now)/1000/60)}')
             # Simulate passenger.
             self.initiate_passenger_arrival(

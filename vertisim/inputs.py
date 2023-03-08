@@ -9,7 +9,7 @@ sim_params = {
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
-    'initial_parking_occupancy': 0.5,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
+    'initial_parking_occupancy': 0,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
     'num_initial_passengers': 0,   # TODO: of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 60 * 10,  # seconds
@@ -89,7 +89,7 @@ network_and_demand = {
             #     'battery_capacity': 287,  # kWh
             # }
         },
-        'aircraft_interarrival_constant': 3600/10,  # If not None, then the aircraft arrival process will be created by the constant.
+        'aircraft_interarrival_constant': 3600/1,  # If not None, then the aircraft arrival process will be created by the constant.
         'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
         'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
         'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport

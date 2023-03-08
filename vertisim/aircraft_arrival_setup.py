@@ -112,7 +112,7 @@ class AircraftArrivalSetup:
             # Get the passenger capacity of the aircraft.
             passenger_capacity = self.vertiport_manager.aircraft_fleet_specs[aircraft_model]['pax']
 
-            yield self.env.timeout(interarrival_time)
+            yield self.env.timeout(sec_to_ms(interarrival_time))
             # Simulate the aircraft.
             self.initiate_aircraft_arrival(tail_number=tail_number,
                                            initial_soc=initial_soc,
