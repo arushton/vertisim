@@ -84,9 +84,8 @@ class AircraftArrivalSetup:
             # Generate artificial aircraft arrival schedule.
             aircraft_arrival_schedule = generate_artificial_aircraft_aircraft_supply(
                 aircraft_fleet_specs=self.artificial_aircraft_arrival_process['aircraft_fleet_specs'],
-                aircraft_arrival_process=self.artificial_aircraft_arrival_process['aircraft_arrival_distribution']
+                aircraft_arrival_process=self.artificial_aircraft_arrival_process
             )
-            # print("Success: Aircraft arrival schedule is generated from the given distribution.")
         else:
             raise ValueError('Aircraft arrival schedule or aircraft arrival distribution must be defined.')
         # Get the number of aircraft.

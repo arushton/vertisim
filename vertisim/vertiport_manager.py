@@ -6,6 +6,7 @@ from utils.distribution_generator import DistributionGenerator
 from utils.helpers import get_passenger_ids_from_passenger_list, calculate_passenger_consolidation_time
 from battery_model import BatteryModel
 from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
+from typing import List
 
 
 class VertiportManager:

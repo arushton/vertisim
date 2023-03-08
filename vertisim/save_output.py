@@ -136,7 +136,9 @@ def save_output(trackers,
     total_aircraft_throughput INTEGER,
     mean_passenger_throughput REAL, 
     total_passenger_throughput INTEGER, 
-    fato_utilization REAL)''')
+    fato_utilization REAL,
+    passenger_interarrival_constant,
+    aircraft_interarrival_constant)''')
 
     if simulation_params['sim_params']['only_aircraft_simulation'] and simulation_params['aircraft_params']['time_charging']:
         values = [(sim_id,
@@ -154,14 +156,11 @@ def save_output(trackers,
                    simulation_params['passenger_params']['embark_disembark_time_constant'],
                    simulation_params['network_and_demand']['passenger_arrival_process'][
                        'passenger_arrival_distribution']['parameters']['mu'],
-                   simulation_params['network_and_demand']['passenger_arrival_process'][
-                       'passenger_arrival_distribution'][
-                       'num_passengers'],
+                   simulation_params['network_and_demand']['passenger_arrival_process']['num_passengers'],
                    simulation_params['network_and_demand']['aircraft_arrival_schedule_file_name'],
                    simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
                        'parameters']['mu'],
-                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
-                       'num_aircraft'],
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['num_aircraft'],
                    simulation_params['aircraft_params']['aircraft_model'],
                    simulation_params['aircraft_params']['pax'],
                    simulation_params['aircraft_params']['range'],
@@ -210,7 +209,9 @@ def save_output(trackers,
                    performance_metrics['aircraft_throughput']['total'],
                    -1,
                    -1,
-                   performance_metrics['fato_utilization'])]
+                   performance_metrics['fato_utilization'],
+                   -1,
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'])]
     elif simulation_params['sim_params']['only_aircraft_simulation']:
         values = [(sim_id,
                    simulation_params['sim_params']['arrival_priority'],
@@ -283,8 +284,9 @@ def save_output(trackers,
                    performance_metrics['aircraft_throughput']['total'],
                    -1,
                    -1,
-                   performance_metrics['fato_utilization'])]
-
+                   performance_metrics['fato_utilization'],
+                   -1,
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'])]
     else:
         values = [(sim_id,
                    simulation_params['sim_params']['arrival_priority'],
@@ -301,14 +303,11 @@ def save_output(trackers,
                    simulation_params['passenger_params']['embark_disembark_time_constant'],
                    simulation_params['network_and_demand']['passenger_arrival_process'][
                        'passenger_arrival_distribution']['parameters']['mu'],
-                   simulation_params['network_and_demand']['passenger_arrival_process'][
-                       'passenger_arrival_distribution'][
-                       'num_passengers'],
+                   simulation_params['network_and_demand']['passenger_arrival_process']['num_passengers'],
                    simulation_params['network_and_demand']['aircraft_arrival_schedule_file_name'],
                    simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
                        'parameters']['mu'],
-                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
-                       'num_aircraft'],
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['num_aircraft'],
                    simulation_params['aircraft_params']['aircraft_model'],
                    simulation_params['aircraft_params']['pax'],
                    simulation_params['aircraft_params']['range'],
@@ -357,11 +356,13 @@ def save_output(trackers,
                    performance_metrics['aircraft_throughput']['total'],
                    performance_metrics['passenger_throughput']['mean'],
                    performance_metrics['passenger_throughput']['total'],
-                   performance_metrics['fato_utilization'])]
+                   performance_metrics['fato_utilization'],
+                   simulation_params['network_and_demand']['passenger_arrival_process']['passenger_interarrival_constant'],
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'])]
 
     query = '''INSERT INTO performance_metrics 
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-        ?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
     c.executemany(query, values)
 
     conn.commit()

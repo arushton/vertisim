@@ -9,7 +9,7 @@
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
         "interuptive_approach": false,
-        "only_aircraft_simulation": false,
+        "only_aircraft_simulation": true,
         "default_aircraft": true,
         "verbose": true,
         "battery_model_sim": false
@@ -19,14 +19,15 @@
         "passenger_arrival_schedule_file_name": null,
         "aircraft_arrival_schedule_file_name": null,
         "passenger_arrival_process": {
+            "passenger_interarrival_constant": 60,
+            "num_passengers": 300,
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 180
+                    "mu": 30
                 },
                 "distribution_type": "discrete",
-                "max_val_in_dist": 120,
-                "num_passengers": 300
+                "max_val_in_dist": 120
             }
         },
         "aircraft_arrival_process": {
@@ -37,17 +38,18 @@
                     "battery_capacity": 160
                 }
             },
+            "aircraft_interarrival_constant": 360.0,
+            "num_aircraft": 100,
+            "num_passengers": null,
+            "min_init_soc": 20,
+            "max_init_soc": 50,
             "aircraft_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
-                    "mu": 360
+                    "mu": 3600
                 },
                 "distribution_type": "discrete",
-                "max_interarrival_time": 180,
-                "num_aircraft": 100,
-                "num_passengers": null,
-                "min_init_soc": 20,
-                "max_init_soc": 50
+                "max_interarrival_time": 180
             }
         }
     },
@@ -80,21 +82,21 @@
         "pax": 4,
         "range": 150,
         "initial_soc": 20,
-        "ground_taxi_speed": 5,
-        "time_passenger_embark_disembark": 70,
+        "ground_taxi_speed": 3.67,
+        "time_passenger_embark_disembark": 0,
         "time_pre_charging_processes": 0,
         "time_charging_plug_disconnection": 0,
         "time_post_charging_processes": 0,
-        "time_descend_transition": 46.3,
-        "time_hover_descend": 22.9,
-        "time_rotor_spin_down": 5,
+        "time_descend_transition": 60,
+        "time_hover_descend": 0,
+        "time_rotor_spin_down": 0,
         "time_post_landing_safety_checks": 0,
         "time_tug_connection": 0,
         "time_tug_disconnection": 0,
         "time_pre_take_off_check_list": 0,
-        "time_rotor_spin_up": 4.5,
-        "time_hover_climb": 13.5,
-        "time_climb_transition": 28.7,
+        "time_rotor_spin_up": 0,
+        "time_hover_climb": 0,
+        "time_climb_transition": 60,
         "time_charging": 720,
         "charging_time_dist": {
             "distribution_name": "poisson",

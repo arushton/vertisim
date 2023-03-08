@@ -68,16 +68,19 @@ class EventSaver:
     def save_passenger_waiting_time(self, passenger_id, waiting_time):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
-        time = self.is_time_overlapping(time=time, agent_type='passenger')
-        self.passenger_waiting_time[time]['passenger_id'] = passenger_id
-        self.passenger_waiting_time[time]['waiting_time'] = waiting_time
+        # time = self.is_time_overlapping(time=time, agent_type='passenger')
+        # self.passenger_waiting_time[time]['passenger_id'] = passenger_id
+        # self.passenger_waiting_time[time]['waiting_time'] = waiting_time
+        self.passenger_waiting_time[passenger_id] = waiting_time
 
     def save_passenger_transfer_time(self, passenger_id, transfer_time):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
-        time = self.is_time_overlapping(time=time, agent_type='passenger')
-        self.passenger_transfer_time[time]['passenger_id'] = passenger_id
-        self.passenger_transfer_time[time]['transfer_time'] = transfer_time
+        # time = self.is_time_overlapping(time=time, agent_type='passenger')
+        # self.passenger_transfer_time[time]['passenger_id'] = passenger_id
+        # self.passenger_transfer_time[time]['transfer_time'] = transfer_time
+        self.passenger_transfer_time[passenger_id] = transfer_time
+
 
     def update_passenger_departure_queue_counter(self, queue_update: int) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,

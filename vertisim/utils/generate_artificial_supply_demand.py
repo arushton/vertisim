@@ -15,12 +15,20 @@ def generate_artificial_aircraft_aircraft_supply(aircraft_fleet_specs: Dict, air
     if num_passengers is None and num_aircraft is None:
         raise ValueError('Either num_passengers or num_aircraft must be defined.')
     if num_aircraft is None:
-        num_aircraft = int(round(((num_passengers / avg_aircraft_capacity) + 1) * 2.5))
+        num_aircraft = int(round(((num_passengers / avg_aircraft_capacity) + 1) * 2.5)) # 1/2.5 is the average aircraft load factor
     tail_numbers = list(range(num_aircraft))
 
-    distribution = DistributionGenerator(distribution_params=aircraft_arrival_process,
-                                         max_val_in_dist=aircraft_arrival_process['max_interarrival_time'])
-    interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_aircraft)]
+    # Generate interarrival times. If constant interarrival time is defined, use that. Otherwise, use the distribution.
+    # If neither is defined, raise an error.
+    if aircraft_arrival_process['aircraft_interarrival_constant'] is None and aircraft_arrival_process['aircraft_arrival_distribution'] is None:
+        raise ValueError('Either aircraft_interarrival_constant or aircraft_arrival_distribution must be defined.')
+    if aircraft_arrival_process['aircraft_interarrival_constant'] is not None:
+        interarrival_times = [aircraft_arrival_process['aircraft_interarrival_constant']] * num_aircraft
+    else:
+        distribution = DistributionGenerator(distribution_params=aircraft_arrival_process['aircraft_arrival_distribution'],
+                                            max_val_in_dist=aircraft_arrival_process['aircraft_arrival_distribution']['max_interarrival_time'])
+        interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_aircraft)]
+
     aircraft_arrival_times = cumulative_sum_array(interarrival_times)
     initial_soc = [random.randint(aircraft_arrival_process['min_init_soc'],
                                   aircraft_arrival_process['max_init_soc']
@@ -36,15 +44,20 @@ def generate_artificial_aircraft_aircraft_supply(aircraft_fleet_specs: Dict, air
 
 def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
                                          flight_destination_ids: List):
-    num_passengers = passenger_arrival_process['passenger_arrival_distribution']['num_passengers']
-    max_interarrival_time = passenger_arrival_process['passenger_arrival_distribution']['max_val_in_dist']
-
+    num_passengers = passenger_arrival_process['num_passengers']
     passenger_ids = list(range(num_passengers))
-    distribution = DistributionGenerator(distribution_params=passenger_arrival_process['passenger_arrival_distribution'],
-                                         max_val_in_dist=max_interarrival_time)
-    interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_passengers)]
-    passenger_arrival_times = cumulative_sum_array(interarrival_times)
     dest_vertiport_ids = [random.choice(flight_destination_ids) for _ in range(num_passengers)]
+    
+    if passenger_arrival_process['passenger_arrival_distribution'] is None and passenger_arrival_process['passenger_interarrival_constant'] is None:
+        raise ValueError('Either passenger_arrival_distribution or passenger_interarrival_constant must be defined.')
+    if passenger_arrival_process['passenger_interarrival_constant'] is not None:
+        interarrival_times = [passenger_arrival_process['passenger_interarrival_constant']] * num_passengers
+    else:
+        max_interarrival_time = passenger_arrival_process['passenger_arrival_distribution']['max_val_in_dist']
+        distribution = DistributionGenerator(distribution_params=passenger_arrival_process['passenger_arrival_distribution'],
+                                            max_val_in_dist=max_interarrival_time)
+        interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_passengers)]
+    passenger_arrival_times = cumulative_sum_array(interarrival_times)
 
     return pd.DataFrame({'passenger_id': passenger_ids,
                          'passenger_arrival_time': passenger_arrival_times,

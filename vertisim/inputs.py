@@ -15,7 +15,7 @@ sim_params = {
     'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
+    'only_aircraft_simulation': True,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.
@@ -89,7 +89,7 @@ network_and_demand = {
             #     'battery_capacity': 287,  # kWh
             # }
         },
-        'aircraft_interarrival_constant': 60,  # If not None, then the aircraft arrival process will be created by the constant.
+        'aircraft_interarrival_constant': 3600/10,  # If not None, then the aircraft arrival process will be created by the constant.
         'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
         'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
         'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
@@ -97,7 +97,7 @@ network_and_demand = {
         'aircraft_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
-                'mu': 60 * 0.5  # seconds
+                'mu': 60 * 60  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -215,7 +215,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/supernal',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/test',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

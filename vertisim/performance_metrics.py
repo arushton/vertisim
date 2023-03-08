@@ -10,10 +10,19 @@ from typing import List
 
 class PerformanceMetrics:
 
-    def __init__(self, sim_start_timestamp, only_aircraft_simulation, passenger_consolidation_time,
-                 passenger_departure_queue_count, aircraft_arrival_queue_count, aircraft_departure_queue_count,
-                 passenger_waiting_time, passenger_transfer_time, flight_schedule,
-                 fato_usage_tracker, sim_id, verbose=False):
+    def __init__(self, 
+                sim_start_timestamp, 
+                only_aircraft_simulation, 
+                passenger_consolidation_time,
+                 passenger_departure_queue_count, 
+                 aircraft_arrival_queue_count, 
+                 aircraft_departure_queue_count,
+                 passenger_waiting_time, 
+                 passenger_transfer_time, 
+                 flight_schedule,
+                 fato_usage_tracker, 
+                 sim_id, 
+                 verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
         self.only_aircraft_simulation = only_aircraft_simulation
         self.passenger_consolidation_time = passenger_consolidation_time
@@ -76,7 +85,8 @@ class PerformanceMetrics:
 
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
-        waiting_times = [x['waiting_time'] for x in list(nested_dict_all_values(self.passenger_waiting_time, 1))]
+        # waiting_times = [x['waiting_time'] for x in list(nested_dict_all_values(self.passenger_waiting_time, 1))]
+        waiting_times = np.array(list(self.passenger_waiting_time.values()))
 
         self.performance_metrics['passenger_waiting_time']['mean'] = round(ms_to_min(np.mean(waiting_times)), 2)
         self.performance_metrics['passenger_waiting_time']['median'] = round(ms_to_min(np.median(waiting_times)), 2)
@@ -88,7 +98,8 @@ class PerformanceMetrics:
         # Creates a dataframe for passenger transfer time statistics including mean, median, standard deviation,
         # max and min
 
-        transfer_times = [x['transfer_time'] for x in list(nested_dict_all_values(self.passenger_transfer_time, 1))]
+        # transfer_times = [x['transfer_time'] for x in list(nested_dict_all_values(self.passenger_transfer_time, 1))]
+        transfer_times = np.array(list(self.passenger_transfer_time.values()))
 
         self.performance_metrics['passenger_transfer_time']['mean'] = round(ms_to_min(np.mean(transfer_times)), 2)
         self.performance_metrics['passenger_transfer_time']['median'] = round(ms_to_min(np.median(transfer_times)), 2)
@@ -159,7 +170,7 @@ class PerformanceMetrics:
         self.performance_metrics['passenger_throughput']['mean'] = total_passengers / interval_length
         return total_passengers / interval_length
 
-    def get_time_interval(self, total_sim_time: int) -> List(int, int):
+    def get_time_interval(self, total_sim_time: int) -> [int, int]:
         """
         Returns the time interval for the result indexing.
         :param total_sim_time: Total simulation time

@@ -8,6 +8,8 @@ import re
 # --------------------
 def loop_input(passenger_arrival_mu,
                aircraft_arrival_mu,
+               passenger_interarrival_constant,
+               aircraft_interarrival_constant,
                waiting_time_threshold,
                charge_time,
                vertiport_layout,
@@ -17,7 +19,8 @@ def loop_input(passenger_arrival_mu,
         'arrival_priority': 1,  # Lower the value higher the priority
         'departure_priority': 1,  # Lower the value higher the priority
         'simultaneous_taxi_and_take_off': True,
-        'initial_parking_occupancy_%': 0,  # Initially ... % of the parking spaces are occupied with aircraft.
+        'initial_parking_occupancy': 0.5,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
+
         'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
         'random_seed': 42,
         'max_passenger_waiting_time': waiting_time_threshold,  # seconds
@@ -39,7 +42,7 @@ def loop_input(passenger_arrival_mu,
     # -----------------
     network_and_demand = {
         'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv',
+                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv',
 
         # DEMAND FILES.
         # ---------------------------------------------------------------
@@ -56,16 +59,17 @@ def loop_input(passenger_arrival_mu,
         # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
         # depending on the distribution you use.
         'passenger_arrival_process': {
+            'passenger_interarrival_constant': passenger_interarrival_constant,  # If not None, then the passenger arrival process will be created by the constant.
+            'num_passengers': 400,  # Number of passengers to be generated
             'passenger_arrival_distribution': {
                 'distribution_name': 'poisson',
                 'parameters': {
                     'mu': passenger_arrival_mu  # seconds
-                    # 'param2': None,
-                    # 'param3': None
+                    # 'param3': None,
+                    # 'param4': None
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-                'num_passengers': 450,  # Number of passengers to be generated
-                'max_val_in_dist': 120  # seconds  # UNUSED
+                'max_val_in_dist': 120,  # seconds  # UNUSED
             }
         },
 
@@ -99,6 +103,11 @@ def loop_input(passenger_arrival_mu,
                 #     'battery_capacity': 287,  # kWh
                 # }
             },
+            'aircraft_interarrival_constant': aircraft_interarrival_constant,  # If not None, then the aircraft arrival process will be created by the constant.
+            'num_aircraft': 400,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
+            'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
+            'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
+            'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
             'aircraft_arrival_distribution': {
                 'distribution_name': 'poisson',
                 'parameters': {
@@ -108,13 +117,6 @@ def loop_input(passenger_arrival_mu,
                 },
                 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
                 'max_interarrival_time': 180,  # seconds
-                'num_aircraft': 450,
-                # Number of aircraft in the simulation. If None, then the required number of aircraft
-                # will be estimated from the num_passengers.
-                'num_passengers': None,
-                # If num_aircraft is defined, this can be None because num_aircraft will overwrite.
-                'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
-                'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
             }
         }
     }
@@ -145,9 +147,9 @@ def loop_input(passenger_arrival_mu,
         'randomize_constants': False,
         # If true, the constants will be randomized. If false, the constants will be used as
         # it is.
-        'car_to_entrance_walking_time_constant': 40,  # secs
+        'car_to_entrance_walking_time_constant': 0,  # secs
         'car_to_entrance_walking_time_dist': None,
-        'security_check_time_constant': 20,  # secs
+        'security_check_time_constant': 30,  # secs
         'security_check_time_dist': None,
         # 'security_check_time_dist': {
         #     'distribution_name': 'expon',
@@ -159,11 +161,11 @@ def loop_input(passenger_arrival_mu,
         #     },
         #     'max_val_in_dist': 60
         # },
-        'waiting_room_to_boarding_gate_walking_time_constant': 30,  # secs
+        'waiting_room_to_boarding_gate_walking_time_constant': 31.9,  # secs
         'waiting_room_to_boarding_gate_walking_time_dist': None,
-        'boarding_gate_to_aircraft_time_constant': 60,  # secs
+        'boarding_gate_to_aircraft_time_constant': 19.7,  # secs
         'boarding_gate_to_aircraft_time_dist': None,
-        'embark_disembark_time_constant': 60 * 3,  # secs
+        'embark_disembark_time_constant': 70,  # secs
         'embark_disembark_time_dist': None,
         'deboard_aircraft_and_walk_to_exit_constant': 120,  # secs
         'deboard_aircraft_and_walk_to_exit_dist': None,
@@ -208,19 +210,20 @@ def loop_input(passenger_arrival_mu,
         # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
         'time_charging': charge_time,  # constant sec  # If None charging_time_dist will be used.
-        # Prob. dist. name and the parameter variable names should be consistent with the reference:
-        # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
-        # depending on the distribution you use.
-        'charging_time_dist': None,
-        # 'distribution_name': 'poisson',
-        # 'parameters': {
-        #     'mu': 60 * 11
-        #     # 'param3': None,
-        #     # 'param4': None
-        # },
-        # 'distribution_type': 'discrete',  # 'discrete' or 'continuous'
-        # 'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
-        # # time distribution generation.
+    # Prob. dist. name and the parameter variable names should be consistent with the reference:
+    # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
+    # depending on the distribution you use.
+        'charging_time_dist': {
+            'distribution_name': 'poisson',
+            'parameters': {
+                'mu': charge_time
+                # 'param3': None,
+                # 'param4': None
+            },
+            'distribution_type': 'discrete',  # 'discrete' or 'continuous'
+            'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
+            # time distribution generation.
+        },
         'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
                                                         'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
         'min_reserve_soc': 20
@@ -228,7 +231,7 @@ def loop_input(passenger_arrival_mu,
     }
 
     output_params = {
-        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/supernal',
+        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/vertisim_paper',
         'config_output_file_name': 'config',
         # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
         # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

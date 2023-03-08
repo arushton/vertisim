@@ -227,7 +227,12 @@ class SimSetup:
             aircraft_arrival_process.create_aircraft_arrival()
         )
         if self.sim_params['verbose']:
-            print("Success: Aircraft arrival process is created.")
+            if self.network_and_demand['aircraft_arrival_process'][
+                'aircraft_interarrival_constant'
+            ]:
+                print("Success: Aircraft arrival process is generated from a constant interarrival time.")
+            else:
+                print("Success: Aircraft arrival process is generated from a given distribution process.")
 
     def create_passenger_arrival_process(self):
         if self.sim_params['only_aircraft_simulation'] is False:
@@ -289,7 +294,7 @@ class SimSetup:
                                   flight_schedule=self.event_saver.flight_schedule,
                                   fato_usage_tracker=self.event_saver.fato_usage_tracker,
                                   sim_id=self.sim_id,
-                                  verbose=self.sim_params['verbose'])
+                                  verbose=self.sim_params['verbose']).performance_metrics
 
     def save_results(self):
         # Save the results
@@ -315,6 +320,6 @@ class SimSetup:
             # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
             # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
             performance_metrics_output_file_name=self.output_params['performance_metrics_output_file_name'],
-            performance_metrics=self.performance_metrics.performance_metrics,
+            performance_metrics=self.performance_metrics,
             sim_id=self.sim_id
         )

@@ -74,11 +74,16 @@ class PassengerArrivalSetup:
             charging_time = self.charging_param
 
         # Time to fill the vertiport with aircraft. This number is inputed in sim_params['initial_parking_occupancy']
+        if self.artificial_passenger_arrival_process['passenger_interarrival_constant'] is not None:
+            passenger_arrival_interval_time = self.artificial_passenger_arrival_process['passenger_interarrival_constant']
+        else:
+            passenger_arrival_interval_time = self.artificial_passenger_arrival_process['passenger_arrival_distribution']['parameters']['mu']   
         time_to_fill_vertiport = int(self.num_parking_pad*self.initial_parking_occupancy) * (
             self.aircraft_params['time_descend_transition'] +
             self.aircraft_params['time_hover_descend'] +
             self.aircraft_params['time_rotor_spin_down'] +
-            22) + charging_time
+            22) + charging_time - self.aircraft_params['pax']/2 * passenger_arrival_interval_time
+        time_to_fill_vertiport = max(0, time_to_fill_vertiport)
 
         yield self.env.timeout(sec_to_ms(time_to_fill_vertiport))
 

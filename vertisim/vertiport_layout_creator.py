@@ -28,10 +28,10 @@ class VertiportLayout:
         self.num_parking_pad = self.get_num_parking_pad()
         self.num_taxiway_nodes = self.get_num_taxi_nodes()
         self.num_edges = self.get_num_edges()
-        save_vertiport_layout_layer_for_unfolded(self.fato_lat_lngs,
-                                                 self.park_lat_lngs,
-                                                 self.inters_lat_lngs,
-                                                 self.layout_type)
+        # save_vertiport_layout_layer_for_unfolded(self.fato_lat_lngs,
+        #                                          self.park_lat_lngs,
+        #                                          self.inters_lat_lngs,
+        #                                          self.layout_type)
 
     def import_vertiport_layout(self) -> pd.DataFrame:
         """
