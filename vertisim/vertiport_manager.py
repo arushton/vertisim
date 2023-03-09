@@ -6,7 +6,7 @@ from utils.distribution_generator import DistributionGenerator
 from utils.helpers import get_passenger_ids_from_passenger_list, calculate_passenger_consolidation_time
 from battery_model import BatteryModel
 from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
-from typing import List
+from typing import List, Union
 
 
 class VertiportManager:
@@ -160,7 +160,7 @@ class VertiportManager:
         if taxi_usage_request is not None:
             self.taxi_resource.release(taxi_usage_request)
 
-    def generate_taxi_route_nodes(self, source: str, target: str) -> [list, float]:
+    def generate_taxi_route_nodes(self, source: str, target: str) -> Union[list, float]:
         """
         Returns a taxi route as a list between assigned FATO pad and parking
         space.
@@ -303,6 +303,10 @@ class VertiportManager:
                                                        agent_id=aircraft.tail_number,
                                                        aircraft_model=aircraft.aircraft_model,
                                                        agent_type='aircraft')
+    
+        # Save the aircraft idle time
+        self.event_saver.save_aircraft_idle_time(agent_id=aircraft.tail_number,
+                                                 charging_end_time=aircraft.charging_end_time)
 
         # Save total passenger waiting time
         for passenger in departing_passengers:

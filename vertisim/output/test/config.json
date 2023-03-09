@@ -7,9 +7,9 @@
         "initial_parking_occupancy": 0,
         "num_initial_passengers": 0,
         "random_seed": 42,
-        "max_passenger_waiting_time": 600,
+        "max_passenger_waiting_time": 3600,
         "interuptive_approach": false,
-        "only_aircraft_simulation": true,
+        "only_aircraft_simulation": false,
         "default_aircraft": true,
         "verbose": true,
         "battery_model_sim": false
@@ -19,8 +19,8 @@
         "passenger_arrival_schedule_file_name": null,
         "aircraft_arrival_schedule_file_name": null,
         "passenger_arrival_process": {
-            "passenger_interarrival_constant": 60,
-            "num_passengers": 300,
+            "passenger_interarrival_constant": 360,
+            "num_passengers": 400,
             "passenger_arrival_distribution": {
                 "distribution_name": "poisson",
                 "parameters": {
@@ -38,8 +38,8 @@
                     "battery_capacity": 160
                 }
             },
-            "aircraft_interarrival_constant": 3600.0,
-            "num_aircraft": 100,
+            "aircraft_interarrival_constant": 180.0,
+            "num_aircraft": 400,
             "num_passengers": null,
             "min_init_soc": 20,
             "max_init_soc": 50,

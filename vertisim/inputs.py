@@ -15,7 +15,7 @@ sim_params = {
     'max_passenger_waiting_time': 60 * 10,  # seconds
     'interuptive_approach': False,
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': True,  # If True, then the simulation will only simulate aircraft turnaround.
+    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.
@@ -45,8 +45,8 @@ network_and_demand = {
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
     'passenger_arrival_process': {
-        'passenger_interarrival_constant': 60,  # If not None, then the passenger arrival process will be created by the constant.
-        'num_passengers': 300,  # Number of passengers to be generated
+        'passenger_interarrival_constant': 360,  # If not None, then the passenger arrival process will be created by the constant.
+        'num_passengers': 400,  # Number of passengers to be generated
         'passenger_arrival_distribution': {
             'distribution_name': 'poisson',
             'parameters': {
@@ -89,8 +89,8 @@ network_and_demand = {
             #     'battery_capacity': 287,  # kWh
             # }
         },
-        'aircraft_interarrival_constant': 3600/1,  # If not None, then the aircraft arrival process will be created by the constant.
-        'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
+        'aircraft_interarrival_constant': 3600/20,  # If not None, then the aircraft arrival process will be created by the constant.
+        'num_aircraft': 400,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
         'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
         'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
         'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport

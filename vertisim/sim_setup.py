@@ -282,6 +282,7 @@ class SimSetup:
         return ''.join(random.choices(string.ascii_uppercase, k=8))
 
     def calculate_performance_metrics(self):
+        print(self.event_saver.aircraft_idle_time_tracker)
         # Print and save performance metrics
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
                                   only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
@@ -293,6 +294,7 @@ class SimSetup:
                                   passenger_transfer_time=self.event_saver.passenger_transfer_time,
                                   flight_schedule=self.event_saver.flight_schedule,
                                   fato_usage_tracker=self.event_saver.fato_usage_tracker,
+                                  aircraft_idle_time_tracker=self.event_saver.aircraft_idle_time_tracker,
                                   sim_id=self.sim_id,
                                   verbose=self.sim_params['verbose']).performance_metrics
 

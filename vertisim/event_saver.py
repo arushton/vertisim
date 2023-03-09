@@ -45,6 +45,7 @@ class EventSaver:
         self.aircraft_departure_queue_count[self.sim_start_timestamp] = 0
         self.passenger_waiting_time = defaultdict(dict)
         self.passenger_transfer_time = defaultdict(dict)
+        self.aircraft_idle_time_tracker = defaultdict(dict)
         self.fato_usage_tracker = defaultdict(dict)
         self.fato_usage_tracker[self.sim_start_timestamp] = 0
 
@@ -105,6 +106,21 @@ class EventSaver:
         # Get the last value from the dictionary and add the queue_update to it
         last_value = list(self.aircraft_departure_queue_count.values())[-1]
         self.aircraft_departure_queue_count[time] = last_value + queue_update
+    
+    def save_aircraft_idle_time(self, agent_id: int, charging_end_time: int) -> None:
+        """
+        Saves the aircraft idle time
+        :param aircraft_id: Aircraft tail number
+        :param aircraft_model: Aircraft model
+        :param charging_end_time: Time when the aircraft is done charging
+        :return:
+        """
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        charging_end_time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                                  sim_time=charging_end_time)
+        time = self.is_time_overlapping(time=time, agent_type='aircraft')
+        self.aircraft_idle_time_tracker[agent_id] = time - charging_end_time
 
     def save_agent_creation_time(self, agent_id: int,
                                  agent_type: str,

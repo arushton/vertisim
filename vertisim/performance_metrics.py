@@ -14,15 +14,16 @@ class PerformanceMetrics:
                 sim_start_timestamp, 
                 only_aircraft_simulation, 
                 passenger_consolidation_time,
-                 passenger_departure_queue_count, 
-                 aircraft_arrival_queue_count, 
-                 aircraft_departure_queue_count,
-                 passenger_waiting_time, 
-                 passenger_transfer_time, 
-                 flight_schedule,
-                 fato_usage_tracker, 
-                 sim_id, 
-                 verbose=False):
+                passenger_departure_queue_count, 
+                aircraft_arrival_queue_count, 
+                aircraft_departure_queue_count,
+                passenger_waiting_time, 
+                passenger_transfer_time, 
+                flight_schedule,
+                fato_usage_tracker, 
+                aircraft_idle_time_tracker,
+                sim_id, 
+                verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
         self.only_aircraft_simulation = only_aircraft_simulation
         self.passenger_consolidation_time = passenger_consolidation_time
@@ -33,6 +34,7 @@ class PerformanceMetrics:
         self.passenger_transfer_time = passenger_transfer_time
         self.flight_schedule = flight_schedule
         self.fato_usage_tracker = fato_usage_tracker
+        self.aircraft_idle_time_tracker = aircraft_idle_time_tracker
         self.sim_id = sim_id
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(dict)
@@ -47,6 +49,7 @@ class PerformanceMetrics:
             self.compute_total_passenger_throughput()
             self.compute_average_passenger_throughput()
             self.compute_load_factor_stats()
+            self.compute_aircraft_idle_time_stats()
         self.calculate_aircraft_arrival_queue_count_stats()
         self.calculate_aircraft_departure_queue_count_stats()
         self.compute_aircraft_throughput()
@@ -76,7 +79,7 @@ class PerformanceMetrics:
             self.performance_metrics['passenger_consolidation_time']['min'] = round(ms_to_min(np.min(consolidation_times)),
                                                                                     2)
         else:
-            # If all the passengers are flying on a different flight, then there is no consolidation timeß
+            # If all the passengers are flying on a different flight, then there is no consolidation time
             self.performance_metrics['passenger_consolidation_time']['mean'] = -1
             self.performance_metrics['passenger_consolidation_time']['median'] = -1
             self.performance_metrics['passenger_consolidation_time']['std'] = -1
@@ -150,6 +153,15 @@ class PerformanceMetrics:
         avg_load_factor = total_passengers / len(flight_list)
         self.performance_metrics['load_factor']['mean'] = round(avg_load_factor, 2)
 
+    def compute_aircraft_idle_time_stats(self):
+        # Computes aircraft idle time statistics
+        idle_times = list(self.aircraft_idle_time_tracker.values())
+        self.performance_metrics['aircraft_idle_time']['max'] = round(ms_to_min(np.max(idle_times)), 2)
+        self.performance_metrics['aircraft_idle_time']['min'] = round(ms_to_min(np.min(idle_times)), 2)
+        self.performance_metrics['aircraft_idle_time']['mean'] = round(ms_to_min(np.mean(idle_times)), 2)
+        self.performance_metrics['aircraft_idle_time']['median'] = round(ms_to_min(np.median(idle_times)), 2)
+        self.performance_metrics['aircraft_idle_time']['std'] = round(ms_to_min(np.std(idle_times)), 2)
+
     def compute_total_passenger_throughput(self):
         # Computes the total passenger throughput
         total_passengers = sum(
@@ -162,15 +174,17 @@ class PerformanceMetrics:
         total_sim_time = self.calculate_total_simulated_time()
         first, second = self.get_time_interval(total_sim_time)
         interval_length = second - first
-        total_passengers = 0
-        for key, value in self.flight_schedule.items():
-            if self.sim_start_timestamp + self.hour * first <= key <= self.sim_start_timestamp + second * self.hour:
-                total_passengers += len(self.flight_schedule[key]['passengers'])
-
+        total_passengers = sum(
+            len(self.flight_schedule[key]['passengers'])
+            for key, value in self.flight_schedule.items()
+            if self.sim_start_timestamp + self.hour * first
+            <= key
+            <= self.sim_start_timestamp + second * self.hour
+        )
         self.performance_metrics['passenger_throughput']['mean'] = total_passengers / interval_length
         return total_passengers / interval_length
 
-    def get_time_interval(self, total_sim_time: int) -> [int, int]:
+    def get_time_interval(self, total_sim_time: int) -> List[int]:
         """
         Returns the time interval for the result indexing.
         :param total_sim_time: Total simulation time
@@ -337,6 +351,21 @@ class PerformanceMetrics:
         print(df)
         print("")
 
+    def print_aircraft_idle_time_stats(self):
+        print("Aircraft idle time statistics in minutes:")
+        print("-----------------------------")
+        df = pd.DataFrame(
+            {
+                'mean': [self.performance_metrics['aircraft_idle_time']['mean']],
+                'median': [self.performance_metrics['aircraft_idle_time']['median']],
+                'std': [self.performance_metrics['aircraft_idle_time']['std']],
+                'max': [self.performance_metrics['aircraft_idle_time']['max']],
+                'min': [self.performance_metrics['aircraft_idle_time']['min']]
+            }
+        )
+        print(df)
+        print("")
+
     def print_aircraft_throughput_stats_for_each_hr(self):
         print("Aircraft throughput statistics for each hour:")
         print("-----------------------------")
@@ -395,6 +424,7 @@ class PerformanceMetrics:
             self.print_passenger_transfer_time_stats()
             self.print_passenger_departure_queue_count_stats()
             self.print_avg_load_factor()
+            self.print_aircraft_idle_time_stats()
             self.print_total_passenger_throughput()
             self.print_average_passenger_throughput()
         self.print_aircraft_arrival_queue_count_stats()

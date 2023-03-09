@@ -29,6 +29,7 @@ class Aircraft:
         self.current_soc = initial_soc
         self.battery_capacity = None  # TODO: Use
         self.charging_start_time = None
+        self.charging_end_time = None
         self.parking_space = None
         self.parking_space_id = None
 
@@ -381,6 +382,7 @@ class Aircraft:
 
         # Actual charging happens here
         yield self.env.timeout(self.get_charging_time(time_passenger_embark_disembark))
+        self.charging_end_time = self.env.now
 
         self.event_saver.save_charging_finish_time(charging_location=parking_space.parking_space_id,
                                                    agent_id=self.tail_number,
@@ -409,128 +411,4 @@ class Aircraft:
         yield self.env.timeout(passenger_disembark_time)
         self.event_saver.aircraft_dict[self.tail_number]['passenger_unloading_finished'] = \
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
-    #
-    # def simulate_aircraft(self):
-    #     self.event_saver.save_agent_creation_time(agent_id=self.tail_number,
-    #                                               agent_type='aircraft',
-    #                                               aircraft_model=self.aircraft_model)
-    #     # parking space and FATO reservation for landing
-    #     parking_space = yield self.vertiport_manager.get_parking_pad()
-    #     parking_space_id = parking_space.parking_space_id
-    #
-    #     # Currently, vertiport manager assigns the closest FATO
-    #     assigned_fato_id = self.vertiport_manager.assign_fato(parking_space_id)
-    #
-    #     # Aircraft calls the FATO resource that will be requested.
-    #     assigned_fato_resource = self.call_fato_resource(assigned_fato_id)
-    #     # Request for FATO pad usage
-    #     aircraft_fato_usage_request = self.vertiport_manager.request_fato(
-    #         assigned_fato_resource=assigned_fato_resource,
-    #         operation_type='arrival'
-    #     )
-    #     yield aircraft_fato_usage_request
-    #
-    #     # Landing process
-    #     yield self.env.process(
-    #         self.aircraft_landing_process(
-    #             time_descend_transition=self.time_descend_transition,
-    #             time_hover_descend=self.time_hover_descend,
-    #             time_rotor_spin_down=self.time_rotor_spin_down,
-    #             landing_fato_id=assigned_fato_id,
-    #             time_post_landing_safety_checks=self.time_post_landing_safety_checks,
-    #             time_tug_connection=self.time_tug_connection
-    #         )
-    #     )
-    #
-    #     # Get the taxi route
-    #     taxi_route, taxi_route_edges = self.get_taxi_instructions(
-    #         assigned_fato_id,
-    #         parking_space_id
-    #     )
-    #
-    #     # Taxi-in process
-    #     yield self.env.process(
-    #         self.taxi(
-    #             taxi_route=taxi_route,
-    #             taxi_route_edges=taxi_route_edges,
-    #             assigned_fato_resource=assigned_fato_resource,
-    #             parking_space_id=parking_space_id,
-    #             parking_space=parking_space,
-    #             aircraft_fato_usage_request=aircraft_fato_usage_request,
-    #             operation_type='arrival'
-    #         )
-    #     )
-    #
-    #     # Put the aircraft into active aircraft list
-    #     self.vertiport_manager.active_aircraft_store.put(self.tail_number)
-    #
-    #     # Charge the aircraft
-    #     yield self.env.process(
-    #         self.charge_aircraft(
-    #             charge_time=self.time_charging,
-    #             time_passenger_embark_disembark=self.time_passenger_embark_disembark,
-    #             parking_space=parking_space,
-    #             time_pre_charging_processes=self.time_pre_charging_processes,
-    #             time_post_charging_processes=self.time_post_charging_processes,
-    #             time_charging_plug_disconnection=self.time_charging_plug_disconnection,
-    #             shared_charger=self.vertiport_manager.vertiport.shared_charger_sets
-    #         )
-    #     )
-    #
-    #     # Take out the aircraft from active aircraft list and put it into available aircraft list
-    #     self.vertiport_manager.active_aircraft_store.get(lambda filt: filt == self.tail_number)
-    #     self.vertiport_manager.available_aircraft_store.put(self.tail_number)
-    #
-    #     # Aircraft take off request
-    #     assigned_fato_id = self.vertiport_manager.assign_fato(parking_space_id)
-    #
-    #     # Aircraft calls the FATO resource that will be requested.
-    #     assigned_fato_resource = self.call_fato_resource(assigned_fato_id)
-    #
-    #     # Request for FATO pad usage
-    #     aircraft_fato_usage_request = self.vertiport_manager.request_fato(
-    #         assigned_fato_resource=assigned_fato_resource,
-    #         operation_type='departure'
-    #     )
-    #     yield aircraft_fato_usage_request
-    #
-    #     taxi_usage_request = self.vertiport_manager.request_taxi_resource()
-    #     if taxi_usage_request is not None:
-    #         yield taxi_usage_request
-    #
-    #     # Save pushback time
-    #     self.event_saver.save_pushback_info(
-    #         pushback_location=parking_space_id,
-    #         agent_id=self.tail_number,
-    #         aircraft_model=self.aircraft_model
-    #     )
-    #
-    #     # Taxi-out process
-    #     taxi_route, taxi_route_edges = self.get_taxi_instructions(parking_space_id, assigned_fato_id)
-    #     yield self.env.process(
-    #         self.taxi(
-    #             taxi_route=taxi_route,
-    #             taxi_route_edges=taxi_route_edges,
-    #             assigned_fato_resource=assigned_fato_resource,
-    #             parking_space_id=parking_space_id,
-    #             parking_space=parking_space,
-    #             aircraft_fato_usage_request=aircraft_fato_usage_request,
-    #             operation_type='departure'
-    #         )
-    #     )
-    #
-    #     # Take-off process
-    #     yield self.env.process(
-    #         self.aircraft_take_off_process(
-    #             time_rotor_spin_up=self.time_rotor_spin_up,
-    #             time_hover_climb=self.time_hover_climb,
-    #             time_climb_transition=self.time_climb_transition,
-    #             take_off_fato_id=assigned_fato_id,
-    #             time_pre_take_off_check_list=self.time_pre_take_off_check_list,
-    #             time_tug_disconnection=self.time_tug_disconnection
-    #         )
-    #     )
-    #
-    #     self.vertiport_manager.release_taxi_usage_request(taxi_usage_request)
-    #     # Release the FATO
-    #     assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
+    
