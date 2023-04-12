@@ -19,7 +19,7 @@ def loop_input(passenger_arrival_mu,
         'arrival_priority': 1,  # Lower the value higher the priority
         'departure_priority': 1,  # Lower the value higher the priority
         'simultaneous_taxi_and_take_off': True,
-        'initial_parking_occupancy': 0.5,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
+        'initial_parking_occupancy': 0,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
 
         'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
         'random_seed': 42,
@@ -42,7 +42,7 @@ def loop_input(passenger_arrival_mu,
     # -----------------
     network_and_demand = {
         'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv',
+                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv',
 
         # DEMAND FILES.
         # ---------------------------------------------------------------
@@ -62,9 +62,9 @@ def loop_input(passenger_arrival_mu,
             'passenger_interarrival_constant': passenger_interarrival_constant,  # If not None, then the passenger arrival process will be created by the constant.
             'num_passengers': 400,  # Number of passengers to be generated
             'passenger_arrival_distribution': {
-                'distribution_name': 'poisson',
+                'distribution_name': 'expon',
                 'parameters': {
-                    'mu': passenger_arrival_mu  # seconds
+                    'loc': passenger_arrival_mu  # seconds
                     # 'param3': None,
                     # 'param4': None
                 },
@@ -109,9 +109,9 @@ def loop_input(passenger_arrival_mu,
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
             'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
             'aircraft_arrival_distribution': {
-                'distribution_name': 'poisson',
+                'distribution_name': 'expon',
                 'parameters': {
-                    'mu': aircraft_arrival_mu  # seconds
+                    'loc': aircraft_arrival_mu  # seconds
                     # 'param3': None,
                     # 'param4': None
                 },
@@ -209,14 +209,14 @@ def loop_input(passenger_arrival_mu,
         # complete the mission. To use this feature, battery model parameters and aircraft energy consumption data need to
         # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
-        'time_charging': charge_time,  # constant sec  # If None charging_time_dist will be used.
+        'time_charging': None,  # constant sec  # If None charging_time_dist will be used.
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
         'charging_time_dist': {
-            'distribution_name': 'poisson',
+            'distribution_name': 'expon',
             'parameters': {
-                'mu': charge_time
+                'loc': charge_time
                 # 'param3': None,
                 # 'param4': None
             },
@@ -231,7 +231,7 @@ def loop_input(passenger_arrival_mu,
     }
 
     output_params = {
-        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/vertisim_paper',
+        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/vertisim_paper_stochastic_full',
         'config_output_file_name': 'config',
         # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
         # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

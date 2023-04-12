@@ -138,7 +138,15 @@ def save_output(trackers,
     total_passenger_throughput INTEGER, 
     fato_utilization REAL,
     passenger_interarrival_constant,
-    aircraft_interarrival_constant)''')
+    aircraft_interarrival_constant,
+    mean_aircraft_idle_time REAL,
+    max_aircraft_idle_time REAL,
+    min_aircraft_idle_time REAL,
+    mean_passenger_trasfer_time REAL,
+    max_passenger_trasfer_time REAL,
+    min_passenger_trasfer_time REAL,
+    total_simulated_time REAL
+    )''')
 
     if simulation_params['sim_params']['only_aircraft_simulation'] and simulation_params['aircraft_params']['time_charging']:
         values = [(sim_id,
@@ -211,7 +219,14 @@ def save_output(trackers,
                    -1,
                    performance_metrics['fato_utilization'],
                    -1,
-                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'])]
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'],
+                   -1,
+                   -1,
+                   -1,
+                   -1,
+                   -1,
+                   -1,
+                   performance_metrics['total_simulated_time'])]
     elif simulation_params['sim_params']['only_aircraft_simulation']:
         values = [(sim_id,
                    simulation_params['sim_params']['arrival_priority'],
@@ -286,7 +301,14 @@ def save_output(trackers,
                    -1,
                    performance_metrics['fato_utilization'],
                    -1,
-                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'])]
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'],
+                   -1,
+                   -1,
+                   -1,
+                   -1,
+                   -1,
+                   -1,
+                   performance_metrics['total_simulated_time'])]
     else:
         values = [(sim_id,
                    simulation_params['sim_params']['arrival_priority'],
@@ -302,11 +324,11 @@ def save_output(trackers,
                    simulation_params['passenger_params']['boarding_gate_to_aircraft_time_constant'],
                    simulation_params['passenger_params']['embark_disembark_time_constant'],
                    simulation_params['network_and_demand']['passenger_arrival_process'][
-                       'passenger_arrival_distribution']['parameters']['mu'],
+                       'passenger_arrival_distribution']['parameters']['loc'],
                    simulation_params['network_and_demand']['passenger_arrival_process']['num_passengers'],
                    simulation_params['network_and_demand']['aircraft_arrival_schedule_file_name'],
                    simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_arrival_distribution'][
-                       'parameters']['mu'],
+                       'parameters']['loc'],
                    simulation_params['network_and_demand']['aircraft_arrival_process']['num_aircraft'],
                    simulation_params['aircraft_params']['aircraft_model'],
                    simulation_params['aircraft_params']['pax'],
@@ -330,7 +352,7 @@ def save_output(trackers,
                    simulation_params['aircraft_params']['time_climb_transition'],
                    simulation_params['aircraft_params']['time_charging'],
                    simulation_params['aircraft_params']['charging_time_dist']['distribution_name'],
-                   simulation_params['aircraft_params']['charging_time_dist']['parameters']['mu'],
+                   simulation_params['aircraft_params']['charging_time_dist']['parameters']['loc'],
                    simulation_params['vertiport_params']['layout'],
                    # find_first_int(simulation_params['vertiport_params']['layout']),
                    # find_second_int(simulation_params['vertiport_params']['layout']),
@@ -358,107 +380,52 @@ def save_output(trackers,
                    performance_metrics['passenger_throughput']['total'],
                    performance_metrics['fato_utilization'],
                    simulation_params['network_and_demand']['passenger_arrival_process']['passenger_interarrival_constant'],
-                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'])]
+                   simulation_params['network_and_demand']['aircraft_arrival_process']['aircraft_interarrival_constant'],
+                   performance_metrics['aircraft_idle_time']['mean'],
+                   performance_metrics['aircraft_idle_time']['max'],
+                   performance_metrics['aircraft_idle_time']['min'],
+                   performance_metrics['passenger_transfer_time']['mean'],
+                   performance_metrics['passenger_transfer_time']['max'],
+                   performance_metrics['passenger_transfer_time']['min'],
+                   performance_metrics['total_simulated_time'])]
 
     query = '''INSERT INTO performance_metrics 
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
     c.executemany(query, values)
 
     conn.commit()
     conn.close()
 
-    # if not shared_charger_sets:
-    #     save_folder = f"output/{layout_type}_dist_{time_aircraft_arrival_interval_parameters['distribution']}_low_{time_aircraft_arrival_interval_parameters['low']}_high_{time_aircraft_arrival_interval_parameters['high']}_scale_{time_aircraft_arrival_interval_parameters['scale']}"
-    # else:
-    #     save_folder = f"output/{layout_type}_dist_{time_aircraft_arrival_interval_parameters['distribution']}_low_{time_aircraft_arrival_interval_parameters['low']}_high_{time_aircraft_arrival_interval_parameters['high']}_scale_{time_aircraft_arrival_interval_parameters['scale']}"
-    # os.makedirs(save_folder, exist_ok=True)
-    # for key, value in trackers.items():
-    #     df = pd.DataFrame.from_dict(value, orient='index')
-    #     df.reset_index(inplace=True)
-    #     df.rename(columns={'index': 'time'}, inplace=True)
-    #     df.to_csv(f'{save_folder}/{key}_charging_{time_charging}.csv')
-    #
-    #     # Convert trajectory file to geoJSON and save
-    #     json_trajectory = create_trajectory_json(df)
-    #     with open(f'{save_folder}/{key}_charging_{time_charging}.geojson', 'w') as f:
-    #         json.dump(json_trajectory, f)
 
-    # config_output = {
-    #     'layout_name': simulation_params['sim_params']['layout_name'],
-    #     'num_flight_destinations': simulation_params['network_and_demand']['num_flight_destinations'],
-    #     'num_aircraft': simulation_params['network_and_demand']['aircraft_arrival_process']['num_aircraft'],
-    #     'num_passengers': simulation_params['network_and_demand']['passenger_arrival_process']['num_passengers'],
-    #     'arrival_priority': simulation_params['sim_params']['arrival_priority'],
-    #     'departure_priority': simulation_params['sim_params']['departure_priority'],
-    #     'simultaneous_taxi_and_take_off': simulation_params['sim_params']['simultaneous_taxi_and_take_off'],
-    #     'num_security_check_servers': simulation_params['vertiport_params']['num_security_check_servers'],
-    #     'num_chargers': simulation_params['vertiport_params']['num_chargers'],
-    #     'is_shared_charger': is_shared_charger(simulation_params['vertiport_params']['shared_charger_sets']),
-    #
-    #     'time_charging': simulation_params['aircraft_params']['time_charging'],
-    #     'charging_dist': simulation_params['aircraft_params']['charging_time_dist'],
-    #
-    #     'is_aircraft_arrival_input': none_checker(simulation_params['network_and_demand']['aircraft_arrival_process']),
-    #     'aircraft_arrival_process': simulation_params['network_and_demand']['aircraft_arrival_process'],
-    #
-    #     'ground_taxi_speed'
-    #     'time_pre_charging_processes'
-    #     'time_charging_plug_disconnection'
-    #     'time_post_charging_processes'
-    #     'time_descend_transition'
-    #     'time_hover_descend'
-    #     'time_rotor_spin_down'
-    #     'time_post_landing_safety_checks'
-    #     'time_tug_connection'
-    #     'time_tug_disconnection'
-    #     'time_pre_take_off_check_list'
-    #     'time_rotor_spin_up'
-    #     'time_hover_climb'
-    #     'time_climb_transition'
-    #
-    #     'is_passenger_arrival_input'
-    #     'passenger_arrival_distribution_name'
-    #     'passenger_arrival_distribution_param1'
-    #     'passenger_arrival_distribution_param2'
-    #     'passenger_arrival_distribution_param3'
-    #     'max_passenger_interarrival_time'
-    #     'max_val_in_passenger_arrival_distribution'
-    #     'is_randomize_passanger_time_constants'
-    #
-    #     'car_to_entrance_walking_time_constant'
-    #     'car_to_entrance_walking_time_distribution_name'
-    #     'car_to_entrance_walking_time_distribution_param1'
-    #     'car_to_entrance_walking_time_distribution_param2'
-    #     'car_to_entrance_walking_time_distribution_param3'
-    #
-    #     'security_check_walking_time_constant'
-    #     'security_check_walking_time_distribution_name'
-    #     'security_check_walking_time_distribution_param1'
-    #     'security_check_walking_time_distribution_param2'
-    #     'security_check_walking_time_distribution_param3'
-    #
-    #     'waiting_room_to_boarding_gate_walking_time_constant'
-    #     'waiting_room_to_boarding_gate_walking_time_distribution_name'
-    #     'waiting_room_to_boarding_gate_walking_time_distribution_param1'
-    #     'waiting_room_to_boarding_gate_walking_time_distribution_param2'
-    #     'waiting_room_to_boarding_gate_walking_time_distribution_param3'
-    #
-    #     'boarding_gate_to_security_check_walking_time_constant'
-    #     'boarding_gate_to_security_check_walking_time_distribution_name'
-    #     'boarding_gate_to_security_check_walking_time_distribution_param1'
-    #     'boarding_gate_to_security_check_walking_time_distribution_param2'
-    #     'boarding_gate_to_security_check_walking_time_distribution_param3'
-    #
-    #     'embark_disembark_time_constant'
-    #     'embark_disembark_time_distribution_name'
-    #     'embark_disembark_time_distribution_param1'
-    #     'embark_disembark_time_distribution_param2'
-    #     'embark_disembark_time_distribution_param3'
-    #
-    #     'deboard_aircraft_and_walk_to_exit_constant'
-    #     'deboard_aircraft_and_walk_to_exit_distribution_name'
-    #     'deboard_aircraft_and_walk_to_exit_distribution_param1'
-    #     'deboard_aircraft_and_walk_to_exit_distribution_param2'
-    #     'deboard_aircraft_and_walk_to_exit_distribution_param3'
+
+    # trackers = {
+    #     'passenger_consolidation_time': passenger_consolidation_time_tracker,
+    #     'passenger_waiting_time': passenger_waiting_time_tracker,
+    #     'passenger_departure_queue_count': passenger_departure_queue_count_tracker,
+    #     'aircraft_arrival_queue_count': aircraft_arrival_queue_count_tracker,
+    #     'aircraft_departure_queue_count': aircraft_departure_queue_count_tracker,
+    #     'load_factor': load_factor_tracker,
+    #     'aircraft_throughput': aircraft_throughput_tracker,
+    #     'passenger_throughput': passenger_throughput_tracker,
+    #     'fato_utilization': fato_utilization_tracker,
+    #     'aircraft_idle_time': aircraft_idle_time_tracker,
+    #     'passenger_transfer_time': passenger_transfer_time_tracker
     # }
+
+    # for key, value in trackers.items():
+    #     performance_metrics[key]['mean'] = np.mean(value)
+    #     performance_metrics[key]['max'] = np.max(value)
+    #     performance_metrics[key]['min'] = np.min(value)
+
+    # performance_metrics['aircraft_throughput']['total'] = len(aircraft_departure_queue_tracker)
+    # performance_metrics['passenger_throughput']['total'] = len(passenger_departure_queue_tracker)
+
+    # return performance_metrics
+
+# def find_first_int(string):
+#     return int(re.findall(r'\d+', string)[0])
+
+# def find_second_int(string):
+#     return int(re.findall(r'\d+', string)[1])
+

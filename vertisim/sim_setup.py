@@ -258,7 +258,7 @@ class SimSetup:
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=self.aircraft_params,
                     num_parking_pad=self.vertiport_layout.num_parking_pad,
-                    charging_param=self.aircraft_params['charging_time_dist']['parameters']['mu'],
+                    charging_param=self.aircraft_params['charging_time_dist']['parameters']['loc'],
                     initial_parking_occupancy=self.sim_params['initial_parking_occupancy']
                 )
             self.env.process(
@@ -282,7 +282,6 @@ class SimSetup:
         return ''.join(random.choices(string.ascii_uppercase, k=8))
 
     def calculate_performance_metrics(self):
-        print(self.event_saver.aircraft_idle_time_tracker)
         # Print and save performance metrics
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
                                   only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
@@ -292,6 +291,8 @@ class SimSetup:
                                   aircraft_departure_queue_count=self.event_saver.aircraft_departure_queue_count,
                                   passenger_waiting_time=self.event_saver.passenger_waiting_time,
                                   passenger_transfer_time=self.event_saver.passenger_transfer_time,
+                                  passenger_departure_queue_waiting_time=self.event_saver.passenger_departure_queue_waiting_time,
+                                  aircraft_arrival_queue_waiting_time=self.event_saver.aircraft_arrival_queue_waiting_time,
                                   flight_schedule=self.event_saver.flight_schedule,
                                   fato_usage_tracker=self.event_saver.fato_usage_tracker,
                                   aircraft_idle_time_tracker=self.event_saver.aircraft_idle_time_tracker,

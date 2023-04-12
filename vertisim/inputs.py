@@ -12,7 +12,7 @@ sim_params = {
     'initial_parking_occupancy': 0,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
     'num_initial_passengers': 0,   # TODO: of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 60 * 10,  # seconds
+    'max_passenger_waiting_time': False,  # seconds
     'interuptive_approach': False,
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
@@ -45,12 +45,12 @@ network_and_demand = {
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
     'passenger_arrival_process': {
-        'passenger_interarrival_constant': 360,  # If not None, then the passenger arrival process will be created by the constant.
+        'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
         'num_passengers': 400,  # Number of passengers to be generated
         'passenger_arrival_distribution': {
-            'distribution_name': 'poisson',
+            'distribution_name': 'expon',
             'parameters': {
-                'mu': 30  # seconds
+                'loc': 3600/10  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -89,15 +89,15 @@ network_and_demand = {
             #     'battery_capacity': 287,  # kWh
             # }
         },
-        'aircraft_interarrival_constant': 3600/20,  # If not None, then the aircraft arrival process will be created by the constant.
+        'aircraft_interarrival_constant': None,  # If not None, then the aircraft arrival process will be created by the constant.
         'num_aircraft': 400,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
         'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
         'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
         'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
         'aircraft_arrival_distribution': {
-            'distribution_name': 'poisson',
+            'distribution_name': 'expon',
             'parameters': {
-                'mu': 60 * 60  # seconds
+                'loc': 3600/4  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -194,14 +194,14 @@ aircraft_params = {
     # complete the mission. To use this feature, battery model parameters and aircraft energy consumption data need to
     # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
-    'time_charging': 12*60,  # constant sec  # If None charging_time_dist will be used.
+    'time_charging': None,  # constant sec  # If None charging_time_dist will be used.
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
     'charging_time_dist': {
-        'distribution_name': 'poisson',
+        'distribution_name': 'expon',
         'parameters': {
-            'mu': 60 * 11
+            'loc': 60 * 1
             # 'param3': None,
             # 'param4': None
         },

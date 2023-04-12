@@ -40,7 +40,7 @@ class DistributionGenerator:
         """
         time = self.distribution.rvs(**self.distribution_params['parameters'], size=1)[0]
         time_sec = round(max(0, time))
-        return sec_to_ms(time_sec)
+        return time_sec
 
 
 

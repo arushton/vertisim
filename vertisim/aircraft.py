@@ -336,7 +336,7 @@ class Aircraft:
         """
         if self.time_charging is not None:
             return max(time_passenger_embark_disembark, self.time_charging)
-        charge_time = self.vertiport_manager.charging_time_distribution.pick_number_from_distribution()
+        charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
         return max(time_passenger_embark_disembark, charge_time)
 
     def charge_aircraft(self, charge_time: float, time_passenger_embark_disembark: float, parking_space: object,

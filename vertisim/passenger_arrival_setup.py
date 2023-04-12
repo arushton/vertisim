@@ -77,7 +77,7 @@ class PassengerArrivalSetup:
         if self.artificial_passenger_arrival_process['passenger_interarrival_constant'] is not None:
             passenger_arrival_interval_time = self.artificial_passenger_arrival_process['passenger_interarrival_constant']
         else:
-            passenger_arrival_interval_time = self.artificial_passenger_arrival_process['passenger_arrival_distribution']['parameters']['mu']   
+            passenger_arrival_interval_time = self.artificial_passenger_arrival_process['passenger_arrival_distribution']['parameters']['loc']   
         time_to_fill_vertiport = int(self.num_parking_pad*self.initial_parking_occupancy) * (
             self.aircraft_params['time_descend_transition'] +
             self.aircraft_params['time_hover_descend'] +

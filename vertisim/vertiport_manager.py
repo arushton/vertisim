@@ -48,7 +48,7 @@ class VertiportManager:
         self.aircraft_energy_consumption_data = aircraft_energy_consumption_data
         self.aircraft_battery_models = self.build_aircraft_battery_models(self.aircraft_fleet_specs)
         self.taxi_resource = simpy.Resource(self.env, 1)
-        if not self.only_aircraft_simulation:
+        if not self.only_aircraft_simulation and self.max_flight_waiting_time is not False:
             self.env.process(self.check_passenger_max_waiting_time_threshold())
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
@@ -307,8 +307,12 @@ class VertiportManager:
         # Save the aircraft idle time
         self.event_saver.save_aircraft_idle_time(agent_id=aircraft.tail_number,
                                                  charging_end_time=aircraft.charging_end_time)
+        
+        # Save aircraft flight assignment time
+        self.event_saver.save_aircraft_flight_assignment_time(agent_id=aircraft.tail_number)
+        
 
-        # Save total passenger waiting time
+        # Save total passenger waiting time until the flight assignment
         for passenger in departing_passengers:
             self.event_saver.save_passenger_waiting_time(passenger_id=passenger.passenger_id,
                                                          waiting_time=self.env.now - passenger.waiting_room_arrival_time)
@@ -445,6 +449,9 @@ class VertiportManager:
         )
         yield aircraft_fato_usage_request
 
+        self.event_saver.save_aircraft_arrival_queue_waiting_time(agent_id=aircraft.tail_number,
+                                                                  waiting_time=self.env.now - aircraft.creation_time)
+
         # Save FATO usage start time
         self.event_saver.update_fato_usage_tracker(fato_usage=1)
 
@@ -507,6 +514,9 @@ class VertiportManager:
         for passenger in departing_passengers:
             self.event_saver.save_passenger_boarding_finish_time(passenger_id=passenger.passenger_id,
                                                                  aircraft=aircraft)
+
+        boarding_time = self.env.now    
+        
         # Aircraft take off request
         assigned_fato_id = self.assign_fato(aircraft.parking_space_id)
 
@@ -522,6 +532,13 @@ class VertiportManager:
             operation_type='departure'
         )
         yield aircraft_fato_usage_request
+
+        # Save passenger departure queue waiting time
+        for passenger in departing_passengers:
+            self.event_saver.save_passenger_departure_queue_waiting_time(
+                passenger_id=passenger.passenger_id,
+                boarding_time=boarding_time
+            )
 
         # Decrease the aircraft departure queue counter
         self.event_saver.update_aircraft_departure_queue_counter(queue_update=-1)

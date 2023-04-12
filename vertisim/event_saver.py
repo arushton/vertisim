@@ -45,6 +45,8 @@ class EventSaver:
         self.aircraft_departure_queue_count[self.sim_start_timestamp] = 0
         self.passenger_waiting_time = defaultdict(dict)
         self.passenger_transfer_time = defaultdict(dict)
+        self.passenger_departure_queue_waiting_time = defaultdict(dict)
+        self.aircraft_arrival_queue_waiting_time = defaultdict(dict)
         self.aircraft_idle_time_tracker = defaultdict(dict)
         self.fato_usage_tracker = defaultdict(dict)
         self.fato_usage_tracker[self.sim_start_timestamp] = 0
@@ -67,21 +69,13 @@ class EventSaver:
         self.passenger_consolidation_time[time]['consolidation_time'] = consolidation_time
 
     def save_passenger_waiting_time(self, passenger_id, waiting_time):
-        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
-                                     sim_time=self.env.now)
-        # time = self.is_time_overlapping(time=time, agent_type='passenger')
-        # self.passenger_waiting_time[time]['passenger_id'] = passenger_id
-        # self.passenger_waiting_time[time]['waiting_time'] = waiting_time
         self.passenger_waiting_time[passenger_id] = waiting_time
 
     def save_passenger_transfer_time(self, passenger_id, transfer_time):
-        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
-                                     sim_time=self.env.now)
-        # time = self.is_time_overlapping(time=time, agent_type='passenger')
-        # self.passenger_transfer_time[time]['passenger_id'] = passenger_id
-        # self.passenger_transfer_time[time]['transfer_time'] = transfer_time
         self.passenger_transfer_time[passenger_id] = transfer_time
 
+    def save_passenger_departure_queue_waiting_time(self, passenger_id, boarding_time):
+        self.passenger_departure_queue_waiting_time[passenger_id] = self.env.now - boarding_time
 
     def update_passenger_departure_queue_counter(self, queue_update: int) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
@@ -106,6 +100,9 @@ class EventSaver:
         # Get the last value from the dictionary and add the queue_update to it
         last_value = list(self.aircraft_departure_queue_count.values())[-1]
         self.aircraft_departure_queue_count[time] = last_value + queue_update
+
+    def save_aircraft_arrival_queue_waiting_time(self, aircraft_id, waiting_time):
+        self.aircraft_arrival_queue_waiting_time[aircraft_id] =  waiting_time
     
     def save_aircraft_idle_time(self, agent_id: int, charging_end_time: int) -> None:
         """
@@ -563,6 +560,20 @@ class EventSaver:
         self.passenger_agent_trajectory[time]['latitude'] = 37.629424
         self.passenger_agent_trajectory[time]['longitude'] = -122.378581
         self.passenger_agent_trajectory[time]['location'] = 'flight_assignment'
+
+    def save_aircraft_flight_assignment_time(self, agent_id: int, agent_type: str = 'aircraft'):
+            """
+            Saves the time when an aircraft is assigned to a flight
+            :param agent_id:
+            :return:
+            """
+            time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                        sim_time=self.env.now)
+            time = self.is_time_overlapping(time=time, agent_type=agent_type)
+            self.aircraft_agent_trajectory[time]['aircraft_id'] = f'aircraft{agent_id}'
+            self.aircraft_agent_trajectory[time]['latitude'] = 37.629424
+            self.aircraft_agent_trajectory[time]['longitude'] = -122.378581
+            self.aircraft_agent_trajectory[time]['location'] = 'flight_assignment'
 
     def save_passenger_waiting_room_departure_time(self,
                                                    agent_id: int,

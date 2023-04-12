@@ -7,7 +7,7 @@
         "initial_parking_occupancy": 0,
         "num_initial_passengers": 0,
         "random_seed": 42,
-        "max_passenger_waiting_time": 3600,
+        "max_passenger_waiting_time": false,
         "interuptive_approach": false,
         "only_aircraft_simulation": false,
         "default_aircraft": true,
@@ -19,12 +19,12 @@
         "passenger_arrival_schedule_file_name": null,
         "aircraft_arrival_schedule_file_name": null,
         "passenger_arrival_process": {
-            "passenger_interarrival_constant": 360,
+            "passenger_interarrival_constant": null,
             "num_passengers": 400,
             "passenger_arrival_distribution": {
-                "distribution_name": "poisson",
+                "distribution_name": "expon",
                 "parameters": {
-                    "mu": 30
+                    "loc": 360.0
                 },
                 "distribution_type": "discrete",
                 "max_val_in_dist": 120
@@ -38,15 +38,15 @@
                     "battery_capacity": 160
                 }
             },
-            "aircraft_interarrival_constant": 180.0,
+            "aircraft_interarrival_constant": null,
             "num_aircraft": 400,
             "num_passengers": null,
             "min_init_soc": 20,
             "max_init_soc": 50,
             "aircraft_arrival_distribution": {
-                "distribution_name": "poisson",
+                "distribution_name": "expon",
                 "parameters": {
-                    "mu": 3600
+                    "loc": 900.0
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180
@@ -97,11 +97,11 @@
         "time_rotor_spin_up": 0,
         "time_hover_climb": 0,
         "time_climb_transition": 60,
-        "time_charging": 720,
+        "time_charging": null,
         "charging_time_dist": {
-            "distribution_name": "poisson",
+            "distribution_name": "expon",
             "parameters": {
-                "mu": 660
+                "loc": 60
             },
             "distribution_type": "discrete",
             "max_charge_duration": 1800
