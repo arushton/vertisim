@@ -28,7 +28,7 @@ def sim_setup(sim_params: dict,
               sim_start_time: int):
     sim_start_timestamp = sec_to_ms(1625065200)  # Wednesday, June 30, 2021 8:00:00 AM PT
 
-    set_seed(sim_params['random_seed'])
+    # set_seed(sim_params['random_seed'])
 
     # Create an environment
     env = simpy.Environment()

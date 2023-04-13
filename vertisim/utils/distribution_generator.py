@@ -1,7 +1,7 @@
 import scipy.stats as stats
 from typing import Dict, Union
 from utils.units import sec_to_ms
-
+import random
 
 # def pick_number(population, probabilities):
 #     """
@@ -39,6 +39,7 @@ class DistributionGenerator:
         :return:
         """
         time = self.distribution.rvs(**self.distribution_params['parameters'], size=1)[0]
+        # time = random.expovariate(1/self.distribution_params['parameters']['mu'])
         time_sec = round(max(0, time))
         return time_sec
 

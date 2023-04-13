@@ -82,7 +82,7 @@ class SimSetup:
         Creates the event saver
         """
         # Create event saver
-        return EventSaver(self.env, self.vertiport_layout, self.sim_start_timestamp)
+        return EventSaver(self.env, self.vertiport_layout, self.sim_start_timestamp, self.sim_params)
 
     def import_vertiport_distance(self):
         """
@@ -258,7 +258,7 @@ class SimSetup:
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=self.aircraft_params,
                     num_parking_pad=self.vertiport_layout.num_parking_pad,
-                    charging_param=self.aircraft_params['charging_time_dist']['parameters']['loc'],
+                    charging_param=self.aircraft_params['charging_time_dist']['parameters']['scale'],
                     initial_parking_occupancy=self.sim_params['initial_parking_occupancy']
                 )
             self.env.process(
@@ -284,6 +284,7 @@ class SimSetup:
     def calculate_performance_metrics(self):
         # Print and save performance metrics
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
+                                  aircraft_params=self.aircraft_params,
                                   only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
                                   passenger_consolidation_time=self.event_saver.passenger_consolidation_time,
                                   passenger_departure_queue_count=self.event_saver.passenger_departure_queue_count,
@@ -293,6 +294,8 @@ class SimSetup:
                                   passenger_transfer_time=self.event_saver.passenger_transfer_time,
                                   passenger_departure_queue_waiting_time=self.event_saver.passenger_departure_queue_waiting_time,
                                   aircraft_arrival_queue_waiting_time=self.event_saver.aircraft_arrival_queue_waiting_time,
+                                  aircraft_charging_times=self.event_saver.aircraft_charging_times,
+                                  aircraft_taxi_times=self.event_saver.aircraft_taxi_times,
                                   flight_schedule=self.event_saver.flight_schedule,
                                   fato_usage_tracker=self.event_saver.fato_usage_tracker,
                                   aircraft_idle_time_tracker=self.event_saver.aircraft_idle_time_tracker,

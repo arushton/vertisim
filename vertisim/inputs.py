@@ -12,8 +12,9 @@ sim_params = {
     'initial_parking_occupancy': 0,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
     'num_initial_passengers': 0,   # TODO: of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': False,  # seconds
+    'max_passenger_waiting_time': 600,  # seconds
     'interuptive_approach': False,
+    'save_trajectories': False, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
@@ -46,11 +47,11 @@ network_and_demand = {
     # depending on the distribution you use.
     'passenger_arrival_process': {
         'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-        'num_passengers': 400,  # Number of passengers to be generated
+        'num_passengers': 100,  # Number of passengers to be generated
         'passenger_arrival_distribution': {
             'distribution_name': 'expon',
             'parameters': {
-                'loc': 3600/10  # seconds
+                'scale': 3600/10  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -90,14 +91,14 @@ network_and_demand = {
             # }
         },
         'aircraft_interarrival_constant': None,  # If not None, then the aircraft arrival process will be created by the constant.
-        'num_aircraft': 400,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
+        'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
         'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
         'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
         'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
         'aircraft_arrival_distribution': {
             'distribution_name': 'expon',
             'parameters': {
-                'loc': 3600/4  # seconds
+                'scale': 3600/4  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -201,7 +202,7 @@ aircraft_params = {
     'charging_time_dist': {
         'distribution_name': 'expon',
         'parameters': {
-            'loc': 60 * 1
+            'scale': 60 * 10
             # 'param3': None,
             # 'param4': None
         },
@@ -215,7 +216,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/test',
+    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertisim_output/test',
     'config_output_file_name': 'config',
     # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
     # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',

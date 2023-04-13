@@ -450,7 +450,7 @@ class VertiportManager:
         yield aircraft_fato_usage_request
 
         self.event_saver.save_aircraft_arrival_queue_waiting_time(agent_id=aircraft.tail_number,
-                                                                  waiting_time=self.env.now - aircraft.creation_time)
+                                                                  waiting_time=self.env.now - aircraft.arrival_time)
 
         # Save FATO usage start time
         self.event_saver.update_fato_usage_tracker(fato_usage=1)
@@ -473,6 +473,7 @@ class VertiportManager:
             parking_space_id
         )
 
+        taxi_start_time = self.env.now
         # Taxi-in process
         yield self.env.process(
             aircraft.taxi(
@@ -486,6 +487,8 @@ class VertiportManager:
                 departing_passengers=None
             )
         )
+        taxi_end_time = self.env.now
+        self.event_saver.save_aircraft_taxi_time(aircraft.tail_number, taxi_end_time-taxi_start_time)
 
         # Charge the aircraft
         yield self.env.process(
@@ -566,6 +569,7 @@ class VertiportManager:
             self.event_saver.save_passenger_transfer_time(passenger_id=passenger.passenger_id,
                                                           transfer_time=self.env.now - passenger.vertiport_arrival_time)
 
+        taxi_start_time = self.env.now
         # Taxi-out process
         taxi_route, taxi_route_edges = self.get_taxi_instructions(aircraft.parking_space_id, assigned_fato_id)
         yield self.env.process(
@@ -580,7 +584,8 @@ class VertiportManager:
                 departing_passengers=departing_passengers
             )
         )
-
+        taxi_end_time = self.env.now
+        self.event_saver.save_aircraft_taxi_time(aircraft.tail_number, taxi_end_time-taxi_start_time)
 
         # Save take-off info
         self.event_saver.save_flight_info(tail_number=aircraft.tail_number,

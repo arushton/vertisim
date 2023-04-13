@@ -12,6 +12,7 @@ class PerformanceMetrics:
 
     def __init__(self, 
                 sim_start_timestamp, 
+                aircraft_params,
                 only_aircraft_simulation, 
                 passenger_consolidation_time,
                 passenger_departure_queue_count, 
@@ -21,12 +22,15 @@ class PerformanceMetrics:
                 passenger_transfer_time, 
                 passenger_departure_queue_waiting_time,
                 aircraft_arrival_queue_waiting_time,
+                aircraft_charging_times,
+                aircraft_taxi_times,
                 flight_schedule,
                 fato_usage_tracker, 
                 aircraft_idle_time_tracker,
                 sim_id, 
                 verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
+        self.aircraft_params = aircraft_params
         self.only_aircraft_simulation = only_aircraft_simulation
         self.passenger_consolidation_time = passenger_consolidation_time
         self.passenger_departure_queue_count = passenger_departure_queue_count
@@ -36,6 +40,8 @@ class PerformanceMetrics:
         self.passenger_transfer_time = passenger_transfer_time
         self.passenger_departure_queue_waiting_time = passenger_departure_queue_waiting_time
         self.aircraft_arrival_queue_waiting_time = aircraft_arrival_queue_waiting_time
+        self.aircraft_charging_times=aircraft_charging_times,
+        self.aircraft_taxi_times=aircraft_taxi_times,
         self.flight_schedule = flight_schedule
         self.fato_usage_tracker = fato_usage_tracker
         self.aircraft_idle_time_tracker = aircraft_idle_time_tracker
@@ -54,11 +60,17 @@ class PerformanceMetrics:
             self.compute_average_passenger_throughput()
             self.compute_load_factor_stats()
             self.compute_aircraft_idle_time_stats()
+            self.calculate_passenger_departure_queue_waiting_times_stats()
         self.calculate_aircraft_arrival_queue_count_stats()
         self.calculate_aircraft_departure_queue_count_stats()
         self.compute_aircraft_throughput()
         self.compute_average_aircraft_throughput()
         self.compute_fato_utilization()
+        self.calculate_aircraft_arrival_queue_waiting_times_stats()
+        self.compute_average_charge_time()
+        self.compute_average_taxi_time()
+        self.compute_turnaround_duration()
+        self.compute_tlof_reservation_duration()
 
         if verbose:
             self.print_verbose_performance_metrics()
@@ -129,7 +141,7 @@ class PerformanceMetrics:
         # Creates a dataframe for passenger departure queue waiting times statistics including mean, median, standard deviation,
         # max and min
         
-        waiting_times = np.array(list(self.passenger_departure_queue_waiting_times.values()))
+        waiting_times = np.array(list(self.passenger_departure_queue_waiting_time.values()))
 
         self.performance_metrics['passenger_departure_queue_waiting_times']['mean'] = round(ms_to_min(np.mean(waiting_times)), 2)
         self.performance_metrics['passenger_departure_queue_waiting_times']['median'] = round(ms_to_min(np.median(waiting_times)), 2)
@@ -159,6 +171,18 @@ class PerformanceMetrics:
         self.performance_metrics['aircraft_departure_queue_count']['max'] = max(list(self.aircraft_departure_queue_count.values()))
         self.performance_metrics['aircraft_departure_queue_count']['min'] = min(list(self.aircraft_departure_queue_count.values()))
 
+    def calculate_aircraft_arrival_queue_waiting_times_stats(self):
+        # Creates a dataframe for aircraft arrival queue waiting times statistics including mean, median, standard deviation,
+        # max and min
+        
+        waiting_times = np.array(list(self.aircraft_arrival_queue_waiting_time.values()))
+
+        self.performance_metrics['aircraft_arrival_queue_waiting_times']['mean'] = round(ms_to_min(np.mean(waiting_times)), 2)
+        self.performance_metrics['aircraft_arrival_queue_waiting_times']['median'] = round(ms_to_min(np.median(waiting_times)), 2)
+        self.performance_metrics['aircraft_arrival_queue_waiting_times']['std'] = round(ms_to_min(np.std(waiting_times)), 2)
+        self.performance_metrics['aircraft_arrival_queue_waiting_times']['max'] = round(ms_to_min(np.max(waiting_times)), 2)
+        self.performance_metrics['aircraft_arrival_queue_waiting_times']['min'] = round(ms_to_min(np.min(waiting_times)), 2)
+
     def compute_load_factor_stats(self):
         # Computes load factor statistics
         flight_list = get_values_from_nested_dict(self.flight_schedule, 'passengers')
@@ -177,6 +201,41 @@ class PerformanceMetrics:
         self.performance_metrics['aircraft_idle_time']['mean'] = round(ms_to_min(np.mean(idle_times)), 2)
         self.performance_metrics['aircraft_idle_time']['median'] = round(ms_to_min(np.median(idle_times)), 2)
         self.performance_metrics['aircraft_idle_time']['std'] = round(ms_to_min(np.std(idle_times)), 2)
+
+    def compute_average_charge_time(self):
+        # Computes the average charge time
+        total_charge_time = sum(self.aircraft_charging_times[0].values())
+        total_aircraft = len(self.aircraft_charging_times[0].values())
+        self.performance_metrics['average_charge_time'] = round(ms_to_min(total_charge_time / total_aircraft), 2)
+
+    def compute_average_taxi_time(self):
+        total_taxi_time = sum(self.aircraft_taxi_times[0].values())
+        total_aircraft = len(self.aircraft_taxi_times[0].values())
+        self.performance_metrics['average_taxi_time'] = round(ms_to_min(total_taxi_time / total_aircraft), 2)
+
+    def compute_turnaround_duration(self):
+        # Computes the average aircraft turnaround time
+        turnaround_time = 2*self.performance_metrics['average_taxi_time'] + \
+            self.performance_metrics['average_charge_time'] + \
+            self.aircraft_params['time_pre_charging_processes'] + \
+            self.aircraft_params['time_post_charging_processes'] + \
+            self.aircraft_params['time_charging_plug_disconnection']
+    
+        self.performance_metrics['average_aircraft_turnaround_time'] = round(ms_to_min(turnaround_time), 2)
+
+    def compute_tlof_reservation_duration(self):
+        tlof_time = self.aircraft_params['time_descend_transition'] + \
+            self.aircraft_params['time_hover_descend'] + \
+            self.aircraft_params['time_rotor_spin_down'] + \
+            self.aircraft_params['time_post_landing_safety_checks'] + \
+            self.aircraft_params['time_tug_connection'] + \
+            self.aircraft_params['time_pre_take_off_check_list'] + \
+            self.aircraft_params['time_rotor_spin_up'] + \
+            self.aircraft_params['time_hover_climb'] + \
+            self.aircraft_params['time_climb_transition'] + \
+            self.performance_metrics['average_taxi_time']
+        tlof_time = tlof_time / 2
+        self.performance_metrics['tlof_time'] = round(ms_to_min(tlof_time), 2)
 
     def compute_total_passenger_throughput(self):
         # Computes the total passenger throughput

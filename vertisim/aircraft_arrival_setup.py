@@ -129,6 +129,7 @@ class AircraftArrivalSetup:
                             passenger_capacity=passenger_capacity,
                             max_range=self.vertiport_manager.aircraft_fleet_specs[aircraft_model]['range'],
                             initial_soc=initial_soc,
+                            arrival_time=self.env.now,
                             ground_taxi_speed=self.aircraft_params['ground_taxi_speed'],
                             time_passenger_embark_disembark=sec_to_ms(self.aircraft_params['time_passenger_embark_disembark']),
                             time_descend_transition=sec_to_ms(self.aircraft_params['time_descend_transition']),

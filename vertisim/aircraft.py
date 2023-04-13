@@ -10,7 +10,7 @@ class Aircraft:
     Aircraft agent
     """
 
-    def __init__(self, env, tail_number, ground_taxi_speed, initial_soc, aircraft_model, aircraft_specs,
+    def __init__(self, env, tail_number, ground_taxi_speed, initial_soc, arrival_time, aircraft_model, aircraft_specs,
                  passenger_capacity, max_range,
                  time_charging,
                  time_passenger_embark_disembark, time_descend_transition, time_hover_descend, time_rotor_spin_down,
@@ -27,6 +27,7 @@ class Aircraft:
         self.ground_taxi_speed = ground_taxi_speed
         self.initial_soc = initial_soc
         self.current_soc = initial_soc
+        self.arrival_time = arrival_time
         self.battery_capacity = None  # TODO: Use
         self.charging_start_time = None
         self.charging_end_time = None
@@ -337,7 +338,9 @@ class Aircraft:
         if self.time_charging is not None:
             return max(time_passenger_embark_disembark, self.time_charging)
         charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
-        return max(time_passenger_embark_disembark, charge_time)
+        charge_time = max(time_passenger_embark_disembark, charge_time)
+        self.event_saver.save_aircraft_charging_time(self.tail_number, charge_time)
+        return charge_time
 
     def charge_aircraft(self, charge_time: float, time_passenger_embark_disembark: float, parking_space: object,
                         time_pre_charging_processes: int, time_post_charging_processes: int,
