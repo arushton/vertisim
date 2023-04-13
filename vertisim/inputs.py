@@ -1,5 +1,9 @@
 import time
 from sim_setup import SimSetup
+import os
+from pathlib import Path
+
+cwd = os.getcwd()
 
 # ------------------------ Inputs ------------------------
 # Simulation parameters
@@ -29,8 +33,7 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                   'Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv',
+    'vertiport_network_file_path': f'{cwd}/input/vertiport_network_two.csv',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -111,8 +114,7 @@ network_and_demand = {
 # Vertiport parameters
 # --------------------
 vertiport_params = {
-    'vertiport_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                  'Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls',
+    'vertiport_layout_file_path': f'{cwd}/input/skyport_layouts/skyport_layout.xls',
     'layout': 'clover_1_fato_4_park',
     'num_security_check_servers': 12,
     'num_chargers': 4,
@@ -210,18 +212,14 @@ aircraft_params = {
         'max_charge_duration': 60 * 30,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
-    'aircraft_energy_consumption_data_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                                    'Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption',
+    'aircraft_energy_consumption_data_folder_path': f'{cwd}/input/aircraft_energy_consumption',
     'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 
 output_params = {
-    'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertisim_output/test',
+    'output_folder_path': f'{str(Path(cwd).parents[1])}/vertisim_output/test',
     'config_output_file_name': 'config',
-    # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
-    # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
-    # 'flight_schedule_output_file_name': 'flight_schedule',
-    'performance_metrics_output_file_name': 'performance_metrics'
+    'performance_metrics_output_file_name': 'performance_metrics',
 }
 
 # ----------------------------------------------------------
