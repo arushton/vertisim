@@ -122,7 +122,7 @@ class VertiportLayout:
             for target in self.G.nodes:
                 try:
                     node_distances.loc[source, target] = round(nx.shortest_path_length(
-                        self.G, source=source, target=target, weight='weight'), 2)
+                        self.G, source=source, target=target, weight='weight'))
                 except:
                     continue
         return node_distances
