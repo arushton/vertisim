@@ -5,16 +5,18 @@ from typing import List, Union
 import re
 
 
-def set_seed(seed):
+def set_seed(seed=None):
     """
     Sets the seed for random number generation.
-    :param seed:
-    :return:
+    :param seed: an optional seed value (int)
+    :return: None
     """
-    try:
+    if seed is not None:
         random.seed(seed)
-    except Exception:
+        np.random.seed(seed)
+    else:
         random.seed(42)
+        np.random.seed(42)
 
 
 def compute_interarrival_times_from_schedule(schedule):
