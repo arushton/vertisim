@@ -1,6 +1,7 @@
 import scipy.stats as stats
 from typing import Dict, Union
 from utils.units import sec_to_ms
+from utils.helpers import set_seed
 import random
 
 # def pick_number(population, probabilities):
@@ -19,6 +20,7 @@ class DistributionGenerator:
     def __init__(self, distribution_params: Dict, max_val_in_dist: Union[float, int]):
         self.distribution_params = distribution_params
         self.max_val_in_dist = max_val_in_dist
+        set_seed()
         self.distribution = getattr(stats, self.distribution_params['distribution_name'])
         # self.population, self.probabilities = self.generate_distribution()
 
@@ -38,10 +40,9 @@ class DistributionGenerator:
         Picks a number from the distribution.
         :return:
         """
+        set_seed()
         time = self.distribution.rvs(**self.distribution_params['parameters'], size=1)[0]
-        # time = random.expovariate(1/self.distribution_params['parameters']['mu'])
-        time_sec = round(max(0, time))
-        return time_sec
+        return round(max(0, time))
 
 
 

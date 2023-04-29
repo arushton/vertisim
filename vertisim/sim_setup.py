@@ -308,8 +308,6 @@ class SimSetup:
             trackers={
                 'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
                 'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory,
-                # 'aircraft_queue_count': event_saver.aircraft_queue_count,
-                # 'passenger_queue_count': event_saver.passenger_queue_count,
                 'flight_schedule': self.event_saver.flight_schedule,
             },
             simulation_params={

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from utils.units import ms_to_min
+from utils.units import ms_to_min, sec_to_min
 from utils.helpers import nested_dict_all_values, remove_larger_keys, get_values_from_nested_dict, \
     get_length_of_longest_list, get_length_of_shortest_list
 import matplotlib.pyplot as plt
@@ -217,11 +217,11 @@ class PerformanceMetrics:
         # Computes the average aircraft turnaround time
         turnaround_time = 2*self.performance_metrics['average_taxi_time'] + \
             self.performance_metrics['average_charge_time'] + \
-            self.aircraft_params['time_pre_charging_processes'] + \
-            self.aircraft_params['time_post_charging_processes'] + \
-            self.aircraft_params['time_charging_plug_disconnection']
+            sec_to_min(self.aircraft_params['time_pre_charging_processes']) + \
+            sec_to_min(self.aircraft_params['time_post_charging_processes']) + \
+            sec_to_min(self.aircraft_params['time_charging_plug_disconnection'])
     
-        self.performance_metrics['average_aircraft_turnaround_time'] = round(ms_to_min(turnaround_time), 2)
+        self.performance_metrics['average_aircraft_turnaround_time'] = round(turnaround_time, 2)
 
     def compute_tlof_reservation_duration(self):
         tlof_time = self.aircraft_params['time_descend_transition'] + \
@@ -411,6 +411,21 @@ class PerformanceMetrics:
         print(df)
         print("")
 
+    def print_aircraft_arrival_queue_waiting_times_stats(self):
+        print("Aircraft arrival queue waiting times statistics in minutes:")
+        print("-----------------------------")
+        df = pd.DataFrame(
+            {
+                'mean': [self.performance_metrics['aircraft_arrival_queue_waiting_times']['mean']],
+                'median': [self.performance_metrics['aircraft_arrival_queue_waiting_times']['median']],
+                'std': [self.performance_metrics['aircraft_arrival_queue_waiting_times']['std']],
+                'max': [self.performance_metrics['aircraft_arrival_queue_waiting_times']['max']],
+                'min': [self.performance_metrics['aircraft_arrival_queue_waiting_times']['min']]
+            }
+        )
+        print(df)
+        print("")
+
     def print_aircraft_departure_queue_count_stats(self):
         print("Aircraft departure queue count statistics:")
         print("-----------------------------")
@@ -506,6 +521,7 @@ class PerformanceMetrics:
             self.print_average_passenger_throughput()
         self.print_aircraft_arrival_queue_count_stats()
         self.print_aircraft_departure_queue_count_stats()
+        self.print_aircraft_arrival_queue_waiting_times_stats()
         self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
         self.print_aircraft_throughput_stats_for_each_hr_verbose()

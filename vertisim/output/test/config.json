@@ -7,24 +7,25 @@
         "initial_parking_occupancy": 0,
         "num_initial_passengers": 0,
         "random_seed": 42,
-        "max_passenger_waiting_time": false,
+        "max_passenger_waiting_time": 600,
         "interuptive_approach": false,
+        "save_trajectories": true,
         "only_aircraft_simulation": false,
         "default_aircraft": true,
         "verbose": true,
         "battery_model_sim": false
     },
     "network_and_demand": {
-        "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv",
+        "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv",
         "passenger_arrival_schedule_file_name": null,
         "aircraft_arrival_schedule_file_name": null,
         "passenger_arrival_process": {
             "passenger_interarrival_constant": null,
-            "num_passengers": 400,
+            "num_passengers": 200,
             "passenger_arrival_distribution": {
                 "distribution_name": "expon",
                 "parameters": {
-                    "loc": 360.0
+                    "scale": 90.0
                 },
                 "distribution_type": "discrete",
                 "max_val_in_dist": 120
@@ -39,14 +40,14 @@
                 }
             },
             "aircraft_interarrival_constant": null,
-            "num_aircraft": 400,
+            "num_aircraft": 200,
             "num_passengers": null,
             "min_init_soc": 20,
             "max_init_soc": 50,
             "aircraft_arrival_distribution": {
                 "distribution_name": "expon",
                 "parameters": {
-                    "loc": 900.0
+                    "scale": 257.14285714285717
                 },
                 "distribution_type": "discrete",
                 "max_interarrival_time": 180
@@ -101,7 +102,7 @@
         "charging_time_dist": {
             "distribution_name": "expon",
             "parameters": {
-                "loc": 60
+                "scale": 600
             },
             "distribution_type": "discrete",
             "max_charge_duration": 1800

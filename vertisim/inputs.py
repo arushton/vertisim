@@ -18,9 +18,9 @@ sim_params = {
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds
     'interuptive_approach': False,
-    'save_trajectories': False, # If True, then the simulator will save the trajectories of the aircraft and passengers.
+    'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
-    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
+    'only_aircraft_simulation': True,  # If True, then the simulation will only simulate aircraft turnaround.
     'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.
@@ -33,7 +33,7 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{cwd}/input/vertiport_network_two.csv',
+    'vertiport_network_file_path': f'{cwd}/input/vertiport_network_full.csv',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -50,11 +50,11 @@ network_and_demand = {
     # depending on the distribution you use.
     'passenger_arrival_process': {
         'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-        'num_passengers': 100,  # Number of passengers to be generated
+        'num_passengers': 200,  # Number of passengers to be generated
         'passenger_arrival_distribution': {
             'distribution_name': 'expon',
             'parameters': {
-                'scale': 3600/10  # seconds
+                'scale': 3600/40  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -94,14 +94,14 @@ network_and_demand = {
             # }
         },
         'aircraft_interarrival_constant': None,  # If not None, then the aircraft arrival process will be created by the constant.
-        'num_aircraft': 100,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
+        'num_aircraft': 200,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
         'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
         'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
         'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
         'aircraft_arrival_distribution': {
             'distribution_name': 'expon',
             'parameters': {
-                'scale': 3600/4  # seconds
+                'scale': 3600/14  # seconds
                 # 'param3': None,
                 # 'param4': None
             },
@@ -217,7 +217,7 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': f'{str(Path(cwd).parents[1])}/vertisim_output/test',
+    'output_folder_path': f'{cwd}/output/test_only_aircraft',
     'config_output_file_name': 'config',
     'performance_metrics_output_file_name': 'performance_metrics',
 }

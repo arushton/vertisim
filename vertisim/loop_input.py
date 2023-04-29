@@ -20,7 +20,7 @@ def loop_input(passenger_arrival_mu,
         'departure_priority': 1,  # Lower the value higher the priority
         'simultaneous_taxi_and_take_off': True,
         'initial_parking_occupancy': 0,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim.
-
+        'save_trajectories': False,  # If True, then the simulator will save the trajectories of the aircraft and passengers.
         'num_initial_passengers': 0,  # #of passengers at the vertiport at the beginning of the simulation.
         'random_seed': 42,
         'max_passenger_waiting_time': waiting_time_threshold,  # seconds
@@ -42,7 +42,7 @@ def loop_input(passenger_arrival_mu,
     # -----------------
     network_and_demand = {
         'vertiport_network_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport '
-                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_full.csv',
+                                       'Simulation/vertiSim_dev/vertisim/input/vertiport_network_two.csv',
 
         # DEMAND FILES.
         # ---------------------------------------------------------------
@@ -64,7 +64,7 @@ def loop_input(passenger_arrival_mu,
             'passenger_arrival_distribution': {
                 'distribution_name': 'expon',
                 'parameters': {
-                    'loc': passenger_arrival_mu  # seconds
+                    'scale': passenger_arrival_mu  # seconds
                     # 'param3': None,
                     # 'param4': None
                 },
@@ -104,14 +104,14 @@ def loop_input(passenger_arrival_mu,
                 # }
             },
             'aircraft_interarrival_constant': aircraft_interarrival_constant,  # If not None, then the aircraft arrival process will be created by the constant.
-            'num_aircraft': 400,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
+            'num_aircraft': 1500,  # Number of aircraft in the simulation. If None, then the required number of aircraft will be estimated from the num_passengers.
             'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
             'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
             'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
             'aircraft_arrival_distribution': {
                 'distribution_name': 'expon',
                 'parameters': {
-                    'loc': aircraft_arrival_mu  # seconds
+                    'scale': aircraft_arrival_mu  # seconds
                     # 'param3': None,
                     # 'param4': None
                 },
@@ -216,7 +216,7 @@ def loop_input(passenger_arrival_mu,
         'charging_time_dist': {
             'distribution_name': 'expon',
             'parameters': {
-                'loc': charge_time
+                'scale': charge_time
                 # 'param3': None,
                 # 'param4': None
             },
@@ -231,11 +231,8 @@ def loop_input(passenger_arrival_mu,
     }
 
     output_params = {
-        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/vertisim_paper_stochastic_full',
+        'output_folder_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/output/vertisim_paper_only_aircraft2',
         'config_output_file_name': 'config',
-        # 'aircraft_trajectory_output_file_name': 'aircraft_agent_trajectory',
-        # 'passenger_trajectory_output_file_name': 'passenger_agent_trajectory',
-        # 'flight_schedule_output_file_name': 'flight_schedule',
         'performance_metrics_output_file_name': 'performance_metrics'
     }
 

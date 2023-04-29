@@ -22,3 +22,9 @@ def ms_to_min(ms):
         raise TypeError(f"Can't convert ms to min. Duration (ms) format is not correct. The type you inputted is {type(ms)}")
     else:
         return ms / 60000
+    
+def sec_to_min(sec):
+    if type(sec) not in [int, float, np.float64, np.float32, np.int_]:
+        raise TypeError(f"Can't convert sec to min. Duration (sec) format is not correct. The type you inputted is {type(sec)}")
+    else:
+        return sec / 60
