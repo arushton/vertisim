@@ -1,61 +1,68 @@
 import simpy
 import random
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from collections import defaultdict
 from utils.helpers import flatten
+from charger_model import ChargerModel
 
 
 class VertiportConfig:
 
     def __init__(self,
-                 env,
-                 vertiport_layout: object,
-                 vertiport_distances: str,
-                 num_chargers: int,
-                 shared_charger_sets: [Dict, None],
-                 num_security_check_servers: int):
+                 env: simpy.Environment,
+                 vertiport_id: Any,
+                 vertiport_data: dict,
+                 vertiport_ids: list):
         self.env = env
-        self.vertiport_layout = vertiport_layout
-        self.vertiport_distances = vertiport_distances
-        self.num_chargers = num_chargers
-        self.shared_charger_sets = shared_charger_sets
-        self.num_security_check_servers = num_security_check_servers
+        self.vertiport_id = vertiport_id
+        self.vertiport_data = vertiport_data
+        self.vertiport_layout = self.vertiport_data['vertiport_layout']
+        self.vertiport_ids = vertiport_ids
 
+        self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
+        self.charger_model = self.set_charger_model()
         self.fato_store = self.add_fato_ids_to_store()
         self.parking_space_store = self.check_charger_resource_type()
         self.taxiway_node_store = self.add_taxiway_nodes_to_store()
         self.edge_store = self.add_edges_to_store()
-        self.charger_resource = simpy.Resource(self.env, capacity=num_chargers)
+        self.charger_resource = simpy.Resource(self.env, capacity=self.vertiport_data['num_chargers'])
         self.waiting_room_stores = self.create_waiting_room_stores()
         self.available_aircraft_store = simpy.Store(self.env)
+        self.taxi_resource = simpy.Resource(self.env, capacity=1)
 
     def check_charger_resource_type(self):
         # Based on the charger resource specification, this method changes the structure of the parking pads.
-        if self.shared_charger_sets and self.num_chargers is None:
+        if self.vertiport_data['shared_charger_sets'] and self.vertiport_data['num_chargers'] is None:
             raise ValueError("Both shared_charger_sets and num_chargers variables are None. Please input one.")
-        elif self.shared_charger_sets is not None:
+        elif self.vertiport_data['shared_charger_sets'] is not None:
             # If the user specified a shared chargers create a ParkingPadAndChargerResource object for each parking pad
-            return self.add_parking_spaces_and_chargers_to_store(self.shared_charger_sets)
-        elif self.num_chargers is not None:
+            return self.add_parking_spaces_and_chargers_to_store(self.vertiport_data['shared_charger_sets'])
+        elif self.vertiport_data['num_chargers'] is not None:
             # If the user didn't specify a shared charger resources then all of the chargers can be used by any of the
             # parking pads
             return self.add_parking_spaces_to_store()
 
-    def create_charger_resources(self, chargers_set: [Dict, int]) -> Dict:
+    def create_charger_resources(self, chargers_set: Union[Dict, int]) -> Dict:
         charger_resources = defaultdict(dict)
         if isinstance(chargers_set, dict):
             for shared_charger_list in chargers_set.values():
                 charger_resources[simpy.Resource(self.env, capacity=1)] = shared_charger_list
             return charger_resources
 
-        elif isinstance(chargers_set, int):
-            for charger in range(chargers_set):
-                charger_resources[simpy.Resource(self.env, capacity=1)] = charger
-            return charger_resources
+        # elif isinstance(chargers_set, int):
+        #     for charger in range(chargers_set):
+        #         charger_resources[simpy.Resource(self.env, capacity=1)] = charger
+        #     return charger_resources
         else:
             raise TypeError("Charger set input type is not correct")
+        
+    def set_charger_model(self):
+        # This method sets the charger model for the chargers in the vertiport.
+        return ChargerModel(self.vertiport_data['charger_max_charge_rate'],
+                            self.vertiport_data['charger_efficiency'])
 
-    def add_parking_spaces_and_chargers_to_store(self, chargers_set):
+
+    def add_parking_spaces_and_chargers_to_store(self):
         # Add parking space IDs to parking_space_store
         if self.vertiport_layout.num_parking_pad == 0:
             #TODO: Currently, the simulator requires parking pad to store aircraft.
@@ -65,12 +72,20 @@ class VertiportConfig:
         # Create a store for parking spaces
         parking_space_store = simpy.Store(self.env, capacity=self.vertiport_layout.num_parking_pad)
         # Create a dictionary for the shared charger combination.
-        shared_charger_resources = self.create_charger_resources(self.shared_charger_sets)
+        shared_charger_resources = self.create_charger_resources(self.self.vertiport_data['shared_charger_sets'])
+
+        # If no parking pad is defined then use FATO as parking pad
+        if self.vertiport_layout.num_parking_pad == 0:
+            for fato in self.vertiport_layout.fato_ids:
+                parking_pad = ParkingPadAndChargerResource(parking_space_id=fato)
+                for charger_resource, parking_pad_id_list in shared_charger_resources.items():
+                    if fato in parking_pad_id_list:
+                        parking_pad.charger_resources.append(charger_resource)
+                parking_space_store.put(parking_pad)
+            return parking_space_store
+
         for parking_pad_id in self.vertiport_layout.parking_pad_ids:
             parking_pad = ParkingPadAndChargerResource(parking_space_id=parking_pad_id)
-
-            if not isinstance(chargers_set, dict):
-                raise TypeError("Charger set type is not correct.")
 
             for charger_resource, parking_pad_id_list in shared_charger_resources.items():
                 if parking_pad_id in parking_pad_id_list:
@@ -79,12 +94,18 @@ class VertiportConfig:
         return parking_space_store
 
     def add_parking_spaces_to_store(self):
+        """
+        Creates parking_space_store. If there is no parking space is defined then uses FATO as parking space
+        """
         if self.vertiport_layout.num_fato == 0 and self.vertiport_layout.num_parking_pad == 0:
             raise ValueError("There is no FATO and parking pad in the skyport layout.")
 
         # If there is no parking space is defined then use FATO as parking space
         if self.vertiport_layout.num_parking_pad == 0:
-            parking_space_store = self.add_fato_ids_to_store()
+            parking_space_store = simpy.Store(self.env, capacity=self.vertiport_layout.num_fato)
+            for fato in self.vertiport_layout.fato_ids:
+                parking_pad = ParkingPadAndChargerResource(parking_space_id=fato)
+                parking_space_store.put(parking_pad)
             return parking_space_store
         # Add parking space IDs to parking_space_store
         # Create a store for parking spaces
@@ -129,8 +150,9 @@ class VertiportConfig:
     def create_waiting_room_stores(self):
         waiting_room_stores = defaultdict(dict)
         # Create a store for waiting rooms
-        for key, value in self.vertiport_distances.items():
-            waiting_room_stores[f'waiting_room_{key}'] = simpy.Store(self.env)
+        exclude_origin = [dest for dest in self.vertiport_ids if dest != self.vertiport_id]
+        for dest in exclude_origin:
+            waiting_room_stores[f'waiting_room_{dest}'] = simpy.Store(self.env)
         return waiting_room_stores
 
 

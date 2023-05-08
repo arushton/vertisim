@@ -1,6 +1,6 @@
 import random
 from utils.distribution_generator import DistributionGenerator
-from typing import Dict, Union
+from typing import Dict, Union, Any
 
 
 class Passenger:
@@ -11,7 +11,8 @@ class Passenger:
     """
 
     def __init__(self, env, passenger_id,
-                 dest_vertiport_id: int,
+                 origin_vertiport_id: Any,
+                 dest_vertiport_id: Any,
                  car_to_entrance_walking_time_constant: Union[float, None],
                  security_check_time_constant: Union[float, None],
                  waiting_room_to_boarding_gate_walking_time_constant: Union[float, None],
@@ -22,6 +23,7 @@ class Passenger:
                  vertiport_manager: object):
         self.env = env
         self.passenger_id = passenger_id
+        self.origin_vertiport_id = origin_vertiport_id
         self.dest_vertiport_id = dest_vertiport_id
         self.car_to_entrance_walking_time_constant = car_to_entrance_walking_time_constant
         self.security_check_time_constant = security_check_time_constant

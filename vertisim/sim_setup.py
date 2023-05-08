@@ -4,17 +4,18 @@ import time
 
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
 import simpy
-
+from typing import Dict, List
+import pandas as pd
 from aircraft_arrival_setup import AircraftArrivalSetup
 from event_saver import EventSaver
-from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layout, set_taxi_operations_config
+from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layouts, set_taxi_operations_config
 from passenger_arrival_setup import PassengerArrivalSetup
 from performance_metrics import PerformanceMetrics
 from save_output import save_output
 from scheduler import Scheduler
 from utils.bundle_passenger_related_distributions import bundle_distributions
-from utils.calc_vertiport_distances_from_lat_lng import calc_destination_vertiport_distances
-from utils.helpers import set_seed
+from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
+from utils.helpers import set_seed, get_all_aircraft_models
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
 from utils.units import sec_to_ms
@@ -23,15 +24,13 @@ from utils.units import sec_to_ms
 class SimSetup:
     def __init__(self,
                  sim_params,
-                 network_and_demand: dict,
-                 vertiport_params: dict,
-                 passenger_params: dict,
-                 aircraft_params: dict,
-                 output_params: dict,
+                 network_and_demand: Dict,
+                 passenger_params: Dict,
+                 aircraft_params: Dict,
+                 output_params: Dict,
                  sim_start_time: int):
         self.sim_params = sim_params
         self.network_and_demand = network_and_demand
-        self.vertiport_params = vertiport_params
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
@@ -40,12 +39,14 @@ class SimSetup:
         self.sim_start_timestamp = sec_to_ms(1625065200)  # Wednesday, June 30, 2021 8:00:00 AM PT
         set_seed(sim_params['random_seed'])
         self.env = self.create_environment()
-        self.vertiport_layout = self.create_vertiport_layout()
+        self.create_vertiport_layout()
         self.event_saver = self.create_event_saver()
-        self.vertiport_distances = self.import_vertiport_distance()
-        self.vertiport = self.create_vertiport()
+        self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
+        self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids
+        self.num_destinations = self.get_num_destinations()
+        self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
         self.taxi_config = self.set_taxi_operations_config()
-        self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data()
+        self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
         self.scheduler = self.create_scheduler()
         self.vertiport_manager = self.create_vertiport_manager()
@@ -66,44 +67,53 @@ class SimSetup:
 
     def create_vertiport_layout(self):
         """
-        Creates the vertiport layout
+        Creates the vertiport layouts and adds them to the network_and_demand dictionary
         """
-        # Create vertiport layout
-        vertiport_layout = create_vertiport_layout(
-            file_path=self.vertiport_params['vertiport_layout_file_path'],
-            layout_type=self.vertiport_params['layout']
-        )
+        # Create vertiport layouts
+        create_vertiport_layouts(network_and_demand=self.network_and_demand)
         if self.sim_params['verbose']:
             print("Success: Vertiport layout created.")
-        return vertiport_layout
 
     def create_event_saver(self):
         """
         Creates the event saver
         """
         # Create event saver
-        return EventSaver(self.env, self.vertiport_layout, self.sim_start_timestamp, self.sim_params)
-
-    def import_vertiport_distance(self):
+        return EventSaver(env=self.env, 
+                          vertiports=self.network_and_demand['vertiports'], 
+                          sim_start_timestamp=self.sim_start_timestamp, 
+                          sim_params=self.sim_params)
+    
+    def compute_vertiport_distances(self) -> pd.DataFrame:
         """
         Imports the vertiport distance
         """
         # Import vertiport distance
-        vertiport_distances = calc_destination_vertiport_distances(
+        vertiport_distances = calc_vertiport_distances(
             self.network_and_demand['vertiport_network_file_path'])
         if self.sim_params['verbose']:
             print("Success: Vertiport network imported.")
         return vertiport_distances
+    
+    def get_vertiport_ids(self) -> List:
+        """
+        Returns the vertiport ids
+        """
+        return list(set(self.vertiport_distances['origin_vertiport_id'].to_list() + 
+                        self.vertiport_distances['destination_vertiport_id'].to_list()))
 
-    def create_vertiport(self):
+    def get_num_destinations(self) -> int:
+        """
+        Returns the number of destinations
+        """
+        return len(self.vertiport_distances)
+
+    def create_vertiports(self) -> Dict:
         # Set vertiport configurations
         return vertiport_config(
             env=self.env,
-            vertiport_layout=self.vertiport_layout,
-            vertiport_distances=self.vertiport_distances,
-            num_chargers=self.vertiport_params['num_chargers'],
-            shared_charger_sets=self.vertiport_params['shared_charger_sets'],
-            num_security_check_servers=self.vertiport_params['num_security_check_servers']
+            vertiports=self.network_and_demand['vertiports'],
+            vertiport_ids=self.vertiport_ids
         )
 
     def set_taxi_operations_config(self):
@@ -118,22 +128,6 @@ class SimSetup:
             print("Success: Vertiport configuration is set.")
         return taxi_config
 
-    def import_aircraft_energy_consumption_data(self):
-        """
-        Imports the aircraft energy consumption data
-        """
-        # Import aircraft energy consumption data
-        if self.aircraft_params['aircraft_energy_consumption_data_folder_path'] is not None:
-            aircraft_energy_consumption_data = import_aircraft_energy_consumption_data(
-                folder_path=self.aircraft_params['aircraft_energy_consumption_data_folder_path'],
-                aircraft_models=self.network_and_demand['aircraft_arrival_process']['aircraft_fleet_specs'].keys(),
-                ranges=list(self.vertiport_distances.values()))
-            if self.sim_params['verbose']:
-                print("Success: Aircraft energy consumption data imported.")
-        else:
-            aircraft_energy_consumption_data = None
-        return aircraft_energy_consumption_data
-
     def set_aircraft_energy_consumption_data(self):
         """
         Sets the aircraft energy consumption data
@@ -142,6 +136,24 @@ class SimSetup:
             return self.import_aircraft_energy_consumption_data()
         else:
             return None
+
+    def import_aircraft_energy_consumption_data(self):
+        """
+        Imports the aircraft energy consumption data
+        """
+        # Import aircraft energy consumption data
+        if self.aircraft_params['aircraft_energy_consumption_data_folder_path'] is not None:
+            aircraft_energy_consumption_data = import_aircraft_energy_consumption_data(
+                folder_path=self.aircraft_params['aircraft_energy_consumption_data_folder_path'],
+                aircraft_models=get_all_aircraft_models(self.network_and_demand),
+                ranges=list(self.vertiport_distances['distance']))
+            if self.sim_params['verbose']:
+                print("Success: Aircraft energy consumption data imported.")
+        else:
+            if self.sim_params['verbose']:
+                print("Aircraft energy consumption data folder path is not provided.")
+            aircraft_energy_consumption_data = None
+        return aircraft_energy_consumption_data
 
     def bundle_passenger_distributions(self):
         # Bundle passenger related distributions
@@ -165,40 +177,30 @@ class SimSetup:
         return setup_passenger_distributions(**passenger_distributions_bundle)
 
     def create_scheduler(self):
-        if self.sim_params['default_aircraft']:
-            # Create scheduler
-            return Scheduler(env=self.env,
-                             vertiport=self.vertiport,
-                             aircraft_capacity=self.aircraft_params['pax']
-                             )
-        else:
-            # Create scheduler
-            return Scheduler(env=self.env,
-                             vertiport=self.vertiport,
-                             aircraft_fleet_specs=self.network_and_demand['aircraft_arrival_process'][
-                                 'aircraft_fleet_specs']
-                             )
+        # Create scheduler
+        return Scheduler(env=self.env,
+                            vertiports=self.vertiports,
+                            aircraft_capacity=self.aircraft_params['pax']
+                            )
 
     def create_vertiport_manager(self):
         # Create vertiport manager
         return create_vertiport_manager(
             env=self.env,
-            vertiport=self.vertiport,
+            vertiports=self.vertiports,
             scheduler=self.scheduler,
             arrival_priority=self.sim_params['arrival_priority'],
             departure_priority=self.sim_params['departure_priority'],
             taxi_config=self.taxi_config,
             only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
-            aircraft_fleet_specs=self.network_and_demand['aircraft_arrival_process']['aircraft_fleet_specs'],
+            aircraft_params=self.aircraft_params,
+            vertiport_distances=self.vertiport_distances,
             aircraft_energy_consumption_data=self.aircraft_energy_consumption_data,
-            charging_time_distribution_params=self.aircraft_params['charging_time_dist'],
             passenger_distributions=self.passenger_distributions,
             max_flight_waiting_time=self.sim_params['max_passenger_waiting_time'],
             charging_interuption=self.sim_params['interuptive_approach'],
-            charger_efficiency=self.vertiport_params['charger_efficiency'],
-            charger_max_charge_rate=self.vertiport_params['charger_max_charge_rate'],
-            min_reserve_soc=self.aircraft_params['min_reserve_soc'],
-            event_saver=self.event_saver
+            event_saver=self.event_saver,
+            network_simulation=self.sim_params['network_simulation']
         )
 
     def create_aircraft_arrival_process(self):
@@ -207,7 +209,8 @@ class SimSetup:
             # Load aircraft arrival schedule
             aircraft_arrival_process = AircraftArrivalSetup(
                 env=self.env,
-                artificial_aircraft_arrival_process=None,
+                network_simulation=self.sim_params['network_simulation'],
+                vertiport_configs=self.network_and_demand['vertiports'],
                 aircraft_arrival_schedule_file_path=self.network_and_demand['aircraft_arrival_schedule_file_name'],
                 aircraft_params=self.aircraft_params,
                 vertiport_manager=self.vertiport_manager,
@@ -217,7 +220,8 @@ class SimSetup:
             # Create aircraft arrival process
             aircraft_arrival_process = AircraftArrivalSetup(
                 env=self.env,
-                artificial_aircraft_arrival_process=self.network_and_demand['aircraft_arrival_process'],
+                network_simulation=self.sim_params['network_simulation'],
+                vertiport_configs=self.network_and_demand['vertiports'],
                 aircraft_arrival_schedule_file_path=None,
                 aircraft_params=self.aircraft_params,
                 vertiport_manager=self.vertiport_manager,
@@ -227,12 +231,8 @@ class SimSetup:
             aircraft_arrival_process.create_aircraft_arrival()
         )
         if self.sim_params['verbose']:
-            if self.network_and_demand['aircraft_arrival_process'][
-                'aircraft_interarrival_constant'
-            ]:
-                print("Success: Aircraft arrival process is generated from a constant interarrival time.")
-            else:
-                print("Success: Aircraft arrival process is generated from a given distribution process.")
+            print("Success: Aircraft arrival process is created.")
+
 
     def create_passenger_arrival_process(self):
         if self.sim_params['only_aircraft_simulation'] is False:
@@ -240,26 +240,30 @@ class SimSetup:
             if self.network_and_demand['passenger_arrival_schedule_file_name'] is not None:
                 passenger_arrival_process = PassengerArrivalSetup(
                     env=self.env,
-                    artificial_passenger_arrival_process=None,
+                    vertiport_configs=self.network_and_demand['vertiports'],
                     passenger_arrival_schedule_file_path=self.network_and_demand[
                         'passenger_arrival_schedule_file_name'],
                     passenger_params=self.passenger_params,
-                    flight_destination_ids=list(self.vertiport_distances.keys()),
-                    vertiport_manager=self.vertiport_manager
+                    demand_probabilities=self.network_and_demand['demand_probabilities'],
+                    vertiport_ids=self.vertiport_ids,
+                    vertiport_manager=self.vertiport_manager,
+                    aircraft_params=None,
+                    initial_parking_occupancy=None,
+                    network_simulation=self.sim_params['network_simulation']
                 )
             else:
                 # Create passenger arrival process
                 passenger_arrival_process = PassengerArrivalSetup(
                     env=self.env,
-                    artificial_passenger_arrival_process=self.network_and_demand['passenger_arrival_process'],
+                    vertiport_configs=self.network_and_demand['vertiports'],
                     passenger_arrival_schedule_file_path=None,
                     passenger_params=self.passenger_params,
-                    flight_destination_ids=list(self.vertiport_distances.keys()),
+                    demand_probabilities=self.network_and_demand['demand_probabilities'],
+                    vertiport_ids=self.vertiport_ids,
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=self.aircraft_params,
-                    num_parking_pad=self.vertiport_layout.num_parking_pad,
-                    charging_param=self.aircraft_params['charging_time_dist']['parameters']['scale'],
-                    initial_parking_occupancy=self.sim_params['initial_parking_occupancy']
+                    initial_parking_occupancy=self.sim_params['initial_parking_occupancy'],
+                    network_simulation=self.sim_params['network_simulation']
                 )
             self.env.process(
                 passenger_arrival_process.create_passenger_arrival()

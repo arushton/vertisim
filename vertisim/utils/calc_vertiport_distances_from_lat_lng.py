@@ -1,6 +1,6 @@
 import numpy as np
 from math import sin, cos, sqrt, atan2
-from typing import Dict
+import pandas as pd
 from utils.read_files import read_input_file
 
 
@@ -22,15 +22,10 @@ def calc_haversine_dist(lat1: float, lon1: float, lat2: float, lon2: float) -> f
     return round(r * c)
 
 
-def calc_destination_vertiport_distances(vertiport_network_file_path: str) -> Dict:
+def calc_vertiport_distances(vertiport_network_file_path: str) -> pd.DataFrame:
     # Calculate the distance between origin vertiport and destination vertiports and create a dictionary of distances
     # for each origin vertiport. key should be vertiport_id and value should be haversine distance. Unit is miles/km.
     vertiport_network = read_input_file(vertiport_network_file_path)
-    vertiport_distances = {}
-    for _, row in vertiport_network.iterrows():
-        vertiport_distances[row['vertiport_id']] = calc_haversine_dist(row['o_vert_lat'],
-                                                                       row['o_vert_lon'],
-                                                                       row['d_vert_lat'],
-                                                                       row['d_vert_lon'])
-    return vertiport_distances
-
+    vertiport_network['distance_miles'] = vertiport_network.apply(
+        lambda row: calc_haversine_dist(row['o_vert_lat'], row['o_vert_lon'], row['d_vert_lat'], row['d_vert_lon']), axis=1)
+    return vertiport_network

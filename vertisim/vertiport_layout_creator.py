@@ -8,9 +8,10 @@ from utils.helpers import check_if_dataframe_is_empty
 
 
 class VertiportLayout:
-    def __init__(self, file_path: str, layout_type: str):
+    def __init__(self, file_path: str, layout_type: str, vertiport_id: str):
         self.file_path = file_path
         self.layout_type = layout_type
+        self.vertiport_id = vertiport_id
         self.G = nx.Graph()
         self.node_pos = {}
         self.edge_list = []
@@ -72,6 +73,17 @@ class VertiportLayout:
             'taxi_ramp_intersection_nodes', 'inters_lat', 'inters_lng', 'inters_diameter_ft']]
         self.inters_lat_lngs.set_index('taxi_ramp_intersection_nodes', inplace=True)
 
+        self.vert_door_lat_lngs = df[df['vert_door_nodes'].notna()][['vert_door_nodes', 'vert_door_lat', 'vert_door_lng']]
+        self.vert_door_lat_lngs.set_index('vert_door_nodes', inplace=True)
+
+        self.waiting_room_lat_lngs = df[df['waiting_room_nodes'].notna()][
+            ['waiting_room_nodes', 'waiting_room_lat', 'waiting_room_lng']]
+        self.waiting_room_lat_lngs.set_index('waiting_room_nodes', inplace=True)
+
+        self.boarding_gate_lat_lngs = df[df['boarding_gate_nodes'].notna()][
+            ['boarding_gate_nodes', 'boarding_gate_lat', 'boarding_gate_lng']]
+        self.boarding_gate_lat_lngs.set_index('boarding_gate_nodes', inplace=True)
+    
     def get_num_fato(self) -> int:
         return len(self.fato_ids)
 

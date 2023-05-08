@@ -17,9 +17,8 @@ import random
 
 
 class DistributionGenerator:
-    def __init__(self, distribution_params: Dict, max_val_in_dist: Union[float, int]):
+    def __init__(self, distribution_params: Dict):
         self.distribution_params = distribution_params
-        self.max_val_in_dist = max_val_in_dist
         set_seed()
         self.distribution = getattr(stats, self.distribution_params['distribution_name'])
         # self.population, self.probabilities = self.generate_distribution()
@@ -42,7 +41,9 @@ class DistributionGenerator:
         """
         set_seed()
         time = self.distribution.rvs(**self.distribution_params['parameters'], size=1)[0]
-        return round(max(0, time))
+        if self.distribution_params['max_val_in_dist'] is None:
+            return round(max(0, time))
+        return min(round(max(0, time)), self.distribution_params['max_val_in_dist'])
 
 
 

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from utils.units import sec_to_ms
 from utils.helpers import compute_interarrival_times_from_schedule
-from utils.generate_artificial_supply_demand import generate_artificial_aircraft_aircraft_supply
+from utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
 from typing import Dict, List, Union
 # from scipy.stats import truncnorm
 import scipy.stats as ss
@@ -15,14 +15,16 @@ from utils.read_files import read_input_file
 class AircraftArrivalSetup:
     def __init__(self,
                  env: object,
-                 artificial_aircraft_arrival_process: Union[Dict, None],
+                 network_simulation: bool,
+                 vertiport_configs: Union[Dict, None],
                  aircraft_arrival_schedule_file_path: Union[str, None],
                  aircraft_params: Dict,
                  vertiport_manager: int,
                  event_saver: object):
         self.env = env
+        self.network_simulation = network_simulation
         self.aircraft_arrival_schedule_file_path = aircraft_arrival_schedule_file_path
-        self.artificial_aircraft_arrival_process = artificial_aircraft_arrival_process
+        self.vertiport_configs = vertiport_configs
         self.aircraft_params = aircraft_params
         self.vertiport_manager = vertiport_manager
         self.event_saver = event_saver
@@ -36,7 +38,11 @@ class AircraftArrivalSetup:
         """
         # Check if aircraft arrival time exists in the input file.
         if 'aircraft_arrival_time' not in aircraft_arrival_schedule.columns:
-            raise ValueError('aircraft_arrival_time is not defined in the input file.')
+            raise ValueError('aircraft_arrival_time column is not exist in the aircraft arrival process file.')
+
+        # Check if vertiport_id column exists in the input file.
+        if 'vertiport_id' not in aircraft_arrival_schedule.columns:
+            raise ValueError('vertiport_id column is not exist in the aircraft arrival process file.')
 
         # Check if aircraft type exists in the input file.
         if 'aircraft_model' not in aircraft_arrival_schedule.columns:
@@ -80,14 +86,12 @@ class AircraftArrivalSetup:
             # Check if the columns of the input file are correct.
             self.check_aircraft_arrival_schedule(aircraft_arrival_schedule)
             print("Success: Aircraft arrival schedule loaded from file.")
-        elif self.artificial_aircraft_arrival_process is not None:
-            # Generate artificial aircraft arrival schedule.
-            aircraft_arrival_schedule = generate_artificial_aircraft_aircraft_supply(
-                aircraft_fleet_specs=self.artificial_aircraft_arrival_process['aircraft_fleet_specs'],
-                aircraft_arrival_process=self.artificial_aircraft_arrival_process
-            )
         else:
-            raise ValueError('Aircraft arrival schedule or aircraft arrival distribution must be defined.')
+            # Generate artificial aircraft arrival schedule.
+            aircraft_arrival_schedule = generate_aircraft_network_schedule(
+                vertiport_configs=self.vertiport_configs,
+                aircraft_params=self.aircraft_params,
+                network_simulation=self.network_simulation)
         # Get the number of aircraft.
         self.num_aircraft = len(aircraft_arrival_schedule)
         return aircraft_arrival_schedule
@@ -95,7 +99,7 @@ class AircraftArrivalSetup:
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
         aircraft_arrival_schedule = self.setup_aircraft_arrival()
-        # Tail numbers start from 0 and ends at the number of aircraft -1.
+        # Tail numbers start from 0 and ends at the number of aircraft-1.
         for tail_number in aircraft_arrival_schedule.tail_number:
             # Get the arrival time of the aircraft.
             interarrival_time = aircraft_arrival_schedule.loc[aircraft_arrival_schedule.tail_number == tail_number,
@@ -109,25 +113,33 @@ class AircraftArrivalSetup:
                 aircraft_arrival_schedule.loc[
                     aircraft_arrival_schedule.tail_number == tail_number, 'aircraft_model'].values[0]
             # Get the passenger capacity of the aircraft.
-            passenger_capacity = self.vertiport_manager.aircraft_fleet_specs[aircraft_model]['pax']
+            passenger_capacity = self.aircraft_params['pax']
+
+            # Get the arrival vertiport id of the aircraft.
+            arrival_vertiport_id = \
+                aircraft_arrival_schedule.loc[
+                    aircraft_arrival_schedule.tail_number == tail_number, 'vertiport_id'].values[0]
 
             yield self.env.timeout(sec_to_ms(interarrival_time))
             # Simulate the aircraft.
             self.initiate_aircraft_arrival(tail_number=tail_number,
                                            initial_soc=initial_soc,
                                            aircraft_model=aircraft_model,
-                                           passenger_capacity=passenger_capacity)
+                                           passenger_capacity=passenger_capacity,
+                                           arrival_vertiport_id=arrival_vertiport_id)
 
     def initiate_aircraft_arrival(self, tail_number: int,
                                   initial_soc: int,
                                   aircraft_model: str,
-                                  passenger_capacity: int):
+                                  passenger_capacity: int,
+                                  arrival_vertiport_id: str):
         aircraft = Aircraft(env=self.env,
                             tail_number=tail_number,
+                            arrival_vertiport_id=arrival_vertiport_id,
                             aircraft_model=aircraft_model,
-                            aircraft_specs=self.vertiport_manager.aircraft_fleet_specs[aircraft_model],
+                            battery_capacity=self.aircraft_params['battery_capacity'],
                             passenger_capacity=passenger_capacity,
-                            max_range=self.vertiport_manager.aircraft_fleet_specs[aircraft_model]['range'],
+                            max_range=self.aircraft_params['range'],
                             initial_soc=initial_soc,
                             arrival_time=self.env.now,
                             ground_taxi_speed=self.aircraft_params['ground_taxi_speed'],

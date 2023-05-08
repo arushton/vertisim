@@ -254,6 +254,26 @@ def find_second_int(string):
     """
     return int(re.findall(r'\d+', string)[1])
 
+
+def get_all_aircraft_models(network_and_demand: dict) -> set:
+    return list(set(
+        model 
+        for vertiport_data in network_and_demand['vertiports'].values()
+            for model in vertiport_data['aircraft_arrival_process']
+            ['aircraft_fleet_specs'].keys()
+            ))
+
+
+def get_dict_vals_as_list(llist, key) -> List:
+    """
+    Returns a list of values from a list of dictionaries given a key.
+
+    :param llist:
+    :param key:
+    """
+    return [d[key] for d in llist]
+
+
 # def nested_dict_filter_values(d, depth, value):
 #     """
 #     Usage:

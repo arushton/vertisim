@@ -1,53 +1,21 @@
-from sympy import Piecewise, var
-import numpy as np
-import matplotlib.pyplot as plt
+# import numpy as np
+# import matplotlib.pyplot as plt
 import pandas as pd
 
 
 class BatteryModel:
-    def __init__(self, charger_max_charge_rate, charger_efficiency, min_reserve_soc):
-        self.charger_max_charge_rate = charger_max_charge_rate
-        self.charger_efficiency = charger_efficiency
+    def __init__(self, charger_model, min_reserve_soc):
+        self.charger_model = charger_model
         self.min_reserve_soc = min_reserve_soc
 
-        self.piecewise_soc = self.calc_piecewise_soc_charge_rate_func()
-
-        # self.visualize_piecewise_soc_function(self.piecewise_soc)
-        # self.save_battery_model_visual = save_battery_model_visual
-        # self.output_folder_path = output_folder_path
-
-    @staticmethod
-    def slope_at_soc_charge_rate(max_charge_rate):
+    def charge_process(self, battery_size=120):
         """
-        Between 0-20% SoC charge rate is constant. After 20% SoC we observe a linear decrease in the charge rate.
-        For more check paper TODO: add paper link
-        """
-        return max_charge_rate / 80
-
-    def calc_piecewise_soc_charge_rate_func(self):
-        """
-        Calculates the piecewise function for the charge rate as a function of SoC.
-        :return: piecewise linear function
-        """
-        elbow_soc = 20
-        var('x')
-        max_charge_rate = self.charger_max_charge_rate * self.charger_efficiency
-        piecewise_soc = Piecewise((max_charge_rate, x <= elbow_soc), (
-            max_charge_rate - self.slope_at_soc_charge_rate(max_charge_rate) * (x - elbow_soc), x > elbow_soc))
-        return piecewise_soc
-
-    @staticmethod
-    def calc_charge_rate(piecewise_soc, soc):
-        return piecewise_soc.subs(x, soc)
-
-    def compute_charging_process_params(self, battery_size=120):
-        """
-        Computes the charging process for a given battery size and charge rate. Each aircraft model has its own process
+        Computes the charging process for a given battery size and charger model. Each aircraft model has its own process
         :param battery_size:
         :return:
         """
         increments_size_in_soc = 1  # in %
-        charge_rate_kw = self.charger_max_charge_rate * self.charger_efficiency
+        charge_rate_kw = self.charger_model.charger_max_charge_rate * self.charger_model.charger_efficiency
         prev_time = 0
         soc_initial = 0
         soc_final = 100
@@ -57,10 +25,8 @@ class BatteryModel:
         socs = [soc_initial]
         cumulative_energy_kwh = [0]
 
-        piecewise_soc = self.calc_piecewise_soc_charge_rate_func()
-
         for soc in range(soc_initial, soc_final + 1, increments_size_in_soc):
-            new_charge_rate_kw = self.calc_charge_rate(piecewise_soc, soc)
+            new_charge_rate_kw = self.charger_model.calc_charge_rate(self.charger_model.piecewise_soc, soc)
             average_kw = (charge_rate_kw + new_charge_rate_kw) / 2
 
             charge_increment_kwh = increments_size_in_soc / 100 * battery_size  # Charge in the interval
@@ -76,6 +42,10 @@ class BatteryModel:
 
         return pd.DataFrame(data=list(zip(time, charge_rates, socs, cumulative_energy_kwh)),
                             columns=['time', 'charge_rate', 'soc', 'cumulative_energy_kwh'], dtype=float)
+    
+    def discharge_process(self):
+        # TODO: Complete discharge process using CM paper.
+        pass
 
 
 

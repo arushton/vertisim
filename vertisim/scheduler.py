@@ -1,33 +1,39 @@
-from typing import Dict, Union, Callable, Optional
+from typing import Dict, Union, Callable, Optional, Dict, List
 from utils.units import sec_to_ms
+from collections import defaultdict
 
 
 class Scheduler:
     def __init__(self, env: object,
-                 vertiport: object,
-                 aircraft_capacity: Optional[int] = None,
-                 aircraft_fleet_specs: Optional[Dict] = None):
+                 vertiports: object,
+                 aircraft_capacity: int = None):
         self.env = env
-        self.aircraft_fleet_specs = aircraft_fleet_specs
-        self.vertiport = vertiport
+        self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
+
+    def fixed_schedule(self):
+        # TODO: Implement fixed schedule
+        pass
 
     def check_max_waiting_time_threshold(self, max_flight_waiting_time):
         """
         Checks all of the waiting rooms. If there are passengers who are waiting
         more than max_flight_waiting_time, it creates a flight for those passengers immediately.
         """
-        departing_passenger_groups = []
-        for waiting_room, wr_store in self.vertiport.waiting_room_stores.items():
-            num_agents_in_the_wr = len(wr_store.items)
-            if num_agents_in_the_wr > 0:
-                for waiting_passenger in wr_store.items:
-                    if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_flight_waiting_time:
-                        # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
-                        num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
-                        departing_passengers = Scheduler.collect_departing_passengers(wr_store, num_departing_passengers)
-                        departing_passenger_groups.append(departing_passengers)
+        departing_passenger_groups = defaultdict(list)
+        for vertiport in self.vertiports:
+            for waiting_room, wr_store in vertiport['vertiport_layout'].waiting_room_stores.items():
+                num_agents_in_the_wr = len(wr_store.items)
+                if num_agents_in_the_wr > 0:
+                    for waiting_passenger in wr_store.items:
+                        if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_flight_waiting_time:
+                            # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
+                            num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
+                            departing_passengers = Scheduler.collect_departing_passengers(wr_store, num_departing_passengers)
+                            departing_passenger_groups[vertiport].extend(departing_passengers)
+
         return departing_passenger_groups
+
 
     def check_waiting_room(self, current_waiting_room):
         """
@@ -38,7 +44,8 @@ class Scheduler:
             return Scheduler.collect_departing_passengers(current_waiting_room, self.aircraft_capacity)
         else:
             return None
-    
+
+
     def last_call_check(self, current_waiting_room, num_departing_passengers):
         """
          After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight list
@@ -48,7 +55,7 @@ class Scheduler:
                                                       )
 
     @staticmethod
-    def collect_departing_passengers(current_waiting_room, num_departing_passengers):
+    def collect_departing_passengers(current_waiting_room, num_departing_passengers) -> Union[None, List]:
         departing_passengers = []
         for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
             # Collect agents from the waiting room as FIFO
