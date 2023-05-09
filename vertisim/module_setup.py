@@ -1,26 +1,31 @@
 from vertiport_layout_creator import VertiportLayout
 from config import VertiportConfig, TaxiOperationsConfig
 from vertiport_manager import VertiportManager
+from collections import defaultdict
 
 
 def create_vertiport_layouts(network_and_demand) -> None:
     layout_file_path = network_and_demand['vertiport_layout_file_path']
+    vertiport_layouts = defaultdict(dict)
     for vertiport_id, vertiport_data in network_and_demand['vertiports'].items():
         layout = vertiport_data['layout']
         vertiport_layout = VertiportLayout(file_path=layout_file_path, 
                                            layout_type=layout,
                                            vertiport_id=vertiport_id)
-        vertiport_data['vertiport_layout'] = vertiport_layout
+        vertiport_layouts[vertiport_id] = vertiport_layout
+    return vertiport_layouts
 
 
 def vertiport_config(env: object,
                      vertiports: dict,
+                     vertiport_layouts: dict,
                      vertiport_ids: list) -> dict:
     
-    return {vertiport_id: VertiportConfig(env,
-                                            vertiport_id,
-                                            vertiport_data,
-                                            vertiport_ids)
+    return {vertiport_id: VertiportConfig(env=env,
+                                          vertiport_id=vertiport_id,
+                                          vertiport_data=vertiport_data,
+                                          vertiport_layout=vertiport_layouts[vertiport_id],
+                                          vertiport_ids=vertiport_ids)
                 for vertiport_id, vertiport_data in vertiports.items()
             }
 

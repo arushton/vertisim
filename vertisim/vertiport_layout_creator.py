@@ -29,10 +29,11 @@ class VertiportLayout:
         self.num_parking_pad = self.get_num_parking_pad()
         self.num_taxiway_nodes = self.get_num_taxi_nodes()
         self.num_edges = self.get_num_edges()
-        # save_vertiport_layout_layer_for_unfolded(self.fato_lat_lngs,
-        #                                          self.park_lat_lngs,
-        #                                          self.inters_lat_lngs,
-        #                                          self.layout_type)
+        save_vertiport_layout_layer_for_unfolded(df1=self.fato_lat_lngs,
+                                                 df2=self.park_lat_lngs,
+                                                 df3=self.inters_lat_lngs,
+                                                 height=self.vertiport_height,
+                                                 layout_type=self.layout_type)
 
     def import_vertiport_layout(self) -> pd.DataFrame:
         """
@@ -83,6 +84,7 @@ class VertiportLayout:
         self.boarding_gate_lat_lngs = df[df['boarding_gate_nodes'].notna()][
             ['boarding_gate_nodes', 'boarding_gate_lat', 'boarding_gate_lng']]
         self.boarding_gate_lat_lngs.set_index('boarding_gate_nodes', inplace=True)
+        self.vertiport_height = df['height_m'].iloc[0]
     
     def get_num_fato(self) -> int:
         return len(self.fato_ids)

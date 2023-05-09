@@ -12,11 +12,12 @@ class VertiportConfig:
                  env: simpy.Environment,
                  vertiport_id: Any,
                  vertiport_data: dict,
+                 vertiport_layout: dict,
                  vertiport_ids: list):
         self.env = env
         self.vertiport_id = vertiport_id
         self.vertiport_data = vertiport_data
-        self.vertiport_layout = self.vertiport_data['vertiport_layout']
+        self.vertiport_layout = vertiport_layout
         self.vertiport_ids = vertiport_ids
 
         self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
@@ -58,9 +59,8 @@ class VertiportConfig:
         
     def set_charger_model(self):
         # This method sets the charger model for the chargers in the vertiport.
-        return ChargerModel(self.vertiport_data['charger_max_charge_rate'],
-                            self.vertiport_data['charger_efficiency'])
-
+        return ChargerModel(charger_max_charge_rate=self.vertiport_data['charger_max_charge_rate'],
+                            charger_efficiency=self.vertiport_data['charger_efficiency'])
 
     def add_parking_spaces_and_chargers_to_store(self):
         # Add parking space IDs to parking_space_store
@@ -176,7 +176,7 @@ class FatoResource:
     """
 
     def __init__(self, fato_id, fato_resource):
-        self.fato_id = fato_id
+        self.resource_id = fato_id
         self.fato_resource = fato_resource
 
 
@@ -192,5 +192,5 @@ class ParkingPadAndChargerResource:
     """
 
     def __init__(self, parking_space_id: str) -> str:
-        self.parking_space_id = parking_space_id
+        self.resource_id = parking_space_id
         self.charger_resources = []

@@ -14,7 +14,7 @@ class ChargerModel:
     def slope_at_soc_charge_rate(max_charge_rate):
         """
         Between 0-20% SoC charge rate is constant. After 20% SoC we observe a linear decrease in the charge rate.
-        For more check paper TODO: add paper link
+        For more check paper TODO: add paper link and remove hardcoded value.
         """
         return max_charge_rate / 80
 
@@ -23,7 +23,7 @@ class ChargerModel:
         Calculates the piecewise function for the charge rate as a function of SoC.
         :return: piecewise linear function
         """
-        elbow_soc = 20
+        elbow_soc = 20 # TODO: Remove hardcoded value
         var('x')
         max_charge_rate = self.charger_max_charge_rate * self.charger_efficiency
         piecewise_soc = Piecewise((max_charge_rate, x <= elbow_soc), (

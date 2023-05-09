@@ -4,7 +4,7 @@ import random
 import pandas as pd
 from utils.distribution_generator import DistributionGenerator
 from utils.helpers import cumulative_sum_array, nested_dict_filter_keys
-from utils.weighted_random_chooser import weighted_random_choose, random_choose_exclude_element
+from utils.weighted_random_chooser import weighted_random_choose_exclude_element, random_choose_exclude_element
 from typing import Dict
 
 def generate_aircraft_network_schedule(vertiport_configs: Dict, 
@@ -88,7 +88,6 @@ def generate_passenger_network_demand(vertiport_configs: Dict,
     Generate artificial passenger demand for each vertiport in the network.
     """
     network_demand = pd.DataFrame()
-
     for vertiport_id, vertiport_config in vertiport_configs.items():
         vertiport_demand = generate_artificial_passenger_demand(
             passenger_arrival_process=vertiport_config['passenger_arrival_process'],
@@ -115,13 +114,14 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
                                          demand_probabilities: List,
                                          network_simulation: bool):
     num_passengers = passenger_arrival_process['num_passengers']
-
     if network_simulation and len(vertiport_ids) != len(demand_probabilities):
         raise ValueError('Number of vertiports and the length of demand_probabilities must be the same.')
+    
     if network_simulation:
-        dest_vertiport_ids = weighted_random_choose(elements_list=vertiport_ids, 
-                                                    probabilities=demand_probabilities, 
-                                                    num_selection=num_passengers)
+        dest_vertiport_ids = weighted_random_choose_exclude_element(elements_list=vertiport_ids, 
+                                                                    exclude_element=origin_vertiport_id,
+                                                                    probabilities=demand_probabilities, 
+                                                                    num_selection=num_passengers)
     else:
         dest_vertiport_ids = random_choose_exclude_element(elements_list=vertiport_ids,
                                                            exclude_element=origin_vertiport_id,

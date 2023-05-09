@@ -13,8 +13,7 @@ sim_params = {
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
-    'initial_parking_occupancy': 0,  # Rate of the parking spaces that are occupied with aircraft at the beginning of the sim. Used for single vertiport simulation.
-    'num_initial_passengers': 0,   # TODO: of passengers at the vertiport at the beginning of the simulation.
+    'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds
     'interuptive_approach': False,
@@ -22,7 +21,6 @@ sim_params = {
     # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
-    'default_aircraft': True,  # If True, then the simulation will use the default aircraft parameters.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
     'battery_model_sim': False  # If True, then the simulation will use the battery model.
     # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
@@ -43,16 +41,17 @@ network_and_demand = {
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated.
     # Priority is given to the demand files.
-    'passenger_arrival_schedule_file_name': None,  # Use a full path. If None, passenger_arrival_generator will be used. 
-    'aircraft_arrival_schedule_file_name': None,  # Use a full path. If None, aircraft_arrival_generator will be used.
+    'aircraft_schedule_file_name': None,  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    'passenger_schedule_file_name': None,  # Use a full path. If None, passenger_arrival_generator will be used. 
 
-    'demand_probabilities': [0.7, 0.3], # The probability of the demand to be generated for each vertiport. Should be None for single vertiport sim.
+    # If the demand files are None, then the artificial demand is generated.
+    'demand_probabilities': [0.7, 0.3], # The probability of the demand to be generated for each vertiport.
 
     'vertiports': {
     # Input specifications for each vertiport.
         'LAX': {
             'layout': 'clover_1_fato_4_park',
-            'num_security_check_servers' : 12,
+            'num_security_check_servers' : 4,
             'num_chargers': 4,
             'charger_max_charge_rate': 480,  # kW
             'charger_efficiency': 0.90,
@@ -79,13 +78,15 @@ network_and_demand = {
                         # 'param3': None,
                         # 'param4': None
                     },
-                    'max_val_in_dist': None,  # seconds  # UNUSED
+                    'max_val_in_dist': None,  # seconds
                 },
             },
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
                 'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
+                'initial_parking_occupancy_state': 4,  # The # of the parking spaces that are occupied with aircraft at the beginning of the sim.
+                'initial_arrival_queue_state': 0,  # TODO: Number of aircraft in the arrival queue at the beginning of the sim.                
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
                 # For network simulatio, if num_aircraft is None, then the  num_aircraft will be half of the parking pads.
@@ -107,7 +108,7 @@ network_and_demand = {
         },
         'DTLA': {
             'layout': 'helipad_1_fato',
-            'num_security_check_servers' : 12,
+            'num_security_check_servers' : 4,
             'num_chargers': 1,
             'charger_max_charge_rate': 480,  # kW
             'charger_efficiency': 0.90,
@@ -126,7 +127,8 @@ network_and_demand = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 1  
+                'num_initial_aircraft_in_vertiport': 1,
+                'initial_arrival_queue_state': 0
                 # 'aircraft_interarrival_constant': None,
                 # 'num_aircraft': 200,
                 # 'num_passengers': None,
@@ -210,7 +212,7 @@ aircraft_params = {
     # complete the mission. To use this feature, battery model parameters and aircraft energy consumption data need to
     # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
-    'time_charging': None,  # constant sec  # If None charging_time_dist will be used.
+    'time_charging': None,  # constant sec. If None charging_time_dist will be used.
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
@@ -221,12 +223,12 @@ aircraft_params = {
             # 'param3': None,
             # 'param4': None
         },
-        'max_charge_duration': None,  # sec. This parameter is used as the max charge time for the charging
+        'max_val_in_dist': None,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
     'aircraft_energy_consumption_data_folder_path': f'{cwd}/input/aircraft_energy_consumption',
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
-    'max_init_soc': 50,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
+    'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
     'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 

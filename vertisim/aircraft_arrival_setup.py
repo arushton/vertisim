@@ -39,6 +39,14 @@ class AircraftArrivalSetup:
         # Check if aircraft arrival time exists in the input file.
         if 'aircraft_arrival_time' not in aircraft_arrival_schedule.columns:
             raise ValueError('aircraft_arrival_time column is not exist in the aircraft arrival process file.')
+        
+        # Check if aircraft departure time exists in the input file.
+        if 'aircraft_departure_time' not in aircraft_arrival_schedule.columns:
+            raise ValueError('aircraft_departure_time column is not exist in the aircraft arrival process file.')
+
+        # Check if tail number exists in the input file.
+        if 'tail_number' not in aircraft_arrival_schedule.columns:
+            raise ValueError('tail_number column is not exist in the aircraft arrival process file.')
 
         # Check if vertiport_id column exists in the input file.
         if 'vertiport_id' not in aircraft_arrival_schedule.columns:
@@ -68,11 +76,11 @@ class AircraftArrivalSetup:
 
         # Check if initial state of charge exists in the input file.
         if 'initial_soc' not in aircraft_arrival_schedule.columns:
-            aircraft_arrival_schedule['initial_soc'] = self.aircraft_params['initial_soc']
+            aircraft_arrival_schedule['initial_soc'] = self.aircraft_params['max_init_soc']
         print(
             f"Initial state of charge is not defined in the input file. The default initial state of charge of {self.aircraft_params['initial_soc']} is used. If you "
             "want to define the initial state of charge for each aircraft type, please add the column "
-            "'initial_soc' to the input file.")
+            "'max_init_soc' to the input file.")
 
         # Check if interarrival column time exists in the input file.
         if 'interarrival_time' not in aircraft_arrival_schedule.columns:
@@ -100,6 +108,7 @@ class AircraftArrivalSetup:
         # Create aircraft arrival process.
         aircraft_arrival_schedule = self.setup_aircraft_arrival()
         # Tail numbers start from 0 and ends at the number of aircraft-1.
+
         for tail_number in aircraft_arrival_schedule.tail_number:
             # Get the arrival time of the aircraft.
             interarrival_time = aircraft_arrival_schedule.loc[aircraft_arrival_schedule.tail_number == tail_number,
@@ -121,6 +130,13 @@ class AircraftArrivalSetup:
                     aircraft_arrival_schedule.tail_number == tail_number, 'vertiport_id'].values[0]
 
             yield self.env.timeout(sec_to_ms(interarrival_time))
+
+            # TODO: Agent should be created anywhere in the simulation. vertiport_id key should be changed to location_id.
+            self.event_saver.save_agent_creation_time(agent_id=tail_number,
+                                                      vertiport_id=arrival_vertiport_id,
+                                                      agent_type='aircraft',
+                                                      aircraft_model=aircraft_model)
+                    
             # Simulate the aircraft.
             self.initiate_aircraft_arrival(tail_number=tail_number,
                                            initial_soc=initial_soc,

@@ -1,0 +1,5 @@
+,time,tail_number,origin_vertiport_id,destination_vertiport_id,passengers,aircraft_model,event
+0,1625065603036,aircraft_0,LAX,LAX,"[0, 1, 2, 4]",jobyS4,take_off
+1,1625065695973,aircraft_1,LAX,LAX,"[5, 6, 7, 9]",jobyS4,take_off
+2,1625065913973,aircraft_2,LAX,LAX,"[10, 11, 12, 14]",jobyS4,take_off
+3,1625066132518,aircraft_3,LAX,LAX,"[15, 16, 17, 19]",jobyS4,take_off

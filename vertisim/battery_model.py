@@ -8,10 +8,10 @@ class BatteryModel:
         self.charger_model = charger_model
         self.min_reserve_soc = min_reserve_soc
 
-    def charge_process(self, battery_size=120):
+    def charge_process(self, battery_capacity=120):
         """
         Computes the charging process for a given battery size and charger model. Each aircraft model has its own process
-        :param battery_size:
+        :param battery_capacity:
         :return:
         """
         increments_size_in_soc = 1  # in %
@@ -29,8 +29,8 @@ class BatteryModel:
             new_charge_rate_kw = self.charger_model.calc_charge_rate(self.charger_model.piecewise_soc, soc)
             average_kw = (charge_rate_kw + new_charge_rate_kw) / 2
 
-            charge_increment_kwh = increments_size_in_soc / 100 * battery_size  # Charge in the interval
-            time_increment = charge_increment_kwh / average_kw
+            charge_increment_kwh = increments_size_in_soc / 100 * battery_capacity  # Charge in the interval
+            time_increment = charge_increment_kwh / average_kw # in hours
             current_time = prev_time + time_increment
             total_charge += charge_increment_kwh
             cumulative_energy_kwh.append(total_charge)
@@ -39,9 +39,12 @@ class BatteryModel:
             socs.append(soc)
             prev_time = current_time
             charge_rate_kw = average_kw
-
-        return pd.DataFrame(data=list(zip(time, charge_rates, socs, cumulative_energy_kwh)),
-                            columns=['time', 'charge_rate', 'soc', 'cumulative_energy_kwh'], dtype=float)
+        
+        charge_df = pd.DataFrame(data=list(zip(time, charge_rates, socs, cumulative_energy_kwh)),
+                            columns=['time_hr', 'charge_rate', 'soc', 'cumulative_energy_kwh'], dtype=float)
+        charge_df['time_sec'] = charge_df['time_hr']*3600
+        
+        return charge_df
     
     def discharge_process(self):
         # TODO: Complete discharge process using CM paper.

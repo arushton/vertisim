@@ -21,8 +21,8 @@ class Scheduler:
         more than max_flight_waiting_time, it creates a flight for those passengers immediately.
         """
         departing_passenger_groups = defaultdict(list)
-        for vertiport in self.vertiports:
-            for waiting_room, wr_store in vertiport['vertiport_layout'].waiting_room_stores.items():
+        for vertiport_id, vertiport in self.vertiports.items():
+            for waiting_room, wr_store in vertiport.waiting_room_stores.items():
                 num_agents_in_the_wr = len(wr_store.items)
                 if num_agents_in_the_wr > 0:
                     for waiting_passenger in wr_store.items:
