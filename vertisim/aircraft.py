@@ -1,6 +1,7 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value
-from utils.units import sec_to_ms, min_to_sec
+from utils.units import sec_to_ms, min_to_sec, ms_to_sec
 from typing import Union, Dict, List, Optional
+import pandas as pd # For type hinting
 import numpy as np
 import random
 
@@ -20,7 +21,6 @@ class Aircraft:
                  vertiport_manager, event_saver):
         self.env = env
         self.tail_number = tail_number
-        self.arrival_vertiport_id = arrival_vertiport_id
         self.aircraft_model = aircraft_model
         self.battery_capacity = battery_capacity
         self.passenger_capacity = passenger_capacity
@@ -28,12 +28,15 @@ class Aircraft:
         self.ground_taxi_speed = ground_taxi_speed
         self.initial_soc = initial_soc
         self.current_soc = initial_soc
-        self.arrival_time = arrival_time
+        self.arrival_time = arrival_time # TODO: Update this at every holding fix arrival
+        self.arrival_vertiport_id = arrival_vertiport_id   
+        self.departure_vertiport_id = None             
         self.charging_start_time = None
         self.charging_end_time = None
         self.parking_space = None
         self.parking_space_id = None
-        self.departure_vertiport_id = None
+        self.holding_time = None # event_saver.aircraft_arrival_queue_waiting_time keeps track of this for every aircraft at every vertiport
+
 
         self.time_passenger_embark_disembark = time_passenger_embark_disembark
 
@@ -59,10 +62,6 @@ class Aircraft:
     def aircraft_landing_process(self, time_descend_transition, time_hover_descend, time_rotor_spin_down,
                                  landing_fato_id, time_post_landing_safety_checks, time_tug_connection):
 
-        self.event_saver.save_pre_landing_info(landing_fato_id=landing_fato_id,
-                                               agent_id=self.tail_number,
-                                               aircraft_model=self.aircraft_model,
-                                               vertiport_id=self.arrival_vertiport_id)
         yield self.env.timeout(time_descend_transition)
         yield self.env.timeout(time_hover_descend)
         self.event_saver.save_landing_info(assigned_fato_id=landing_fato_id,
@@ -128,7 +127,7 @@ class Aircraft:
                 # Decrease the aircraft arrival queue counter
                 self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=vertiport_id,
                                                                        queue_update=-1)     
-                self.event_saver.save_parking_info(parking_pad_id=assigned_fato_resource.fato_id,
+                self.event_saver.save_parking_info(parking_pad_id=assigned_fato_resource.resource_id,
                                                    agent_id=self.tail_number,
                                                    aircraft_model=self.aircraft_model,
                                                    vertiport_id=vertiport_id)
@@ -285,6 +284,7 @@ class Aircraft:
                                                     agent_type='passenger',
                                                     aircraft_model=None,
                                                     vertiport_id=self.departure_vertiport_id)
+
         yield self.env.timeout(time_tug_disconnection)
         yield self.env.timeout(time_pre_take_off_check_list)
         yield self.env.timeout(time_rotor_spin_up)
@@ -314,6 +314,7 @@ class Aircraft:
                                                      agent_type='passenger',
                                                      aircraft_model=None,
                                                      vertiport_id=self.departure_vertiport_id)
+            
 
     def request_charger(self):
         """
@@ -321,18 +322,20 @@ class Aircraft:
         """
         return self.vertiport_manager.vertiports[self.arrival_vertiport_id].charger_resource.request()
 
-    def get_charging_time(self, time_passenger_embark_disembark):
+    def get_charging_time(self):
         """
         Get charging time - Two options: Constant charging time or draw a number from distribution
         """
         if self.time_charging is not None:
-            return max(time_passenger_embark_disembark, self.time_charging)
+            return max(self.time_passenger_embark_disembark, self.time_charging)
         charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
-        charge_time = max(time_passenger_embark_disembark, charge_time)
-        self.event_saver.save_aircraft_charging_time(self.tail_number, charge_time)
+        charge_time = max(self.time_passenger_embark_disembark, charge_time)
+        self.event_saver.save_aircraft_charging_time(vertiport_id=self.arrival_vertiport_id,
+                                                     aircraft_id=self.tail_number, 
+                                                     charging_time=charge_time)
         return charge_time
 
-    def charge_aircraft(self, charge_time: float, time_passenger_embark_disembark: float, parking_space: object,
+    def charge_aircraft(self, charge_time: float, parking_space: object,
                         time_pre_charging_processes: int, time_post_charging_processes: int,
                         time_charging_plug_disconnection: int, shared_charger: bool = False) -> None:
         """
@@ -367,38 +370,80 @@ class Aircraft:
             charging_request = self.request_charger()
             yield charging_request
 
-        self.event_saver.save_charging_start_time(charging_location=parking_space.parking_space_id,
+        self.event_saver.save_charging_start_time(charging_location=parking_space.resource_id,
                                                   agent_id=self.tail_number,
                                                   event='charging_started',
-                                                  aircraft_model=self.aircraft_model)
+                                                  aircraft_model=self.aircraft_model,
+                                                  vertiport_id=self.arrival_vertiport_id)
         self.charging_start_time = self.env.now
 
         # Actual charging happens here
-        yield self.env.timeout(self.get_charging_time(time_passenger_embark_disembark))
+        yield self.env.timeout(self.get_charging_time())
         self.charging_end_time = self.env.now
 
-        self.event_saver.save_charging_finish_time(charging_location=parking_space.parking_space_id,
+        # Update the SOC
+        self.update_charge_level(operation='charge')
+
+        self.event_saver.save_charging_finish_time(charging_location=parking_space.resource_id,
                                                    agent_id=self.tail_number,
                                                    event='charging_finished',
-                                                   aircraft_model=self.aircraft_model)
+                                                   aircraft_model=self.aircraft_model,
+                                                   vertiport_id=self.arrival_vertiport_id)
 
         if shared_charger:
             used_charger_resource.release(selected_charging_request)
         else:
-            self.vertiport_manager.vertiport.charger_resource.release(charging_request)
+            self.vertiport_manager.vertiports[self.arrival_vertiport_id].charger_resource.release(charging_request)
 
-        self.event_saver.save_turnaround_info(charging_location=parking_space.parking_space_id,
+        self.event_saver.save_turnaround_info(charging_location=parking_space.resource_id,
                                               agent_id=self.tail_number,
                                               agent_type='aircraft',
-                                              aircraft_model=self.aircraft_model)
+                                              aircraft_model=self.aircraft_model,
+                                              vertiport_id=self.arrival_vertiport_id,)
 
-        # TODO
+    @staticmethod
+    def calc_soc_from_charge_time(charge_time: int, initial_soc: int, df: pd.DataFrame) -> int:
+        """
+        charge_time is the time between the current time and the charging start time.
 
-    # def update_charge_level(self, charge_time: float) -> None:
-    #     """
-    #     Updates the charge level of the aircraft.
-    #     """
-    #     self.charge_level = min(100, self.charge_level + self.charge_rate * charge_time)
+        Parameters
+        ----------
+        charge_time: int
+            Time between the current time and the charging start time in miliseconds.
+        initial_soc: int
+            Initial soc level of the aircraft.
+        df: pd.DataFrame
+            Dataframe that contains the soc levels and the time information.
+
+        Returns
+        -------
+        int
+            The soc level of the aircraft after the charging time.
+        """
+        # Calculate new soc from charge time
+        # Get the time at initial soc level
+        initial_soc_time = df[df.soc == initial_soc]['time_sec'].values[0]
+        # Get the time at final soc level
+        final_soc_time = initial_soc_time + ms_to_sec(charge_time)
+        # Get the soc at final soc level
+        idx_final_soc = df['time'].sub(final_soc_time).abs().idxmin()
+        return df.loc[idx_final_soc]['soc']
+
+
+    def update_charge_level(self, new_soc: int = None, operation: str = 'charge') -> None:
+        """
+        Updates the charge level of the aircraft using current charge time.
+        """
+        if operation == 'charge':
+            charge_time = self.env.now - self.charging_start_time
+            charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.arrival_vertiport_id]
+            final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.initial_soc, df=charge_lookup_table)
+            self.current_soc = min(100, final_soc)
+        elif operation == 'discharge':
+            self.current_soc = new_soc
+
+    def check_charge_level(self):
+        return self.current_soc
 
     def unload_passengers(self, passenger_disembark_time):
         # TODO: check
@@ -406,8 +451,8 @@ class Aircraft:
         self.event_saver.aircraft_dict[self.tail_number]['passenger_unloading_finished'] = \
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
     
-
-
+    def fly_in_the_airspace(self, departure_fix_usage_request):
+        pass
 
     # @staticmethod
     # def request_fato(assigned_fato_resource: object, priority: int) -> object:
