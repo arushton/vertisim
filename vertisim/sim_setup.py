@@ -7,6 +7,7 @@ import simpy
 from typing import Dict, List
 import pandas as pd
 from aircraft_arrival_setup import AircraftArrivalSetup
+from airspace import Airspace
 from event_saver import EventSaver
 from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layouts, set_taxi_operations_config
 from passenger_arrival_setup import PassengerArrivalSetup
@@ -50,6 +51,7 @@ class SimSetup:
         self.passenger_distributions = self.create_passenger_distributions()
         self.scheduler = self.create_scheduler()
         self.vertiport_manager = self.create_vertiport_manager()
+        self.airspace = self.create_airspace()
 
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
@@ -204,6 +206,12 @@ class SimSetup:
             event_saver=self.event_saver,
             network_simulation=self.sim_params['network_simulation']
         )
+    
+    def create_airspace(self):
+        # Create airspace
+        return Airspace(env=self.env,
+                        vertiports=self.vertiports,
+                        holding_unit_capacity=self.network_and_demand['holding_unit_capacity'])
 
     def create_aircraft_arrival_process(self):
         # Load or generate aircraft arrival schedule and start the aircraft arrival process
