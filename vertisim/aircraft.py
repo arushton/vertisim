@@ -270,7 +270,8 @@ class Aircraft:
             self.vertiport_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))
 
     def aircraft_take_off_process(self, time_rotor_spin_up, time_hover_climb, time_climb_transition, take_off_fato_id,
-                                  time_pre_take_off_check_list, time_tug_disconnection, departing_passengers):
+                                  time_pre_take_off_check_list, time_tug_disconnection, departing_passengers,
+                                  departure_fix_usage_request):
         self.event_saver.save_fato_arrival_info(assigned_fato_id=take_off_fato_id,
                                                 agent_id=self.tail_number,
                                                 agent_type='aircraft',
@@ -314,7 +315,11 @@ class Aircraft:
                                                      agent_type='passenger',
                                                      aircraft_model=None,
                                                      vertiport_id=self.departure_vertiport_id)
-            
+        
+        # Release the departure fix
+        self.vertiport_manager.release_fix_resource(aircraft=self,
+                                                    fix_resource_request=departure_fix_usage_request,
+                                                    operation_type='departure')
 
     def request_charger(self):
         """
@@ -451,7 +456,7 @@ class Aircraft:
         self.event_saver.aircraft_dict[self.tail_number]['passenger_unloading_finished'] = \
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
     
-    def fly_in_the_airspace(self, departure_fix_usage_request):
+    def fly_in_the_airspace(self, flight_direction):
         pass
 
     # @staticmethod

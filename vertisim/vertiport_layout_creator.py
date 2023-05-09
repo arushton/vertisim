@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from utils.layout_layer_for_unfolded import save_vertiport_layout_layer_for_unfolded
 from utils.read_files import read_input_file
 from utils.helpers import check_if_dataframe_is_empty
+from utils.haversine import haversine_dist
 
 
 class VertiportLayout:
@@ -29,6 +30,7 @@ class VertiportLayout:
         self.num_parking_pad = self.get_num_parking_pad()
         self.num_taxiway_nodes = self.get_num_taxi_nodes()
         self.num_edges = self.get_num_edges()
+        self.terminal_airspace_radius = self.compute_terminal_airspace_radius()
         save_vertiport_layout_layer_for_unfolded(df1=self.fato_lat_lngs,
                                                  df2=self.park_lat_lngs,
                                                  df3=self.inters_lat_lngs,
@@ -128,6 +130,14 @@ class VertiportLayout:
                                (self.node_pos[node[0]][1] - self.node_pos[node[1]][1]) ** 2)
             self.G.add_edge(node[0], node[1], weight=distance)
         return list(self.G.edges)
+    
+    def compute_terminal_airspace_radius(self):
+        # Compute the terminal airspace radius
+        return haversine_dist(self.fato_lat_lngs['fato_lat'].iloc[0], 
+                              self.fato_lat_lngs['fato_lng'].iloc[0],
+                              self.approach_fix_lat_lng['approach_fix_lat'].iloc[0], 
+                              self.approach_fix_lat_lng['approach_fix_lng'].iloc[0],
+                              unit='mile')
 
     def calculate_distances_matrix(self):
         # Calculate the distances matrix

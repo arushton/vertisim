@@ -577,6 +577,10 @@ class VertiportManager:
         # Increase aircraft arrival queue counter
         self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.arrival_vertiport_id,
                                                                queue_update=1)
+        
+        # Request arrival fix resource
+        arrival_fix_usage_request = self.request_fix_resource(aircraft=aircraft, operation_type='arrival')
+        yield arrival_fix_usage_request
 
         # Save aircraft arrival time
         self.event_saver.save_pre_landing_info(agent_id=aircraft.tail_number, 
@@ -584,10 +588,6 @@ class VertiportManager:
                                                vertiport_id=aircraft.arrival_vertiport_id,
                                                agent_type='aircraft')
         
-        # Request arrival fix resource
-        arrival_fix_usage_request = self.request_fix_resource(aircraft=aircraft, operation_type='arrival')
-        yield arrival_fix_usage_request
-
         yield self.release_fix_resource(aircraft=aircraft,
                                         fix_resource_request=arrival_fix_usage_request, 
                                         operation_type='arrival')
@@ -601,7 +601,7 @@ class VertiportManager:
             aircraft.parking_space_id = parking_space_id   
         else:
             parking_space = None
-            parking_space_id = None        
+            parking_space_id = None   
 
         # Currently, vertiport manager assigns the closest FATO
         assigned_fato_id = self.assign_fato(vertiport_id=aircraft.arrival_vertiport_id,
@@ -811,7 +811,8 @@ class VertiportManager:
                 take_off_fato_id=assigned_fato_id,
                 time_pre_take_off_check_list=aircraft.time_pre_take_off_check_list,
                 time_tug_disconnection=aircraft.time_tug_disconnection,
-                departing_passengers=departing_passengers
+                departing_passengers=departing_passengers,
+                departure_fix_usage_request=departure_fix_usage_request
             )
         )
 
@@ -824,7 +825,7 @@ class VertiportManager:
         self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.departure_vertiport_id,
                                                    fato_usage=-1)
         
-        yield self.env.process(aircraft.fly_in_the_airspace(
-            departure_fix_usage_request=departure_fix_usage_request))
+        flight_direction = aircraft.departure_vertiport_id + '+' + aircraft.arrival_vertiport_id
+        yield self.env.process(aircraft.fly_in_the_airspace(flight_direction=flight_direction))
         
 

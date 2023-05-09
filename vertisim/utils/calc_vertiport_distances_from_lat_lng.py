@@ -1,31 +1,11 @@
-import numpy as np
-from math import sin, cos, sqrt, atan2
 import pandas as pd
+from utils.haversine import haversine_dist
 from utils.read_files import read_input_file
 
-
-def calc_haversine_dist(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    # 6367 for distance in KM for miles use 3958
-    r = 3958
-
-    lat1 = np.radians(lat1)
-    lon1 = np.radians(lon1)
-    lat2 = np.radians(lat2)
-    lon2 = np.radians(lon2)
-
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-
-    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    return round(r * c)
-
-
 def calc_vertiport_distances(vertiport_network_file_path: str) -> pd.DataFrame:
-    # Calculate the distance between origin vertiport and destination vertiports and create a dictionary of distances
+    # Calculates the distance between origin vertiport and destination vertiports and creates a dictionary of distances
     # for each origin vertiport. key should be vertiport_id and value should be haversine distance. Unit is miles/km.
     vertiport_network = read_input_file(vertiport_network_file_path)
     vertiport_network['distance_miles'] = vertiport_network.apply(
-        lambda row: calc_haversine_dist(row['o_vert_lat'], row['o_vert_lon'], row['d_vert_lat'], row['d_vert_lon']), axis=1)
+        lambda row: haversine_dist(row['o_vert_lat'], row['o_vert_lon'], row['d_vert_lat'], row['d_vert_lon']), axis=1)
     return vertiport_network

@@ -34,6 +34,7 @@ sim_params = {
 network_and_demand = {
     'vertiport_network_file_path': f'{cwd}/input/network_of_2_vertiports.csv',
     'vertiport_layout_file_path': f'{cwd}/input/skyport_layouts/skyport_layout.xls',
+    'holding_unit_capacity': 100,  # TODO: Each vertiport should define this.
 
 
     # DEMAND FILES.
@@ -202,6 +203,17 @@ aircraft_params = {
     'time_rotor_spin_up': 0,  # sec
     'time_hover_climb': 0,  # sec
     'time_climb_transition': 60,  # sec
+
+    # FLIGHT PARAMETERS
+    # -----------------
+    'cruise_speed': 120,  # mph
+    'vertical_take_off_speed': 60,  # mph
+    'vertical_landing_speed': 60,  # mph
+    'climb_speed': 60,  # mph
+    'descent_speed': 60,  # mph
+
+
+
 
     # AIRCRAFT CHARGING TIME PARAMETERS
     # ----------------------------
