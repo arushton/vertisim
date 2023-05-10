@@ -1,5 +1,8 @@
 ,time,tail_number,origin_vertiport_id,destination_vertiport_id,passengers,aircraft_model,event
-0,1625065603036,aircraft_0,LAX,LAX,"[0, 1, 2, 4]",jobyS4,take_off
-1,1625065695973,aircraft_1,LAX,LAX,"[5, 6, 7, 9]",jobyS4,take_off
-2,1625065913973,aircraft_2,LAX,LAX,"[10, 11, 12, 14]",jobyS4,take_off
-3,1625066132518,aircraft_3,LAX,LAX,"[15, 16, 17, 19]",jobyS4,take_off
+0,1625065603036,aircraft_4,DTLA,LAX,"[1, 3, 5, 7]",jobyS4,take_off
+1,1625065693009,aircraft_5,DTLA,LAX,"[9, 11, 13, 14]",jobyS4,take_off
+2,1625065707973,aircraft_1,LAX,DTLA,"[8, 10, 12, 15]",jobyS4,take_off
+3,1625065903973,aircraft_2,LAX,DTLA,"[17, 19, 21, 22]",jobyS4,take_off
+4,1625065931973,aircraft_6,DTLA,LAX,"[16, 18, 20, 23]",jobyS4,take_off
+5,1625066128518,aircraft_7,DTLA,LAX,"[25, 27, 28, 30]",jobyS4,take_off
+6,1625066156518,aircraft_3,LAX,DTLA,"[24, 26, 29, 31]",jobyS4,take_off

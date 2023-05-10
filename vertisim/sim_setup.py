@@ -200,6 +200,7 @@ class SimSetup:
         return create_vertiport_manager(
             env=self.env,
             vertiports=self.vertiports,
+            vertiport_ids=self.vertiport_ids,
             scheduler=self.scheduler,
             arrival_priority=self.sim_params['arrival_priority'],
             departure_priority=self.sim_params['departure_priority'],

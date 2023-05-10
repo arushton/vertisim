@@ -30,6 +30,8 @@ class VertiportConfig:
         self.waiting_room_stores = self.create_waiting_room_stores()
         self.available_aircraft_store = simpy.Store(self.env)
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
+        self.arrival_fix_resource = simpy.Resource(self.env, capacity=1)
+        self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
 
     def check_charger_resource_type(self):
         # Based on the charger resource specification, this method changes the structure of the parking pads.

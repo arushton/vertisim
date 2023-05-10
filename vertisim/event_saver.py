@@ -386,9 +386,21 @@ class EventSaver:
             else:
                 raise ValueError('agent_type must be either aircraft or passenger')
 
-    def save_airspace_location_time_info(self, ) -> None:
-        pass
-
+    def save_airspace_location_time_info(self, 
+                                         agent_id: int = None,
+                                         agent_type: str = 'aircraft',
+                                         aircraft_model: str = None,
+                                         waypoint_lat_lng: tuple = None,
+                                         waypoint_id: str = None) -> None:
+        if self.sim_params['save_trajectories']:
+            time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                        sim_time=self.env.now)
+            time = self.is_time_overlapping(time=time, agent_type=agent_type)        
+            self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
+            self.aircraft_agent_trajectory[time]['latitude'] = waypoint_lat_lng[0]
+            self.aircraft_agent_trajectory[time]['longitude'] = waypoint_lat_lng[1]
+            self.aircraft_agent_trajectory[time]['location'] = waypoint_id
+            self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model
 
     def save_taxi_location_time_info(self, 
                                     node: str, 

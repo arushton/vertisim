@@ -49,7 +49,7 @@ network_and_demand = {
     'vertiports': {
     # Input specifications for each vertiport.
         'LAX': {
-            'layout': 'clover_1_fato_4_park',
+            'layout': 'clover_1_fato_4_park_lax',
             'num_security_check_servers' : 4,
             'num_chargers': 4,
             'charger_max_charge_rate': 480,  # kW
@@ -101,14 +101,14 @@ network_and_demand = {
                 #         # 'param3': None,
                 #         # 'param4': None
                 #     },
-                #     'max_interarrival_time': None,  # seconds
+                #     'max_val_in_dist': None,  # seconds
                 # }
             }
         },
         'DTLA': {
-            'layout': 'helipad_1_fato',
+            'layout': 'clover_1_fato_4_park_dtla',
             'num_security_check_servers' : 4,
-            'num_chargers': 1,
+            'num_chargers': 4,
             'charger_max_charge_rate': 480,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
@@ -119,14 +119,14 @@ network_and_demand = {
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/16  # seconds
+                        'scale': 3600/60  # seconds
                     },
-                    'max_val_in_dist': None,  # seconds  # UNUSED
+                    'max_val_in_dist': None,  # seconds
                 },
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 1,
+                'num_initial_aircraft_in_vertiport': 4,
                 'initial_arrival_queue_state': 0
                 # 'aircraft_interarrival_constant': None,
                 # 'num_aircraft': 200,
@@ -136,7 +136,7 @@ network_and_demand = {
                 #     'parameters': {
                 #         'scale': 3600/14  # seconds
                 #     },
-                #     'max_interarrival_time': None,  # seconds
+                #     'max_val_in_dist': None,  # seconds
                 # }
             }
         }
@@ -213,14 +213,13 @@ aircraft_params = {
     'time_hover_climb': 0,  # sec
     'time_climb_transition': 60,  # sec
 
-    # FLIGHT PARAMETERS
+    # FLIGHT SPEED PARAMETERS
     # -----------------
     'cruise_speed': 120,  # mph
-    'vertical_take_off_speed': 60,  # mph
-    'vertical_landing_speed': 60,  # mph
+    'vertical_takeoff_speed': 5,  # mph
+    'vertical_landing_speed': 5,  # mph
     'climb_speed': 60,  # mph
     'descent_speed': 60,  # mph
-
 
 
 

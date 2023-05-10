@@ -121,9 +121,17 @@ class AircraftArrivalSetup:
             aircraft_model = \
                 aircraft_arrival_schedule.loc[
                     aircraft_arrival_schedule.tail_number == tail_number, 'aircraft_model'].values[0]
+            
             # Get the passenger capacity of the aircraft.
-            passenger_capacity = self.aircraft_params['pax']
-
+            passenger_capacity = \
+                aircraft_arrival_schedule.loc[
+                    aircraft_arrival_schedule.tail_number == tail_number, 'passenger_capacity'].values[0]
+            
+            # Get the maximum range of the aircraft.
+            max_range = \
+                aircraft_arrival_schedule.loc[
+                    aircraft_arrival_schedule.tail_number == tail_number, 'max_range'].values[0]
+            
             # Get the arrival vertiport id of the aircraft.
             arrival_vertiport_id = \
                 aircraft_arrival_schedule.loc[
@@ -141,6 +149,7 @@ class AircraftArrivalSetup:
             self.initiate_aircraft_arrival(tail_number=tail_number,
                                            initial_soc=initial_soc,
                                            aircraft_model=aircraft_model,
+                                           max_range=max_range,
                                            passenger_capacity=passenger_capacity,
                                            arrival_vertiport_id=arrival_vertiport_id)
 
@@ -148,34 +157,18 @@ class AircraftArrivalSetup:
                                   initial_soc: int,
                                   aircraft_model: str,
                                   passenger_capacity: int,
+                                  max_range: int,
                                   arrival_vertiport_id: str):
         aircraft = Aircraft(env=self.env,
                             tail_number=tail_number,
                             arrival_vertiport_id=arrival_vertiport_id,
-                            aircraft_model=aircraft_model,
-                            battery_capacity=self.aircraft_params['battery_capacity'],
-                            passenger_capacity=passenger_capacity,
-                            max_range=self.aircraft_params['range'],
                             initial_soc=initial_soc,
                             arrival_time=self.env.now,
-                            ground_taxi_speed=self.aircraft_params['ground_taxi_speed'],
-                            time_passenger_embark_disembark=sec_to_ms(self.aircraft_params['time_passenger_embark_disembark']),
-                            time_descend_transition=sec_to_ms(self.aircraft_params['time_descend_transition']),
-                            time_hover_descend=sec_to_ms(self.aircraft_params['time_hover_descend']),
-                            time_rotor_spin_down=sec_to_ms(self.aircraft_params['time_rotor_spin_down']),
-                            time_post_landing_safety_checks=sec_to_ms(self.aircraft_params['time_post_landing_safety_checks']),
-                            time_tug_connection=sec_to_ms(self.aircraft_params['time_tug_connection']),
-                            time_pre_charging_processes=sec_to_ms(self.aircraft_params['time_pre_charging_processes']),
-                            time_charging_plug_disconnection=sec_to_ms(self.aircraft_params[
-                                'time_charging_plug_disconnection']),
-                            time_post_charging_processes=sec_to_ms(self.aircraft_params['time_post_charging_processes']),
-                            time_pre_take_off_check_list=sec_to_ms(self.aircraft_params['time_pre_take_off_check_list']),
-                            time_tug_disconnection=sec_to_ms(self.aircraft_params['time_tug_disconnection']),
-                            time_rotor_spin_up=sec_to_ms(self.aircraft_params['time_rotor_spin_up']),
-                            time_hover_climb=sec_to_ms(self.aircraft_params['time_hover_climb']),
-                            time_climb_transition=sec_to_ms(self.aircraft_params['time_climb_transition']),
+                            aircraft_params=self.aircraft_params,
+                            passenger_capacity=passenger_capacity,
+                            max_range=max_range,
+                            aircraft_model=aircraft_model,
                             vertiport_manager=self.vertiport_manager,
-                            time_charging=sec_to_ms(self.aircraft_params['time_charging']),
                             event_saver=self.event_saver
                             )
 

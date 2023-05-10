@@ -6,11 +6,13 @@ class Airspace:
     def __init__(self, env: simpy.Environment(), 
                  holding_unit_capacity: int = 100, 
                  airlink_capacity: int = 1,
+                 airlink_segment_length_miles: float = 0.25,
                  waypoint_ids: Dict = None,
                  waypoint_locations: Dict = None):
         self.env = env
         self.holding_unit_capacity = holding_unit_capacity
         self.airlink_capacity = airlink_capacity
+        self.airlink_segment_length_miles = airlink_segment_length_miles
         self.waypoint_ids = waypoint_ids
         self.waypoint_locations = waypoint_locations
         self.airlink_resources = self.create_airlink_resources()

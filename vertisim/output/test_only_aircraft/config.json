@@ -4,7 +4,6 @@
         "arrival_priority": 1,
         "departure_priority": 1,
         "simultaneous_taxi_and_take_off": true,
-        "initial_parking_occupancy": 0,
         "num_initial_passengers": 0,
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
@@ -12,23 +11,22 @@
         "save_trajectories": true,
         "only_aircraft_simulation": false,
         "network_simulation": true,
-        "default_aircraft": true,
         "verbose": true,
         "battery_model_sim": false
     },
     "network_and_demand": {
         "vertiport_network_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/network_of_2_vertiports.csv",
         "vertiport_layout_file_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/skyport_layouts/skyport_layout.xls",
-        "passenger_schedule_file_name": null,
         "aircraft_schedule_file_name": null,
+        "passenger_schedule_file_name": null,
         "demand_probabilities": [
             0.7,
             0.3
         ],
         "vertiports": {
             "LAX": {
-                "layout": "clover_1_fato_4_park",
-                "num_security_check_servers": 12,
+                "layout": "clover_1_fato_4_park_lax",
+                "num_security_check_servers": 4,
                 "num_chargers": 4,
                 "charger_max_charge_rate": 480,
                 "charger_efficiency": 0.9,
@@ -45,13 +43,15 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 4
+                    "num_initial_aircraft_in_vertiport": 4,
+                    "initial_parking_occupancy": 4,
+                    "initial_arrival_queue_state": 0
                 }
             },
             "DTLA": {
-                "layout": "helipad_1_fato",
-                "num_security_check_servers": 12,
-                "num_chargers": 1,
+                "layout": "clover_1_fato_4_park_dtla",
+                "num_security_check_servers": 4,
+                "num_chargers": 4,
                 "charger_max_charge_rate": 480,
                 "charger_efficiency": 0.9,
                 "shared_charger_sets": null,
@@ -61,13 +61,14 @@
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
-                            "scale": 225.0
+                            "scale": 60.0
                         },
                         "max_val_in_dist": null
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 1
+                    "num_initial_aircraft_in_vertiport": 4,
+                    "initial_arrival_queue_state": 0
                 }
             }
         }
@@ -108,6 +109,11 @@
         "time_rotor_spin_up": 0,
         "time_hover_climb": 0,
         "time_climb_transition": 60,
+        "cruise_speed": 120,
+        "vertical_takeoff_speed": 5,
+        "vertical_landing_speed": 5,
+        "climb_speed": 60,
+        "descent_speed": 60,
         "time_charging": null,
         "charging_time_dist": {
             "distribution_name": "expon",
@@ -118,7 +124,7 @@
         },
         "aircraft_energy_consumption_data_folder_path": "/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft_energy_consumption",
         "min_init_soc": 20,
-        "max_init_soc": 50,
+        "max_init_soc": 100,
         "min_reserve_soc": 20
     },
     "output_params": {

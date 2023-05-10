@@ -41,16 +41,15 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
                                         network_simulation: bool):
     min_init_soc=aircraft_params['min_init_soc']
     max_init_soc=aircraft_params['max_init_soc']
-
+    passenger_capacity=aircraft_params['pax']
     if not network_simulation:
         num_passengers = aircraft_arrival_process['num_passengers']
         num_aircraft = aircraft_arrival_process['num_aircraft']
-        aircraft_capacity=aircraft_params['pax']
 
         if num_passengers is None and num_aircraft is None:
             raise ValueError('Either num_passengers or num_aircraft must be defined.')
         if num_aircraft is None:
-            num_aircraft = int(round(((num_passengers / aircraft_capacity) + 1) * 2.5)) # 1/2.5 is the average aircraft load factor
+            num_aircraft = int(round(((num_passengers / passenger_capacity) + 1) * 2.5)) # 1/2.5 is the average aircraft load factor
 
         # Generate interarrival times. If constant interarrival time is defined, use that. Otherwise, use the distribution.
         # If neither is defined, raise an error.
@@ -76,6 +75,8 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
     return pd.DataFrame({'aircraft_arrival_time': aircraft_arrival_times,
                          'interarrival_time': interarrival_times,
                          'initial_soc': initial_soc,
+                         'passenger_capacity': passenger_capacity,
+                         'max_range': aircraft_params['range'],
                          'aircraft_model': aircraft_model_list,
                          'vertiport_id': [vertiport_id] * num_aircraft})
 
