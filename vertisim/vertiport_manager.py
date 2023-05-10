@@ -15,9 +15,9 @@ class VertiportManager:
                  env: object,
                  vertiports: Dict,
                  scheduler: object,
-                 airspace: object,
                  arrival_priority: int,
                  departure_priority: int,
+                 airspace: object,
                  taxi_config: object,
                  only_aircraft_simulation: bool,
                  aircraft_params: Dict,
@@ -825,7 +825,7 @@ class VertiportManager:
         self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.departure_vertiport_id,
                                                    fato_usage=-1)
         
-        flight_direction = aircraft.departure_vertiport_id + '+' + aircraft.arrival_vertiport_id
+        flight_direction = aircraft.departure_vertiport_id + '_' + aircraft.arrival_vertiport_id
         yield self.env.process(aircraft.fly_in_the_airspace(flight_direction=flight_direction))
         
 

@@ -1,7 +1,10 @@
 from vertiport_layout_creator import VertiportLayout
 from config import VertiportConfig, TaxiOperationsConfig
 from vertiport_manager import VertiportManager
+from airspace_creator import AirspaceCreator
+from airspace import Airspace
 from collections import defaultdict
+from typing import Dict, List
 
 
 def create_vertiport_layouts(network_and_demand) -> None:
@@ -14,6 +17,24 @@ def create_vertiport_layouts(network_and_demand) -> None:
                                            vertiport_id=vertiport_id)
         vertiport_layouts[vertiport_id] = vertiport_layout
     return vertiport_layouts
+
+def create_airspace_layout(env: object, 
+                            vertiports: Dict, 
+                            vertiport_distances, 
+                            airspace_params):
+    if airspace_params['airspace_layout_file_path'] is not None:
+        raise NotImplementedError("Airspace layout file path is not implemented yet. Use airspace creator.") # TODO: Implement airspace layout file path
+    
+    # Create the airspace layout
+    airspace_creator = AirspaceCreator(vertiports=vertiports,
+                                       airlink_segment_length_miles=airspace_params['airlink_segment_length'],
+                                       vertiport_distances=vertiport_distances)
+    return Airspace(env=env,
+                    vertiports=vertiports,
+                    holding_unit_capacity=airspace_params['holding_unit_capacity'],
+                    airlink_capacity=airspace_params['airlink_capacity'],
+                    waypoint_ids=airspace_creator.waypoint_ids,
+                    waypoint_locations=airspace_creator.waypoint_locations)
 
 
 def vertiport_config(env: object,
@@ -39,6 +60,7 @@ def create_vertiport_manager(env,
                              scheduler,
                              arrival_priority,
                              departure_priority,
+                             airspace,
                              taxi_config,
                              only_aircraft_simulation,
                              aircraft_params,
@@ -54,6 +76,7 @@ def create_vertiport_manager(env,
                             scheduler,
                             arrival_priority,
                             departure_priority,
+                            airspace,
                             taxi_config,
                             only_aircraft_simulation,
                             aircraft_params,

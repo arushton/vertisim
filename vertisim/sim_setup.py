@@ -7,9 +7,8 @@ import simpy
 from typing import Dict, List
 import pandas as pd
 from aircraft_arrival_setup import AircraftArrivalSetup
-from airspace import Airspace
 from event_saver import EventSaver
-from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layouts, set_taxi_operations_config
+from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
 from passenger_arrival_setup import PassengerArrivalSetup
 from performance_metrics import PerformanceMetrics
 from save_output import save_output
@@ -17,6 +16,7 @@ from scheduler import Scheduler
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from utils.helpers import set_seed, get_all_aircraft_models
+from utils.airspace_creator import determine_num_waypoints, create_waypoint_ids
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
 from utils.units import sec_to_ms
@@ -26,12 +26,14 @@ class SimSetup:
     def __init__(self,
                  sim_params,
                  network_and_demand: Dict,
+                 airspace_params: Dict,
                  passenger_params: Dict,
                  aircraft_params: Dict,
                  output_params: Dict,
                  sim_start_time: int):
         self.sim_params = sim_params
         self.network_and_demand = network_and_demand
+        self.airspace_params = airspace_params
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
@@ -45,13 +47,17 @@ class SimSetup:
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids
         self.num_destinations = self.get_num_destinations()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
+        self.airspace_waypoints = self.create_airspace_waypoints() # Dictionary of airspace waypoints
         self.event_saver = self.create_event_saver()
         self.taxi_config = self.set_taxi_operations_config()
         self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
         self.scheduler = self.create_scheduler()
-        self.vertiport_manager = self.create_vertiport_manager()
         self.airspace = self.create_airspace()
+        print("Airlink_resources", self.airspace.airlink_resources)
+        print("Waypoint locations", self.airspace.waypoint_locations)
+        print("Waypoint ids", self.airspace.waypoint_ids)
+        self.vertiport_manager = self.create_vertiport_manager()
 
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
@@ -187,6 +193,13 @@ class SimSetup:
                             aircraft_capacity=self.aircraft_params['pax']
                             )
 
+    def create_airspace(self):
+        # Create airspace
+        return create_airspace_layout(env=self.env,
+                                    vertiports=self.vertiports,
+                                    vertiport_distances=self.vertiport_distances,
+                                    aircraft_params=self.aircraft_params)
+    
     def create_vertiport_manager(self):
         # Create vertiport manager
         return create_vertiport_manager(
@@ -195,6 +208,7 @@ class SimSetup:
             scheduler=self.scheduler,
             arrival_priority=self.sim_params['arrival_priority'],
             departure_priority=self.sim_params['departure_priority'],
+            airspace=self.airspace,
             taxi_config=self.taxi_config,
             only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
             aircraft_params=self.aircraft_params,
@@ -206,12 +220,6 @@ class SimSetup:
             event_saver=self.event_saver,
             network_simulation=self.sim_params['network_simulation']
         )
-    
-    def create_airspace(self):
-        # Create airspace
-        return Airspace(env=self.env,
-                        vertiports=self.vertiports,
-                        holding_unit_capacity=self.network_and_demand['holding_unit_capacity'])
 
     def create_aircraft_arrival_process(self):
         # Load or generate aircraft arrival schedule and start the aircraft arrival process

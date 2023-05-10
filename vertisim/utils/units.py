@@ -34,3 +34,9 @@ def ms_to_sec(ms):
         raise TypeError(f"Can't convert ms to sec. Duration (ms) format is not correct. The type you inputted is {type(ms)}")
     else:
         return ms / 1000
+    
+def hr_to_ms(hr):
+    if type(hr) not in [int, float, np.float64, np.float32, np.int_]:
+        raise TypeError(f"Can't convert hr to ms. Duration (hr) format is not correct. The type you inputted is {type(hr)}")
+    else:
+        return hr * 3600000

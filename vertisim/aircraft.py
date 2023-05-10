@@ -1,5 +1,5 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec
+from utils.units import sec_to_ms, min_to_sec, ms_to_sec, hr_to_ms
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
@@ -194,7 +194,7 @@ class Aircraft:
             yield self.env.timeout(node_to_node_move_time)
 
             # Save the location and time of the current node
-            self.event_saver.save_location_time_info(
+            self.event_saver.save_taxi_location_time_info(
                 node=next_node,
                 agent_id=self.tail_number,
                 agent_type='aircraft',
@@ -242,7 +242,7 @@ class Aircraft:
                 if operation_type == 'departure':
                     # Save passenger location and time
                     for passenger in departing_passengers:
-                        self.event_saver.save_location_time_info(
+                        self.event_saver.save_taxi_location_time_info(
                             node=next_node,
                             agent_id=passenger.passenger_id,
                             agent_type='passenger',
@@ -457,7 +457,12 @@ class Aircraft:
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
     
     def fly_in_the_airspace(self, flight_direction):
-        pass
+        link_traversal_time = hr_to_ms(self.vertiport.airspace.airlink_length / self.cruise_speed)
+        for resource in self.vertiport.airspace.airlink_resources[flight_direction]:
+            with resource.request() as req:
+                yield req
+                yield self.env.timeout(link_traversal_time)
+            self.event_saver.
 
     # @staticmethod
     # def request_fato(assigned_fato_resource: object, priority: int) -> object:

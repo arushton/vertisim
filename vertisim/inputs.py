@@ -34,8 +34,6 @@ sim_params = {
 network_and_demand = {
     'vertiport_network_file_path': f'{cwd}/input/network_of_2_vertiports.csv',
     'vertiport_layout_file_path': f'{cwd}/input/skyport_layouts/skyport_layout.xls',
-    'holding_unit_capacity': 100,  # TODO: Each vertiport should define this.
-
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -144,6 +142,17 @@ network_and_demand = {
         }
     }
 }
+
+# Airspace parameters
+# -------------------
+airspace_params = {
+    'airspace_layout_file_path': None,
+    'airlink_capacity': 1,
+    'holding_unit_capacity': 100,  # TODO: Each vertiport should define this.
+    'airlink_segment_length': 0.25  # miles
+}
+
+
 
 # Passenger parameters
 # --------------------
@@ -255,6 +264,7 @@ start_time = time.time()
 
 SimSetup(sim_params=sim_params,
          network_and_demand=network_and_demand,
+         airspace_params=airspace_params,
          passenger_params=passenger_params,
          aircraft_params=aircraft_params,
          output_params=output_params,

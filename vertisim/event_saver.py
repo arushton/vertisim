@@ -16,7 +16,7 @@ class EventSaver:
     6. save_fatto_arrival_info: saves the time when a aircraft arrives at a fato after taxi
     7. save_take_off_info: saves the time when an aircraft takes off from a fato
     8. save_departure_fix_info: saves the time when an aircraft is at the departure fix
-    9. save_location_time_info: saves the time when an aircraft is at the taxi nodes
+    9. save_taxi_location_time_info: saves the time when an aircraft is at the taxi nodes
     10. save_charging_start_time: saves the time when an aircraft starts charging
     11. save_charging_end_time: saves the time when an aircraft ends charging
     12. save_turnaround_info: saves the time when an aircraft ready to depart
@@ -386,12 +386,16 @@ class EventSaver:
             else:
                 raise ValueError('agent_type must be either aircraft or passenger')
 
-    def save_location_time_info(self, 
-                                node: str, 
-                                agent_id: int, 
-                                agent_type: str, 
-                                aircraft_model: str = None,
-                                vertiport_id: int = None) -> None:
+    def save_airspace_location_time_info(self, ) -> None:
+        pass
+
+
+    def save_taxi_location_time_info(self, 
+                                    node: str, 
+                                    agent_id: int, 
+                                    agent_type: str, 
+                                    aircraft_model: str = None,
+                                    vertiport_id: int = None) -> None:
         """
         Saves the time when an aircraft or passenger arrives at a node
         :param aircraft_model:
