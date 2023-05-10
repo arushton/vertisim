@@ -160,7 +160,7 @@ airspace_params = {
 passenger_params = {
     'randomize_constants': False,  # If true, the constants will be randomized. If false, the constants will be used as
     # it is.
-    'car_to_entrance_walking_time_constant': 0,  # secs
+    'car_to_entrance_walking_time_constant': 30,  # secs
     'car_to_entrance_walking_time_dist': None,
     'security_check_time_constant': 30,  # secs
     'security_check_time_dist': None,
@@ -216,7 +216,7 @@ aircraft_params = {
     # FLIGHT SPEED PARAMETERS
     # -----------------
     'cruise_speed': 120,  # mph
-    'vertical_takeoff_speed': 5,  # mph
+    'vertical_takeoff_speed': 5,  # mph # TODO
     'vertical_landing_speed': 5,  # mph
     'climb_speed': 60,  # mph
     'descent_speed': 60,  # mph

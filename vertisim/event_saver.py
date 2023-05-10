@@ -147,23 +147,23 @@ class EventSaver:
             time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                         sim_time=self.env.now)
             time = self.is_time_overlapping(time=time, agent_type=agent_type)
-            if agent_type == 'aircraft':
-                self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
-                # TODO: This is a hack. Need to fix this. The approach fix is not always the first one
-                approach_fix_lat_lng = self.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng.iloc[0]
-                self.aircraft_agent_trajectory[time]['latitude'] = approach_fix_lat_lng.approach_fix_lat
-                self.aircraft_agent_trajectory[time]['longitude'] = approach_fix_lat_lng.approach_fix_lng
-                self.aircraft_agent_trajectory[time]['location'] = 'created_in_voa'
-                self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model
-            elif agent_type == 'passenger':
+            # if agent_type == 'aircraft':
+            #     self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
+            #     # TODO: This is a hack. Need to fix this. The approach fix is not always the first one
+            #     approach_fix_lat_lng = self.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng.iloc[0]
+            #     self.aircraft_agent_trajectory[time]['latitude'] = approach_fix_lat_lng.approach_fix_lat
+            #     self.aircraft_agent_trajectory[time]['longitude'] = approach_fix_lat_lng.approach_fix_lng
+            #     self.aircraft_agent_trajectory[time]['location'] = 'created_in_voa'
+            #     self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model
+            if agent_type == 'passenger':
                 self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{agent_id}'
                 self.passenger_agent_trajectory[time]['latitude'] = \
                     self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lat']
                 self.passenger_agent_trajectory[time]['longitude'] = \
                     self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lng']
                 self.passenger_agent_trajectory[time]['location'] = 'arrived_at_vertiport'
-            else:
-                raise ValueError('agent_type must be either aircraft or passenger')
+            # else:
+            #     raise ValueError('agent_type must be either aircraft or passenger')
     #
     # def save_landing_approval_time(self, aircraft_id: int, aircraft_model: str) -> None:
     #     time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,

@@ -577,7 +577,7 @@ class VertiportManager:
 
     def simulate_aircraft_arrival_process(self, aircraft, arriving_passengers=None):
         # TODO: keep track of arriving passengers
-
+        
         # Increase aircraft arrival queue counter
         self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.arrival_vertiport_id,
                                                                queue_update=1)
@@ -689,6 +689,7 @@ class VertiportManager:
     def simulate_aircraft_departure_process(self, aircraft, origin_vertiport_id, dest_vertiport_id):
         aircraft.departure_vertiport_id = origin_vertiport_id
         aircraft.arrival_vertiport_id = dest_vertiport_id
+
         # Save passenger boarding time
         for passenger in aircraft.passengers_onboard:
             self.event_saver.save_passenger_boarding_finish_time(passenger_id=passenger.passenger_id,
@@ -696,7 +697,7 @@ class VertiportManager:
                                                                  vertiport_id=origin_vertiport_id)
 
         boarding_time = self.env.now    
-        
+
         # Aircraft take off request
         assigned_fato_id = self.assign_fato(vertiport_id=aircraft.departure_vertiport_id, 
                                             parking_space=aircraft.parking_space_id)
@@ -804,7 +805,7 @@ class VertiportManager:
         # Save FATO usage finish time
         self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.departure_vertiport_id,
                                                    fato_usage=-1)
-        
+
         flight_direction = aircraft.departure_vertiport_id + '_' + aircraft.arrival_vertiport_id
         yield self.env.process(aircraft.fly_in_the_airspace(flight_direction=flight_direction))
         

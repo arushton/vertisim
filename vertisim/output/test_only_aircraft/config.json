@@ -75,7 +75,7 @@
     },
     "passenger_params": {
         "randomize_constants": false,
-        "car_to_entrance_walking_time_constant": 0,
+        "car_to_entrance_walking_time_constant": 30,
         "car_to_entrance_walking_time_dist": null,
         "security_check_time_constant": 30,
         "security_check_time_dist": null,

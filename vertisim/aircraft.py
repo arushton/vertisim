@@ -312,13 +312,6 @@ class Aircraft:
                                                  agent_type='aircraft',
                                                  aircraft_model=self.aircraft_model,
                                                  vertiport_id=self.departure_vertiport_id)
-        # Save passenger location and time
-        for passenger in self.passengers_onboard:
-            self.event_saver.save_departure_fix_info(take_off_fato_id=take_off_fato_id,
-                                                     agent_id=passenger.passenger_id,
-                                                     agent_type='passenger',
-                                                     aircraft_model=None,
-                                                     vertiport_id=self.departure_vertiport_id)
         
         # Release the departure fix
         self.vertiport_manager.release_fix_resource(aircraft=self,
@@ -473,8 +466,9 @@ class Aircraft:
                                                               waypoint_lat_lng=waypoint_lat_lng,
                                                               waypoint_id=waypoint_id)
         
-        self.vertiport_manager.simulate_aircraft_arrival_process(aircraft=self, 
-                                                                 arriving_passengers=self.passengers_onboard)
+        yield self.env.process(self.vertiport_manager.simulate_aircraft_arrival_process(
+            aircraft=self, arriving_passengers=self.passengers_onboard)
+            )
 
     # @staticmethod
     # def request_fato(assigned_fato_resource: object, priority: int) -> object:
