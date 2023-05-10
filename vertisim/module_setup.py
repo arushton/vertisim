@@ -30,7 +30,6 @@ def create_airspace_layout(env: object,
                                        airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                                        vertiport_distances=vertiport_distances)
     return Airspace(env=env,
-                    vertiports=vertiports,
                     holding_unit_capacity=airspace_params['holding_unit_capacity'],
                     airlink_capacity=airspace_params['airlink_capacity'],
                     waypoint_ids=airspace_creator.waypoint_ids,

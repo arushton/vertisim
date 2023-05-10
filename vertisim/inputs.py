@@ -84,7 +84,7 @@ network_and_demand = {
             # -------------------------------------
             'aircraft_arrival_process': {
                 'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
-                'initial_parking_occupancy_state': 4,  # The # of the parking spaces that are occupied with aircraft at the beginning of the sim.
+                'initial_parking_occupancy': 4,  # The # of the parking spaces that are occupied with aircraft at the beginning of the sim.
                 'initial_arrival_queue_state': 0,  # TODO: Number of aircraft in the arrival queue at the beginning of the sim.                
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.

@@ -17,7 +17,6 @@ class PassengerArrivalSetup:
                  vertiport_ids: List,
                  vertiport_manager: int,
                  aircraft_params: Dict = None,
-                 initial_parking_occupancy: int = None,
                  network_simulation: bool = False):
         self.env = env
         self.passenger_arrival_schedule_file_path = passenger_arrival_schedule_file_path
@@ -27,7 +26,6 @@ class PassengerArrivalSetup:
         self.vertiport_ids = vertiport_ids
         self.vertiport_manager = vertiport_manager
         self.aircraft_params = aircraft_params
-        self.initial_parking_occupancy = initial_parking_occupancy
         self.network_simulation = network_simulation
 
     @staticmethod
@@ -83,7 +81,7 @@ class PassengerArrivalSetup:
             else:
                 passenger_arrival_interval_time = self.vertiport_configs[origin_vertiport_id]['passenger_arrival_process']['passenger_arrival_distribution']['parameters']['scale']   
             num_parking_pads = self.vertiport_manager.vertiports[origin_vertiport_id].vertiport_layout.num_parking_pad # This is the number of parking pads at the first vertiport. Might be improved.
-            time_to_fill_vertiport = int(num_parking_pads*self.initial_parking_occupancy) * (
+            time_to_fill_vertiport = int(num_parking_pads/2) * (
                 self.aircraft_params['time_descend_transition'] +
                 self.aircraft_params['time_hover_descend'] +
                 self.aircraft_params['time_rotor_spin_down'] +

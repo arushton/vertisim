@@ -15,9 +15,9 @@ class Airspace:
         self.waypoint_locations = waypoint_locations
         self.airlink_resources = self.create_airlink_resources()
 
-    def create_airlink_resources(self, waypoint_ids):
+    def create_airlink_resources(self):
         airlink_resources = defaultdict(dict)
-        for flight_direction, waypoint_id_list in waypoint_ids.items():
+        for flight_direction, waypoint_id_list in self.waypoint_ids.items():
             for waypoint_id in waypoint_id_list:
                 # The last one (holding unit) will have capacity of holding_unit_capacity
                 if waypoint_id == waypoint_id_list[-1]:

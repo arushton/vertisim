@@ -16,7 +16,6 @@ from scheduler import Scheduler
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from utils.helpers import set_seed, get_all_aircraft_models
-from utils.airspace_creator import determine_num_waypoints, create_waypoint_ids
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
 from utils.units import sec_to_ms
@@ -47,16 +46,12 @@ class SimSetup:
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids
         self.num_destinations = self.get_num_destinations()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
-        self.airspace_waypoints = self.create_airspace_waypoints() # Dictionary of airspace waypoints
+        self.airspace = self.create_airspace()      
         self.event_saver = self.create_event_saver()
         self.taxi_config = self.set_taxi_operations_config()
         self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
         self.scheduler = self.create_scheduler()
-        self.airspace = self.create_airspace()
-        print("Airlink_resources", self.airspace.airlink_resources)
-        print("Waypoint locations", self.airspace.waypoint_locations)
-        print("Waypoint ids", self.airspace.waypoint_ids)
         self.vertiport_manager = self.create_vertiport_manager()
 
         self.create_aircraft_arrival_process()
@@ -198,7 +193,7 @@ class SimSetup:
         return create_airspace_layout(env=self.env,
                                     vertiports=self.vertiports,
                                     vertiport_distances=self.vertiport_distances,
-                                    aircraft_params=self.aircraft_params)
+                                    airspace_params=self.airspace_params)
     
     def create_vertiport_manager(self):
         # Create vertiport manager
@@ -266,7 +261,6 @@ class SimSetup:
                     vertiport_ids=self.vertiport_ids,
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=None,
-                    initial_parking_occupancy=None,
                     network_simulation=self.sim_params['network_simulation']
                 )
             else:
@@ -280,7 +274,6 @@ class SimSetup:
                     vertiport_ids=self.vertiport_ids,
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=self.aircraft_params,
-                    initial_parking_occupancy=self.sim_params['initial_parking_occupancy'],
                     network_simulation=self.sim_params['network_simulation']
                 )
             self.env.process(

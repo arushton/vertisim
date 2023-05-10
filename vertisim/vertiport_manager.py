@@ -63,7 +63,7 @@ class VertiportManager:
             return None
         return DistributionGenerator(self.aircraft_params['charging_time_dist'])
 
-    def build_aircraft_battery_models(self) -> Dict[pd.DataFrame]:
+    def build_aircraft_battery_models(self) -> Dict[Any, pd.DataFrame]:
         """
         Builds the battery charging lookup tables for the aircraft model for each vertiport.
         """

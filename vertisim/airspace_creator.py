@@ -10,7 +10,7 @@ class AirspaceCreator:
         self.airlink_segment_length_miles = airlink_segment_length_miles
         self.vertiport_distances = vertiport_distances
         self.num_waypoints_per_airlink = self.determine_num_waypoints()
-        self.airlink_start_end_points = self.get_airlink_start_end_points()
+        self.airlinks_start_end_points = self.get_airlinks_start_end_points()
         self.waypoint_ids = self.create_waypoint_ids()
         self.waypoints = self.create_waypoints()
         self.waypoint_locations = self.match_waypoint_names_locations()
@@ -57,13 +57,13 @@ class AirspaceCreator:
             num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints
         return num_waypoints_per_airlink
 
-    def get_airlink_start_end_points(self):
+    def get_airlinks_start_end_points(self):
         airlinks_start_end_endpoints = defaultdict(dict)
         for _, row in self.vertiport_distances.iterrows():
             origin_departure_fix_lat = self.vertiports[row['origin_vertiport_id']].vertiport_layout.departure_fix_lat_lng['departure_fix_lat'].iloc[0]
             origin_departure_fix_lng = self.vertiports[row['origin_vertiport_id']].vertiport_layout.departure_fix_lat_lng['departure_fix_lng'].iloc[0]
-            dest_arrival_fix_lat = self.vertiports[row['destination_vertiport_id']].vertiport_layout.arrival_fix_lat_lng['arrival_fix_lat'].iloc[0]
-            dest_arrival_fix_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.arrival_fix_lat_lng['arrival_fix_lng'].iloc[0]
+            dest_arrival_fix_lat = self.vertiports[row['destination_vertiport_id']].vertiport_layout.approach_fix_lat_lng['approach_fix_lat'].iloc[0]
+            dest_arrival_fix_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.approach_fix_lat_lng['approach_fix_lng'].iloc[0]
             airlinks_start_end_endpoints[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = (origin_departure_fix_lat, 
                                                                                                                 origin_departure_fix_lng, 
                                                                                                                 dest_arrival_fix_lat, 
@@ -78,13 +78,13 @@ class AirspaceCreator:
                 if i == num_waypoints-1:
                     waypoint_ids[flight_direction].append(f'holding_unit_{flight_direction}')
                 else:
-                    waypoint_ids[flight_direction].append(f'{flight_direction}_{str(i)}')
+                    waypoint_ids[flight_direction].append(f'waypoint_{flight_direction}_{str(i)}')
         return waypoint_ids
 
 
     def create_waypoints(self):
         waypoints = defaultdict(list)
-        for flight_direction, start_end_points in self.airlinks_start_endpoints.items():
+        for flight_direction, start_end_points in self.airlinks_start_end_points.items():
             origin_departure_fix_lat, origin_departure_fix_lng, dest_arrival_fix_lat, dest_arrival_fix_lng = start_end_points
             num_waypoints = len(self.waypoint_ids[flight_direction])
             waypoints[flight_direction] = AirspaceCreator.generate_waypoints(origin_departure_fix_lat, 

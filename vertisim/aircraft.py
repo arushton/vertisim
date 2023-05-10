@@ -462,7 +462,7 @@ class Aircraft:
             with resource.request() as req:
                 yield req
                 yield self.env.timeout(link_traversal_time)
-            self.event_saver.
+            # self.event_saver.
 
     # @staticmethod
     # def request_fato(assigned_fato_resource: object, priority: int) -> object:
