@@ -193,6 +193,7 @@ class SimSetup:
         # Create scheduler
         return Scheduler(env=self.env,
                             vertiports=self.vertiports,
+                            vertiport_manager=None,
                             aircraft_capacity=self.aircraft_params['pax']
                             )
 
@@ -247,6 +248,7 @@ class SimSetup:
                 aircraft_arrival_schedule_file_path=self.network_and_demand['aircraft_schedule_file_name'],
                 aircraft_params=self.aircraft_params,
                 vertiport_manager=self.vertiport_manager,
+                scheduler=self.scheduler,
                 event_saver=self.event_saver
             )
         else:
@@ -258,6 +260,7 @@ class SimSetup:
                 aircraft_arrival_schedule_file_path=None,
                 aircraft_params=self.aircraft_params,
                 vertiport_manager=self.vertiport_manager,
+                scheduler=self.scheduler,
                 event_saver=self.event_saver
             )
         self.env.process(
@@ -309,7 +312,7 @@ class SimSetup:
 
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        # print(f'Total time to run: {round(time_taken, 2)} seconds')
+        print(f'Total time to run: {round(time_taken, 2)} seconds')
 
     def set_sim_id(self):
         # Set simulation id

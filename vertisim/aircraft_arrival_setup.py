@@ -20,6 +20,7 @@ class AircraftArrivalSetup:
                  aircraft_arrival_schedule_file_path: Union[str, None],
                  aircraft_params: Dict,
                  vertiport_manager: int,
+                 scheduler: object,
                  event_saver: object):
         self.env = env
         self.network_simulation = network_simulation
@@ -27,6 +28,7 @@ class AircraftArrivalSetup:
         self.vertiport_configs = vertiport_configs
         self.aircraft_params = aircraft_params
         self.vertiport_manager = vertiport_manager
+        self.scheduler = scheduler
         self.event_saver = event_saver
         self.num_aircraft = None
 
@@ -83,6 +85,9 @@ class AircraftArrivalSetup:
         if 'interarrival_time' not in aircraft_arrival_schedule.columns:
             aircraft_arrival_schedule['interarrival_time'] = compute_interarrival_times_from_schedule(
                 aircraft_arrival_schedule['arrival_time'])
+            
+            
+        # TODO: Check whether the same aircraft doesn't show up at the list before all the aircraft in the schedule have been initiated.
 
         # # Check if aircraft type exists in the input file.
         # if 'aircraft_model' not in aircraft_arrival_schedule.columns:
@@ -109,19 +114,30 @@ class AircraftArrivalSetup:
     def setup_aircraft_arrival(self):
         if self.aircraft_arrival_schedule_file_path is not None:
             # Load aircraft arrival schedule from the path provided on self.aircraft_arrival_schedule.
-            aircraft_arrival_schedule = read_input_file(self.aircraft_arrival_schedule_file_path)
+            aircraft_arrival_schedule_from_file = read_input_file(self.aircraft_arrival_schedule_file_path)
+            # Sort the aircraft arrival schedule by arrival time.
+            aircraft_arrival_schedule_from_file = aircraft_arrival_schedule_from_file.sort_values(by='aircraft_arrival_time')
             # Check if the columns of the input file are correct.
-            self.check_aircraft_arrival_schedule(aircraft_arrival_schedule)
+            self.check_aircraft_arrival_schedule(aircraft_arrival_schedule_from_file)
+            # We get the initial state of the system from the input file. The rest will be used from aircraft_arrival_schedule
+            first_events = aircraft_arrival_schedule.groupby('tail_number').first()
+            # Exclude the first events from the aircraft arrival schedule.
+            aircraft_arrival_schedule_from_file = pd.concat([aircraft_arrival_schedule_from_file, first_events, first_events]).drop_duplicates(keep=False)
+            # Save the aircraft arrival schedule for the scheduler.
+            self.scheduler.fixed_flight_schedule = aircraft_arrival_schedule_from_file
+            self.scheduler.vertiport_manager = self.vertiport_manager
+
             print("Success: Aircraft arrival schedule loaded from file.")
+            return first_events
         else:
             # Generate artificial aircraft arrival schedule.
             aircraft_arrival_schedule = generate_aircraft_network_schedule(
                 vertiport_configs=self.vertiport_configs,
                 aircraft_params=self.aircraft_params,
                 network_simulation=self.network_simulation)
-        # Get the number of aircraft.
-        self.num_aircraft = len(aircraft_arrival_schedule)
-        return aircraft_arrival_schedule
+            # Get the number of aircraft.
+            self.num_aircraft = len(aircraft_arrival_schedule)
+            return aircraft_arrival_schedule
 
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
@@ -181,6 +197,10 @@ class AircraftArrivalSetup:
                                            location=location,
                                            serviced_time_at_the_location=serviced_time_at_the_location,
                                            departure_time=departure_time)
+            
+        if self.aircraft_arrival_schedule_file_path is not None:
+            yield self.env.process(self.scheduler.initiate_fixed_schedule_from_file())
+
 
     def initiate_aircraft_arrival(self, 
                                   tail_number: str,
@@ -208,6 +228,8 @@ class AircraftArrivalSetup:
                             )
 
         self.env.process(self.vertiport_manager.simulate_aircraft_arrival_process(aircraft))
+
+        
 
     # def check_aircraft_arrival_input(self):
     #     if self.aircraft_arrival_schedule_file_path is not None and self.artificial_aircraft_arrival_process is not None:

@@ -459,22 +459,41 @@ class Aircraft:
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
     
     def fly_in_the_airspace(self, flight_direction):
+        """
+        Finds the location of the aircraft in the airspace from self.vertiport_manager.airspace.airlink_resources
+        and traverses the airspace starting from that location        
+        """      
         link_traversal_time = hr_to_ms(self.vertiport_manager.airspace.airlink_segment_length_miles / self.cruise_speed)
-        for waypoint_id, resource in self.vertiport_manager.airspace.airlink_resources[flight_direction].items():
+        # Get the airlink resources for the flight direction
+        airlink_resources = self.vertiport_manager.airspace.airlink_resources[flight_direction]
+
+        # Find the current location of the aircraft in the airlink resources
+        current_location_index = None
+        for index, (waypoint_id, _) in enumerate(airlink_resources.items()):
+            if waypoint_id == self.location:
+                current_location_index = index
+                break
+
+        if current_location_index is None:
+            raise ValueError(f"Aircraft's current location ({self.location}) not found in the airlink resources")
+
+        # Start iterating the airlink resources from the current location
+        for waypoint_id, resource in list(airlink_resources.items())[current_location_index:]:
             with resource.request() as req:
                 yield req
                 yield self.env.timeout(link_traversal_time)
-            waypoint_lat_lng = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
 
             # Save location and time information
             self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                 agent_type='aircraft',
-                                                 location_id=waypoint_id)
-        
+                                                agent_type='aircraft',
+                                                location_id=waypoint_id)
+            self.location = waypoint_id
+
         yield self.env.process(self.vertiport_manager.simulate_aircraft_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
-            )
+        )
 
+       
     # @staticmethod
     # def request_fato(assigned_fato_resource: object, priority: int) -> object:
     #     """

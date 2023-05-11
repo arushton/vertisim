@@ -71,7 +71,8 @@ def create_vertiport_manager(env,
                              max_flight_waiting_time,
                              charging_interuption,
                              event_saver,
-                             network_simulation):
+                             network_simulation,
+                             node_locations):
     return VertiportManager(env=env,
                             vertiports=vertiports,
                             vertiport_ids=vertiport_ids,
@@ -88,4 +89,5 @@ def create_vertiport_manager(env,
                             max_flight_waiting_time=max_flight_waiting_time,
                             charging_interuption=charging_interuption,
                             event_saver=event_saver,
-                            network_simulation=network_simulation)
+                            network_simulation=network_simulation,
+                            node_locations=node_locations)

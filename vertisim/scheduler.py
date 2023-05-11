@@ -6,13 +6,18 @@ from collections import defaultdict
 class Scheduler:
     def __init__(self, env: object,
                  vertiports: object,
+                 vertiport_manager: object,
                  aircraft_capacity: int = None):
         self.env = env
         self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
+        self.vertiport_manager = vertiport_manager
+        self.fixed_flight_schedule = None
 
-    def fixed_schedule(self):
-        # TODO: Implement fixed schedule
+    def initiate_fixed_schedule_from_file(self):
+        # TODO: Implement this method
+        # Timeout the event times from the current time. Then start the arrival process
+        # for tail_number in self.fixed_flight_schedule.tail_number:
         pass
 
     def check_max_waiting_time_threshold(self, max_flight_waiting_time):

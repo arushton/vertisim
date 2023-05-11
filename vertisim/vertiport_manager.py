@@ -28,7 +28,8 @@ class VertiportManager:
                  max_flight_waiting_time: int,
                  charging_interuption: bool,
                  event_saver: object,
-                 network_simulation: bool):
+                 network_simulation: bool,
+                 node_locations: Dict):
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
@@ -46,6 +47,8 @@ class VertiportManager:
         self.charging_interuption = charging_interuption
         self.event_saver = event_saver
         self.network_simulation = network_simulation
+        self.node_locations = node_locations
+        self.fixed_flight_schedule = None
         # if not self.network_simulation:
         self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()
@@ -575,7 +578,7 @@ class VertiportManager:
     #         yield self.env.process(passenger.waiting_room_to_boarding_gate())
     #         self.event_saver.save_passenger_boarding_gate_arrival_time(agent_id=passenger.passenger_id)
 
-    def simulate_aircraft_arrival_process(self, aircraft, arriving_passengers=None):
+    def simulate_aircraft_arrival_process(self, aircraft: object):
         # TODO: keep track of arriving passengers
         
         # Increase aircraft arrival queue counter
