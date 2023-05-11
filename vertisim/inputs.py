@@ -18,7 +18,6 @@ sim_params = {
     'max_passenger_waiting_time': 600,  # seconds
     'interuptive_approach': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
-    # For more details see the paper section ..., #TODO: Not implemented yet. Keep it False.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
@@ -57,9 +56,9 @@ network_and_demand = {
             'shared_charger_sets': None,
             # # Note: PARK IDs should match with the excel/csv file PARK IDs.
             # 'shared_charger_sets' : {
-            #     1: ['PARK11', 'PARK12'],
-            #     2: ['PARK12', 'PARK13'],
-            #     3: ['PARK13', 'PARK14']
+            #     1: ['LAX_PARK11', 'LAX_PARK12'],
+            #     2: ['LAX_PARK12', 'LAX_PARK13'],
+            #     3: ['LAX_PARK13', 'LAX_PARK14']
             # },
 
             # ARTIFICIAL PASSENGER DEMAND GENERATION
