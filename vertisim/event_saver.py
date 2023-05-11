@@ -30,11 +30,12 @@ class EventSaver:
     20. save_passenger_boarding_finish_time: saves the time when a passenger finishes boarding
     """
 
-    def __init__(self, env, vertiports, sim_start_timestamp, sim_params):
+    def __init__(self, env, vertiports, sim_start_timestamp, sim_params, node_locations):
         self.env = env
         self.vertiports = vertiports
         self.sim_start_timestamp = sim_start_timestamp
         self.sim_params = sim_params
+        self.node_locations = node_locations
         self.aircraft_agent_trajectory = defaultdict(dict)
         self.passenger_agent_trajectory = defaultdict(dict)
         self.flight_schedule = defaultdict(dict)
@@ -131,11 +132,10 @@ class EventSaver:
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
         self.aircraft_idle_time_tracker[vertiport_id][agent_id] = time - charging_end_time
 
-    def save_agent_creation_time(self, 
+    def save_agent_location(self, 
                                  agent_id: int,
                                  agent_type: str,
-                                 vertiport_id: Any,
-                                 aircraft_model: str = None) -> None:
+                                 location_id: Any) -> None:
         """
         Saves the time when an agent is created
         :param aircraft_model:
@@ -147,21 +147,16 @@ class EventSaver:
             time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                         sim_time=self.env.now)
             time = self.is_time_overlapping(time=time, agent_type=agent_type)
-            # if agent_type == 'aircraft':
-            #     self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
-            #     # TODO: This is a hack. Need to fix this. The approach fix is not always the first one
-            #     approach_fix_lat_lng = self.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng.iloc[0]
-            #     self.aircraft_agent_trajectory[time]['latitude'] = approach_fix_lat_lng.approach_fix_lat
-            #     self.aircraft_agent_trajectory[time]['longitude'] = approach_fix_lat_lng.approach_fix_lng
-            #     self.aircraft_agent_trajectory[time]['location'] = 'created_in_voa'
-            #     self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model
-            if agent_type == 'passenger':
+            if agent_type == 'aircraft':
+                self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
+                self.aircraft_agent_trajectory[time]['latitude'] = self.node_locations[location_id][0]
+                self.aircraft_agent_trajectory[time]['longitude'] = self.node_locations[location_id][1]
+                self.aircraft_agent_trajectory[time]['location'] = location_id
+            elif agent_type == 'passenger':
                 self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{agent_id}'
-                self.passenger_agent_trajectory[time]['latitude'] = \
-                    self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lat']
-                self.passenger_agent_trajectory[time]['longitude'] = \
-                    self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lng']
-                self.passenger_agent_trajectory[time]['location'] = 'arrived_at_vertiport'
+                self.passenger_agent_trajectory[time]['latitude'] = self.node_locations[location_id][0]
+                self.passenger_agent_trajectory[time]['longitude'] = self.node_locations[location_id][1]
+                self.passenger_agent_trajectory[time]['location'] = location_id
             # else:
             #     raise ValueError('agent_type must be either aircraft or passenger')
     #
@@ -177,7 +172,6 @@ class EventSaver:
 
     def save_pre_landing_info(self, 
                               agent_id, 
-                              aircraft_model: str = None,
                               vertiport_id: int = None,
                               agent_type: str = 'aircraft') -> None:
         """
@@ -187,17 +181,19 @@ class EventSaver:
         :param agent_id:
         :return:
         """
-        
+        # TODO: Check save_take_off_info function 
         if self.sim_params['save_trajectories']:
             time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                         sim_time=self.env.now)
             time = self.is_time_overlapping(time=time, agent_type=agent_type)
             self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent_id}'
-            approach_fix_lat_lng = self.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng.iloc[0]
-            self.aircraft_agent_trajectory[time]['latitude'] = approach_fix_lat_lng.approach_fix_lat
-            self.aircraft_agent_trajectory[time]['longitude'] = approach_fix_lat_lng.approach_fix_lng
+            approach_fix_lat_lng = self.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng[
+                self.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng.fato_nodes == f'{vertiport_id}_FATO1'
+                ]            
+            self.aircraft_agent_trajectory[time]['latitude'] = approach_fix_lat_lng.approach_fix_lat.values[0]
+            self.aircraft_agent_trajectory[time]['longitude'] = approach_fix_lat_lng.approach_fix_lng.values[0]            
             self.aircraft_agent_trajectory[time]['location'] = 'final_approach_fix'
-            self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model   
+
 
     def save_landing_info(self, 
                           assigned_fato_id: str, 
@@ -584,7 +580,6 @@ class EventSaver:
     def save_pushback_info(self, 
                            pushback_location: str, 
                            agent_id: int, 
-                           aircraft_model: str = None,
                            vertiport_id: int = None) -> None:
         """
         Saves the time when an aircraft starts pushback
@@ -599,7 +594,6 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='aircraft')
             self.aircraft_agent_trajectory[time]['tail_number'] = f'aircraft{agent_id}'
             self.aircraft_agent_trajectory[time]['location'] = 'Pushback_time'
-            self.aircraft_agent_trajectory[time]['aircraft_model'] = aircraft_model            
             if self.vertiports[vertiport_id].vertiport_layout.num_parking_pad == 0:
                 self.aircraft_agent_trajectory[time]['latitude'] = \
                     self.vertiports[vertiport_id].vertiport_layout.fato_lat_lngs.loc[pushback_location]['fato_lat']
@@ -629,7 +623,7 @@ class EventSaver:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.flight_schedule[time]['tail_number'] = f'aircraft_{tail_number}'
+        self.flight_schedule[time]['tail_number'] = f'aircraft{tail_number}'
         self.flight_schedule[time]['origin_vertiport_id'] = origin_vertiport_id
         self.flight_schedule[time]['destination_vertiport_id'] = destination_vertiport_id
         self.flight_schedule[time]['passengers'] = passengers
@@ -648,9 +642,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='passenger')
             self.passenger_agent_trajectory[time]['passenger_id'] = f'passenger{passenger_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lat']
+                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc[f'{vertiport_id}_ENTRANCE']['vert_door_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lng']
+                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc[f'{vertiport_id}_ENTRANCE']['vert_door_lng']
             self.passenger_agent_trajectory[time]['location'] = 'vertiport_entrance'
 
     def save_passenger_security_check_finish_time(self, vertiport_id: Any, passenger_id: int) -> None:
@@ -665,9 +659,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='passenger')
             self.passenger_agent_trajectory[time]['passenger_id'] = f'passenger{passenger_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lat']
+                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc[f'{vertiport_id}_ENTRANCE']['vert_door_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc['ENTRANCE']['vert_door_lng']
+                self.vertiports[vertiport_id].vertiport_layout.vert_door_lat_lngs.loc[f'{vertiport_id}_ENTRANCE']['vert_door_lng']
             self.passenger_agent_trajectory[time]['location'] = 'security_check_finish'
 
     def save_passenger_waiting_room_arrival_time(self, vertiport_id, passenger_id: int, waiting_room_id: str):
@@ -683,9 +677,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='passenger')
             self.passenger_agent_trajectory[time]['passenger_id'] = f'passenger{passenger_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lat']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lng']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lng']
             self.passenger_agent_trajectory[time]['location'] = f'waiting_room_{waiting_room_id}'
 
     def save_passenger_group_completion_time(self, vertiport_id: Any, passenger_id: int, agent_type: str = 'passenger'):
@@ -701,9 +695,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type=agent_type)
             self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{passenger_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lat']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lng']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lng']
             self.passenger_agent_trajectory[time]['location'] = 'passenger_group_completed'
 
     def save_passenger_flight_assignment_time(self, vertiport_id: Any, passenger_id: int, agent_type: str = 'passenger'):
@@ -719,9 +713,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type=agent_type)
             self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{passenger_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lat']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lng']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lng']
             self.passenger_agent_trajectory[time]['location'] = 'flight_assignment'
 
     def save_aircraft_flight_assignment_time(self, 
@@ -771,9 +765,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='passenger')
             self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{agent_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lat']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc['ROOM']['waiting_room_lng']
+                self.vertiports[vertiport_id].vertiport_layout.waiting_room_lat_lngs.loc[f'{vertiport_id}_ROOM']['waiting_room_lng']
             self.passenger_agent_trajectory[time]['location'] = f'waiting_room_{waiting_room_id}_departure'
 
     def save_passenger_boarding_gate_arrival_time(self, vertiport_id: Any, agent_id: int, agent_type: str = 'passenger') -> None:
@@ -790,9 +784,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='passenger')
             self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{agent_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc['GATE']['boarding_gate_lat']
+                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc[f'{vertiport_id}_GATE']['boarding_gate_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc['ROOM']['boarding_gate_lng']
+                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc[f'{vertiport_id}_GATE']['boarding_gate_lng']
             self.passenger_agent_trajectory[time]['location'] = 'boarding_gate'
 
     def save_passenger_boarding_gate_departure_time(self, vertiport_id: Any, passenger_id: int) -> None:
@@ -808,9 +802,9 @@ class EventSaver:
             time = self.is_time_overlapping(time=time, agent_type='passenger')
             self.passenger_agent_trajectory[time]['passenger_id'] = f'passenger{passenger_id}'
             self.passenger_agent_trajectory[time]['latitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc['GATE']['boarding_gate_lat']
+                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc[f'{vertiport_id}_GATE']['boarding_gate_lat']
             self.passenger_agent_trajectory[time]['longitude'] = \
-                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc['ROOM']['boarding_gate_lng']
+                self.vertiports[vertiport_id].vertiport_layout.boarding_gate_lat_lngs.loc[f'{vertiport_id}_GATE']['boarding_gate_lng']
             self.passenger_agent_trajectory[time]['location'] = 'boarding_gate_exit'
 
     def save_passenger_boarding_finish_time(self, 

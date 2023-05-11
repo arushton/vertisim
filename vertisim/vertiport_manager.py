@@ -244,10 +244,10 @@ class VertiportManager:
         Requests the fix resource from vertiport manager
         """
         if operation_type == 'arrival':
-            arrival_fix_resource = self.vertiports[aircraft.arrival_vertiport_id].arrival_fix_resource
+            arrival_fix_resource = self.vertiports[aircraft.destination_vertiport_id].arrival_fix_resource
             return arrival_fix_resource.request()            
         elif operation_type == 'departure':
-            departure_fix_resource = self.vertiports[aircraft.departure_vertiport_id].departure_fix_resource
+            departure_fix_resource = self.vertiports[aircraft.origin_vertiport_id].departure_fix_resource
             return departure_fix_resource.request()
 
     def release_fix_resource(self, aircraft: object, fix_resource_request: object, operation_type: str):
@@ -255,10 +255,10 @@ class VertiportManager:
         Releases the fix resource from usage
         """
         if operation_type == 'arrival':
-            arrival_fix_resource = self.vertiports[aircraft.arrival_vertiport_id].arrival_fix_resource
+            arrival_fix_resource = self.vertiports[aircraft.destination_vertiport_id].arrival_fix_resource
             arrival_fix_resource.release(fix_resource_request)
         elif operation_type == 'departure':
-            departure_fix_resource = self.vertiports[aircraft.departure_vertiport_id].departure_fix_resource
+            departure_fix_resource = self.vertiports[aircraft.origin_vertiport_id].departure_fix_resource
             departure_fix_resource.release(fix_resource_request)            
 
     def generate_taxi_route_nodes(self, vertiport_id: str, source: str, target: str) -> Union[list, float]:
@@ -552,9 +552,9 @@ class VertiportManager:
     def simulate_passenger_arrival(self, passenger):
         """ Simulate passenger."""
         # Save passenger creation time
-        self.event_saver.save_agent_creation_time(agent_id=passenger.passenger_id,
-                                                  agent_type='passenger',
-                                                  vertiport_id=passenger.origin_vertiport_id)
+        self.event_saver.save_agent_location(agent_id=passenger.passenger_id,
+                                             agent_type='passenger',
+                                             location_id=f'{passenger.origin_vertiport_id}_ENTRANCE')
         passenger.vertiport_arrival_time = self.env.now
 
         # Simulate agent's walk from car to the vertiport entrance
@@ -579,7 +579,7 @@ class VertiportManager:
         # TODO: keep track of arriving passengers
         
         # Increase aircraft arrival queue counter
-        self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.arrival_vertiport_id,
+        self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.destination_vertiport_id,
                                                                queue_update=1)
         
         # Request arrival fix resource
@@ -588,17 +588,16 @@ class VertiportManager:
 
         # Save aircraft arrival time
         self.event_saver.save_pre_landing_info(agent_id=aircraft.tail_number, 
-                                               aircraft_model=aircraft.aircraft_model,
-                                               vertiport_id=aircraft.arrival_vertiport_id,
+                                               vertiport_id=aircraft.destination_vertiport_id,
                                                agent_type='aircraft')
         
         self.release_fix_resource(aircraft=aircraft,
                                   fix_resource_request=arrival_fix_usage_request, 
                                   operation_type='arrival')
 
-        if self.vertiports[aircraft.arrival_vertiport_id].vertiport_layout.num_parking_pad > 0:
+        if self.vertiports[aircraft.destination_vertiport_id].vertiport_layout.num_parking_pad > 0:
             # parking space reservation for landing
-            parking_space = yield self.get_parking_pad(vertiport_id=aircraft.arrival_vertiport_id)
+            parking_space = yield self.get_parking_pad(vertiport_id=aircraft.destination_vertiport_id)
             parking_space_id = parking_space.resource_id
             # Save them to use for departure
             aircraft.parking_space = parking_space
@@ -608,15 +607,15 @@ class VertiportManager:
             parking_space_id = None   
 
         # Currently, vertiport manager assigns the closest FATO
-        assigned_fato_id = self.assign_fato(vertiport_id=aircraft.arrival_vertiport_id,
+        assigned_fato_id = self.assign_fato(vertiport_id=aircraft.destination_vertiport_id,
                                             parking_space=parking_space_id)
 
         # Aircraft calls the FATO resource that will be requested.
-        assigned_fato_resource = self.call_fato_resource(vertiport_id=aircraft.arrival_vertiport_id,
+        assigned_fato_resource = self.call_fato_resource(vertiport_id=aircraft.destination_vertiport_id,
                                                          assigned_fato_id=assigned_fato_id)
         
         # If there is no parking pad then aircraft will be parked on FATO
-        if self.vertiports[aircraft.arrival_vertiport_id].vertiport_layout.num_parking_pad == 0:
+        if self.vertiports[aircraft.destination_vertiport_id].vertiport_layout.num_parking_pad == 0:
             aircraft.parking_space = assigned_fato_resource
             aircraft.parking_space_id = assigned_fato_id  
             parking_space = assigned_fato_resource
@@ -631,14 +630,14 @@ class VertiportManager:
         yield aircraft_fato_usage_request
 
         # Save aircraft arrival queue waiting time
-        self.event_saver.save_aircraft_arrival_queue_waiting_time(vertiport_id=aircraft.arrival_vertiport_id,
+        self.event_saver.save_aircraft_arrival_queue_waiting_time(vertiport_id=aircraft.destination_vertiport_id,
                                                                   agent_id=aircraft.tail_number,
                                                                   waiting_time=self.env.now - aircraft.arrival_time)
         
         aircraft.holding_time = self.env.now - aircraft.arrival_time
 
         # Save FATO usage start time
-        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.arrival_vertiport_id,
+        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.destination_vertiport_id,
                                                    fato_usage=1)
 
         # Landing process
@@ -646,7 +645,7 @@ class VertiportManager:
 
         # Get the taxi route
         taxi_route, taxi_route_edges = self.get_taxi_instructions(
-            vertiport_id=aircraft.arrival_vertiport_id,
+            vertiport_id=aircraft.destination_vertiport_id,
             assigned_fato_id=assigned_fato_id,
             parking_space_id=parking_space_id
         )
@@ -664,7 +663,7 @@ class VertiportManager:
                 operation_type='arrival')
         )
         taxi_end_time = self.env.now
-        self.event_saver.save_aircraft_taxi_time(vertiport_id=aircraft.arrival_vertiport_id,
+        self.event_saver.save_aircraft_taxi_time(vertiport_id=aircraft.destination_vertiport_id,
                                                  aircraft_id=aircraft.tail_number, 
                                                  taxi_time=taxi_end_time-taxi_start_time)
 
@@ -672,13 +671,13 @@ class VertiportManager:
         yield self.env.process(
             aircraft.charge_aircraft(
                 parking_space=parking_space,
-                shared_charger=self.vertiports[aircraft.arrival_vertiport_id].shared_charger_sets
+                shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
             )
         )
 
         # Take out the aircraft from active aircraft list and put it into available aircraft list
         # self.active_aircraft_store.get(lambda filt: filt == aircraft.tail_number)
-        self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.arrival_vertiport_id, 
+        self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id, 
                                                         aircraft=aircraft)
 
         if self.only_aircraft_simulation and not self.network_simulation:
@@ -687,8 +686,8 @@ class VertiportManager:
             )
 
     def simulate_aircraft_departure_process(self, aircraft, origin_vertiport_id, dest_vertiport_id):
-        aircraft.departure_vertiport_id = origin_vertiport_id
-        aircraft.arrival_vertiport_id = dest_vertiport_id
+        aircraft.origin_vertiport_id = origin_vertiport_id
+        aircraft.destination_vertiport_id = dest_vertiport_id
 
         # Save passenger boarding time
         for passenger in aircraft.passengers_onboard:
@@ -699,15 +698,15 @@ class VertiportManager:
         boarding_time = self.env.now    
 
         # Aircraft take off request
-        assigned_fato_id = self.assign_fato(vertiport_id=aircraft.departure_vertiport_id, 
+        assigned_fato_id = self.assign_fato(vertiport_id=aircraft.origin_vertiport_id, 
                                             parking_space=aircraft.parking_space_id)
 
         # Aircraft calls the FATO resource that will be requested.
-        assigned_fato_resource = self.call_fato_resource(vertiport_id=aircraft.departure_vertiport_id,
+        assigned_fato_resource = self.call_fato_resource(vertiport_id=aircraft.origin_vertiport_id,
                                                          assigned_fato_id=assigned_fato_id)
 
         # Increase the aircraft departure queue counter
-        self.event_saver.update_aircraft_departure_queue_counter(vertiport_id=aircraft.departure_vertiport_id,
+        self.event_saver.update_aircraft_departure_queue_counter(vertiport_id=aircraft.origin_vertiport_id,
                                                                  queue_update=1)
 
         # Request for FATO pad usage
@@ -720,25 +719,25 @@ class VertiportManager:
         # Save passenger departure queue waiting time
         for passenger in aircraft.passengers_onboard:
             self.event_saver.save_passenger_departure_queue_waiting_time(
-                vertiport_id=aircraft.departure_vertiport_id,
+                vertiport_id=aircraft.origin_vertiport_id,
                 passenger_id=passenger.passenger_id,
                 boarding_time=boarding_time
             )
 
         # Decrease the aircraft departure queue counter
-        self.event_saver.update_aircraft_departure_queue_counter(vertiport_id=aircraft.departure_vertiport_id,
+        self.event_saver.update_aircraft_departure_queue_counter(vertiport_id=aircraft.origin_vertiport_id,
                                                                  queue_update=-1)
 
         if not self.only_aircraft_simulation:
             # Decrease the passenger departure queue counter
-            self.event_saver.update_passenger_departure_queue_counter(vertiport_id=aircraft.departure_vertiport_id,
+            self.event_saver.update_passenger_departure_queue_counter(vertiport_id=aircraft.origin_vertiport_id,
                                                                       queue_update=-1)
 
         # Save FATO usage start time
-        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.departure_vertiport_id,
+        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.origin_vertiport_id,
                                                    fato_usage=1)
 
-        taxi_usage_request = self.request_taxi_resource(vertiport_id=aircraft.departure_vertiport_id)
+        taxi_usage_request = self.request_taxi_resource(vertiport_id=aircraft.origin_vertiport_id)
         if taxi_usage_request is not None:
             yield taxi_usage_request
 
@@ -746,19 +745,18 @@ class VertiportManager:
         self.event_saver.save_pushback_info(
             pushback_location=aircraft.parking_space_id,
             agent_id=aircraft.tail_number,
-            aircraft_model=aircraft.aircraft_model,
-            vertiport_id=aircraft.departure_vertiport_id
+            vertiport_id=aircraft.origin_vertiport_id
         )
 
         # Save total transfer time of a passenger
         for passenger in aircraft.passengers_onboard:
-            self.event_saver.save_passenger_transfer_time(vertiport_id=aircraft.departure_vertiport_id,
+            self.event_saver.save_passenger_transfer_time(vertiport_id=aircraft.origin_vertiport_id,
                                                           passenger_id=passenger.passenger_id,
                                                           transfer_time=self.env.now - passenger.vertiport_arrival_time)
 
         taxi_start_time = self.env.now
         # Taxi-out process
-        taxi_route, taxi_route_edges = self.get_taxi_instructions(vertiport_id=aircraft.departure_vertiport_id,
+        taxi_route, taxi_route_edges = self.get_taxi_instructions(vertiport_id=aircraft.origin_vertiport_id,
                                                                   parking_space_id=aircraft.parking_space_id, 
                                                                   assigned_fato_id=assigned_fato_id)
         yield self.env.process(
@@ -772,13 +770,13 @@ class VertiportManager:
                 operation_type='departure')
         )
         taxi_end_time = self.env.now
-        self.event_saver.save_aircraft_taxi_time(vertiport_id=aircraft.departure_vertiport_id, 
+        self.event_saver.save_aircraft_taxi_time(vertiport_id=aircraft.origin_vertiport_id, 
                                                  aircraft_id=aircraft.tail_number, 
                                                  taxi_time=taxi_end_time-taxi_start_time)
 
         # Save take-off info
-        self.event_saver.save_flight_info(origin_vertiport_id=aircraft.departure_vertiport_id,
-                                          destination_vertiport_id=aircraft.arrival_vertiport_id,
+        self.event_saver.save_flight_info(origin_vertiport_id=aircraft.origin_vertiport_id,
+                                          destination_vertiport_id=aircraft.destination_vertiport_id,
                                           tail_number=aircraft.tail_number,
                                           passengers=get_passenger_ids_from_passenger_list(aircraft.passengers_onboard),
                                           aircraft_model=aircraft.aircraft_model,
@@ -797,16 +795,16 @@ class VertiportManager:
             )
         )
 
-        self.release_taxi_usage_request(vertiport_id=aircraft.departure_vertiport_id,
+        self.release_taxi_usage_request(vertiport_id=aircraft.origin_vertiport_id,
                                         taxi_usage_request=taxi_usage_request)
         # Release the FATO
         assigned_fato_resource.fato_resource.release(aircraft_fato_usage_request)
 
         # Save FATO usage finish time
-        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.departure_vertiport_id,
+        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.origin_vertiport_id,
                                                    fato_usage=-1)
 
-        flight_direction = aircraft.departure_vertiport_id + '_' + aircraft.arrival_vertiport_id
+        flight_direction = aircraft.origin_vertiport_id + '_' + aircraft.destination_vertiport_id
         yield self.env.process(aircraft.fly_in_the_airspace(flight_direction=flight_direction))
         
 

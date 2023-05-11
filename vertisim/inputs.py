@@ -44,7 +44,7 @@ network_and_demand = {
     'passenger_schedule_file_name': None,  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
-    'demand_probabilities': [0.7, 0.3], # The probability of the demand to be generated for each vertiport.
+    'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
 
     'vertiports': {
     # Input specifications for each vertiport.
@@ -192,7 +192,7 @@ aircraft_params = {
     'pax': 4,  # Default passenger capacity, if passenger capacity is given with the schedule,
     # then that will be used as the passenger capacity.
     'range': 150,  # miles
-    'initial_soc': 20,  # Default initial SOC of aircraft at the arrival to the vertiport
+    'soc': 20,  # Default initial SOC of aircraft at the arrival to the vertiport
     'battery_capacity': 160,  # kWh
     
     # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS

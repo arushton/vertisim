@@ -19,7 +19,7 @@ def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> pd.DataFrame:
     elif file_type in ['xlsx', 'xls']:
         return pd.read_excel(file_path, sheet_name=sheet_name)
     else:
-        raise ValueError('The file type is not supported.')
+        raise ValueError(f'The file type is not supported: {file_path}')
 
 
 def detect_file_type(file_path: str) -> str:

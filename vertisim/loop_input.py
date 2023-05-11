@@ -180,7 +180,7 @@ def loop_input(passenger_arrival_mu,
         'pax': 4,  # Default passenger capacity, if passenger capacity is given with the schedule,
         # then that will be used as the passenger capacity.
         'range': 150,  # miles
-        'initial_soc': 20,  # Default initial SOC of aircraft at the arrival to the vertiport
+        'soc': 20,  # Default initial SOC of aircraft at the arrival to the vertiport
 
         # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
         # ------------------------------------------------

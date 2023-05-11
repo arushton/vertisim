@@ -13,7 +13,9 @@ def generate_aircraft_network_schedule(vertiport_configs: Dict,
     """
     Generate artificial aircraft supply for each vertiport in the network.
     """
-    network_schedule = pd.DataFrame(columns=['aircraft_arrival_time', 'interarrival_time', 'initial_soc', 'aircraft_model', 'vertiport_id'])
+    network_schedule = pd.DataFrame(columns=['tail_number', 'aircraft_arrival_time', 'aircraft_departure_time', 
+                                             'interarrival_time', 'origin_vertiport_id', 'destination_vertiport_id', 
+                                             'passengers_onboard', 'location', 'soc'])
 
     for vertiport_id, vertiport_config in vertiport_configs.items():
         vertiport_schedule = generate_artificial_aircraft_supply(
@@ -61,24 +63,33 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
             distribution = DistributionGenerator(distribution_params=aircraft_arrival_process['aircraft_arrival_distribution'],
                                                 max_val_in_dist=aircraft_arrival_process['aircraft_arrival_distribution']['max_val_in_dist'])
             interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_aircraft)]
-        initial_soc = [random.randint(min_init_soc, max_init_soc) for _ in range(num_aircraft)]
+        soc = [random.randint(min_init_soc, max_init_soc) for _ in range(num_aircraft)]
     else:
         # If network simulation, aircraft start from the ground with max_init_soc.
         num_aircraft = aircraft_arrival_process['num_initial_aircraft_in_vertiport']
         interarrival_times = [0 for _ in range(num_aircraft)]
-        initial_soc = [max_init_soc for _ in range(num_aircraft)]
+        soc = [max_init_soc for _ in range(num_aircraft)]
+        location = [f'{vertiport_id}_APPROACH_FIX' for _ in range(num_aircraft)]
 
 
     aircraft_arrival_times = cumulative_sum_array(interarrival_times)
-    aircraft_model_list = [aircraft_params['aircraft_model'] for _ in range(num_aircraft)]
+    aircraft_departure_times = [None for _ in range(num_aircraft)]
+    origin_vertiport_id = [None for _ in range(num_aircraft)]
+    destination_vertiport_id = [vertiport_id for _ in range(num_aircraft)]
+    passengers_onboard = [[] for _ in range(num_aircraft)]
+    serviced_time_at_the_location = [0 for _ in range(num_aircraft)]
+
 
     return pd.DataFrame({'aircraft_arrival_time': aircraft_arrival_times,
+                         'aircraft_departure_time': aircraft_departure_times,
                          'interarrival_time': interarrival_times,
-                         'initial_soc': initial_soc,
-                         'passenger_capacity': passenger_capacity,
-                         'max_range': aircraft_params['range'],
-                         'aircraft_model': aircraft_model_list,
-                         'vertiport_id': [vertiport_id] * num_aircraft})
+                         'origin_vertiport_id': origin_vertiport_id,
+                         'destination_vertiport_id': destination_vertiport_id,
+                         'soc': soc,
+                         'passengers_onboard': passengers_onboard,
+                         'location': location,
+                         'serviced_time_at_the_location': serviced_time_at_the_location
+                         })
 
 
 def generate_passenger_network_demand(vertiport_configs: Dict, 

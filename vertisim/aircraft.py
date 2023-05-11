@@ -11,35 +11,42 @@ class Aircraft:
     Aircraft agent
     """
 
-    def __init__(self, env, 
+    def __init__(self, 
+                 env, 
                  tail_number, 
-                 arrival_vertiport_id, 
-                 initial_soc, 
+                 origin_vertiport_id,
+                 destination_vertiport_id,
+                 passengers_onboard, 
+                 soc,
                  arrival_time, 
+                 departure_time,
+                 location,
+                 serviced_time_at_the_location,
                  aircraft_params, 
-                 passenger_capacity,
-                 max_range,
-                 aircraft_model,
                  vertiport_manager, 
                  event_saver):
         self.env = env
         self.tail_number = tail_number
-        self.initial_soc = initial_soc
-        self.current_soc = initial_soc
+        self.soc = soc
+        self.current_soc = soc
         self.arrival_time = arrival_time # TODO: Update this at every holding fix arrival
-        self.arrival_vertiport_id = arrival_vertiport_id   
-        self.departure_vertiport_id = None             
+        self.departure_time = departure_time
+        self.origin_vertiport_id = origin_vertiport_id   
+        self.destination_vertiport_id = destination_vertiport_id
+        self.location = location
+        self.serviced_time_at_the_location = serviced_time_at_the_location
+        self.passengers_onboard = passengers_onboard
+
         self.charging_start_time = None
         self.charging_end_time = None
         self.parking_space = None
         self.parking_space_id = None
         self.holding_time = None # event_saver.aircraft_arrival_queue_waiting_time keeps track of this for every aircraft at every vertiport
-        self.passengers_onboard = None
 
 
-        self.aircraft_model = aircraft_model
-        self.passenger_capacity = passenger_capacity
-        self.max_range = max_range
+        self.aircraft_model = aircraft_params['aircraft_model']
+        self.passenger_capacity = aircraft_params['pax']
+        self.max_range = aircraft_params['range']
         self.battery_capacity = aircraft_params['battery_capacity']
         self.ground_taxi_speed = aircraft_params['ground_taxi_speed']
         self.cruise_speed = aircraft_params['cruise_speed']
@@ -75,7 +82,7 @@ class Aircraft:
         self.event_saver.save_landing_info(assigned_fato_id=landing_fato_id,
                                            agent_id=self.tail_number,
                                            aircraft_model=self.aircraft_model,
-                                           vertiport_id=self.arrival_vertiport_id)
+                                           vertiport_id=self.destination_vertiport_id)
         yield self.env.timeout(self.time_rotor_spin_down)
         yield self.env.timeout(self.time_post_landing_safety_checks)
         yield self.env.timeout(self.time_tug_connection)
@@ -83,7 +90,7 @@ class Aircraft:
         self.event_saver.save_landing_time(assigned_fato_id=landing_fato_id,
                                            agent_id=self.tail_number,
                                            aircraft_model=self.aircraft_model,
-                                           vertiport_id=self.arrival_vertiport_id)
+                                           vertiport_id=self.destination_vertiport_id)
 
     def taxi(self, 
              taxi_route: list, 
@@ -124,9 +131,9 @@ class Aircraft:
             It can be only 'arrival' or 'departure'
         """
         if operation_type == 'arrival':
-            vertiport_id = self.arrival_vertiport_id
+            vertiport_id = self.destination_vertiport_id
         elif operation_type == 'departure':
-            vertiport_id = self.departure_vertiport_id
+            vertiport_id = self.origin_vertiport_id
         # Check whether the vertiport has a parking pad or not. If it has a parking pad then the aircraft will taxi. Otherwise, it will be parked on the FATO pad.
         if len(taxi_route) == 0:
             if operation_type == 'arrival':
@@ -280,7 +287,7 @@ class Aircraft:
                                                 agent_id=self.tail_number,
                                                 agent_type='aircraft',
                                                 aircraft_model=self.aircraft_model,
-                                                vertiport_id=self.departure_vertiport_id)
+                                                vertiport_id=self.origin_vertiport_id)
 
         # Save passenger location and time
         for passenger in self.passengers_onboard:
@@ -288,7 +295,7 @@ class Aircraft:
                                                     agent_id=passenger.passenger_id,
                                                     agent_type='passenger',
                                                     aircraft_model=None,
-                                                    vertiport_id=self.departure_vertiport_id)
+                                                    vertiport_id=self.origin_vertiport_id)
 
         yield self.env.timeout(self.time_tug_disconnection)
         yield self.env.timeout(self.time_pre_take_off_check_list)
@@ -297,21 +304,21 @@ class Aircraft:
                                             agent_id=self.tail_number,
                                             agent_type='aircraft',
                                             aircraft_model=self.aircraft_model,
-                                            vertiport_id=self.departure_vertiport_id)
+                                            vertiport_id=self.origin_vertiport_id)
         # Save passenger location and time
         for passenger in self.passengers_onboard:
             self.event_saver.save_take_off_info(assigned_fato_id=take_off_fato_id,
                                                 agent_id=passenger.passenger_id,
                                                 agent_type='passenger',
                                                 aircraft_model=None,
-                                                vertiport_id=self.departure_vertiport_id)
+                                                vertiport_id=self.origin_vertiport_id)
         yield self.env.timeout(self.time_hover_climb)
         yield self.env.timeout(self.time_climb_transition)
         self.event_saver.save_departure_fix_info(take_off_fato_id=take_off_fato_id,
                                                  agent_id=self.tail_number,
                                                  agent_type='aircraft',
                                                  aircraft_model=self.aircraft_model,
-                                                 vertiport_id=self.departure_vertiport_id)
+                                                 vertiport_id=self.origin_vertiport_id)
         
         # Release the departure fix
         self.vertiport_manager.release_fix_resource(aircraft=self,
@@ -322,7 +329,7 @@ class Aircraft:
         """
         This method is used when the charger configuration is normal (any parking pads can use any chargers).
         """
-        return self.vertiport_manager.vertiports[self.arrival_vertiport_id].charger_resource.request()
+        return self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource.request()
 
     def get_charging_time(self):
         """
@@ -332,7 +339,7 @@ class Aircraft:
             return max(self.time_passenger_embark_disembark, self.time_charging)
         charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
         charge_time = max(self.time_passenger_embark_disembark, charge_time)
-        self.event_saver.save_aircraft_charging_time(vertiport_id=self.arrival_vertiport_id,
+        self.event_saver.save_aircraft_charging_time(vertiport_id=self.destination_vertiport_id,
                                                      aircraft_id=self.tail_number, 
                                                      charging_time=charge_time)
         return charge_time
@@ -374,7 +381,7 @@ class Aircraft:
                                                   agent_id=self.tail_number,
                                                   event='charging_started',
                                                   aircraft_model=self.aircraft_model,
-                                                  vertiport_id=self.arrival_vertiport_id)
+                                                  vertiport_id=self.destination_vertiport_id)
         self.charging_start_time = self.env.now
 
         # Actual charging happens here
@@ -388,18 +395,18 @@ class Aircraft:
                                                    agent_id=self.tail_number,
                                                    event='charging_finished',
                                                    aircraft_model=self.aircraft_model,
-                                                   vertiport_id=self.arrival_vertiport_id)
+                                                   vertiport_id=self.destination_vertiport_id)
 
         if shared_charger:
             used_charger_resource.release(selected_charging_request)
         else:
-            self.vertiport_manager.vertiports[self.arrival_vertiport_id].charger_resource.release(charging_request)
+            self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource.release(charging_request)
 
         self.event_saver.save_turnaround_info(charging_location=parking_space.resource_id,
                                               agent_id=self.tail_number,
                                               agent_type='aircraft',
                                               aircraft_model=self.aircraft_model,
-                                              vertiport_id=self.arrival_vertiport_id,)
+                                              vertiport_id=self.destination_vertiport_id)
 
     @staticmethod
     def calc_soc_from_charge_time(charge_time: int, initial_soc: int, df: pd.DataFrame) -> int:
@@ -410,7 +417,7 @@ class Aircraft:
         ----------
         charge_time: int
             Time between the current time and the charging start time in miliseconds.
-        initial_soc: int
+        soc: int
             Initial soc level of the aircraft.
         df: pd.DataFrame
             Dataframe that contains the soc levels and the time information.
@@ -436,8 +443,8 @@ class Aircraft:
         """
         if operation == 'charge':
             charge_time = self.env.now - self.charging_start_time
-            charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.arrival_vertiport_id]
-            final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.initial_soc, df=charge_lookup_table)
+            charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
+            final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.soc, df=charge_lookup_table)
             self.current_soc = min(100, final_soc)
         elif operation == 'discharge':
             self.current_soc = new_soc
@@ -460,11 +467,9 @@ class Aircraft:
             waypoint_lat_lng = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
 
             # Save location and time information
-            self.event_saver.save_airspace_location_time_info(agent_id=self.tail_number,
-                                                              agent_type='aircraft',
-                                                              aircraft_model=self.aircraft_model,
-                                                              waypoint_lat_lng=waypoint_lat_lng,
-                                                              waypoint_id=waypoint_id)
+            self.event_saver.save_agent_location(agent_id=self.tail_number,
+                                                 agent_type='aircraft',
+                                                 location_id=waypoint_id)
         
         yield self.env.process(self.vertiport_manager.simulate_aircraft_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)

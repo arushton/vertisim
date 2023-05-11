@@ -6,6 +6,7 @@ from utils.layout_layer_for_unfolded import save_vertiport_layout_layer_for_unfo
 from utils.read_files import read_input_file
 from utils.helpers import check_if_dataframe_is_empty
 from utils.haversine import haversine_dist
+from collections import defaultdict
 
 
 class VertiportLayout:
@@ -31,6 +32,7 @@ class VertiportLayout:
         self.num_taxiway_nodes = self.get_num_taxi_nodes()
         self.num_edges = self.get_num_edges()
         self.terminal_airspace_radius = self.compute_terminal_airspace_radius()
+        self.vertiport_element_locations = self.get_vertiport_element_locations()
         save_vertiport_layout_layer_for_unfolded(df1=self.fato_lat_lngs,
                                                  df2=self.park_lat_lngs,
                                                  df3=self.inters_lat_lngs,
@@ -53,10 +55,11 @@ class VertiportLayout:
         df = self.import_vertiport_layout()
         self.fato_ids = np.array(df[df['fato_nodes'].notna()]['fato_nodes'])
         self.fato_nodes = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_x', 'fato_y', 'fato_diameter_ft']]
-        self.approach_fix_lat_lng = df[df['fato_nodes'].notna()][['fato_nodes', 'approach_fix_lat', 'approach_fix_lng']]
+        self.approach_fix_lat_lng = df[df['fato_nodes'].notna()][['fato_nodes', 'approach_fix_nodes', 'approach_fix_lat', 
+                                                                  'approach_fix_lng']]
         self.departure_fix_lat_lng = df[df['fato_nodes'].notna()][
-            ['fato_nodes', 'departure_fix_lat', 'departure_fix_lng']]
-
+            ['fato_nodes', 'departure_fix_nodes', 'departure_fix_lat', 'departure_fix_lng']]
+        
         self.parking_pad_ids = np.array(df[df['parking_pad_nodes'].notna()]['parking_pad_nodes'])
         self.parking_pad_nodes = df[df['parking_pad_nodes'].notna()][
             ['parking_pad_nodes', 'parking_pad_x', 'parking_pad_y', 'parking_pad_diameter_ft']]
@@ -86,8 +89,41 @@ class VertiportLayout:
         self.boarding_gate_lat_lngs = df[df['boarding_gate_nodes'].notna()][
             ['boarding_gate_nodes', 'boarding_gate_lat', 'boarding_gate_lng']]
         self.boarding_gate_lat_lngs.set_index('boarding_gate_nodes', inplace=True)
+
+
         self.vertiport_height = df['height_m'].iloc[0]
-    
+
+    def get_vertiport_element_locations(self) -> dict:
+        """
+        Returns a dictionary of vertiport elements and their locations
+        """
+        vertiport_elements = defaultdict(dict)
+        for node in self.fato_lat_lngs.reset_index().values:
+            vertiport_elements[node[0]] = (node[1], node[2])
+
+        for node in self.park_lat_lngs.reset_index().values:
+            vertiport_elements[node[0]] = (node[1], node[2])
+
+        for node in self.approach_fix_lat_lng.reset_index().values:
+            vertiport_elements[node[2]] = (node[3], node[4])
+
+        for node in self.departure_fix_lat_lng.reset_index().values:
+            vertiport_elements[node[2]] = (node[3], node[4])
+
+        for node in self.inters_lat_lngs.reset_index().values:
+            vertiport_elements[node[0]] = (node[1], node[2])
+
+        for node in self.vert_door_lat_lngs.reset_index().values:
+            vertiport_elements[node[0]] = (node[1], node[2])
+
+        for node in self.boarding_gate_lat_lngs.reset_index().values:
+            vertiport_elements[node[0]] = (node[1], node[2])
+
+        for node in self.waiting_room_lat_lngs.reset_index().values:
+            vertiport_elements[node[0]] = (node[1], node[2])
+        return vertiport_elements
+
+
     def get_num_fato(self) -> int:
         return len(self.fato_ids)
 

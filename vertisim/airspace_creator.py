@@ -76,9 +76,9 @@ class AirspaceCreator:
         for flight_direction, num_waypoints in self.num_waypoints_per_airlink.items():
             for i in range(num_waypoints):
                 if i == num_waypoints-1:
-                    waypoint_ids[flight_direction].append(f'holding_unit_{flight_direction}')
+                    waypoint_ids[flight_direction].append(f'{flight_direction}_holding_unit')
                 else:
-                    waypoint_ids[flight_direction].append(f'waypoint_{flight_direction}_{str(i)}')
+                    waypoint_ids[flight_direction].append(f'{flight_direction}_waypoint_{str(i)}')
         return waypoint_ids
 
 

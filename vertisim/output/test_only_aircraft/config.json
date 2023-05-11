@@ -20,8 +20,8 @@
         "aircraft_schedule_file_name": null,
         "passenger_schedule_file_name": null,
         "demand_probabilities": [
-            0.7,
-            0.3
+            0.5,
+            0.5
         ],
         "vertiports": {
             "LAX": {
@@ -92,7 +92,7 @@
         "aircraft_model": "jobyS4",
         "pax": 4,
         "range": 150,
-        "initial_soc": 20,
+        "soc": 20,
         "battery_capacity": 160,
         "ground_taxi_speed": 3.67,
         "time_passenger_embark_disembark": 0,
