@@ -27,7 +27,7 @@ class AirspaceCreator:
         # Convert latitude and longitude to radians
         lat1_rad, lon1_rad = np.radians(lat1), np.radians(lon1)
         lat2_rad, lon2_rad = np.radians(lat2), np.radians(lon2)
-        
+
         waypoints = []
         for i in range(1, num_waypoints + 1):
             f = i / (num_waypoints + 1)
@@ -40,8 +40,7 @@ class AirspaceCreator:
             lon_rad = np.arctan2(y, x)
             lat, lon = np.degrees(lat_rad), np.degrees(lon_rad)
             waypoints.append((lat, lon))
-        # links = [(waypoints[i], waypoints[i + 1]) for i in range(len(waypoints) - 1)]
-        return waypoints
+        return [(lat1, lon1)] + waypoints + [(lat2, lon2)]
 
     
     def determine_num_waypoints(self) -> Dict: # vertiport_distances: pd.DataFrame
@@ -74,11 +73,12 @@ class AirspaceCreator:
     def create_waypoint_ids(self):
         waypoint_ids = defaultdict(list)
         for flight_direction, num_waypoints in self.num_waypoints_per_airlink.items():
+            origin = flight_direction.split('_')[0]
+            destination = flight_direction.split('_')[1]
+            waypoint_ids[flight_direction].append(self.vertiports[origin].vertiport_layout.departure_fix_lat_lng.departure_fix_nodes.iloc[0])
             for i in range(num_waypoints):
-                if i == num_waypoints-1:
-                    waypoint_ids[flight_direction].append(f'{flight_direction}_holding_unit')
-                else:
-                    waypoint_ids[flight_direction].append(f'{flight_direction}_waypoint_{str(i)}')
+                waypoint_ids[flight_direction].append(f'{flight_direction}_waypoint_{str(i)}')
+            waypoint_ids[flight_direction].append(self.vertiports[destination].vertiport_layout.approach_fix_lat_lng.approach_fix_nodes.iloc[0])
         return waypoint_ids
 
 

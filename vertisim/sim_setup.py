@@ -80,7 +80,8 @@ class SimSetup:
         Creates the vertiport layouts and adds them to the network_and_demand dictionary
         """
         # Create vertiport layouts
-        vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand)
+        vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand,
+                                                     airspace_params=self.airspace_params)
         if self.sim_params['verbose']:
             print("Success: Vertiport layout(s) created.")
         return vertiport_layouts

@@ -467,6 +467,9 @@ class Aircraft:
         # Get the airlink resources for the flight direction
         airlink_resources = self.vertiport_manager.airspace.airlink_resources[flight_direction]
 
+        # Check if the aircraft on the approach or departure fix. These are the edge of the airspace.
+        
+
         # Find the current location of the aircraft in the airlink resources
         current_location_index = None
         for index, (waypoint_id, _) in enumerate(airlink_resources.items()):

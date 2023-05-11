@@ -4,13 +4,13 @@ from collections import defaultdict
 
 class Airspace:
     def __init__(self, env: simpy.Environment(), 
-                 holding_unit_capacity: int = 100, 
+                 vertiports: Dict = None,
                  airlink_capacity: int = 1,
                  airlink_segment_length_miles: float = 0.25,
                  waypoint_ids: Dict = None,
                  waypoint_locations: Dict = None):
         self.env = env
-        self.holding_unit_capacity = holding_unit_capacity
+        self.vertiports = vertiports
         self.airlink_capacity = airlink_capacity
         self.airlink_segment_length_miles = airlink_segment_length_miles
         self.waypoint_ids = waypoint_ids
@@ -20,10 +20,14 @@ class Airspace:
     def create_airlink_resources(self):
         airlink_resources = defaultdict(dict)
         for flight_direction, waypoint_id_list in self.waypoint_ids.items():
+            origin = flight_direction.split('_')[0]
+            destination = flight_direction.split('_')[1]
             for waypoint_id in waypoint_id_list:
-                # The last one (holding unit) will have capacity of holding_unit_capacity
-                if waypoint_id == waypoint_id_list[-1]:
-                    airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.holding_unit_capacity)
+                # The last one (holding unit -approach departure fixes) will have capacity of holding_unit_capacity
+                if waypoint_id == waypoint_id_list[0]:
+                    airlink_resources[flight_direction][waypoint_id] = self.vertiports[origin].departure_fix_resource
+                elif waypoint_id == waypoint_id_list[-1]:
+                    airlink_resources[flight_direction][waypoint_id] = self.vertiports[destination].arrival_fix_resource
                 else:
                     airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.airlink_capacity)
         return airlink_resources

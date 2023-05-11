@@ -49,6 +49,7 @@ network_and_demand = {
     # Input specifications for each vertiport.
         'LAX': {
             'layout': 'clover_1_fato_4_park_lax',
+            'holding_unit_capacity': 20,            
             'num_security_check_servers' : 4,
             'num_chargers': 4,
             'charger_max_charge_rate': 480,  # kW
@@ -106,6 +107,7 @@ network_and_demand = {
         },
         'DTLA': {
             'layout': 'clover_1_fato_4_park_dtla',
+            'holding_unit_capacity': 20,
             'num_security_check_servers' : 4,
             'num_chargers': 4,
             'charger_max_charge_rate': 480,  # kW
@@ -147,7 +149,6 @@ network_and_demand = {
 airspace_params = {
     'airspace_layout_file_path': None,
     'airlink_capacity': 1,
-    'holding_unit_capacity': 100,  # TODO: Each vertiport should define this.
     'airlink_segment_length': 0.25  # miles
 }
 
