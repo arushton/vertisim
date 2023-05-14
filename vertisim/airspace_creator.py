@@ -5,8 +5,9 @@ from collections import defaultdict
 import pandas as pd # For type hinting
 
 class AirspaceCreator:
-    def __init__(self, vertiports: Dict, airlink_segment_length_miles: float = 0.25, vertiport_distances: pd.DataFrame = None):
+    def __init__(self, vertiports: Dict, airspace_layout_file_path: str, airlink_segment_length_miles: float = 0.25, vertiport_distances: pd.DataFrame = None):
         self.vertiports = vertiports
+        self.airspace_layout_file_path = airspace_layout_file_path
         self.airlink_segment_length_miles = airlink_segment_length_miles
         self.vertiport_distances = vertiport_distances
         self.num_waypoints_per_airlink = self.determine_num_waypoints()

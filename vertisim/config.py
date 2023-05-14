@@ -32,6 +32,11 @@ class VertiportConfig:
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
+        self.entity_resources = self.create_entity_resources()
+
+    def create_entity_resources(self):
+        entity_resources = defaultdict(lambda: defaultdict(list))
+
 
     def check_charger_resource_type(self):
         # Based on the charger resource specification, this method changes the structure of the parking pads.
@@ -72,7 +77,7 @@ class VertiportConfig:
             print("Currently, skyport simulator is not able to run without a parking pad.")
             return
         # Create a store for parking spaces
-        parking_space_store = simpy.Store(self.env, capacity=self.vertiport_layout.num_parking_pad)
+        parking_space_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_parking_pad)
         # Create a dictionary for the shared charger combination.
         shared_charger_resources = self.create_charger_resources(self.self.vertiport_data['shared_charger_sets'])
 
@@ -104,14 +109,14 @@ class VertiportConfig:
 
         # If there is no parking space is defined then use FATO as parking space
         if self.vertiport_layout.num_parking_pad == 0:
-            parking_space_store = simpy.Store(self.env, capacity=self.vertiport_layout.num_fato)
+            parking_space_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_fato)
             for fato in self.vertiport_layout.fato_ids:
                 parking_pad = ParkingPadAndChargerResource(parking_space_id=fato)
                 parking_space_store.put(parking_pad)
             return parking_space_store
         # Add parking space IDs to parking_space_store
         # Create a store for parking spaces
-        parking_space_store = simpy.Store(self.env, capacity=self.vertiport_layout.num_parking_pad)
+        parking_space_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_parking_pad)
         for parking_pad_id in self.vertiport_layout.parking_pad_ids:
             parking_pad = ParkingPadAndChargerResource(parking_space_id=parking_pad_id)
             parking_space_store.put(parking_pad)
@@ -154,7 +159,7 @@ class VertiportConfig:
         # Create a store for waiting rooms
         exclude_origin = [dest for dest in self.vertiport_ids if dest != self.vertiport_id]
         for dest in exclude_origin:
-            waiting_room_stores[f'waiting_room_{dest}'] = simpy.Store(self.env)
+            waiting_room_stores[dest] = simpy.Store(self.env)
         return waiting_room_stores
 
 

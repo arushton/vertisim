@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils.layout_layer_for_unfolded import save_vertiport_layout_layer_for_unfolded
 from utils.read_files import read_input_file
-from utils.helpers import check_if_dataframe_is_empty
+from utils.helpers import check_if_dataframe_is_empty, convert_to_list
 from utils.haversine import haversine_dist
 from collections import defaultdict
 
@@ -32,7 +32,8 @@ class VertiportLayout:
         self.num_taxiway_nodes = self.get_num_taxi_nodes()
         self.num_edges = self.get_num_edges()
         self.terminal_airspace_radius = self.compute_terminal_airspace_radius()
-        self.vertiport_element_locations = self.get_vertiport_element_locations()
+        self.vertiport_element_locations = self.get_structural_entity_locations()
+        self.structural_entity_groups = self.get_structural_entity_groups()
         save_vertiport_layout_layer_for_unfolded(df1=self.fato_lat_lngs,
                                                  df2=self.park_lat_lngs,
                                                  df3=self.inters_lat_lngs,
@@ -53,17 +54,21 @@ class VertiportLayout:
         Get values from input file
         """
         df = self.import_vertiport_layout()
-        self.fato_ids = np.array(df[df['fato_nodes'].notna()]['fato_nodes'])
+        self.fato_ids = list(df[df['fato_nodes'].notna()]['fato_nodes'])
         self.fato_nodes = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_x', 'fato_y', 'fato_diameter_ft']]
         self.approach_fix_lat_lng = df[df['fato_nodes'].notna()][['fato_nodes', 'approach_fix_nodes', 'approach_fix_lat', 
                                                                   'approach_fix_lng']]
+        # !!! This function only supports one approach fix node. This is used in vertiport manager.
+        self.approach_fix_node = self.approach_fix_lat_lng.approach_fix_nodes.iloc[0]
         self.departure_fix_lat_lng = df[df['fato_nodes'].notna()][
             ['fato_nodes', 'departure_fix_nodes', 'departure_fix_lat', 'departure_fix_lng']]
-        
-        self.parking_pad_ids = np.array(df[df['parking_pad_nodes'].notna()]['parking_pad_nodes'])
+        # !!! This function only supports one approach fix node. This is used in vertiport manager.
+        self.departure_fix_node = self.departure_fix_lat_lng.departure_fix_nodes.iloc[0]
+
+        self.parking_pad_ids = list(df[df['parking_pad_nodes'].notna()]['parking_pad_nodes'])
         self.parking_pad_nodes = df[df['parking_pad_nodes'].notna()][
             ['parking_pad_nodes', 'parking_pad_x', 'parking_pad_y', 'parking_pad_diameter_ft']]
-        self.taxiway_node_ids = np.array(df[df['taxi_ramp_intersection_nodes'].notna()]['taxi_ramp_intersection_nodes'])
+        self.taxiway_node_ids = list(df[df['taxi_ramp_intersection_nodes'].notna()]['taxi_ramp_intersection_nodes'])
         self.taxiway_nodes = df[df['taxi_ramp_intersection_nodes'].notna()][
             ['taxi_ramp_intersection_nodes', 'inters_x', 'inters_y', 'inters_diameter_ft']]
         self.edges = df[df['origin_node'].notna()][['origin_node', 'destination_node']]
@@ -80,20 +85,22 @@ class VertiportLayout:
         self.inters_lat_lngs.set_index('taxi_ramp_intersection_nodes', inplace=True)
 
         self.vert_door_lat_lngs = df[df['vert_door_nodes'].notna()][['vert_door_nodes', 'vert_door_lat', 'vert_door_lng']]
+        self.vert_door_node = self.vert_door_lat_lngs.vert_door_nodes.iloc[0]        
         self.vert_door_lat_lngs.set_index('vert_door_nodes', inplace=True)
 
         self.waiting_room_lat_lngs = df[df['waiting_room_nodes'].notna()][
             ['waiting_room_nodes', 'waiting_room_lat', 'waiting_room_lng']]
-        self.waiting_room_lat_lngs.set_index('waiting_room_nodes', inplace=True)
+        self.waiting_room_node = self.waiting_room_lat_lngs.waiting_room_nodes.iloc[0]          
+        self.waiting_room_lat_lngs.set_index('waiting_room_nodes', inplace=True)      
 
         self.boarding_gate_lat_lngs = df[df['boarding_gate_nodes'].notna()][
             ['boarding_gate_nodes', 'boarding_gate_lat', 'boarding_gate_lng']]
+        self.boarding_gate_node = self.boarding_gate_lat_lngs.boarding_gate_nodes.iloc[0]           
         self.boarding_gate_lat_lngs.set_index('boarding_gate_nodes', inplace=True)
-
 
         self.vertiport_height = df['height_m'].iloc[0]
 
-    def get_vertiport_element_locations(self) -> dict:
+    def get_structural_entity_locations(self) -> dict:
         """
         Returns a dictionary of vertiport elements and their locations
         """
@@ -122,7 +129,18 @@ class VertiportLayout:
         for node in self.waiting_room_lat_lngs.reset_index().values:
             vertiport_elements[node[0]] = (node[1], node[2])
         return vertiport_elements
-
+    
+    def get_structural_entity_groups(self) -> dict:
+        structural_entity_groups = defaultdict(list)
+        structural_entity_groups['fato'] = convert_to_list(self.fato_ids)
+        structural_entity_groups['parking_pad'] = convert_to_list(self.parking_pad_ids)
+        structural_entity_groups['taxiway_node'] = convert_to_list(self.taxiway_node_ids)
+        structural_entity_groups['approach_fix_node'] = convert_to_list(self.approach_fix_node)
+        structural_entity_groups['departure_fix_node'] = convert_to_list(self.departure_fix_node)
+        structural_entity_groups['vertiport_entrance'] = convert_to_list(self.vert_door_node)
+        structural_entity_groups['waiting_room'] = convert_to_list(self.waiting_room_node)
+        structural_entity_groups['boarding_gate'] = convert_to_list(self.boarding_gate_node)
+        return structural_entity_groups
 
     def get_num_fato(self) -> int:
         return len(self.fato_ids)

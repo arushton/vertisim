@@ -27,6 +27,7 @@ def create_airspace_layout(env: object,
     
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
+                                       airspace_layout_file_path=airspace_params['airspace_layout_file_path'],
                                        airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                                        vertiport_distances=vertiport_distances)
     return Airspace(env=env,

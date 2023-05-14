@@ -25,9 +25,9 @@ class Scheduler:
         Checks all of the waiting rooms. If there are passengers who are waiting
         more than max_flight_waiting_time, it creates a flight for those passengers immediately.
         """
-        departing_passenger_groups = defaultdict(list)
-        for vertiport_id, vertiport in self.vertiports.items():
-            for waiting_room, wr_store in vertiport.waiting_room_stores.items():
+        departing_passenger_groups = defaultdict(lambda: defaultdict(list))
+        for origin, vertiport in self.vertiports.items():
+            for destination, wr_store in vertiport.waiting_room_stores.items():
                 num_agents_in_the_wr = len(wr_store.items)
                 if num_agents_in_the_wr > 0:
                     for waiting_passenger in wr_store.items:
@@ -35,7 +35,7 @@ class Scheduler:
                             # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
                             num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
                             departing_passengers = Scheduler.collect_departing_passengers(wr_store, num_departing_passengers)
-                            departing_passenger_groups[vertiport].extend(departing_passengers)
+                            departing_passenger_groups[origin][destination].extend(departing_passengers)
 
         return departing_passenger_groups
 
@@ -124,7 +124,7 @@ def get_available_aircraft_can_complete_mission(current_waiting_room, available_
     #
     #
     #
-    #     if not self.interuptive_approach:
+    #     if not self.charge_interruption:
     #         return self.noninteruptive_aircraft_assignment_strategy(current_waiting_room, available_aircraft_store,
     #                                                            mission_length)
     #     else:

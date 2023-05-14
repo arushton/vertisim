@@ -1,8 +1,9 @@
 import random
 import numpy as np
 from utils.units import sec_to_ms
-from typing import List, Union
+from typing import List, Union, Dict, Any
 import re
+import pandas as pd # For type hinting
 
 
 def set_seed(seed=None):
@@ -272,6 +273,54 @@ def get_dict_vals_as_list(llist, key) -> List:
     :param key:
     """
     return [d[key] for d in llist]
+
+
+def check_whether_node_exists(node_dict: Dict, node_id: Any):
+    """
+    Check whether a node exists in a dictionary of nodes.
+
+    :param node_dict:
+    :param node_id:
+    """
+    return node_id in node_dict.keys()
+
+
+def check_if_none_exists(column: pd.Series) -> bool:
+    """
+    Check whether a column in a dataframe contains None values.
+
+    :param df:
+    :param column_name:
+    """
+    return column.isnull().values.any()
+
+
+def check_if_all_none(column: pd.Series) -> bool:
+    """
+    Check whether a column in a dataframe contains only None values.
+
+    :param df:
+    :param column_name:
+    """
+    return column.isnull().values.all()
+
+def convert_to_list(x: Any):
+    """
+    Convert an object to a list.
+    """
+    if isinstance(x, list):
+        return x
+    elif isinstance(x, tuple):
+        return list(x)
+    elif isinstance(x, np.ndarray):
+        return x.tolist()
+    elif isinstance(x, str):
+        return [x]
+    else:
+        raise TypeError(
+            f'Object is not a list, tuple or numpy array. The object is of type: {type(x)}. It is not supported.'
+        )
+
 
 
 # def nested_dict_filter_values(d, depth, value):

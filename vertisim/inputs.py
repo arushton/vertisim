@@ -16,7 +16,8 @@ sim_params = {
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds
-    'interuptive_approach': False,
+    'charge_interruption': False,
+    'step_by_step_sim': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
@@ -129,18 +130,8 @@ network_and_demand = {
             'aircraft_arrival_process': {
                 'num_initial_aircraft_in_vertiport': 4,
                 'initial_arrival_queue_state': 0
-                # 'aircraft_interarrival_constant': None,
-                # 'num_aircraft': 200,
-                # 'num_passengers': None,
-                # 'aircraft_arrival_distribution': {
-                #     'distribution_name': 'expon',
-                #     'parameters': {
-                #         'scale': 3600/14  # seconds
-                #     },
-                #     'max_val_in_dist': None,  # seconds
-                # }
             }
-        }
+        }     
     }
 }
 
@@ -174,7 +165,7 @@ passenger_params = {
     #     },
     #     'max_val_in_dist': 60
     # },
-    'waiting_room_to_boarding_gate_walking_time_constant': 31.9,  # secs
+    'waiting_room_to_boarding_gate_walking_time_constant': 30,  # secs
     'waiting_room_to_boarding_gate_walking_time_dist': None,
     'boarding_gate_to_aircraft_time_constant': 19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
@@ -216,8 +207,8 @@ aircraft_params = {
     # FLIGHT SPEED PARAMETERS
     # -----------------
     'cruise_speed': 120,  # mph
-    'vertical_takeoff_speed': 5,  # mph # TODO
-    'vertical_landing_speed': 5,  # mph
+    'vertical_takeoff_speed': 5.5,  # mph # TODO
+    'vertical_landing_speed': 5.5,  # mph
     'climb_speed': 60,  # mph
     'descent_speed': 60,  # mph
 
