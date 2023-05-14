@@ -10,8 +10,9 @@ from collections import defaultdict
 
 
 class VertiportLayout:
-    def __init__(self, file_path: str, layout_type: str, vertiport_id: str):
+    def __init__(self, file_path: str, output_folder_path: str, layout_type: str, vertiport_id: str):
         self.file_path = file_path
+        self.output_folder_path = output_folder_path
         self.layout_type = layout_type
         self.vertiport_id = vertiport_id
         self.G = nx.Graph()
@@ -38,7 +39,8 @@ class VertiportLayout:
                                                  df2=self.park_lat_lngs,
                                                  df3=self.inters_lat_lngs,
                                                  height=self.vertiport_height,
-                                                 layout_type=self.layout_type)
+                                                 layout_type=self.layout_type,
+                                                 output_folder_path=self.output_folder_path)
 
     def import_vertiport_layout(self) -> pd.DataFrame:
         """

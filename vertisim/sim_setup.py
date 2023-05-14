@@ -50,7 +50,6 @@ class SimSetup:
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
         self.airspace = self.create_airspace()      
         self.node_locations = self.build_node_locations_dict()
-        print(self.node_locations)
         self.structural_entity_groups = self.merge_structural_entity_groups()
         self.event_saver = self.create_event_saver()
         self.taxi_config = self.set_taxi_operations_config()
@@ -84,7 +83,8 @@ class SimSetup:
         Creates the vertiport layouts and adds them to the network_and_demand dictionary
         """
         # Create vertiport layouts
-        vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand)
+        vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand,
+                                                     output_folder_path=self.output_params['output_folder_path'])
         if self.sim_params['verbose']:
             print("Success: Vertiport layout(s) created.")
         return vertiport_layouts

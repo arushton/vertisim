@@ -4,6 +4,7 @@ import geog
 import geopandas as gpd
 import pandas as pd
 import os
+from pathlib import Path
 
 
 def circle(row, object_name):
@@ -39,14 +40,16 @@ def create_vertiport_layout_layer_for_unfolded(df1, df2, df3, height, fato='fato
     return concatenated_frame
 
 
-def save_vertiport_layout_layer_for_unfolded(df1, df2, df3, height, layout_type):
+def save_vertiport_layout_layer_for_unfolded(df1, df2, df3, height, layout_type, output_folder_path):
     concatenated_frame = create_vertiport_layout_layer_for_unfolded(df1, df2, df3, height)
     gdp = gpd.GeoDataFrame(concatenated_frame, geometry='polygon')
-    os.makedirs('output', exist_ok=True)
-    layout_path = f'output/{layout_type}.json'
-    file_path = os.path.join(os.getcwd(), layout_path)
-    if not os.path.exists(file_path):
-
-        # print(f"removed {file_path}")
-        gdp.to_file(filename=f'output/{layout_type}.json', driver="GeoJSON")
-    # print(f"Saved {layout_path}")
+    path_obj = Path(output_folder_path)
+    # Navigate two levels up
+    parent_dir = path_obj.parent.parent
+    # Get the string representation of the parent directory
+    parent_dir_str = str(parent_dir)
+    output_folder_path = f'{parent_dir_str}/output'
+    os.makedirs(output_folder_path, exist_ok=True)
+    layout_path = f'{parent_dir_str}/{layout_type}.json'
+    file_path = os.path.join(output_folder_path, f'{layout_type}.json')
+    gdp.to_file(filename=file_path, driver="GeoJSON")

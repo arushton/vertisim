@@ -3,7 +3,7 @@ from sim_setup import SimSetup
 import os
 from pathlib import Path
 
-cwd = os.getcwd()
+cwd = Path.cwd()
 
 # ------------------------ Inputs ------------------------
 # Simulation parameters
@@ -32,8 +32,8 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{cwd}/input/network_of_2_vertiports.csv',
-    'vertiport_layout_file_path': f'{cwd}/input/skyport_layouts/skyport_layout.xls',
+    'vertiport_network_file_path': f'{str(cwd)}/input/network_of_2_vertiports.csv',
+    'vertiport_layout_file_path': f'{str(cwd)}/input/skyport_layouts/skyport_layout.xls',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -237,14 +237,14 @@ aircraft_params = {
         'max_val_in_dist': None,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
-    'aircraft_energy_consumption_data_folder_path': f'{cwd}/input/aircraft_energy_consumption',
+    'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/input/aircraft_energy_consumption',
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
     'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
     'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 
 output_params = {
-    'output_folder_path': f'{cwd}/output/test_only_aircraft',
+    'output_folder_path': f'{str(cwd.parent.parent)}/output/test_only_aircraft',
     'config_output_file_name': 'config',
     'performance_metrics_output_file_name': 'performance_metrics',
 }
