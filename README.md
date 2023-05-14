@@ -46,9 +46,3 @@ b) Run many configuration serially: `python3 loop_runner.py` <br>
 c) Run many configuration in parallel (CPU parallelization by multiprocessing): `python3 loop_runner_multiprocess.py`
 
 
-# TODO
-1. Charging process interruption.
-2. Battery charging model for multi-aircraft type scenario.
-3. Passenger - aircraft assignment problem in the case of more than one type of aircraft.
-4. Documentation
-
