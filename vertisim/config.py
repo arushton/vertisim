@@ -32,10 +32,41 @@ class VertiportConfig:
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
-        self.entity_resources = self.create_entity_resources()
+        self.vertiport_resource_states = self.get_resource_states()
 
-    def create_entity_resources(self):
-        entity_resources = defaultdict(lambda: defaultdict(list))
+    def get_resource_states(self):
+        entity_resources = defaultdict(lambda: defaultdict(dict))
+        for fato in self.fato_store.items:
+            # entity_resources[self.vertiport_id][fato.resource_id]['fato_resource'] = fato.fato_resource
+            entity_resources[self.vertiport_id][fato.resource_id]['num_jobs_in_service'] = fato.fato_resource.count
+            entity_resources[self.vertiport_id][fato.resource_id]['num_jobs_in_queue'] = len(fato.fato_resource.queue)
+
+        if self.parking_space_store is not None:
+            # entity_resources[self.vertiport_id]['PARK']['parking_space_store'] = self.parking_space_store
+            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_service'] = len(self.parking_space_store.items)
+            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_queue'] = len(self.parking_space_store.get_queue)
+
+        if self.taxiway_node_store is not None:
+            # entity_resources[self.vertiport_id]['TAXI']['taxiway_node_store'] = self.taxiway_node_store
+            entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
+            entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
+
+        for destination, waiting_room_store in self.waiting_room_stores.items():
+            entity_resources[self.vertiport_id]['WAITING_ROOM'][destination] = {
+                # 'waiting_room_store': waiting_room_store,
+                'num_passengers': len(waiting_room_store.items),
+            }
+        # entity_resources[self.vertiport_id]['ARRIVAL_FIX']['arrival_fix_resource'] = self.arrival_fix_resource
+        entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_service'] = self.arrival_fix_resource.count
+        entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
+
+        # entity_resources[self.vertiport_id]['DEPARTURE_FIX']['departure_fix_resource'] = self.departure_fix_resource
+        entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_service'] = self.departure_fix_resource.count
+        entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
+
+        return entity_resources
+        
+
 
 
     def check_charger_resource_type(self):

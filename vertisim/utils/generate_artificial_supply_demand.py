@@ -81,7 +81,8 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
     destination_vertiport_id = [vertiport_id for _ in range(num_aircraft)]
     passengers_onboard = [[] for _ in range(num_aircraft)]
     serviced_time_at_the_location = [0 for _ in range(num_aircraft)]
-    priority = [0 for _ in range(num_aircraft)]
+    priority = [1 for _ in range(num_aircraft)]
+    speed = [0 for _ in range(num_aircraft)]
 
 
     return pd.DataFrame({'aircraft_arrival_time': aircraft_arrival_times,
@@ -90,6 +91,7 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
                          'origin_vertiport_id': origin_vertiport_id,
                          'destination_vertiport_id': destination_vertiport_id,
                          'soc': soc,
+                         'speed': speed,
                          'passengers_onboard': passengers_onboard,
                          'location': location,
                          'serviced_time_at_the_location': serviced_time_at_the_location,

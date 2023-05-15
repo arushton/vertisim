@@ -171,6 +171,10 @@ class AircraftArrivalSetup:
                 aircraft_arrival_schedule.loc[
                     aircraft_arrival_schedule.tail_number == tail_number, 'soc'].values[0]
             
+            speed = \
+                aircraft_arrival_schedule.loc[
+                    aircraft_arrival_schedule.tail_number == tail_number, 'speed'].values[0]
+            
             # Get the arrival vertiport id of the aircraft.
             origin_vertiport_id = \
                 aircraft_arrival_schedule.loc[
@@ -215,6 +219,7 @@ class AircraftArrivalSetup:
                 # Simulate the aircraft.
                 self.initiate_aircraft_arrival(tail_number=tail_number,
                                             soc=soc,
+                                            speed=speed,
                                             origin_vertiport_id=origin_vertiport_id,
                                             destination_vertiport_id=destination_vertiport_id,
                                             passengers_onboard=passengers_onboard,
@@ -229,6 +234,7 @@ class AircraftArrivalSetup:
     def initiate_aircraft_arrival(self, 
                                   tail_number: str,
                                   soc: int,
+                                  speed: int,
                                   origin_vertiport_id: str,
                                   destination_vertiport_id: str,
                                   passengers_onboard: List,
@@ -246,12 +252,16 @@ class AircraftArrivalSetup:
                             serviced_time_at_the_location=serviced_time_at_the_location,
                             departure_time=departure_time,
                             soc=soc,
+                            speed=speed,
                             arrival_time=self.env.now,
                             priority=priority,
                             aircraft_params=self.aircraft_params,
                             vertiport_manager=self.vertiport_manager,
                             event_saver=self.event_saver
                             )
+        
+        # Save aircraft in aircraft_agent dictionary.
+        self.vertiport_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
 
         # Based on aircraft initial location, initiate the related process.    
         if aircraft.location in self.structural_entity_groups['fato']:

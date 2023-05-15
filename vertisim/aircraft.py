@@ -18,6 +18,7 @@ class Aircraft:
                  destination_vertiport_id,
                  passengers_onboard, 
                  soc,
+                 speed,
                  arrival_time, 
                  departure_time,
                  location,
@@ -29,6 +30,7 @@ class Aircraft:
         self.env = env
         self.tail_number = tail_number
         self._soc = soc
+        self.speed = speed
         self._origin_vertiport_id = origin_vertiport_id   
         self._destination_vertiport_id = destination_vertiport_id
         self._location = location
@@ -45,10 +47,12 @@ class Aircraft:
         self.assigned_fato_id = None
         self.assigned_fato_resource = None
         self.holding_time = None # event_saver.aircraft_arrival_queue_waiting_time keeps track of this for every aircraft at every vertiport
+        self.flight_direction = None
 
         self.arrival_fix_usage_request = None
         self.departure_fix_usage_request = None
         self.aircraft_fato_usage_request = None
+        self.parking_space_usage_request = None
 
 
         self.aircraft_model = aircraft_params['aircraft_model']
@@ -94,6 +98,17 @@ class Aircraft:
             self._soc = 100
         else:
             self._soc = value
+
+    @property
+    def speed(self):
+        return self._speed
+    
+    @speed.setter
+    def speed(self, value):
+        # if self._speed <= 0:
+        #     self._speed = 0
+        # else:
+        self._speed = value
 
     @property
     def origin_vertiport_id(self):
@@ -194,9 +209,13 @@ class Aircraft:
 
 
     def aircraft_landing_process(self, landing_fato_id):
-
+        self.location = 'APPROACH_PATH'
+        self.speed = self.descent_speed
         yield self.env.timeout(self.time_descend_transition)
+        self.speed = self.vertical_landing_speed
         yield self.env.timeout(self.time_hover_descend)
+        self.speed = 0
+
         self.location = landing_fato_id
         # Save landing information
         self.event_saver.save_agent_location(agent_id=self.tail_number,
@@ -209,6 +228,7 @@ class Aircraft:
         self.event_saver.save_agent_location(agent_id=self.tail_number,
                                              agent_type='aircraft',
                                              location_id=self.location)
+        self.flight_direction = None
 
     def taxi(self, 
              taxi_route: list, 
@@ -296,11 +316,13 @@ class Aircraft:
                 self.parking_space = None
                 self.parking_space_id = None
 
+            self.speed = self.ground_taxi_speed
             node_to_node_move_time = int(round(self.vertiport_manager.vertiports[vertiport_id].vertiport_layout.
                                                node_distances.loc[
                                                    first_node, last_node] / self.ground_taxi_speed * 1000))
             yield self.env.timeout(node_to_node_move_time)
 
+            self.speed = 0
             self.location = self.parking_space_id
 
             # Save park time
@@ -317,6 +339,8 @@ class Aircraft:
                 taxiway_nodes.append(taxiway_node)
 
             next_node = taxi_route.pop(0)
+
+            self.speed = self.ground_taxi_speed            
             # Move from first node to the next node over an edge
             node_to_node_move_time = int(round(self.vertiport_manager.vertiports[vertiport_id].vertiport_layout.
                                                node_distances.loc[
@@ -381,6 +405,7 @@ class Aircraft:
             yield self.env.timeout(node_to_node_move_time)
             
             self.location = last_node
+            self.speed = 0            
 
             # Save park time
             if operation_type == 'arrival':
@@ -393,6 +418,7 @@ class Aircraft:
             self.vertiport_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))
 
     def aircraft_take_off_process(self, take_off_fato_id):
+        self.departure_time = self.env.now
         self.location = take_off_fato_id
         self.event_saver.save_agent_location(agent_id=self.tail_number,
                                              agent_type='aircraft',
@@ -409,8 +435,11 @@ class Aircraft:
             self.event_saver.save_agent_location(agent_id=passenger.passenger_id,
                                                 agent_type='passenger',
                                                 location_id=self.location)
-            
+        
+        self.speed = self.vertical_takeoff_speed
+        self.location = 'DEPARTURE_PATH'
         yield self.env.timeout(self.time_hover_climb)
+        self.speed = self.climb_speed
         yield self.env.timeout(self.time_climb_transition)
 
         # Save location and time
@@ -453,6 +482,7 @@ class Aircraft:
         if current_location_index is None:
             raise ValueError(f"Aircraft's current location ({self.location}) not found in the airlink resources")
 
+        self.speed = self.cruise_speed
         # Start iterating the airlink resources from the current location
         for waypoint_id, resource in list(airlink_resources.items())[current_location_index:]:
             with resource.request() as req:

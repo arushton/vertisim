@@ -194,6 +194,14 @@ def get_passenger_ids_from_passenger_list(passenger_list):
     """
     return [passenger.passenger_id for passenger in passenger_list]
 
+def get_passenger_id_str_from_passenger_list(passenger_list):
+    """
+    Get passenger ids from a passenger list.
+    :param passenger_list:
+    :return:
+    """
+    return [f'passenger_{passenger.passenger_id}' for passenger in passenger_list]
+
 
 def calculate_passenger_consolidation_time(departing_passengers):
     """

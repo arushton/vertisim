@@ -207,7 +207,7 @@ aircraft_params = {
     # FLIGHT SPEED PARAMETERS
     # -----------------
     'cruise_speed': 120,  # mph
-    'vertical_takeoff_speed': 5.5,  # mph # TODO
+    'vertical_takeoff_speed': 5.5,  # mph
     'vertical_landing_speed': 5.5,  # mph
     'climb_speed': 60,  # mph
     'descent_speed': 60,  # mph

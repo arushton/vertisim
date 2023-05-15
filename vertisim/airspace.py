@@ -14,8 +14,10 @@ class Airspace:
         self.airlink_capacity = airlink_capacity
         self.airlink_segment_length_miles = airlink_segment_length_miles
         self.waypoint_ids = waypoint_ids
+        self.flight_directions = list(waypoint_ids.keys())
         self.waypoint_locations = waypoint_locations
         self.airlink_resources = self.create_airlink_resources()
+        self.airspace_resource_states = self.get_airspace_states()
 
     def create_airlink_resources(self):
         airlink_resources = defaultdict(dict)
@@ -31,3 +33,16 @@ class Airspace:
                 else:
                     airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.airlink_capacity)
         return airlink_resources
+    
+    def get_airspace_states(self):
+        return {
+            flight_direction: {
+                waypoint_id: {
+                    # 'waypoint_resource': airlink_resource,
+                    'num_jobs_in_service': airlink_resource.count,
+                    'num_jobs_in_queue': len(airlink_resource.queue)
+                }
+                for waypoint_id, airlink_resource in airlink_resources.items()
+            }
+            for flight_direction, airlink_resources in self.airlink_resources.items()
+        }

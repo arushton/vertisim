@@ -49,6 +49,7 @@ class VertiportManager:
         self.network_simulation = network_simulation
         self.node_locations = node_locations
         self.fixed_flight_schedule = None
+        self.aircraft_agents = {}
         # if not self.network_simulation:
         self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()
@@ -130,7 +131,7 @@ class VertiportManager:
         else:
             return max(available_fato_pads, key=available_fato_pads.get)
 
-    def request_fato(self, assigned_fato_resource: object, operation_type: str):
+    def request_fato(self, assigned_fato_resource: object, operation_type: str, priority: int = 1) -> object:
         """
         Requests the assigned fato pad resource from fato_store of vertiport manager
 
@@ -858,6 +859,7 @@ class VertiportManager:
                                                    fato_usage=-1)
 
         flight_direction = aircraft.origin_vertiport_id + '_' + aircraft.destination_vertiport_id
+        aircraft.flight_direction = flight_direction
         yield self.env.process(aircraft.fly_in_the_airspace(flight_direction=flight_direction))
         
     def departure_fix_request(self, aircraft):
