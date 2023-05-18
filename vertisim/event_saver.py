@@ -140,6 +140,46 @@ class EventSaver:
             else:
                 raise ValueError(f'Agent type {agent_type} is not supported')
 
+    def save_agent_state(self,
+                         agent: object,
+                         agent_type: str,
+                         event: str = None,
+                         altitude: float = None) -> None:
+        """
+        Saves the agent state
+        :param agent:
+        :param agent_type:
+        :param event:
+        """          
+        if self.sim_params['save_trajectories']:
+            time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                        sim_time=self.env.now)
+            time = self.is_time_overlapping(time=time, agent_type=agent_type)
+            if agent_type == 'aircraft':
+                self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent.tail_number}'
+                self.aircraft_agent_trajectory[time]['location'] = agent.location
+                self.aircraft_agent_trajectory[time]['speed'] = agent.speed
+                self.aircraft_agent_trajectory[time]['soc'] = agent.soc
+                self.aircraft_agent_trajectory[time]['priority'] = agent.priority
+                self.aircraft_agent_trajectory[time]['event'] = event
+                self.aircraft_agent_trajectory[time]['latitude'] = self.node_locations[agent.location][0]
+                self.aircraft_agent_trajectory[time]['longitude'] = self.node_locations[agent.location][1]  
+                if altitude:
+                    self.aircraft_agent_trajectory[time]['altitude'] = altitude
+                else:
+                    self.aircraft_agent_trajectory[time]['altitude'] = self.node_locations[agent.location][2]                         
+            elif agent_type == 'passenger':
+                self.passenger_agent_trajectory[time]['passenger_id'] = f'{agent_type}{agent.passenger_id}'
+                self.passenger_agent_trajectory[time]['latitude'] = self.node_locations[agent.location][0]
+                self.passenger_agent_trajectory[time]['longitude'] = self.node_locations[agent.location][1]
+                self.passenger_agent_trajectory[time]['altitude'] = self.node_locations[agent.location][2]
+                self.passenger_agent_trajectory[time]['location'] = agent.location
+                self.passenger_agent_trajectory[time]['event'] = event
+            else:
+                raise ValueError(f'Agent type {agent_type} is not supported')
+
+         
+
     def save_flight_info(self, 
                          origin_vertiport_id: Any, 
                          destination_vertiport_id: Any,

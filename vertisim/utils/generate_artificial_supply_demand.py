@@ -71,8 +71,10 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
         num_aircraft = aircraft_arrival_process['num_initial_aircraft_in_vertiport']
         interarrival_times = [0 for _ in range(num_aircraft)]
         soc = [max_init_soc for _ in range(num_aircraft)]
+        # TODO: These things are kind of hardcoded.
         parking_pad_ids = vertiport_layout.parking_pad_ids
         location = [f'{parking_pad_ids.pop()}' for _ in range(num_aircraft)]
+        altitude = [vertiport_layout.vertiport_height for _ in range(num_aircraft)]
 
 
     aircraft_arrival_times = cumulative_sum_array(interarrival_times)
@@ -91,6 +93,7 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
                          'origin_vertiport_id': origin_vertiport_id,
                          'destination_vertiport_id': destination_vertiport_id,
                          'soc': soc,
+                         'altitude': altitude,
                          'speed': speed,
                          'passengers_onboard': passengers_onboard,
                          'location': location,

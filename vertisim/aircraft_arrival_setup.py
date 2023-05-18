@@ -171,9 +171,14 @@ class AircraftArrivalSetup:
                 aircraft_arrival_schedule.loc[
                     aircraft_arrival_schedule.tail_number == tail_number, 'soc'].values[0]
             
-            speed = \
+            input_cruise_speed = \
                 aircraft_arrival_schedule.loc[
                     aircraft_arrival_schedule.tail_number == tail_number, 'speed'].values[0]
+            
+            # Get the altitude of the aircraft.
+            altitude = \
+                aircraft_arrival_schedule.loc[
+                    aircraft_arrival_schedule.tail_number == tail_number, 'altitude'].values[0]
             
             # Get the arrival vertiport id of the aircraft.
             origin_vertiport_id = \
@@ -206,20 +211,16 @@ class AircraftArrivalSetup:
                     aircraft_arrival_schedule.tail_number == tail_number, 'priority'].values[0]
 
             yield self.env.timeout(sec_to_ms(interarrival_time))
-
-            # TODO: Agent should be created anywhere in the simulation. vertiport_id key should be changed to location_id.
-            self.event_saver.save_agent_location(agent_id=tail_number,
-                                                 location_id=location,
-                                                 agent_type='aircraft')
                     
             if self.aircraft_arrival_schedule_file_path is not None:
                 yield self.env.process(self.scheduler.initiate_fixed_schedule_from_file()) 
             else:
-                yield self.env.process(                   
+                self.env.process(                   
                 # Simulate the aircraft.
                 self.initiate_aircraft_arrival(tail_number=tail_number,
                                             soc=soc,
-                                            speed=speed,
+                                            input_cruise_speed=input_cruise_speed,
+                                            altitude=altitude,
                                             origin_vertiport_id=origin_vertiport_id,
                                             destination_vertiport_id=destination_vertiport_id,
                                             passengers_onboard=passengers_onboard,
@@ -234,7 +235,8 @@ class AircraftArrivalSetup:
     def initiate_aircraft_arrival(self, 
                                   tail_number: str,
                                   soc: int,
-                                  speed: int,
+                                  input_cruise_speed: int,
+                                  altitude: int,
                                   origin_vertiport_id: str,
                                   destination_vertiport_id: str,
                                   passengers_onboard: List,
@@ -249,10 +251,11 @@ class AircraftArrivalSetup:
                             destination_vertiport_id=destination_vertiport_id,
                             passengers_onboard=passengers_onboard,
                             location=location,
+                            altitude=altitude,
                             serviced_time_at_the_location=serviced_time_at_the_location,
                             departure_time=departure_time,
                             soc=soc,
-                            speed=speed,
+                            input_cruise_speed=input_cruise_speed,
                             arrival_time=self.env.now,
                             priority=priority,
                             aircraft_params=self.aircraft_params,
@@ -260,6 +263,7 @@ class AircraftArrivalSetup:
                             event_saver=self.event_saver
                             )
         
+        self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.
         self.vertiport_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
 
@@ -270,11 +274,12 @@ class AircraftArrivalSetup:
         elif aircraft.location in self.structural_entity_groups['parking_pad']:
             aircraft.parking_space_id = aircraft.location
             yield self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
+            # TODO: The approac_fix nodes are now in the airspace
         elif aircraft.location in self.structural_entity_groups['approach_fix_node']:
             yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(aircraft=aircraft,
                                                                                                arriving_passengers=passengers_onboard))
         elif aircraft.location in self.structural_entity_groups['departure_fix_node']:
-            yield self.env.process(self.vertiport_manager.departure_fix_request_initial_state(aircraft=aircraft,
-                                                                                              flight_direction=f'{aircraft.origin_vertiport_id}_{aircraft.destination_vertiport_id}'))
+            aircraft.flight_direction = f'{aircraft.origin_vertiport_id}_{aircraft.destination_vertiport_id}'
+            yield self.env.process(self.vertiport_manager.departure_fix_request_initial_state(aircraft=aircraft))
         else:
             raise ValueError(f'Unknown aircraft location: {aircraft.location}')

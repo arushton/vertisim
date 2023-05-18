@@ -98,24 +98,29 @@ class PassengerArrivalSetup:
             origin_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'origin_vertiport_id'].values[0]
             # Get the passenger's destination vertiport id
             dest_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'dest_vertiport_id'].values[0]
+            # Get the location of the passenger
+            passenger_location = f'{origin_vertiport_id}_ENTRANCE'
 
             yield self.env.timeout(sec_to_ms(interarrival_time))
             # print(f'Passenger {passenger_id} arrives at {int((self.env.now)/1000/60)}')
             # Simulate passenger.
             self.initiate_passenger_arrival(
                     passenger_id=passenger_id,
+                    location=passenger_location,
                     origin_vertiport_id=origin_vertiport_id,
                     dest_vertiport_id=dest_vertiport_id
             )
 
     def initiate_passenger_arrival(self, 
                                    passenger_id: int,
+                                   location: str,
                                    origin_vertiport_id: Any,
                                    dest_vertiport_id: Any):
         # Create a passenger object
         passenger = Passenger(
             env=self.env,
             passenger_id=passenger_id,
+            location=location,
             origin_vertiport_id=origin_vertiport_id,
             dest_vertiport_id=dest_vertiport_id,
             car_to_entrance_walking_time_constant=sec_to_ms(self.passenger_params['car_to_entrance_walking_time_constant']),
@@ -128,4 +133,7 @@ class PassengerArrivalSetup:
             vertiport_manager=self.vertiport_manager
         )
 
+        # Add passenger to the passenger agents dictionary.
+        self.vertiport_manager.passenger_agents[f'passenger_{passenger_id}'] = passenger
+        # Initiate passenger arrival.
         self.env.process(self.vertiport_manager.simulate_passenger_arrival(passenger))

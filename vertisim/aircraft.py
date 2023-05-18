@@ -1,9 +1,12 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec, hr_to_ms
+from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, hr_to_ms, ft_to_m, m_to_ft, mph_metersec, metersec_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
 import random
+from utils.flight_helpers import weight, lift_induced_drag_coef, rho, rotor_disk_area, \
+    min_power_speed_for_climb_descend, lift_induced_drag_coef, max_range_speed, stall_speed
+from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 
 
 class Aircraft:
@@ -14,11 +17,12 @@ class Aircraft:
     def __init__(self, 
                  env, 
                  tail_number, 
+                 input_cruise_speed,     
+                 altitude,            
                  origin_vertiport_id,
                  destination_vertiport_id,
                  passengers_onboard, 
                  soc,
-                 speed,
                  arrival_time, 
                  departure_time,
                  location,
@@ -29,8 +33,10 @@ class Aircraft:
                  event_saver):
         self.env = env
         self.tail_number = tail_number
+        self.input_cruise_speed = input_cruise_speed
+        self._altitude = altitude
         self._soc = soc
-        self.speed = speed
+        self._speed = 0
         self._origin_vertiport_id = origin_vertiport_id   
         self._destination_vertiport_id = destination_vertiport_id
         self._location = location
@@ -38,15 +44,18 @@ class Aircraft:
         self._passengers_onboard = passengers_onboard
         self._arrival_time = arrival_time # TODO: Update this at every holding fix arrival
         self._departure_time = departure_time
-        self._priority = priority        
+        self._priority = priority    
 
+        self.aircraft_params = aircraft_params    
+
+        self.flight_phase = None # ['ground', 'cruise', 'landing', 'takeoff', 'holding']
         self.charging_start_time = None
         self.charging_end_time = None
         self.parking_space = None
         self.parking_space_id = None
         self.assigned_fato_id = None
         self.assigned_fato_resource = None
-        self.holding_time = None # event_saver.aircraft_arrival_queue_waiting_time keeps track of this for every aircraft at every vertiport
+        self.holding_time = None
         self.flight_direction = None
 
         self.arrival_fix_usage_request = None
@@ -55,18 +64,43 @@ class Aircraft:
         self.parking_space_usage_request = None
 
 
-        self.aircraft_model = aircraft_params['aircraft_model']
-        self.passenger_capacity = aircraft_params['pax']
-        self.max_range = aircraft_params['range']
-        self.battery_capacity = aircraft_params['battery_capacity']
-        self.ground_taxi_speed = aircraft_params['ground_taxi_speed']
-        self.cruise_speed = aircraft_params['cruise_speed']
-        self.climb_speed = aircraft_params['climb_speed']
-        self.descent_speed = aircraft_params['descent_speed']
-        self.vertical_takeoff_speed = aircraft_params['vertical_takeoff_speed']
-        self.vertical_landing_speed = aircraft_params['vertical_landing_speed']
+        self.aircraft_model = self.aircraft_params['aircraft_model']
+        self.passenger_capacity = self.aircraft_params['pax']
+        self.max_range = self.aircraft_params['range']
+        self.battery_capacity = self.aircraft_params['battery_capacity']
+
+        self.ground_taxi_speed = self.aircraft_params['ground_taxi_speed']
+        self.vertical_takeoff_speed = self.aircraft_params['vertical_takeoff_speed']
+        self.vertical_landing_speed = self.aircraft_params['vertical_landing_speed']
+
+        self.hover_altitude = ft_to_m(aircraft_params['hover_altitude'])
+        self.cruise_altitude = ft_to_m(aircraft_params['cruise_altitude'])
+        self.ground_altitude = ft_to_m(self.aircraft_params['ground_altitude'])    
+        self.climb_transition_end_altitude = self.hover_altitude + self.aircraft_params['time_climb_transition'] * self.vertical_takeoff_speed
+           
+
+        self.mtom = self.aircraft_params['mtom'] # Max takeoff mass
+        self.wing_area = self.aircraft_params['wing_area'] # Wing area (m^2)
+        self.disk_load = self.aircraft_params['disk_load'] # Disk loading (kg/m^2)    
+        self.f = self.aircraft_params['f'] # Correction factor for interference from the fuselage            
+        self.FoM = self.aircraft_params['FoM'] # Figure of merit
+        self.cd_0 = self.aircraft_params['cd_0'] # Zero lift drag coefficient
+        self.cl_max = self.aircraft_params['cl_max'] # Max lift coefficient
+        self.ld_max = self.aircraft_params['ld_max'] # Max lift to drag ratio
+        self.n_hover = self.aircraft_params['n_hover'] # Hover efficiency
+        self.n_descend = self.aircraft_params['n_descend'] # Descend efficiency
+        self.n_climb = self.aircraft_params['n_climb'] # Climb efficiency
+        self.n_cruise = self.aircraft_params['n_cruise'] # Cruise efficiency
+        self.atmosphere_condition = self.aircraft_params['atmosphere_condition']   
+
+        self.stall_speed = stall_speed(atmosphere_condition=self.atmosphere_condition,
+                                       altitude=self.cruise_altitude,
+                                       mtom=self.mtom, 
+                                       wing_area=self.wing_area, 
+                                       cl_max=self.cl_max)
 
         self.time_passenger_embark_disembark = sec_to_ms(aircraft_params['time_passenger_embark_disembark'])
+        self.time_descend = sec_to_ms(aircraft_params['time_descend'])
         self.time_descend_transition = sec_to_ms(aircraft_params['time_descend_transition'])
         self.time_hover_descend = sec_to_ms(aircraft_params['time_hover_descend'])
         self.time_rotor_spin_down = sec_to_ms(aircraft_params['time_rotor_spin_down'])
@@ -83,8 +117,10 @@ class Aircraft:
         self.time_rotor_spin_up = sec_to_ms(aircraft_params['time_rotor_spin_up'])
         self.time_hover_climb = sec_to_ms(aircraft_params['time_hover_climb'])
         self.time_climb_transition = sec_to_ms(aircraft_params['time_climb_transition'])
+        self.time_climb = sec_to_ms(aircraft_params['time_climb'])
         self.vertiport_manager = vertiport_manager
         self.event_saver = event_saver
+        self.soc_required_to_complete_mission = 30 # TODO: Complete calc_soc_required_for_flight function
 
     @property
     def soc(self):
@@ -99,6 +135,9 @@ class Aircraft:
         else:
             self._soc = value
 
+    def update_soc(self, value):
+        self._soc += value
+
     @property
     def speed(self):
         return self._speed
@@ -109,6 +148,17 @@ class Aircraft:
         #     self._speed = 0
         # else:
         self._speed = value
+
+    @property
+    def altitude(self):
+        return self._altitude
+    
+    @altitude.setter
+    def altitude(self, value):
+        if self._altitude <= 0:
+            self._altitude = 0
+        else:
+            self._altitude = value
 
     @property
     def origin_vertiport_id(self):
@@ -208,27 +258,48 @@ class Aircraft:
             f"  - Serviced Time at Location: {self.serviced_time_at_the_location}\n"
 
 
-    def aircraft_landing_process(self, landing_fato_id):
-        self.location = 'APPROACH_PATH'
-        self.speed = self.descent_speed
-        yield self.env.timeout(self.time_descend_transition)
-        self.speed = self.vertical_landing_speed
-        yield self.env.timeout(self.time_hover_descend)
-        self.speed = 0
+    def aircraft_landing_process(self):
+        min_power_speed = min_power_speed_for_climb_descend(atmosphere_condition=self.atmosphere_condition,
+                                                            altitude=self.cruise_altitude,
+                                                            mtom=self.compute_flight_mass(),
+                                                            cd_0=self.cd_0,
+                                                            wing_area=self.wing_area,
+                                                            ld_max=self.ld_max)
+        self.speed = min_power_speed
+        # Descend
+        self.flight_phase = 'landing'
+        yield self.env.timeout(self.time_descend)
+        descend_energy_consumption = self.descend_energy_consumption(min_power_speed=self.speed)
+        self.soc_discharge_update(descend_energy_consumption)
+        # self.update_altitude(vertical_speed=-self.vertical_landing_speed, time=ms_to_sec(self.time_descend)) # TODO: Are you going to use this approach or get the altitude as an input?
+        self.location = self.vertiport_manager.get_last_airlink_node_id(self.flight_direction)
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='descend')
 
-        self.location = landing_fato_id
+        # Request FATO - Aircraft already have a parking pad
+        yield self.env.process(self.vertiport_manager.fato_pad_request(aircraft=self, operation_type='arrival'))
+
+        # Descend transition
+        yield self.env.timeout(self.time_descend_transition)
+        descend_transition_energy_consumption = self.descend_transition_energy_consumption(min_power_speed=self.speed)
+        self.soc_discharge_update(descend_transition_energy_consumption)
+        # self.update_altitude(vertical_speed=-self.vertical_landing_speed, time=ms_to_sec(self.time_descend_transition))
+        self.location = self.assigned_fato_id
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='descend_transition', altitude=self.hover_altitude+self.vertiport_manager.vertiports[self.destination_vertiport_id].vertiport_layout.vertiport_height)
+
+        # Hover descend
+        yield self.env.timeout(self.time_hover_descend)
+        hover_descend_energy_consumption = self.vertical_takeoff_landing_energy_consumption(operation='landing')
+        self.soc_discharge_update(hover_descend_energy_consumption)
+        self.speed = 0
+        self.flight_phase = 'ground'
         # Save landing information
-        self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             location_id=self.location)
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='hover_descend')
+
         yield self.env.timeout(self.time_rotor_spin_down)
         yield self.env.timeout(self.time_post_landing_safety_checks)
         yield self.env.timeout(self.time_tug_connection)
         # Save landing information
-        self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             location_id=self.location)
-        self.flight_direction = None
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='landed')
 
     def taxi(self, 
              taxi_route: list, 
@@ -274,9 +345,7 @@ class Aircraft:
                 # Decrease the aircraft arrival queue counter
                 self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=vertiport_id,
                                                                        queue_update=-1)     
-                self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                     agent_type='aircraft',
-                                                     location_id=self.assigned_fato_resource.resource_id)
+                self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked_on_fato_pad')
             return                          
 
         # Get the first node and the last node on the taxi route. They are
@@ -327,9 +396,7 @@ class Aircraft:
 
             # Save park time
             if operation_type == 'arrival':
-                self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                     agent_type='aircraft',
-                                                     location_id=self.location)
+                self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked')
         else:
             # Reserve all of the taxiway nodes
             taxiway_nodes = []
@@ -350,9 +417,7 @@ class Aircraft:
             self.location = next_node
 
             # Save the location and time of the current node
-            self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                 agent_type='aircraft',
-                                                 location_id=self.location)
+            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='taxiing')
 
             previous_node = next_node
 
@@ -391,9 +456,7 @@ class Aircraft:
                 self.location = node
 
                 # Save the location and time of the current node
-                self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                     agent_type='aircraft',
-                                                     location_id=self.location)
+                self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='taxiing')
 
                 # Put back the previous node and edge
                 self.vertiport_manager.vertiports[vertiport_id].taxiway_node_store.put(previous_node)
@@ -409,9 +472,7 @@ class Aircraft:
 
             # Save park time
             if operation_type == 'arrival':
-                self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                     agent_type='aircraft',
-                                                     location_id=self.location)
+                self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked')
 
             # Put back the previous node and edge
             self.vertiport_manager.vertiports[vertiport_id].taxiway_node_store.put(previous_node)
@@ -420,57 +481,69 @@ class Aircraft:
     def aircraft_take_off_process(self, take_off_fato_id):
         self.departure_time = self.env.now
         self.location = take_off_fato_id
-        self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             location_id=self.location)
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='fato_arrival')
+
+        # Save passenger departure time
+        for passenger in self.passengers_onboard:
+            passenger.departure_time = self.env.now    
+            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='fato_arrival')    
 
         yield self.env.timeout(self.time_tug_disconnection)
         yield self.env.timeout(self.time_pre_take_off_check_list)
         yield self.env.timeout(self.time_rotor_spin_up)
-        self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             location_id=self.location)
-        # Save passenger location and time
-        for passenger in self.passengers_onboard:
-            self.event_saver.save_agent_location(agent_id=passenger.passenger_id,
-                                                agent_type='passenger',
-                                                location_id=self.location)
         
-        self.speed = self.vertical_takeoff_speed
-        self.location = 'DEPARTURE_PATH'
+        # Hover climb
+        self.speed = 0 # horizontal speed
         yield self.env.timeout(self.time_hover_climb)
-        self.speed = self.climb_speed
-        yield self.env.timeout(self.time_climb_transition)
+        hover_climb_energy_consumption = self.vertical_takeoff_landing_energy_consumption(operation='takeoff')
+        self.soc_discharge_update(hover_climb_energy_consumption)
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='hover_climb', altitude=self.hover_altitude+self.vertiport_manager.vertiports[self.origin_vertiport_id].vertiport_layout.vertiport_height)
 
-        # Save location and time
-        self.location = self.vertiport_manager.vertiports[self.origin_vertiport_id].vertiport_layout.departure_fix_node
-        self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             location_id=self.location)
-        
-        # # Save passenger location and time
-        for passenger in self.passengers_onboard:
-            self.event_saver.save_agent_location(agent_id=passenger.passenger_id,
-                                                agent_type='passenger',
-                                                location_id=self.location)      
+        # Climb transition
+        yield self.env.timeout(self.time_climb_transition)
+        min_power_speed = min_power_speed_for_climb_descend(atmosphere_condition=self.atmosphere_condition,
+                                                            altitude=self.hover_altitude,
+                                                            mtom=self.compute_flight_mass(),
+                                                            cd_0=self.cd_0,
+                                                            wing_area=self.wing_area,
+                                                            ld_max=self.ld_max)
+        self.speed = min_power_speed
+        climb_transition_energy_consumption = self.climb_transition_energy_consumption(min_power_speed=min_power_speed)
+        self.soc_discharge_update(climb_transition_energy_consumption)
+        self.location = self.vertiport_manager.get_first_airlink_node_id(flight_direction=self.flight_direction) # First airlink resource is the departure fix
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='climb_transition')
+
+        # Release the departure fix
+        departure_fix = self.vertiport_manager.get_first_airlink_resource(flight_direction=self.flight_direction)
+        departure_fix.release(self.departure_fix_usage_request)
+        self.departure_fix_usage_request = None
+
+        # Climb to cruise altitude
+        first_waypoint = self.vertiport_manager.get_second_airlink_node_id(flight_direction=self.flight_direction) # Second airlink resource is the first waypoint
+        first_waypoint_resource = self.vertiport_manager.get_second_airlink_resource(flight_direction=self.flight_direction) # First airlink resource is the departure fix
+        with first_waypoint_resource.request() as req:
+            yield req
+            yield self.env.timeout(self.time_climb)
+        climb_energy_consumption = self.climb_energy_consumption(min_power_speed=min_power_speed)
+        self.soc_discharge_update(climb_energy_consumption)
+        self.location = first_waypoint
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='climb')
+        self.altitude = self.cruise_altitude
     
-    def fly_in_the_airspace(self, flight_direction):
+    def fly_in_the_airspace(self, user_modification=False):
         """
         Finds the location of the aircraft in the airspace from self.vertiport_manager.airspace.airlink_resources
         and traverses the airspace starting from that location        
         """      
-        # Release the departure fix
-        self.vertiport_manager.release_fix_resource(aircraft=self,
-                                                    fix_resource_request=self.departure_fix_usage_request,
-                                                    operation_type='departure')
-        self.departure_fix_usage_request = None
+        self.speed = max_range_speed(atmosphere_condition=self.atmosphere_condition,
+                                     altitude=self.cruise_altitude,
+                                     mtom=self.compute_flight_mass(),
+                                     cd_0=self.cd_0,
+                                     wing_area=self.wing_area,
+                                     ld_max=self.ld_max)
 
-        link_traversal_time = hr_to_ms(self.vertiport_manager.airspace.airlink_segment_length_miles / self.cruise_speed)
         # Get the airlink resources for the flight direction
-        airlink_resources = self.vertiport_manager.airspace.airlink_resources[flight_direction]
-
-        # Check if the aircraft on the approach or departure fix. These are the edge of the airspace.
-        
+        airlink_resources = self.vertiport_manager.airspace.airlink_resources[self.flight_direction]
 
         # Find the current location of the aircraft in the airlink resources
         current_location_index = None
@@ -482,22 +555,30 @@ class Aircraft:
         if current_location_index is None:
             raise ValueError(f"Aircraft's current location ({self.location}) not found in the airlink resources")
 
-        self.speed = self.cruise_speed
-        # Start iterating the airlink resources from the current location
-        for waypoint_id, resource in list(airlink_resources.items())[current_location_index:]:
+        # Start iterating the airlink resources from the next location. Last node is the final approach fix. We don't request it here.
+        if user_modification:
+            starting_index = current_location_index
+        else:
+            starting_index = current_location_index + 1
+        for waypoint_id, resource in list(airlink_resources.items())[starting_index:-1]:
             with resource.request() as req:
                 yield req
+                link_traversal_time = sec_to_ms(round(miles_to_m(self.vertiport_manager.airspace.airlink_segment_length_miles) / self.speed))
                 yield self.env.timeout(link_traversal_time)
-
+            # Compute energy consumption
+            cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=ms_to_sec(link_traversal_time))
+            self.soc_discharge_update(cruise_energy_consumption)
             # Save location and time information
-            self.event_saver.save_agent_location(agent_id=self.tail_number,
-                                                agent_type='aircraft',
-                                                location_id=waypoint_id)
             self.location = waypoint_id
+            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='cruise')          
 
         yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
         )
+
+        # TODO: distance_to_descend_start_from_approach_fix = self.aircraft_params['time_descend'] * self.v_max_power
+        # num_waypoints_before_approach_fix = int(distance_to_descend_start_from_approach_fix/ miles_to_m(airlink_segment_length_miles))
+        # First request parking pad. If no available parking pad, then hold with cruise speed. Once you get the parking pad, descend and Once the descend finishes, request the fato.
 
     def request_charger(self):
         """
@@ -524,7 +605,13 @@ class Aircraft:
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
-        time_before_charger_allocation = self.env.now
+        if self.soc >= self.soc_required_to_complete_mission:
+            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed') 
+            self.charging_start_time = self.env.now
+            self.charging_end_time = self.env.now
+            return
+        
+        # time_before_charger_allocation = self.env.now
 
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:
@@ -551,10 +638,7 @@ class Aircraft:
             charging_request = self.request_charger()
             yield charging_request
 
-        self.event_saver.save_agent_location(location_id=self.parking_space.resource_id,
-                                             agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             event='charging_start')
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_start')        
         
         self.charging_start_time = self.env.now
 
@@ -563,12 +647,9 @@ class Aircraft:
         self.charging_end_time = self.env.now
 
         # Update the SOC
-        self.update_charge_level(operation='charge')
+        self.soc_charge_update()
 
-        self.event_saver.save_agent_location(location_id=self.parking_space.resource_id,
-                                             agent_id=self.tail_number,
-                                             agent_type='aircraft',
-                                             event='charging_end')
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_end')
 
         if shared_charger:
             used_charger_resource.release(selected_charging_request)
@@ -594,7 +675,6 @@ class Aircraft:
         int
             The soc level of the aircraft after the charging time.
         """
-        # Calculate new soc from charge time
         # Get the time at initial soc level
         initial_soc_time = df[df.soc == initial_soc]['time_sec'].values[0]
         # Get the time at final soc level
@@ -604,23 +684,153 @@ class Aircraft:
         return df.loc[idx_final_soc]['soc']
 
 
-    def update_charge_level(self, new_soc: int = None, operation: str = 'charge') -> None:
+    def soc_charge_update(self) -> None:
         """
         Updates the charge level of the aircraft using current charge time.
         """
-        if operation == 'charge':
-            charge_time = self.env.now - self.charging_start_time
-            charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
-            final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self._soc, df=charge_lookup_table)
-            self._soc = min(100, final_soc)
-        elif operation == 'discharge':
-            self._soc = new_soc
+        charge_time = self.env.now - self.charging_start_time
+        charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
+        final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.soc, df=charge_lookup_table)
+        self._soc = min(100, final_soc)
 
-    def check_charge_level(self):
-        return self.current_soc
+    def convert_kwh_soc(self, kwh: float) -> int:
+        """
+        Converts kwh to aircraft's soc level.
+        """
+        return kwh / self.battery_capacity * 100
+    
+    def soc_discharge_update(self, kwh: float) -> None:
+        """
+        Updates the charge level of the aircraft using current charge time.
+        """
+        self.update_soc(-np.floor(self.convert_kwh_soc(kwh))) # TODO: Create a soc vs time table with 0.5 increment
+        self.check_reserve_energy()
 
     def unload_passengers(self, passenger_disembark_time):
         # TODO: check
         yield self.env.timeout(passenger_disembark_time)
         self.event_saver.aircraft_dict[self.tail_number]['passenger_unloading_finished'] = \
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
+
+    def vertical_takeoff_landing_energy_consumption(self, operation: str) -> float:
+        start_density = rho(altitude=self.ground_altitude, atmosphere_condition=self.atmosphere_condition) # This doesn't matter whether the operation is takeoff or landing as we take the average of the two.
+        end_density = rho(altitude=self.hover_altitude, atmosphere_condition=self.atmosphere_condition)
+        self.tom = self.compute_flight_mass() # Takeoff mass
+
+        term1 = self.f * weight(self.tom) / self.FoM
+        term2_start = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * start_density))
+        term2_end = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * end_density))
+        term3 = weight(self.tom) * mph_metersec(self.vertical_takeoff_speed) / 2
+
+        start_power = max(watt_to_kw((term1 * term2_start + term3) / self.n_hover), 0)
+        end_power = max(watt_to_kw((term1 * term2_end + term3) / self.n_hover), 0)
+
+        print(f'vertical_start_power: {start_power}, end_power: {end_power} for vertical {operation}')
+
+        if operation == 'takeoff':
+            return sec_to_hr((start_power + end_power) / 2 * self.aircraft_params['time_hover_climb']) # kWh - time units need to be seconds
+        elif operation == 'landing':
+            return sec_to_hr((start_power + end_power) / 2 * self.aircraft_params['time_hover_descend'])
+        else:
+            raise ValueError('operation must be either takeoff or landing')
+
+
+    def climb_transition_energy_consumption(self, min_power_speed) -> float:
+        climb_transition_end_velocity = min_power_speed
+        term1_start = self.f * weight(self.tom) / self.FoM
+        term2_start = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * rho(self.hover_altitude, self.atmosphere_condition)))
+        climb_transition_start_power = max(watt_to_kw((term1_start * term2_start)/ self.n_hover), 0)
+
+        term1_end = weight(self.tom) * mph_metersec(self.vertical_takeoff_speed)
+        term2_end = 1/2 * rho(self.climb_transition_end_altitude, self.atmosphere_condition) \
+            * self.wing_area * self.cd_0 * climb_transition_end_velocity ** 3
+        term3_end = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) \
+            * weight(self.tom)**2 / (1/2*rho(self.climb_transition_end_altitude, self.atmosphere_condition) \
+                                       * self.wing_area * climb_transition_end_velocity)
+        climb_transition_end_power = max(watt_to_kw((term1_end + term2_end + term3_end) / self.n_climb), 0)
+
+        print(f'climb_transition_start_power: {climb_transition_start_power}, climb_transition_end_power: {climb_transition_end_power}')
+
+        return sec_to_hr((climb_transition_start_power + climb_transition_end_power) / 2 * self.aircraft_params['time_climb_transition'])
+    
+    def descend_transition_energy_consumption(self, min_power_speed) -> float:
+        descend_transition_start_velocity = min_power_speed
+        term1_start = weight(self.tom) * mph_metersec(self.vertical_landing_speed)
+        term2_start = 1/2 * rho(self.climb_transition_end_altitude, self.atmosphere_condition) \
+            * self.wing_area * self.cd_0 * descend_transition_start_velocity ** 3
+        term3_start = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) \
+            * weight(self.tom)**2 / (1/2*rho(self.climb_transition_end_altitude, self.atmosphere_condition) * descend_transition_start_velocity)
+        descend_transition_start_power = max(watt_to_kw(-term1_start + term2_start / self.n_climb + term3_start / self.n_climb), 0)
+
+        term1_end = self.f * weight(self.tom) / self.FoM
+        term2_end = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * rho(self.hover_altitude, self.atmosphere_condition)))
+        descend_transition_end_power = max(watt_to_kw((term1_end * term2_end)/ self.n_hover), 0) 
+
+        print(f'descend_transition_start_power: {descend_transition_start_power}, descend_transition_end_power: {descend_transition_end_power}')
+
+        return sec_to_hr((descend_transition_start_power + descend_transition_end_power) / 2 * self.aircraft_params['time_descend_transition'])
+
+    def climb_energy_consumption(self, min_power_speed) -> float:
+        K = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) * 4/3 # New K to account for L/D correction
+
+        term1_start = weight(self.tom) * mph_metersec(self.vertical_takeoff_speed)
+        term2_start = 1/2 * rho(self.climb_transition_end_altitude, self.atmosphere_condition) \
+            * self.wing_area * self.cd_0 * min_power_speed ** 3
+        term3_start = K * weight(self.tom)**2 / (1/2*rho(self.climb_transition_end_altitude, self.atmosphere_condition) \
+                                       * self.wing_area * min_power_speed)
+        climb_start_power = max(watt_to_kw((term1_start + term2_start + term3_start) / self.n_climb), 0)
+
+        term1_end = weight(self.tom) * mph_metersec(self.vertical_takeoff_speed)
+        term2_end = 1/2 * rho(self.cruise_altitude, self.atmosphere_condition) \
+            * self.wing_area * self.cd_0 * min_power_speed ** 3
+        term3_end = K * weight(self.tom)**2 / (1/2*rho(self.cruise_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
+        climb_end_power = max(watt_to_kw(-term1_end + term2_end / self.n_climb + term3_end / self.n_climb), 0)
+
+        print(f'climb_start_power: {climb_start_power}, climb_end_power: {climb_end_power}')
+
+        return sec_to_hr((climb_start_power + climb_end_power) / 2 * self.aircraft_params['time_climb'])
+    
+    def descend_energy_consumption(self, min_power_speed) -> float:
+        K = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) * 4/3
+
+        term1_start = weight(self.tom) * mph_metersec(self.vertical_landing_speed)
+        term2_start = 1/2 * rho(self.cruise_altitude, self.atmosphere_condition) \
+            * self.wing_area * self.cd_0 * min_power_speed ** 3
+        term3_start = K * weight(self.tom)**2 / (1/2*rho(self.cruise_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
+        descend_start_power = max(watt_to_kw(-term1_start + term2_start / self.n_climb + term3_start / self.n_climb), 0)
+
+        term1_end = weight(self.tom) * mph_metersec(self.vertical_landing_speed)
+        term2_end = 1/2 * rho(self.hover_altitude, self.atmosphere_condition) \
+            * self.wing_area * self.cd_0 * min_power_speed ** 3
+        term3_end = K * weight(self.tom)**2 / (1/2*rho(self.climb_transition_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
+        descend_end_power = max(watt_to_kw((term1_end + term2_end + term3_end) / self.n_climb), 0)
+
+        print(f'descend_start_power: {descend_start_power}, descend_end_power: {descend_end_power}')
+
+        return sec_to_hr((descend_start_power + descend_end_power) / 2 * self.aircraft_params['time_descend'])
+    
+    def cruise_energy_consumption(self, velocity, time_cruise) -> float:
+        cruise_velocity = min(self.input_cruise_speed, velocity)
+        cruise_velocity = max(cruise_velocity, self.stall_speed)
+        cruise_power = max(watt_to_kw((weight(self.tom) * cruise_velocity) / (0.85*self.ld_max) / self.n_cruise), 0)
+        return sec_to_hr(cruise_power * time_cruise)
+    
+    def check_reserve_energy(self) -> float:
+        if self.soc <= 2 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
+            print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.flight_phase} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
+        if self.soc <= 20 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
+            self.priority = 0
+
+    def update_altitude(self, vertical_speed, time):
+        self.altitude += vertical_speed * time
+        self.altitude = max(self.altitude, 0)
+
+    def compute_flight_mass(self, num_passenger= None) -> float:
+        if num_passenger:
+            return self.mtom - (self.aircraft_params['pax']-num_passenger)*self.aircraft_params['pax_mass']
+        return self.mtom - (self.aircraft_params['pax']-len(self.passengers_onboard))*self.aircraft_params['pax_mass']
+
+
+
+
+    

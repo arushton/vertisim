@@ -38,7 +38,6 @@ def create_trajectory_json(df: pd.DataFrame, agent_type: str, only_aircraft_simu
     :return: 
     """
     collection = create_collection_template()
-    df['alt_m'] = 0
 
     if only_aircraft_simulation:
         return None
@@ -53,7 +52,12 @@ def create_trajectory_json(df: pd.DataFrame, agent_type: str, only_aircraft_simu
     for group_name, df_group in df1_grouped:
         agent = create_agent_template()
         agent['properties']['id'] = group_name
-        df_filter = df_group[['longitude', 'latitude', 'alt_m', 'time']]
+        df_filter = df_group[['longitude', 'latitude', 'altitude', 'time']]
         agent['geometry']['coordinates'] = df_filter.values.tolist()
+        # agent['properties']['event'] = df_group['event'].tolist()
+        # agent['properties']['location'] = df_group['location'].tolist()
+        # agent['properties']['speed'] = df_group['speed'].tolist()
+        # agent['properties']['soc'] = df_group['soc'].tolist()
+        # agent['properties']['priority'] = df_group['priority'].tolist()
         collection["features"].append(agent)
     return collection

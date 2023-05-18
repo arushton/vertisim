@@ -13,6 +13,7 @@ class Passenger:
     def __init__(self, env, passenger_id,
                  origin_vertiport_id: Any,
                  dest_vertiport_id: Any,
+                 location: str,
                  car_to_entrance_walking_time_constant: Union[float, None],
                  security_check_time_constant: Union[float, None],
                  waiting_room_to_boarding_gate_walking_time_constant: Union[float, None],
@@ -25,6 +26,7 @@ class Passenger:
         self.passenger_id = passenger_id
         self.origin_vertiport_id = origin_vertiport_id
         self.dest_vertiport_id = dest_vertiport_id
+        self.location = location
         self.car_to_entrance_walking_time_constant = car_to_entrance_walking_time_constant
         self.security_check_time_constant = security_check_time_constant
         self.waiting_room_to_boarding_gate_walking_time_constant = waiting_room_to_boarding_gate_walking_time_constant
@@ -36,6 +38,8 @@ class Passenger:
         self.vertiport_arrival_time = None
         self.waiting_room_arrival_time = None
         self.waiting_room_store = None
+        self.flight_assignment_time = None
+        self.departure_time = None
 
     def walk_to_entrance(self):
         """ From car to the exit gate."""

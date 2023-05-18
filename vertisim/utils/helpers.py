@@ -330,6 +330,13 @@ def convert_to_list(x: Any):
         )
 
 
+def careful_round(value, decimal_places=2):
+    """
+    Round a value to 2 decimal places.
+    """
+    return None if value is None else round(value, decimal_places)
+
+
 
 # def nested_dict_filter_values(d, depth, value):
 #     """

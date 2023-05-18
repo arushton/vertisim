@@ -28,11 +28,11 @@ def create_airspace_layout(env: object,
     
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
-                                       airspace_layout_file_path=airspace_params['airspace_layout_file_path'],
-                                       airlink_segment_length_miles=airspace_params['airlink_segment_length'],
-                                       vertiport_distances=vertiport_distances)
+                                       airspace_params=airspace_params,
+                                       vertiport_distances=vertiport_distances,
+                                       cruise_altitude=airspace_params['cruise_altitude'])
     return Airspace(env=env,
-                    vertiports=vertiports,
+                    holding_unit_capacity=airspace_params['holding_unit_capacity'],
                     airlink_capacity=airspace_params['airlink_capacity'],
                     airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                     waypoint_ids=airspace_creator.waypoint_ids,

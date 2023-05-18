@@ -3,6 +3,7 @@
 import pandas as pd
 
 
+
 class BatteryModel:
     def __init__(self, charger_model, min_reserve_soc):
         self.charger_model = charger_model

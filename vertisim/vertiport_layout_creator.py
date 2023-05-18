@@ -108,28 +108,22 @@ class VertiportLayout:
         """
         vertiport_elements = defaultdict(dict)
         for node in self.fato_lat_lngs.reset_index().values:
-            vertiport_elements[node[0]] = (node[1], node[2])
+            vertiport_elements[node[0]] = (node[1], node[2], self.vertiport_height)
 
         for node in self.park_lat_lngs.reset_index().values:
-            vertiport_elements[node[0]] = (node[1], node[2])
-
-        for node in self.approach_fix_lat_lng.reset_index().values:
-            vertiport_elements[node[2]] = (node[3], node[4])
-
-        for node in self.departure_fix_lat_lng.reset_index().values:
-            vertiport_elements[node[2]] = (node[3], node[4])
+            vertiport_elements[node[0]] = (node[1], node[2], self.vertiport_height)
 
         for node in self.inters_lat_lngs.reset_index().values:
-            vertiport_elements[node[0]] = (node[1], node[2])
+            vertiport_elements[node[0]] = (node[1], node[2], self.vertiport_height)
 
         for node in self.vert_door_lat_lngs.reset_index().values:
-            vertiport_elements[node[0]] = (node[1], node[2])
+            vertiport_elements[node[0]] = (node[1], node[2], self.vertiport_height)
 
         for node in self.boarding_gate_lat_lngs.reset_index().values:
-            vertiport_elements[node[0]] = (node[1], node[2])
+            vertiport_elements[node[0]] = (node[1], node[2], self.vertiport_height)
 
         for node in self.waiting_room_lat_lngs.reset_index().values:
-            vertiport_elements[node[0]] = (node[1], node[2])
+            vertiport_elements[node[0]] = (node[1], node[2], self.vertiport_height)
         return vertiport_elements
     
     def get_structural_entity_groups(self) -> dict:

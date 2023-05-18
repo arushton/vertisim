@@ -1,57 +1,50 @@
 {
     "tail_number_0": {
-        "soc": 100,
-        "location": "DTLA_PARK11",
+        "soc": 99,
+        "location": "LAX_DTLA_waypoint_25",
         "serviced_time_at_the_location": 0.0,
-        "flight_direction": null,
+        "flight_direction": "LAX_DTLA",
         "passengers_onboard": [
             "passenger_0",
             "passenger_2",
             "passenger_4",
             "passenger_6"
         ],
-        "vertiport_arrival_time": 0,
-        "vertiport_departure_time": 432518,
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": 3.78,
+        "holding_time": null,
         "priority": 1.0,
-        "parking_space_id": "DTLA_PARK11",
+        "parking_space_id": null,
         "fato_id": null,
-        "speed": 0
+        "speed": 90.0
     },
     "tail_number_1": {
         "soc": 100,
-        "location": "LAX_DTLA_waypoint_37",
+        "location": "LAX_PARK13",
         "serviced_time_at_the_location": 0.0,
-        "flight_direction": "LAX_DTLA",
-        "passengers_onboard": [
-            "passenger_8",
-            "passenger_10",
-            "passenger_12",
-            "passenger_15"
-        ],
-        "vertiport_arrival_time": 282000,
-        "vertiport_departure_time": 713973,
+        "flight_direction": null,
+        "passengers_onboard": [],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
         "priority": 1.0,
-        "parking_space_id": null,
+        "parking_space_id": "LAX_PARK13",
         "fato_id": null,
-        "speed": 120
+        "speed": 0
     },
     "tail_number_2": {
         "soc": 100,
-        "location": "LAX_DEPARTURE_FIX",
+        "location": "LAX_PARK12",
         "serviced_time_at_the_location": 0.0,
-        "flight_direction": "LAX_DTLA",
-        "passengers_onboard": [
-            "passenger_17",
-            "passenger_19",
-            "passenger_21",
-            "passenger_22"
-        ],
-        "vertiport_arrival_time": 564000,
-        "vertiport_departure_time": 995973,
+        "flight_direction": null,
+        "passengers_onboard": [],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
         "priority": 1.0,
-        "parking_space_id": null,
+        "parking_space_id": "LAX_PARK12",
         "fato_id": null,
-        "speed": 120
+        "speed": 0
     },
     "tail_number_3": {
         "soc": 100,
@@ -59,12 +52,184 @@
         "serviced_time_at_the_location": 0.0,
         "flight_direction": null,
         "passengers_onboard": [],
-        "vertiport_arrival_time": 846000,
+        "vertiport_arrival_time": 0.0,
         "vertiport_departure_time": null,
+        "holding_time": null,
         "priority": 1.0,
         "parking_space_id": "LAX_PARK11",
         "fato_id": null,
-        "speed": 0.0
+        "speed": 0
+    },
+    "tail_number_4": {
+        "soc": 97.0,
+        "location": "DTLA_LAX_waypoint_9",
+        "serviced_time_at_the_location": 0.0,
+        "flight_direction": "DTLA_LAX",
+        "passengers_onboard": [
+            "passenger_1",
+            "passenger_3",
+            "passenger_5",
+            "passenger_7"
+        ],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": 4.24,
+        "holding_time": null,
+        "priority": 1.0,
+        "parking_space_id": null,
+        "fato_id": null,
+        "speed": 72
+    },
+    "tail_number_5": {
+        "soc": 100,
+        "location": "DTLA_PARK13",
+        "serviced_time_at_the_location": 0.0,
+        "flight_direction": "DTLA_LAX",
+        "passengers_onboard": [
+            "passenger_9",
+            "passenger_11",
+            "passenger_13",
+            "passenger_14"
+        ],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
+        "priority": 1.0,
+        "parking_space_id": null,
+        "fato_id": "DTLA_FATO1",
+        "speed": 3.67
+    },
+    "tail_number_6": {
+        "soc": 100,
+        "location": "DTLA_PARK12",
+        "serviced_time_at_the_location": 0.0,
+        "flight_direction": null,
+        "passengers_onboard": [],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
+        "priority": 1.0,
+        "parking_space_id": "DTLA_PARK12",
+        "fato_id": null,
+        "speed": 0
+    },
+    "tail_number_7": {
+        "soc": 100,
+        "location": "DTLA_PARK11",
+        "serviced_time_at_the_location": 0.0,
+        "flight_direction": null,
+        "passengers_onboard": [],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
+        "priority": 1.0,
+        "parking_space_id": "DTLA_PARK11",
+        "fato_id": null,
+        "speed": 0
+    },
+    "passenger_0": {
+        "location": "LAX_GATE",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 0.47,
+        "vertiport_departure_time": 3.78
+    },
+    "passenger_1": {
+        "location": "DTLA_GATE",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 0.93,
+        "vertiport_departure_time": 4.24
+    },
+    "passenger_2": {
+        "location": "LAX_GATE",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 1.4,
+        "vertiport_departure_time": 3.78
+    },
+    "passenger_3": {
+        "location": "DTLA_GATE",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 1.87,
+        "vertiport_departure_time": 4.24
+    },
+    "passenger_4": {
+        "location": "LAX_GATE",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 2.33,
+        "vertiport_departure_time": 3.78
+    },
+    "passenger_5": {
+        "location": "DTLA_GATE",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 2.8,
+        "vertiport_departure_time": 4.24
+    },
+    "passenger_6": {
+        "location": "LAX_GATE",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 3.27,
+        "vertiport_departure_time": 3.78
+    },
+    "passenger_7": {
+        "location": "DTLA_GATE",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 3.73,
+        "vertiport_departure_time": 4.24
+    },
+    "passenger_8": {
+        "location": "LAX_ROOM",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 4.2,
+        "vertiport_departure_time": null
+    },
+    "passenger_9": {
+        "location": "DTLA_ROOM",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 4.67,
+        "vertiport_departure_time": null
+    },
+    "passenger_10": {
+        "location": "LAX_ROOM",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 5.13,
+        "vertiport_departure_time": null
+    },
+    "passenger_11": {
+        "location": "DTLA_ROOM",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 5.6,
+        "vertiport_departure_time": null
+    },
+    "passenger_12": {
+        "location": "LAX_ROOM",
+        "origin_vertiport_id": "LAX",
+        "destination_vertiport_id": "DTLA",
+        "vertiport_arrival_time": 6.07,
+        "vertiport_departure_time": null
+    },
+    "passenger_13": {
+        "location": "DTLA_ROOM",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 6.53,
+        "vertiport_departure_time": null
+    },
+    "passenger_14": {
+        "location": "DTLA_ROOM",
+        "origin_vertiport_id": "DTLA",
+        "destination_vertiport_id": "LAX",
+        "vertiport_arrival_time": 7.0,
+        "vertiport_departure_time": null
     },
     "Structural Entities": {
         "LAX": {
@@ -274,7 +439,7 @@
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
             },
-            "DTLA_LAX_waypoint_39": {
+            "LAX_holding_unit": {
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
             },
@@ -444,7 +609,7 @@
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
             },
-            "LAX_DTLA_waypoint_39": {
+            "DTLA_holding_unit": {
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
             },

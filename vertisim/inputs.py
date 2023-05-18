@@ -53,7 +53,7 @@ network_and_demand = {
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 4,
             'num_chargers': 4,
-            'charger_max_charge_rate': 480,  # kW
+            'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
             # # Note: PARK IDs should match with the excel/csv file PARK IDs.
@@ -111,7 +111,7 @@ network_and_demand = {
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 4,
             'num_chargers': 4,
-            'charger_max_charge_rate': 480,  # kW
+            'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
             # Passenger Arrival Process
@@ -140,7 +140,13 @@ network_and_demand = {
 airspace_params = {
     'airspace_layout_file_path': None,
     'airlink_capacity': 1,
-    'airlink_segment_length': 0.25  # miles
+    # If the airlink file is not None, then the below parameters are not used.
+    'airlink_segment_length': 0.25,  # miles
+    'fato_to_fadf_distance': 0.67,  # miles - FATO to final approach/departure fix distance
+    'fadf_to_holding_unit_distance': 3.33, # miles - FADF to holding unit distance 
+    'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
+    'cruise_altitude': 450,  # m
+
 }
 
 
@@ -183,35 +189,54 @@ aircraft_params = {
     'pax': 4,  # Default passenger capacity, if passenger capacity is given with the schedule,
     # then that will be used as the passenger capacity.
     'range': 150,  # miles
-    'soc': 20,  # Default initial SOC of aircraft at the arrival to the vertiport
+    'soc': 100,  # Default initial SOC of aircraft at the arrival to the vertiport
     'battery_capacity': 160,  # kWh
+    'pax_mass': 100,  # kg
     
-    # TAKE-OFF, LANDING, AND TURNAROUND TIME PARAMETERS
-    # ------------------------------------------------
-    'ground_taxi_speed': 3.67,  # ft/s
-    'time_passenger_embark_disembark': 60 * 0,  # secs
-    'time_pre_charging_processes': 0,  # sec
-    'time_charging_plug_disconnection': 0,  # sec
-    'time_post_charging_processes': 0,  # sec
-    'time_descend_transition': 60,  # sec
-    'time_hover_descend': 0,  # sec
-    'time_rotor_spin_down': 0,  # sec
-    'time_post_landing_safety_checks': 0,  # sec
+    # MISSION PARAMETERS
+    # -----------------
+    'vertical_takeoff_speed': 12.3,  # mph
+    'vertical_landing_speed': 12.3,  # mph
+    # Altitude
+    'ground_altitude': 0,  # ft
+    'hover_altitude': 50,  # ft
+    'cruise_altitude': 1500,  # ft
+
+    # Process time
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
     'time_rotor_spin_up': 0,  # sec
-    'time_hover_climb': 0,  # sec
-    'time_climb_transition': 60,  # sec
+    'time_hover_climb': 15,  # sec
+    'time_climb_transition': 30,  # sec  
+    'time_climb': 65,  # sec'  
+    'time_descend': 65,  # sec
+    'time_descend_transition': 30,  # sec
+    'time_hover_descend': 15,  # sec
+    'time_rotor_spin_down': 0,  # sec
+    'time_post_landing_safety_checks': 0,  # sec    
+    'ground_taxi_speed': 3.67,  # ft/s
+    'time_passenger_embark_disembark': 60 * 0,  # secs
+    'time_pre_charging_processes': 0,  # sec
+    'time_charging_plug_disconnection': 0,  # sec
+    'time_post_charging_processes': 0,  # sec'
 
-    # FLIGHT SPEED PARAMETERS
-    # -----------------
-    'cruise_speed': 120,  # mph
-    'vertical_takeoff_speed': 5.5,  # mph
-    'vertical_landing_speed': 5.5,  # mph
-    'climb_speed': 60,  # mph
-    'descent_speed': 60,  # mph
 
+    # AERODYNAMICS PARAMETERS
+    # -----------------------
+    'mtom': 2182,  # kg
+    'wing_area': 13,  # m^2
+    'disk_load': 45.9,  # kg/m^2
+    'f': 1.03, # Correction factor for interference from the fuselage
+    'FoM': 0.8,  # Figure of merit
+    'cd_0': 0.015,  # Zero lift drag coefficient
+    'cl_max': 1.5,  # Maximum lift coefficient
+    'ld_max': 18,  # Maximum lift to drag ratio
+    'n_hover': 0.85,  # Hover efficiency
+    'n_climb': 0.85,  # Climb efficiency
+    'n_descend': 0.85,  # Descend efficiency
+    'n_cruise': 0.90,  # Cruise efficiency
+    'atmosphere_condition': 'good', # good, bad
 
 
     # AIRCRAFT CHARGING TIME PARAMETERS
