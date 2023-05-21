@@ -1,8 +1,8 @@
-from utils.haversine import haversine_dist
+from utils.distance import haversine_dist
 import numpy as np
 from typing import List, Dict
 from collections import defaultdict
-import pandas as pd # For type hinting
+import pandas as pd
 
 class AirspaceCreator:
     def __init__(self, vertiports: Dict, airspace_params: Dict, vertiport_distances: pd.DataFrame = None, cruise_altitude: float = 450):
@@ -10,15 +10,30 @@ class AirspaceCreator:
         self.airspace_params = airspace_params
         self.vertiport_distances = vertiport_distances
         self.cruise_altitude = cruise_altitude
-        self.num_waypoints_per_airlink = self.determine_num_waypoints()
-        self.airlinks_start_end_points = self.get_airlinks_start_end_points()
-        self.waypoint_ids = self.create_waypoint_ids()
-        self.waypoints = self.create_waypoints()
-        self.waypoint_locations = self.match_waypoint_names_locations()
+        if airspace_params['airspace_layout_file_path'] is None:
+            self.num_waypoints_per_airlink = self.determine_num_waypoints()
+            self.airlinks_start_end_points = self.get_airlinks_start_end_points()
+            self.waypoint_ids = self.create_waypoint_ids()
+            self.waypoints = self.create_waypoints()
+            self.waypoint_locations = self.match_waypoint_names_locations()
+        else:
+            self.waypoint_ids, self.waypoint_locations = self.read_waypoint_locations_from_file()
 
 
+    def read_waypoint_locations_from_file(self):
+        waypoints = pd.read_csv(self.airspace_params['airspace_layout_file_path'])
+        waypoint_ids = defaultdict(list)
+        waypoint_locations = defaultdict(dict)
+        for _, row in waypoints.iterrows():
+            waypoint_ids[row['flight_direction']].append(row['waypoint_id'])            
+            waypoint_locations[row['waypoint_id']] = [row['latitude'], row['longitude'], row['altitude']]
+        return waypoint_ids, waypoint_locations
+    
     @staticmethod
-    def generate_waypoints(lat1, lon1, lat2, lon2, num_waypoints, cruise_altitude, origin_altitude, destination_altitude):
+    def generate_waypoints(start_end_points, num_waypoints, cruise_altitude, origin_destination_vertiport_locs, origin_altitude, destination_altitude):
+        lat1, lon1, lat2, lon2 = start_end_points # Approach departures fixes
+        o_vert_lat, o_vert_lon, d_vert_lat, d_vert_lon = origin_destination_vertiport_locs
+
         # Calculate haversine distance between the two points
         distance_miles = haversine_dist(lat1, lon1, lat2, lon2, unit='mile')
 
@@ -30,7 +45,7 @@ class AirspaceCreator:
         lat2_rad, lon2_rad = np.radians(lat2), np.radians(lon2)
 
         waypoints = []
-        for i in range(1, num_waypoints + 1):
+        for i in range(1, num_waypoints + 1 - 4):
             f = i / (num_waypoints + 1)
             A = np.sin((1 - f) * c) / np.sin(c)
             B = np.sin(f * c) / np.sin(c)
@@ -41,7 +56,7 @@ class AirspaceCreator:
             lon_rad = np.arctan2(y, x)
             lat, lon = np.degrees(lat_rad), np.degrees(lon_rad)
             waypoints.append((lat, lon, cruise_altitude))
-        return [(lat1, lon1, origin_altitude+97.5)] + waypoints + [(lat2, lon2, destination_altitude+97.5)] # HACK: 97.5 is the altitude of the approach departure fix. This is according to one model. Needs to change.
+        return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+97.5)] + waypoints + [(lat2, lon2, destination_altitude+97.5)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 97.5 is the altitude of the approach departure fix. This is according to one model. Needs to change.
 
     
     def determine_num_waypoints(self) -> Dict: # vertiport_distances: pd.DataFrame
@@ -53,8 +68,8 @@ class AirspaceCreator:
             origin_terminal_airspace_radius = self.vertiports[row['origin_vertiport_id']].vertiport_layout.terminal_airspace_radius
             destination_terminal_airspace_radius = self.vertiports[row['destination_vertiport_id']].vertiport_layout.terminal_airspace_radius
             airlink_length = row['distance_miles'] - origin_terminal_airspace_radius - destination_terminal_airspace_radius
-            num_waypoints = round(airlink_length / self.airspace_params['airlink_segment_length'])
-            num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints
+            num_waypoints = round(airlink_length / self.airspace_params['airlink_segment_length']) - 1
+            num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints # + 4 # Add 2 for the origin and destination vertiports and 2 for the departure and arrival fix
         return num_waypoints_per_airlink
 
     def get_airlinks_start_end_points(self):
@@ -69,37 +84,55 @@ class AirspaceCreator:
                                                                                                                 dest_arrival_fix_lat, 
                                                                                                                 dest_arrival_fix_lng)
         return airlinks_start_end_endpoints
+    
+    def get_origin_destination_vertiport_locs(self):
+        origin_destination_vertiport_locs = defaultdict(dict)
+        for _, row in self.vertiport_distances.iterrows():
+            origin_vertiport_lat = self.vertiports[row['origin_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lat'].iloc[0]
+            origin_vertiport_lng = self.vertiports[row['origin_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lng'].iloc[0]
+            dest_vertiport_lat = self.vertiports[row['destination_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lat'].iloc[0]
+            dest_vertiport_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lng'].iloc[0]
+            origin_destination_vertiport_locs[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = (origin_vertiport_lat,
+                                                                                                                    origin_vertiport_lng,
+                                                                                                                    dest_vertiport_lat,
+                                                                                                                    dest_vertiport_lng)
+        return origin_destination_vertiport_locs
 
     def create_waypoint_ids(self):
         waypoint_ids = defaultdict(list)
         for flight_direction, num_waypoints in self.num_waypoints_per_airlink.items():
             origin = flight_direction.split('_')[0]
             destination = flight_direction.split('_')[1]
-            waypoint_ids[flight_direction].append(self.vertiports[origin].vertiport_layout.departure_fix_lat_lng.departure_fix_nodes.iloc[0])
+            num_waypoints = num_waypoints + 4
             for i in range(num_waypoints):
                 if i == num_waypoints-1:
+                    waypoint_ids[flight_direction].append(f'{destination}_hover_fix')
+                elif i == num_waypoints-2:
+                    waypoint_ids[flight_direction].append(f'{destination}_approach_fix')
+                elif i == num_waypoints-3:
                     waypoint_ids[flight_direction].append(f'{destination}_holding_unit')
+                elif i == 0:
+                    waypoint_ids[flight_direction].append(f'{origin}_hover_fix')
+                elif i == 1:
+                    waypoint_ids[flight_direction].append(f'{origin}_departure_fix')
                 else:
-                    waypoint_ids[flight_direction].append(f'{flight_direction}_waypoint_{str(i)}')
-            waypoint_ids[flight_direction].append(self.vertiports[destination].vertiport_layout.approach_fix_lat_lng.approach_fix_nodes.iloc[0])
+                    waypoint_ids[flight_direction].append(f'{flight_direction}_waypoint_{str(i-1)}')
         return waypoint_ids
 
 
     def create_waypoints(self):
         waypoints = defaultdict(list)
+        origin_destination_vertiport_locs = self.get_origin_destination_vertiport_locs()
         for flight_direction, start_end_points in self.airlinks_start_end_points.items():
-            origin_departure_fix_lat, origin_departure_fix_lng, dest_arrival_fix_lat, dest_arrival_fix_lng = start_end_points
             num_waypoints = len(self.waypoint_ids[flight_direction])
             origin = flight_direction.split('_')[0]
             destination = flight_direction.split('_')[1]
             origin_altitude = self.vertiports[origin].vertiport_layout.vertiport_height                    
             destination_altitude = self.vertiports[destination].vertiport_layout.vertiport_height
-            waypoints[flight_direction] = AirspaceCreator.generate_waypoints(origin_departure_fix_lat, 
-                                                                            origin_departure_fix_lng, 
-                                                                            dest_arrival_fix_lat, 
-                                                                            dest_arrival_fix_lng, 
+            waypoints[flight_direction] = AirspaceCreator.generate_waypoints(start_end_points, 
                                                                             num_waypoints,
                                                                             self.cruise_altitude,
+                                                                            origin_destination_vertiport_locs[flight_direction],
                                                                             origin_altitude,
                                                                             destination_altitude)
         return waypoints
@@ -109,4 +142,5 @@ class AirspaceCreator:
         for flight_direction, waypoint_id_list in self.waypoint_ids.items():
             for i, waypoint_id in enumerate(waypoint_id_list):
                 waypoint_locations[waypoint_id] = self.waypoints[flight_direction][i]
+        print(waypoint_locations)
         return waypoint_locations

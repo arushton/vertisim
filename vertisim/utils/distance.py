@@ -20,3 +20,12 @@ def haversine_dist(lat1: float, lon1: float, lat2: float, lon2: float, unit: str
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
     return round(r * c)
+
+
+# Compute 3D distance between two points
+def distance_3d(lat1: float, lon1: float, alt1: float, lat2: float, lon2: float, alt2: float, unit: str = 'meter') -> float:
+    """
+    Computes the 3D distance between two points. Unit for altitude needs to be consistent with unit for haversine distance.
+    """
+    dist_2d = haversine_dist(lat1, lon1, lat2, lon2, unit)
+    return np.sqrt(dist_2d ** 2 + (alt2 - alt1) ** 2)

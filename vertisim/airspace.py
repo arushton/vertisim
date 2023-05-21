@@ -27,9 +27,9 @@ class Airspace:
             for waypoint_id in waypoint_id_list:
                 # The second to last one (holding unit -approach departure fixes) will have capacity of holding_unit_capacity
                 # Departure fix
-                if waypoint_id in [waypoint_id_list[0], waypoint_id_list[-1]]:
+                if waypoint_id in [waypoint_id_list[0], waypoint_id_list[1], waypoint_id_list[-1], waypoint_id_list[-2]]:
                     airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=1)
-                elif waypoint_id == waypoint_id_list[-2]:
+                elif waypoint_id == waypoint_id_list[-3]:
                     airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.holding_unit_capacity)
                 else:
                     airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.airlink_capacity)

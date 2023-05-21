@@ -252,36 +252,90 @@ class VertiportManager:
         Requests the fix resource from vertiport manager
         """
         if operation_type == 'arrival':
-            arrival_fix_resource = self.get_last_airlink_resource(flight_direction=flight_direction)
-            return arrival_fix_resource.request()            
+            arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction)
+            return arrival_fix_resource.request(), arrival_fix_resource            
         elif operation_type == 'departure':
-            departure_fix_resource = self.get_first_airlink_resource(flight_direction=flight_direction)
-            return departure_fix_resource.request()  
+            departure_fix_resource = self.get_second_airlink_resource(flight_direction=flight_direction)
+            return departure_fix_resource.request(), departure_fix_resource 
+        
+    def release_fix_resource(self, aircraft: object, operation: str):
+        """
+        Releases the fix resource from usage
+
+        Parameters
+        ----------
+        aircraft : object
+            Aircraft object
+        operation : str
+            Operation type of the aircraft. 'arrival' or 'departure'
+
+        Returns
+        -------
+        None
+        """
+        if operation == 'arrival':
+            aircraft.arrival_fix_resource.release(aircraft.arrival_fix_usage_request)
+            aircraft.arriaval_fix_usage_request = None
+            aircraft.arrival_fix_resource = None
+        elif operation == 'departure':
+            aircraft.departure_fix_resource.release(aircraft.departure_fix_usage_request)
+            aircraft.departure_fix_usage_request = None
+            aircraft.departure_fix_resource = None
+        else:
+            raise ValueError("Operation type is not valid. Operation type should be 'arrival' or 'departure'.")
 
     def get_first_airlink_resource(self, flight_direction: str):
-        # First airlink resource is departure fix
+        # First airlink resource is hover fix
         return next(iter(self.airspace.airlink_resources[flight_direction].values()))
     
     def get_first_airlink_node_id(self, flight_direction: str):
+        # First airlink resource is hover fix
         return next(iter(self.airspace.airlink_resources[flight_direction].keys()))
     
     def get_second_airlink_resource(self, flight_direction: str):
-        # Second airlink resource is the first waypoint
+        # Second airlink resource is the departure fix
         values_iterator = iter(self.airspace.airlink_resources[flight_direction].values())
         next(values_iterator)
         return next(values_iterator)
-    
+
     def get_second_airlink_node_id(self, flight_direction: str):
         keys_iterator = iter(self.airspace.airlink_resources[flight_direction].keys())
         next(keys_iterator)
-        return next(keys_iterator)
+        return next(keys_iterator)    
     
+    def get_third_airlink_resource(self, flight_direction: str):
+        # Third airlink resource is the first waypoint
+        values_iterator = iter(self.airspace.airlink_resources[flight_direction].values())
+        next(values_iterator)
+        next(values_iterator)
+        return next(values_iterator)
+    
+    def get_third_airlink_node_id(self, flight_direction: str):
+        keys_iterator = iter(self.airspace.airlink_resources[flight_direction].keys())
+        next(keys_iterator)
+        next(keys_iterator)
+        return next(keys_iterator)
+
     def get_last_airlink_resource(self, flight_direction: str):
-        # Last airlink resource is the approach fix
+        # Last airlink resource is the hover descend fix
         return list(self.airspace.airlink_resources[flight_direction].values())[-1]
     
     def get_last_airlink_node_id(self, flight_direction: str):
         return list(self.airspace.airlink_resources[flight_direction].keys())[-1]
+    
+    def get_second_to_last_airlink_resource(self, flight_direction: str):
+        # Second to last airlink resource is the final approach fix
+        return list(self.airspace.airlink_resources[flight_direction].values())[-2]
+    
+    def get_second_to_last_airlink_node_id(self, flight_direction: str):
+        return list(self.airspace.airlink_resources[flight_direction].keys())[-2]
+    
+    def get_third_to_last_airlink_resource(self, flight_direction: str):
+        # Third to last airlink resource is the holding unit
+        return list(self.airspace.airlink_resources[flight_direction].values())[-3]
+    
+    def get_third_to_last_airlink_node_id(self, flight_direction: str):
+        return list(self.airspace.airlink_resources[flight_direction].keys())[-3]
 
     def generate_taxi_route_nodes(self, vertiport_id: str, source: str, target: str) -> Union[list, float]:
         """
@@ -581,25 +635,24 @@ class VertiportManager:
     # -------------------------
 
     def simulate_terminal_airspace_arrival_process(self, aircraft: object, arriving_passengers: list):
-        aircraft.arrival_time = self.env.now
+        holding_start = self.env.now
         
         # Increase aircraft arrival queue counter
         self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.destination_vertiport_id,
                                                                queue_update=1)
         
         # Request arrival fix resource
-        arrival_fix_usage_request = self.request_fix_resource(flight_direction=aircraft.flight_direction, operation_type='arrival')
+        arrival_fix_usage_request, arrival_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction, operation_type='arrival')
         yield arrival_fix_usage_request
 
-        aircraft.arrival_fix_usage_request = arrival_fix_usage_request
+        holding_end = self.env.now
+        aircraft.holding_time = holding_end - holding_start
+        aircraft.update_holding_energy_consumption(aircraft.holding_time)
 
-        # Save the aircraft location - final approach fix
-        aircraft.location = self.get_last_airlink_node_id(flight_direction=aircraft.flight_direction)
+        aircraft.arrival_fix_resource = arrival_fix_resource
+        aircraft.arrival_fix_usage_request = arrival_fix_usage_request  
 
-        # Save aircraft approach fix arrival time
-        self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='final_approach_fix_arrival')
-        
-        yield self.env.process(self.fato_and_parking_pad_usage_process(aircraft=aircraft))     
+        yield self.env.process(self.fato_and_parking_pad_usage_process(aircraft=aircraft))
 
     def fato_and_parking_pad_usage_process(self, aircraft: object):
         if aircraft.parking_space_id is None and \
@@ -828,39 +881,33 @@ class VertiportManager:
         
         yield self.env.process(self.departure_fix_request(aircraft=aircraft))
 
+        self.release_taxi_usage_request(vertiport_id=aircraft.origin_vertiport_id,
+                                        taxi_usage_request=taxi_usage_request)    
+        
         # Take-off process
         yield self.env.process(
             aircraft.aircraft_take_off_process(
                 take_off_fato_id=aircraft.assigned_fato_id
             )
-        )
-
-        self.release_taxi_usage_request(vertiport_id=aircraft.origin_vertiport_id,
-                                        taxi_usage_request=taxi_usage_request)
-        # Release the FATO
-        aircraft.assigned_fato_resource.fato_resource.release(aircraft.aircraft_fato_usage_request)
-        aircraft.assigned_fato_id = None
-        aircraft.assigned_fato_resource = None             
-
-        # Save FATO usage finish time
-        self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.origin_vertiport_id,
-                                                   fato_usage=-1)
+        ) 
 
         yield self.env.process(aircraft.fly_in_the_airspace())
         
     def departure_fix_request(self, aircraft):
         # Request departure fix resource
-        departure_fix_usage_request = self.request_fix_resource(flight_direction=aircraft.flight_direction,
+        departure_fix_usage_request, departure_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction,
                                                                 operation_type='departure')
         yield departure_fix_usage_request
         aircraft.departure_fix_usage_request = departure_fix_usage_request
+        aircraft.departure_fix_resource = departure_fix_resource
 
     def departure_fix_request_initial_state(self, aircraft):
         # Request departure fix resource
-        departure_fix_usage_request = self.request_fix_resource(flight_direction=aircraft.flight_direction, 
+        departure_fix_usage_request, departure_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction, 
                                                                 operation_type='departure')
         yield departure_fix_usage_request
         aircraft.departure_fix_usage_request = departure_fix_usage_request
+        aircraft.departure_fix_resource = departure_fix_resource
 
         yield self.env.process(aircraft.fly_in_the_airspace())
 

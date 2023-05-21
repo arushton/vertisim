@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.haversine import haversine_dist
+from utils.distance import haversine_dist
 from utils.read_files import read_input_file
 
 def calc_vertiport_distances(vertiport_network_file_path: str) -> pd.DataFrame:

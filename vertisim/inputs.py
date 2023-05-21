@@ -17,7 +17,7 @@ sim_params = {
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds
     'charge_interruption': False,
-    'step_by_step_sim': False,
+    'step_by_step_sim': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
@@ -195,25 +195,25 @@ aircraft_params = {
     
     # MISSION PARAMETERS
     # -----------------
-    'vertical_takeoff_speed': 12.3,  # mph
-    'vertical_landing_speed': 12.3,  # mph
-    # Altitude
-    'ground_altitude': 0,  # ft
-    'hover_altitude': 50,  # ft
-    'cruise_altitude': 1500,  # ft
+    'vertical_takeoff_speed': 5.5,  # m/s
+    'vertical_landing_speed': 5.5,  # m/s
+    # # Altitude
+    'ground_altitude': 0,  # m
+    'hover_altitude': 15,  # m
+    'cruise_altitude': 450,  # m
 
     # Process time
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
-    'time_rotor_spin_up': 0,  # sec
+    'time_rotor_spin_up': 5,  # sec - will be included in the hover time
     'time_hover_climb': 15,  # sec
     'time_climb_transition': 30,  # sec  
     'time_climb': 65,  # sec'  
     'time_descend': 65,  # sec
     'time_descend_transition': 30,  # sec
     'time_hover_descend': 15,  # sec
-    'time_rotor_spin_down': 0,  # sec
+    'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
     'ground_taxi_speed': 3.67,  # ft/s
     'time_passenger_embark_disembark': 60 * 0,  # secs

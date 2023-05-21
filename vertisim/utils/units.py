@@ -83,13 +83,13 @@ def miles_to_m(miles):
     else:
         return miles * 1609.34
     
-def mph_metersec(mph):
+def mph_to_metersec(mph):
     if type(mph) not in [int, float, np.float64, np.float32, np.int_]:
         raise TypeError(f"Can't convert mph to m/s. Speed (mph) format is not correct. The type you inputted is {type(mph)}")
     else:
         return mph * 0.44704
     
-def metersec_mph(metersec):
+def metersec_to_mph(metersec):
     if type(metersec) not in [int, float, np.float64, np.float32, np.int_]:
         raise TypeError(f"Can't convert m/s to mph. Speed (m/s) format is not correct. The type you inputted is {type(metersec)}")
     else:

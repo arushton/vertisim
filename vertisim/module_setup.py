@@ -23,9 +23,6 @@ def create_airspace_layout(env: object,
                             vertiports: Dict, 
                             vertiport_distances, 
                             airspace_params):
-    if airspace_params['airspace_layout_file_path'] is not None:
-        raise NotImplementedError("Airspace layout file path is not implemented yet. Use airspace creator.") # TODO: Implement airspace layout file path
-    
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
                                        airspace_params=airspace_params,
