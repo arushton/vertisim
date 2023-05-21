@@ -785,7 +785,7 @@ class Aircraft:
         start_power = max(watt_to_kw((term1 * term2_start + term3) / self.n_hover), 0)
         end_power = max(watt_to_kw((term1 * term2_end + term3) / self.n_hover), 0)
 
-        print(f'vertical_start_power: {start_power}, end_power: {end_power} for vertical {operation}, hover_time: {hover_time}')
+        # print(f'vertical_start_power: {start_power}, end_power: {end_power} for vertical {operation}, hover_time: {hover_time}')
 
         if operation == 'takeoff':
             return sec_to_hr((start_power + end_power) / 2 * hover_time) # kWh - time units need to be seconds
@@ -810,7 +810,7 @@ class Aircraft:
                                        * self.wing_area * min_power_speed)
         climb_transition_end_power = max(watt_to_kw((term1_end + term2_end + term3_end) / self.n_climb), 0)
 
-        print(f'climb_transition_start_power: {climb_transition_start_power}, climb_transition_end_power: {climb_transition_end_power}, climb_transition_time: {climb_transition_time}')
+        # print(f'climb_transition_start_power: {climb_transition_start_power}, climb_transition_end_power: {climb_transition_end_power}, climb_transition_time: {climb_transition_time}')
 
         return sec_to_hr((climb_transition_start_power + climb_transition_end_power) / 2 * climb_transition_time)
     
@@ -835,7 +835,7 @@ class Aircraft:
         term2_end = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * rho(descend_transition_end_altitude, self.atmosphere_condition)))
         descend_transition_end_power = max(watt_to_kw((term1_end * term2_end)/ self.n_hover), 0) 
 
-        print(f'descend_transition_start_power: {descend_transition_start_power}, descend_transition_end_power: {descend_transition_end_power}, descend_transition_time: {descend_transition_time}')
+        # print(f'descend_transition_start_power: {descend_transition_start_power}, descend_transition_end_power: {descend_transition_end_power}, descend_transition_time: {descend_transition_time}')
 
         return sec_to_hr((descend_transition_start_power + descend_transition_end_power) / 2 * descend_transition_time)
 
@@ -855,7 +855,7 @@ class Aircraft:
         term3_end = K * weight(self.tom)**2 / (1/2*rho(climb_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
         climb_end_power = max(watt_to_kw(term1_end + term2_end / self.n_climb + term3_end / self.n_climb), 0)
 
-        print(f'climb_start_power: {climb_start_power}, climb_end_power: {climb_end_power}, climb_time: {climb_time}')
+        # print(f'climb_start_power: {climb_start_power}, climb_end_power: {climb_end_power}, climb_time: {climb_time}')
 
         return sec_to_hr((climb_start_power + climb_end_power) / 2 * climb_time)
     
@@ -881,7 +881,7 @@ class Aircraft:
         term3_end = K * weight(self.tom)**2 / (1/2*rho(descend_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
         descend_end_power = max(watt_to_kw(-term1_end + term2_end/ self.n_climb + term3_end/ self.n_climb), 0)
 
-        print(f'descend_start_power: {descend_start_power}, descend_end_power: {descend_end_power}, descend_time: {descend_time}')
+        # print(f'descend_start_power: {descend_start_power}, descend_end_power: {descend_end_power}, descend_time: {descend_time}')
 
         return sec_to_hr((descend_start_power + descend_end_power) / 2 * descend_time)
     

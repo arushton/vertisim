@@ -21,13 +21,14 @@ class AirspaceCreator:
 
 
     def read_waypoint_locations_from_file(self):
-        waypoints = pd.read_csv(self.airspace_params['airspace_layout_file_path'])
+        waypoints = pd.read_excel(self.airspace_params['airspace_layout_file_path'], sheet_name='new_route')
         waypoint_ids = defaultdict(list)
         waypoint_locations = defaultdict(dict)
         for _, row in waypoints.iterrows():
-            waypoint_ids[row['flight_direction']].append(row['waypoint_id'])            
+            waypoint_ids[row['flight_direction']].append(row['waypoint_id'])       
             waypoint_locations[row['waypoint_id']] = [row['latitude'], row['longitude'], row['altitude']]
         return waypoint_ids, waypoint_locations
+
     
     @staticmethod
     def generate_waypoints(start_end_points, num_waypoints, cruise_altitude, origin_destination_vertiport_locs, origin_altitude, destination_altitude):

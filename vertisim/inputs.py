@@ -17,7 +17,7 @@ sim_params = {
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds
     'charge_interruption': False,
-    'step_by_step_sim': True,
+    'step_by_step_sim': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
@@ -138,7 +138,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': None,
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/new_route.xls',
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 0.25,  # miles
