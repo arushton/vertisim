@@ -17,7 +17,7 @@ from scheduler import Scheduler
 from run_step_by_step_simulation import run_step_by_step_simulation
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
-from utils.helpers import set_seed, get_all_aircraft_models
+from utils.helpers import set_seed, get_all_aircraft_models, create_dict_for_fixes
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
 from utils.get_state_variables import get_state_variables
@@ -234,6 +234,8 @@ class SimSetup:
             structural_entity_groups = vertiport_config.vertiport_layout.structural_entity_groups
             for entity, value in structural_entity_groups.items():
                 merged_dict[entity].extend(value)
+        fix_nodes = create_dict_for_fixes(self.airspace.waypoint_ids)
+        merged_dict |= fix_nodes
         return dict(merged_dict)
     
     def create_vertiport_manager(self):

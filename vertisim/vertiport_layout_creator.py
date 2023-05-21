@@ -131,8 +131,6 @@ class VertiportLayout:
         structural_entity_groups['fato'] = convert_to_list(self.fato_ids)
         structural_entity_groups['parking_pad'] = convert_to_list(self.parking_pad_ids)
         structural_entity_groups['taxiway_node'] = convert_to_list(self.taxiway_node_ids)
-        structural_entity_groups['approach_fix_node'] = convert_to_list(self.approach_fix_node)
-        structural_entity_groups['departure_fix_node'] = convert_to_list(self.departure_fix_node)
         structural_entity_groups['vertiport_entrance'] = convert_to_list(self.vert_door_node)
         structural_entity_groups['waiting_room'] = convert_to_list(self.waiting_room_node)
         structural_entity_groups['boarding_gate'] = convert_to_list(self.boarding_gate_node)

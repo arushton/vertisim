@@ -143,5 +143,4 @@ class AirspaceCreator:
         for flight_direction, waypoint_id_list in self.waypoint_ids.items():
             for i, waypoint_id in enumerate(waypoint_id_list):
                 waypoint_locations[waypoint_id] = self.waypoints[flight_direction][i]
-        print(waypoint_locations)
         return waypoint_locations

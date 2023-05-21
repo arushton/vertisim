@@ -337,6 +337,20 @@ def careful_round(value, decimal_places=2):
     return None if value is None else round(value, decimal_places)
 
 
+def create_dict_for_fixes(airspace_nodes: Dict) -> Dict:
+    """
+    Create a dictionary for fixes.
+    """
+    fix_nodes = {'approach_fix_node': [], 'departure_fix_node': []}
+    for key, value_list in airspace_nodes.items():
+        for value in value_list:
+            if 'approach' in value.lower():
+                fix_nodes['approach_fix_node'].append(value)
+            elif 'departure' in value.lower():
+                fix_nodes['departure_fix_node'].append(value)
+    return fix_nodes
+
+
 
 # def nested_dict_filter_values(d, depth, value):
 #     """
