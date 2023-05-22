@@ -254,82 +254,73 @@ class Aircraft:
             f"  - Location: {self.location}\n" \
             f"  - Serviced Time at Location: {self.serviced_time_at_the_location}\n"
 
-
     def aircraft_landing_process(self):
+        self.setup_for_descend()
+        yield self.env.process(self.descend_to_final_approach_fix())
+        yield self.env.process(self.descend_transition())
+        yield self.env.process(self.hover_descend())
+        yield self.env.process(self.post_landing_procedures())
+
+    def setup_for_descend(self):
         min_power_speed = min_power_speed_for_climb_descend(atmosphere_condition=self.atmosphere_condition,
                                                             altitude=self.altitude,
                                                             mtom=self.compute_flight_mass(),
                                                             cd_0=self.cd_0,
                                                             wing_area=self.wing_area,
                                                             ld_max=self.ld_max)
-        
         self.speed = min_power_speed
         self.vertical_speed = self.aircraft_params['vertical_landing_speed']
-
         self.flight_phase = 'descend'
+
+    def descend_to_final_approach_fix(self):
         final_approach_fix = self.vertiport_manager.get_second_to_last_airlink_node_id(flight_direction=self.flight_direction)
         holding_to_faf = self.get_node_altitude(self.location) - self.get_node_altitude(final_approach_fix)
-        # Descend to the final approach fix
         descend_time = round(holding_to_faf/self.vertical_speed)
         descend_energy_consumption = self.descend_energy_consumption(min_power_speed=self.speed,
-                                                                     descend_end_altitude=self.get_node_altitude(final_approach_fix),
-                                                                     descend_time=descend_time)
+                                                                    descend_end_altitude=self.get_node_altitude(final_approach_fix),
+                                                                    descend_time=descend_time)
         yield self.env.timeout(sec_to_ms(descend_time))
-        # Discharge update        
-        self.soc_discharge_update(descend_energy_consumption)
-        self.altitude = self.get_node_altitude(final_approach_fix)
-        self.location = final_approach_fix
-        # Save aircraft approach fix arrival time
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='final_approach_fix_arrival')      
-
-        # Request FATO - Aircraft already have a parking pad
+        self.update_aircraft_state(final_approach_fix, descend_energy_consumption, 'final_approach_fix_arrival')
         yield self.env.process(self.vertiport_manager.fato_pad_request(aircraft=self, operation_type='arrival'))
 
-        # Descend transition
+    def descend_transition(self):
         self.flight_phase = 'descend_transition'
-
         hover_fix_id = self.vertiport_manager.get_last_airlink_node_id(flight_direction=self.flight_direction)
-        # Distance from final approach fix to hover fix
-        faf_to_hover = self.get_node_altitude(self.location) - self.get_node_altitude(hover_fix_id) 
+        faf_to_hover = self.get_node_altitude(self.location) - self.get_node_altitude(hover_fix_id)
         descend_transition_time = round(faf_to_hover/self.vertical_speed)
         descend_transition_energy_consumption = self.descend_transition_energy_consumption(min_power_speed=self.speed,
-                                                                                           descend_transition_end_altitude=self.get_node_altitude(hover_fix_id),
-                                                                                           descend_transition_time=descend_transition_time)
+                                                                                        descend_transition_end_altitude=self.get_node_altitude(hover_fix_id),
+                                                                                        descend_transition_time=descend_transition_time)
         yield self.env.timeout(sec_to_ms(descend_transition_time))
-        # Discharge update        
-        self.soc_discharge_update(descend_transition_energy_consumption)
-        self.altitude = self.get_node_altitude(hover_fix_id)
-        self.location = hover_fix_id
         self.speed = 0
-        # Save aircraft hover fix arrival time
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='hover_fix_arrival')        
-
-        # Release Final Approach Fix
+        self.update_aircraft_state(hover_fix_id, descend_transition_energy_consumption, 'hover_fix_arrival')
         self.vertiport_manager.release_fix_resource(aircraft=self, operation='arrival')
 
-        # Hover descend
+    def hover_descend(self):
         self.flight_phase = 'hover_descend'
         hover_to_fato = self.get_node_altitude(self.location) - self.get_node_altitude(self.assigned_fato_id)
-        hover_descend_time = round(hover_to_fato/self.vertical_speed) # in seconds
+        hover_descend_time = round(hover_to_fato/self.vertical_speed) 
         hover_descend_time += ms_to_sec(self.time_rotor_spin_down)
         yield self.env.timeout(sec_to_ms(hover_descend_time))
         hover_descend_energy_consumption = self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.assigned_fato_id),
                                                                                             hover_altitude=self.get_node_altitude(self.location),
                                                                                             hover_time=hover_descend_time,
                                                                                             operation='landing')
-        self.soc_discharge_update(hover_descend_energy_consumption)
-        self.altitude = self.get_node_altitude(self.assigned_fato_id)   
         self.vertical_speed = 0
-        self.location = self.assigned_fato_id
-        self.flight_phase = 'ground'
-        # Save landing information
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='landed')
+        self.update_aircraft_state(self.assigned_fato_id, hover_descend_energy_consumption, 'landed')
         self.arrival_time = self.env.now
 
+    def post_landing_procedures(self):
         yield self.env.timeout(self.time_post_landing_safety_checks)
         yield self.env.timeout(self.time_tug_connection)
-        # Save landing information
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='ready_for_taxi_in')
+
+    def update_aircraft_state(self, location, energy_consumption, event):
+        self.soc_discharge_update(energy_consumption)
+        self.altitude = self.get_node_altitude(location)
+        self.location = location
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event=event)
+
 
     def taxi(self, 
              taxi_route: list, 
@@ -508,20 +499,31 @@ class Aircraft:
             self.vertiport_manager.vertiports[vertiport_id].taxiway_node_store.put(previous_node)
             self.vertiport_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))
 
+
+
     def aircraft_take_off_process(self, take_off_fato_id):
+        """Defines the take-off process of an aircraft."""
+        yield self.env.process(self.initial_takeoff_procedure(take_off_fato_id))
+        yield self.env.process(self.hover_climb())
+        yield self.env.process(self.climb_transition())
+        self.release_fato_and_departure_fix()
+        yield self.env.process(self.climb_to_cruise_altitude())
+
+    def initial_takeoff_procedure(self, take_off_fato_id):
+        """Initial takeoff procedures, including updating location, departure time and passenger records."""
         self.departure_time = self.env.now
         self.location = take_off_fato_id
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='fato_arrival')
 
-        # Save passenger departure time
         for passenger in self.passengers_onboard:
             passenger.departure_time = self.env.now    
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='fato_arrival')    
 
         yield self.env.timeout(self.time_tug_disconnection)
         yield self.env.timeout(self.time_pre_take_off_check_list)
-        
-        # Hover climb
+
+    def hover_climb(self):
+        """Hover climb phase of the takeoff."""
         self.flight_phase = 'hover_climb'
         self.speed = 0 # horizontal speed
         self.vertical_speed = self.aircraft_params['vertical_takeoff_speed']
@@ -531,16 +533,17 @@ class Aircraft:
         hover_climb_time = round(fato_to_hover / self.vertical_speed)
         hover_climb_time += ms_to_sec(self.time_rotor_spin_up)
         hover_climb_energy_consumption = self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.location),
-                                                                                          hover_altitude=self.get_node_altitude(hover_fix_id),
-                                                                                          hover_time=hover_climb_time,
-                                                                                          operation='takeoff')
+                                                                                        hover_altitude=self.get_node_altitude(hover_fix_id),
+                                                                                        hover_time=hover_climb_time,
+                                                                                        operation='takeoff')
         yield self.env.timeout(sec_to_ms(hover_climb_time))
         self.soc_discharge_update(hover_climb_energy_consumption)
         self.location = hover_fix_id
         self.altitude = self.get_node_altitude(hover_fix_id)
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='hover_climb_end')
 
-        # Climb transition
+    def climb_transition(self):
+        """Climb transition phase of the takeoff."""
         self.flight_phase = 'climb_transition'
         departure_fix_id = self.vertiport_manager.get_second_airlink_node_id(flight_direction=self.flight_direction)
         hover_to_departure_fix = self.get_node_altitude(departure_fix_id) - self.get_node_altitude(self.location)
@@ -551,10 +554,10 @@ class Aircraft:
                                                             cd_0=self.cd_0,
                                                             wing_area=self.wing_area,
                                                             ld_max=self.ld_max)
-
         climb_transition_energy_consumption = self.climb_transition_energy_consumption(min_power_speed=min_power_speed,
-                                                                                       climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
-                                                                                       climb_transition_time=climb_transition_time)
+                                                                                    climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
+                                                                                    climb_transition_time=climb_transition_time)
+        
         yield self.env.timeout(sec_to_ms(climb_transition_time))
         self.soc_discharge_update(climb_transition_energy_consumption)
         self.location = departure_fix_id
@@ -562,33 +565,34 @@ class Aircraft:
         self.speed = min_power_speed
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='climb_transition_end')
 
-        # Release fato
+    def release_fato_and_departure_fix(self):
+        """Releasing FATO and departure fix."""
         self.assigned_fato_resource.fato_resource.release(self.aircraft_fato_usage_request)
         self.assigned_fato_id = None
         self.assigned_fato_resource = None
-        # Save FATO usage finish time
         self.event_saver.update_fato_usage_tracker(vertiport_id=self.origin_vertiport_id,
-                                                   fato_usage=-1)  
-        # Release departure fix      
+                                                fato_usage=-1)  
         self.vertiport_manager.release_fix_resource(aircraft=self, operation='departure')
 
-        # Climb to cruise altitude
+    def climb_to_cruise_altitude(self):
+        """Climbing to cruise altitude phase."""
         self.flight_phase = 'climb'
-        first_waypoint = self.vertiport_manager.get_third_airlink_node_id(flight_direction=self.flight_direction) # Third airlink resource is the first waypoint
+        first_waypoint = self.vertiport_manager.get_third_airlink_node_id(flight_direction=self.flight_direction)
         first_waypoint_resource = self.vertiport_manager.get_third_airlink_resource(flight_direction=self.flight_direction)
         dp_to_cruise_altitude = self.get_node_altitude(first_waypoint) - self.get_node_altitude(self.location)
         climb_time = round(dp_to_cruise_altitude / self.vertical_speed)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
-        climb_energy_consumption = self.climb_energy_consumption(min_power_speed=min_power_speed,
-                                                                 climb_end_altitude=self.get_node_altitude(first_waypoint),
-                                                                 climb_time=climb_time)
+        climb_energy_consumption = self.climb_energy_consumption(min_power_speed=self.speed,
+                                                                climb_end_altitude=self.get_node_altitude(first_waypoint),
+                                                                climb_time=climb_time)
         self.soc_discharge_update(climb_energy_consumption)
         self.location = first_waypoint
         self.altitude = self.get_node_altitude(first_waypoint)
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='climb_end')
-    
+
+
     def fly_in_the_airspace(self, user_modification=False):
         """
         Finds the location of the aircraft in the airspace from self.vertiport_manager.airspace.airlink_resources
@@ -635,10 +639,6 @@ class Aircraft:
         yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
         )
-
-        # TODO: distance_to_descend_start_from_approach_fix = self.aircraft_params['time_descend'] * self.v_max_power
-        # num_waypoints_before_approach_fix = int(distance_to_descend_start_from_approach_fix/ miles_to_m(airlink_segment_length_miles))
-        # First request parking pad. If no available parking pad, then hold with cruise speed. Once you get the parking pad, descend and Once the descend finishes, request the fato.
 
     def request_charger(self):
         """

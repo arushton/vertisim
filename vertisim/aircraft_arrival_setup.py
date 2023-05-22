@@ -274,7 +274,6 @@ class AircraftArrivalSetup:
         elif aircraft.location in self.structural_entity_groups['parking_pad']:
             aircraft.parking_space_id = aircraft.location
             yield self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
-            # TODO: The approac_fix nodes are now in the airspace
         elif aircraft.location in self.structural_entity_groups['approach_fix_node']:
             yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(aircraft=aircraft,
                                                                                                arriving_passengers=passengers_onboard))

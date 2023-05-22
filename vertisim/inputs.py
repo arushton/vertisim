@@ -86,7 +86,7 @@ network_and_demand = {
             'aircraft_arrival_process': {
                 'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
                 'initial_parking_occupancy': 4,  # The # of the parking spaces that are occupied with aircraft at the beginning of the sim.
-                'initial_arrival_queue_state': 0,  # TODO: Number of aircraft in the arrival queue at the beginning of the sim.                
+                'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
                 # For network simulatio, if num_aircraft is None, then the  num_aircraft will be half of the parking pads.
@@ -142,11 +142,8 @@ airspace_params = {
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 0.25,  # miles
-    'fato_to_fadf_distance': 0.67,  # miles - FATO to final approach/departure fix distance
-    'fadf_to_holding_unit_distance': 3.33, # miles - FADF to holding unit distance 
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
-
 }
 
 
