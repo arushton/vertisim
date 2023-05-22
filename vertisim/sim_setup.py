@@ -354,60 +354,6 @@ class SimSetup:
         time_taken = end_time - self.sim_start_time
         print(f'Total time to run: {round(time_taken, 2)} seconds')                      
 
-    # def run_simulation(self):
-    #     # Run the simulation
-    #     max_sim_time = sec_to_ms(self.sim_params['sim_time'])
-    #     if self.sim_params['step_by_step_sim']:
-    #         while self.env.peek() < max_sim_time:
-    #             # self.env.run(until=max_sim_time)
-    #             self.env.step()
-    #             get_state_variables(vertiports=self.vertiports, 
-    #                                 airspace_states=self.airspace.airspace_resource_states,
-    #                                 aircraft_agents=self.vertiport_manager.aircraft_agents,
-    #                                 passenger_agents=self.vertiport_manager.passenger_agents)
-    #             modify = input("Do you want to modify any aircraft's state? (y/n) or fast-forward simulation steps (# simulation steps to fast-forward): ")
-    #             if modify.isdigit():
-    #                 for _ in range(int(modify)):
-    #                     self.env.step()
-    #             if modify.lower() == "y":
-    #                 aircraft_id, state, new_value = map(str.strip, input("Enter the aircraft id, state, and new value (comma separated): ").split(','))
-    #                 if aircraft_id in self.vertiport_manager.aircraft_agents:
-    #                     aircraft = self.vertiport_manager.aircraft_agents[aircraft_id]
-    #                     if hasattr(aircraft, state):
-    #                         try:
-    #                             if state == 'soc':
-    #                                 new_value = int(new_value)  # If the state is 'fuel', convert the value to int
-    #                             elif state in [
-    #                                 'speed',
-    #                                 'priority',
-    #                                 'serviced_time_at_the_location',
-    #                             ]:
-    #                                 new_value = float(new_value)
-    #                             setattr(aircraft, state, new_value)
-    #                             if state == 'location':
-    #                                 if new_value in self.structural_entity_groups['fato']:
-    #                                     aircraft.assigned_fato_id = new_value
-    #                                     self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
-    #                                 elif new_value in self.structural_entity_groups['parking_pad']:
-    #                                     aircraft.parking_space_id = new_value
-    #                                     self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
-    #                                 elif new_value in list(self.airspace.airlink_resources[aircraft.flight_direction].keys())[:-1]:
-    #                                     aircraft.location = new_value
-    #                                     self.env.process(aircraft.fly_in_the_airspace(user_modification=True))                                
-    #                             print(f"Successfully modified aircraft {aircraft_id}'s state '{state}' to {new_value}")
-    #                         except ValueError as e:
-    #                             print(e)
-    #                     else:
-    #                         print(f"Aircraft does not have a state named '{state}'")
-    #                 else:
-    #                     print("Invalid aircraft id.")
-    #                     print("Valid aircraft ids are: ", list(self.vertiport_manager.aircraft_agents.keys()))
-    #     else:
-    #         self.env.run(until=max_sim_time)
-    #     end_time = time.time()
-    #     time_taken = end_time - self.sim_start_time
-    #     print(f'Total time to run: {round(time_taken, 2)} seconds')
-
     def set_sim_id(self):
         # Set simulation id
         random.seed(round(time.time()))
