@@ -665,56 +665,75 @@ class Aircraft:
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
+
         if self.soc >= self.soc_required_to_complete_mission:
+            self.set_charging_time_trackers()
             self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed') 
-            self.charging_start_time = self.env.now
-            self.charging_end_time = self.env.now
             return
         
-        # time_before_charger_allocation = self.env.now
-
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:
-            # Request all of the chargers that the parking pad has access.
-            charger_requests = {charger: charger.request() for charger in parking_space.charger_resources}
-            # Yield all of the charger requests. When any_of used it fires all of the requests.
-            charging_request = yield self.env.any_of(list(charger_requests.values()))
-            charging_requests_list = list(charging_request.keys())
-            # The selected charging request is the on top of the list
-            selected_charging_request = charging_requests_list[0]
-            # Find which charger request is being used
-            used_charger_resource = get_key_from_value(charger_requests, selected_charging_request)
-
-            # Since any_of() used more than one request might be filled. Only one should be kept and the rest should
-            # be canceled.
-            for charger_res, charger_req in charger_requests.items():
-                if charger_res != used_charger_resource:
-                    if len(charging_requests_list) > 1:
-                        charger_res.release(charger_req)
-                    else:
-                        charger_req.cancel()
+            used_charger_resource, selected_charging_request = self.handle_shared_charger(parking_space)
         else:
-            # If fixed and share-limited charger is not used
-            charging_request = self.request_charger()
-            yield charging_request
+            selected_charging_request = self.env.process(self.handle_fixed_charger())
 
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_start')        
-        
-        self.charging_start_time = self.env.now
-
-        # Actual charging happens here
+        self.start_charging_process()
         yield self.env.timeout(self.get_charging_time())
+        self.end_charging_process()
+        self.soc_charge_update()
+        self.release_charger_resource(shared_charger, used_charger_resource, selected_charging_request)
+
+    def set_charging_time_trackers(self):
+        self.charging_start_time = self.env.now
         self.charging_end_time = self.env.now
 
-        # Update the SOC
-        self.soc_charge_update()
+    def handle_shared_charger(self, parking_space: object):
+        charger_requests = self.env.process(self.request_all_chargers(parking_space))
+        charging_requests_list = self.get_first_filled_charger_request(charger_requests)
+        selected_charging_request = charging_requests_list[0]
+        used_charger_resource = get_key_from_value(charger_requests, selected_charging_request)
+        # Find which charger request is being used
+        self.release_unused_charger_resources(charger_requests, used_charger_resource, charging_requests_list)
+        return used_charger_resource, selected_charging_request
 
+    def request_all_chargers(self, parking_space: object):
+        # Request all of the chargers that the parking pad has access.
+        charger_requests = {charger: charger.request() for charger in parking_space.charger_resources}
+        # Yield all of the charger requests. When any_of used it fires all of the requests.
+        yield self.env.any_of(list(charger_requests.values()))
+        return charger_requests
+
+    def get_first_filled_charger_request(self, charger_requests: dict):
+        # The selected charging request is the on top of the list
+        return list(charger_requests.keys())
+
+    def release_unused_charger_resources(self, charger_requests: dict, used_charger_resource: object, charging_requests_list: object):
+        # Since any_of() used more than one request might be filled. Only one should be kept and the rest should be canceled.        
+        for charger_res, charger_req in charger_requests.items():
+            if charger_res != used_charger_resource:
+                if len(charging_requests_list) > 1:
+                    charger_res.release(charger_req)
+                else:
+                    charger_req.cancel()
+
+    def handle_fixed_charger(self):
+        charging_request = self.request_charger()
+        yield charging_request
+        return charging_request
+
+    def start_charging_process(self):
+        self.charging_start_time = self.env.now
+        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_start')
+
+    def end_charging_process(self):
+        self.charging_end_time = self.env.now
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_end')
 
+    def release_charger_resource(self, shared_charger: bool, used_charger_resource: object, selected_charging_request: object):
         if shared_charger:
             used_charger_resource.release(selected_charging_request)
         else:
-            self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource.release(charging_request)
+            self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource.release(selected_charging_request)
 
     @staticmethod
     def calc_soc_from_charge_time(charge_time: int, initial_soc: int, df: pd.DataFrame) -> int:
