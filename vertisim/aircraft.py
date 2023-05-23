@@ -1,5 +1,5 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, hr_to_ms, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
+from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
@@ -35,7 +35,7 @@ class Aircraft:
         self.env = env
         self.tail_number = tail_number
         self.input_cruise_speed = input_cruise_speed
-        self._altitude = altitude
+        self.altitude = altitude
         self._soc = soc
         self._speed = 0
         self._vertical_speed = 0
@@ -159,16 +159,16 @@ class Aircraft:
     def vertical_speed(self, value):
         self._vertical_speed = value
 
-    @property
-    def altitude(self):
-        return self._altitude
+    # @property
+    # def altitude(self):
+    #     return self._altitude
     
-    @altitude.setter
-    def altitude(self, value):
-        if self._altitude <= 0:
-            self._altitude = 0
-        else:
-            self._altitude = value
+    # @altitude.setter
+    # def altitude(self, value):
+    #     if self._altitude <= 0:
+    #         self._altitude = 0
+    #     else:
+    #         self._altitude = value
 
     @property
     def origin_vertiport_id(self):
@@ -537,10 +537,7 @@ class Aircraft:
                                                                                         hover_time=hover_climb_time,
                                                                                         operation='takeoff')
         yield self.env.timeout(sec_to_ms(hover_climb_time))
-        self.soc_discharge_update(hover_climb_energy_consumption)
-        self.location = hover_fix_id
-        self.altitude = self.get_node_altitude(hover_fix_id)
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='hover_climb_end')
+        self.update_aircraft_state(hover_fix_id, hover_climb_energy_consumption, 'hover_climb_end')
 
     def climb_transition(self):
         """Climb transition phase of the takeoff."""
@@ -559,11 +556,8 @@ class Aircraft:
                                                                                     climb_transition_time=climb_transition_time)
         
         yield self.env.timeout(sec_to_ms(climb_transition_time))
-        self.soc_discharge_update(climb_transition_energy_consumption)
-        self.location = departure_fix_id
-        self.altitude = self.get_node_altitude(departure_fix_id)
         self.speed = min_power_speed
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='climb_transition_end')
+        self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
 
     def release_fato_and_departure_fix(self):
         """Releasing FATO and departure fix."""
@@ -587,10 +581,7 @@ class Aircraft:
         climb_energy_consumption = self.climb_energy_consumption(min_power_speed=self.speed,
                                                                 climb_end_altitude=self.get_node_altitude(first_waypoint),
                                                                 climb_time=climb_time)
-        self.soc_discharge_update(climb_energy_consumption)
-        self.location = first_waypoint
-        self.altitude = self.get_node_altitude(first_waypoint)
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='climb_end')
+        self.update_aircraft_state(first_waypoint, climb_energy_consumption, 'climb_end')
 
 
     def fly_in_the_airspace(self, user_modification=False):
@@ -631,10 +622,7 @@ class Aircraft:
                 yield self.env.timeout(link_traversal_time)
             # Compute energy consumption
             cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=ms_to_sec(link_traversal_time))
-            self.soc_discharge_update(cruise_energy_consumption)
-            # Save location and time information
-            self.location = waypoint_id
-            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='cruise')          
+            self.update_aircraft_state(waypoint_id, cruise_energy_consumption, 'cruise')         
 
         yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
@@ -804,7 +792,9 @@ class Aircraft:
         start_power = max(watt_to_kw((term1 * term2_start + term3) / self.n_hover), 0)
         end_power = max(watt_to_kw((term1 * term2_end + term3) / self.n_hover), 0)
 
-        # print(f'vertical_start_power: {start_power}, end_power: {end_power} for vertical {operation}, hover_time: {hover_time}')
+        # if self.tail_number == 0:
+        #     print(f'vertical_start_power: {start_power}, end_power: {end_power} for vertical {operation}, hover_time: {hover_time}, location: {self.location}, start_altitude: {self.altitude}, end_altitude: {hover_altitude}')
+        #     print(f'energy: {sec_to_hr((start_power + end_power) / 2 * hover_time)}')
 
         if operation == 'takeoff':
             return sec_to_hr((start_power + end_power) / 2 * hover_time) # kWh - time units need to be seconds
@@ -829,7 +819,9 @@ class Aircraft:
                                        * self.wing_area * min_power_speed)
         climb_transition_end_power = max(watt_to_kw((term1_end + term2_end + term3_end) / self.n_climb), 0)
 
-        # print(f'climb_transition_start_power: {climb_transition_start_power}, climb_transition_end_power: {climb_transition_end_power}, climb_transition_time: {climb_transition_time}')
+        # if self.tail_number == 0:
+        #     print(f'climb_transition_start_power: {climb_transition_start_power}, climb_transition_end_power: {climb_transition_end_power}, climb_transition_time: {climb_transition_time}, location: {self.location}, start_altitude: {self.altitude}, end_altitude: {climb_transition_end_altitude}')
+        #     print(f'energy: {sec_to_hr((climb_transition_start_power + climb_transition_end_power) / 2 * climb_transition_time)}')
 
         return sec_to_hr((climb_transition_start_power + climb_transition_end_power) / 2 * climb_transition_time)
     
@@ -854,7 +846,9 @@ class Aircraft:
         term2_end = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * rho(descend_transition_end_altitude, self.atmosphere_condition)))
         descend_transition_end_power = max(watt_to_kw((term1_end * term2_end)/ self.n_hover), 0) 
 
-        # print(f'descend_transition_start_power: {descend_transition_start_power}, descend_transition_end_power: {descend_transition_end_power}, descend_transition_time: {descend_transition_time}')
+        # if self.tail_number == 0:
+        #     print(f'descend_transition_start_power: {descend_transition_start_power}, descend_transition_end_power: {descend_transition_end_power}, descend_transition_time: {descend_transition_time}, location: {self.location}, descend_trans_start_altitude: {self.altitude}, descend_transition_end_altitude: {descend_transition_end_altitude}')
+        #     print(f'energy: {sec_to_hr((descend_transition_start_power + descend_transition_end_power) / 2 * descend_transition_time)}')
 
         return sec_to_hr((descend_transition_start_power + descend_transition_end_power) / 2 * descend_transition_time)
 
@@ -874,7 +868,9 @@ class Aircraft:
         term3_end = K * weight(self.tom)**2 / (1/2*rho(climb_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
         climb_end_power = max(watt_to_kw(term1_end + term2_end / self.n_climb + term3_end / self.n_climb), 0)
 
-        # print(f'climb_start_power: {climb_start_power}, climb_end_power: {climb_end_power}, climb_time: {climb_time}')
+        # if self.tail_number == 0:
+        #     print(f'climb_start_power: {climb_start_power}, climb_end_power: {climb_end_power}, climb_time: {climb_time}, location: {self.location},climb_start_altitude: {self.altitude}, climb_end_altitude: {climb_end_altitude}')
+        #     print(f'energy: {sec_to_hr((climb_start_power + climb_end_power) / 2 * climb_time)}')
 
         return sec_to_hr((climb_start_power + climb_end_power) / 2 * climb_time)
     
@@ -900,7 +896,9 @@ class Aircraft:
         term3_end = K * weight(self.tom)**2 / (1/2*rho(descend_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
         descend_end_power = max(watt_to_kw(-term1_end + term2_end/ self.n_climb + term3_end/ self.n_climb), 0)
 
-        # print(f'descend_start_power: {descend_start_power}, descend_end_power: {descend_end_power}, descend_time: {descend_time}')
+        # if self.tail_number == 0:
+        #     print(f'descend_start_power: {descend_start_power}, descend_end_power: {descend_end_power}, descend_time: {descend_time}, location: {self.location}, descend_start_altitude: {self.altitude}, descend_end_altitude: {descend_end_altitude}')
+        #     print(f'energy: {sec_to_hr((descend_start_power + descend_end_power) / 2 * descend_time)}')
 
         return sec_to_hr((descend_start_power + descend_end_power) / 2 * descend_time)
     
@@ -912,7 +910,7 @@ class Aircraft:
     
     def update_holding_energy_consumption(self, time_holding) -> float:
         holding_power = max(watt_to_kw((weight(self.tom) * self.speed) / (0.85*self.ld_max) / self.n_cruise), 0)
-        holding_energy = sec_to_hr(holding_power * time_holding)
+        holding_energy = ms_to_hr(holding_power * time_holding)
         self.soc_discharge_update(holding_energy)
     
     def check_reserve_energy(self) -> float:

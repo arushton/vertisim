@@ -58,6 +58,14 @@ def sec_to_hr(sec):
         raise TypeError(f"Can't convert sec to hr. Duration (sec) format is not correct. The type you inputted is {type(sec)}")
     else:
         return sec / 3600
+    
+def ms_to_hr(ms):
+    if ms is None:
+        return None
+    if type(ms) not in [int, float, np.float64, np.float32, np.int_]:
+        raise TypeError(f"Can't convert ms to hr. Duration (ms) format is not correct. The type you inputted is {type(ms)}")
+    else:
+        return ms / 3600000
 
 def ft_to_m(ft):
     if ft is None:

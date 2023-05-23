@@ -138,7 +138,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/new_route.xls',
+    'airspace_layout_file_path': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/new_route.xls',
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 0.25,  # miles
@@ -204,16 +204,16 @@ aircraft_params = {
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
     'time_rotor_spin_up': 5,  # sec - will be included in the hover time
-    'time_hover_climb': 15,  # sec
-    'time_climb_transition': 30,  # sec  
-    'time_climb': 65,  # sec'  
-    'time_descend': 65,  # sec
-    'time_descend_transition': 30,  # sec
-    'time_hover_descend': 15,  # sec
+    'time_hover_climb': 15,  # sec - NOT USED
+    'time_climb_transition': 30,  # sec - NOT USED  
+    'time_climb': 65,  # sec - NOT USED  
+    'time_descend': 65,  # sec - NOT USED
+    'time_descend_transition': 30,  # sec - NOT USED
+    'time_hover_descend': 15,  # sec - NOT USED
     'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
     'ground_taxi_speed': 3.67,  # ft/s
-    'time_passenger_embark_disembark': 60 * 0,  # secs
+    'time_passenger_embark_disembark': 60 * 2,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
     'time_post_charging_processes': 0,  # sec'

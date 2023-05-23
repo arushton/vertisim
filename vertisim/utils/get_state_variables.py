@@ -20,6 +20,9 @@ def collect_flow_entity_state_variables(aircraft_agents: Dict, passenger_agents:
             'soc': aircraft.soc,
             'location': aircraft.location,
             'serviced_time_at_the_location': aircraft.serviced_time_at_the_location,
+            'horizontal_speed': aircraft.speed,
+            'vertical_speed': aircraft.vertical_speed,
+            'altitude': aircraft.altitude,            
             'flight_direction': aircraft.flight_direction,
             'passengers_onboard': get_passenger_id_str_from_passenger_list(aircraft.passengers_onboard),
             'vertiport_arrival_time': careful_round(ms_to_min(aircraft.arrival_time), 2),
@@ -28,7 +31,8 @@ def collect_flow_entity_state_variables(aircraft_agents: Dict, passenger_agents:
             'priority': aircraft.priority,
             'parking_space_id': aircraft.parking_space_id,
             'fato_id': aircraft.assigned_fato_id,
-            'speed': aircraft.speed
+            'arrival_fix_resource': aircraft.arrival_fix_resource,
+            'departure_fix_resource': aircraft.departure_fix_resource
             # 'process': aircraft.process
         }
 

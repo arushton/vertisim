@@ -1,8 +1,11 @@
 {
     "tail_number_0": {
         "soc": 98.0,
-        "location": "DTLA_PARK14",
+        "location": "DTLA_FATO1",
         "serviced_time_at_the_location": 0.0,
+        "horizontal_speed": 3.67,
+        "vertical_speed": 0,
+        "altitude": 203.3,
         "flight_direction": null,
         "passengers_onboard": [
             "passenger_0",
@@ -10,56 +13,63 @@
             "passenger_4",
             "passenger_6"
         ],
-        "vertiport_arrival_time": 6.56,
+        "vertiport_arrival_time": 9.86,
         "vertiport_departure_time": 3.78,
-        "holding_time": 5.73,
+        "holding_time": 9.03,
         "priority": 1.0,
         "parking_space_id": "DTLA_PARK14",
         "fato_id": null,
-        "speed": 0
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
     },
     "tail_number_1": {
         "soc": 98.0,
-        "location": "DTLA_PARK13",
+        "location": "LAX_DTLA_waypoint_9",
         "serviced_time_at_the_location": 0.0,
-        "flight_direction": null,
+        "horizontal_speed": 72,
+        "vertical_speed": 5.5,
+        "altitude": 450,
+        "flight_direction": "LAX_DTLA",
         "passengers_onboard": [
             "passenger_8",
             "passenger_10",
             "passenger_12",
             "passenger_15"
         ],
-        "vertiport_arrival_time": 10.75,
-        "vertiport_departure_time": 7.97,
-        "holding_time": 9.92,
-        "priority": 1.0,
-        "parking_space_id": "DTLA_PARK13",
-        "fato_id": null,
-        "speed": 0
-    },
-    "tail_number_2": {
-        "soc": 98.0,
-        "location": "LAX_DTLA_waypoint_3",
-        "serviced_time_at_the_location": 0.0,
-        "flight_direction": "LAX_DTLA",
-        "passengers_onboard": [
-            "passenger_17",
-            "passenger_19",
-            "passenger_21",
-            "passenger_22"
-        ],
         "vertiport_arrival_time": 0.0,
-        "vertiport_departure_time": 11.23,
+        "vertiport_departure_time": 7.97,
         "holding_time": null,
         "priority": 1.0,
         "parking_space_id": null,
         "fato_id": null,
-        "speed": 71
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
+    },
+    "tail_number_2": {
+        "soc": 100,
+        "location": "LAX_PARK12",
+        "serviced_time_at_the_location": 0.0,
+        "horizontal_speed": 0,
+        "vertical_speed": 0,
+        "altitude": 0.0,
+        "flight_direction": null,
+        "passengers_onboard": [],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
+        "priority": 1.0,
+        "parking_space_id": "LAX_PARK12",
+        "fato_id": null,
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
     },
     "tail_number_3": {
         "soc": 100,
         "location": "LAX_PARK11",
         "serviced_time_at_the_location": 0.0,
+        "horizontal_speed": 0,
+        "vertical_speed": 0,
+        "altitude": 0.0,
         "flight_direction": null,
         "passengers_onboard": [],
         "vertiport_arrival_time": 0.0,
@@ -68,69 +78,80 @@
         "priority": 1.0,
         "parking_space_id": "LAX_PARK11",
         "fato_id": null,
-        "speed": 0
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
     },
     "tail_number_4": {
-        "soc": 97.0,
-        "location": "LAX_PARK14",
+        "soc": 99.0,
+        "location": "LAX_hover_fix",
         "serviced_time_at_the_location": 0.0,
-        "flight_direction": null,
+        "horizontal_speed": 0,
+        "vertical_speed": 5.5,
+        "altitude": 15.0,
+        "flight_direction": "DTLA_LAX",
         "passengers_onboard": [
             "passenger_1",
             "passenger_3",
             "passenger_5",
             "passenger_7"
         ],
-        "vertiport_arrival_time": 6.93,
+        "vertiport_arrival_time": 0.0,
         "vertiport_departure_time": 4.24,
-        "holding_time": 5.48,
+        "holding_time": 8.88,
         "priority": 1.0,
         "parking_space_id": "LAX_PARK14",
-        "fato_id": null,
-        "speed": 0
+        "fato_id": "LAX_FATO1",
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
     },
     "tail_number_5": {
-        "soc": 97.0,
-        "location": "LAX_PARK13",
+        "soc": 99.0,
+        "location": "DTLA_LAX_waypoint_20",
         "serviced_time_at_the_location": 0.0,
-        "flight_direction": null,
+        "horizontal_speed": 72,
+        "vertical_speed": 5.5,
+        "altitude": 450,
+        "flight_direction": "DTLA_LAX",
         "passengers_onboard": [
             "passenger_9",
             "passenger_11",
             "passenger_13",
             "passenger_14"
         ],
-        "vertiport_arrival_time": 10.18,
-        "vertiport_departure_time": 7.5,
-        "holding_time": 8.73,
-        "priority": 1.0,
-        "parking_space_id": "LAX_PARK13",
-        "fato_id": null,
-        "speed": 0
-    },
-    "tail_number_6": {
-        "soc": 97.0,
-        "location": "LAX_holding_unit",
-        "serviced_time_at_the_location": 0.0,
-        "flight_direction": "DTLA_LAX",
-        "passengers_onboard": [
-            "passenger_16",
-            "passenger_18",
-            "passenger_20",
-            "passenger_23"
-        ],
         "vertiport_arrival_time": 0.0,
-        "vertiport_departure_time": 11.7,
-        "holding_time": 0.0,
+        "vertiport_departure_time": 7.5,
+        "holding_time": null,
         "priority": 1.0,
         "parking_space_id": null,
         "fato_id": null,
-        "speed": 72
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
+    },
+    "tail_number_6": {
+        "soc": 100,
+        "location": "DTLA_PARK12",
+        "serviced_time_at_the_location": 0.0,
+        "horizontal_speed": 0,
+        "vertical_speed": 0,
+        "altitude": 203.3,
+        "flight_direction": null,
+        "passengers_onboard": [],
+        "vertiport_arrival_time": 0.0,
+        "vertiport_departure_time": null,
+        "holding_time": null,
+        "priority": 1.0,
+        "parking_space_id": "DTLA_PARK12",
+        "fato_id": null,
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
     },
     "tail_number_7": {
         "soc": 100,
         "location": "DTLA_PARK11",
         "serviced_time_at_the_location": 0.0,
+        "horizontal_speed": 0,
+        "vertical_speed": 0,
+        "altitude": 203.3,
         "flight_direction": null,
         "passengers_onboard": [],
         "vertiport_arrival_time": 0.0,
@@ -139,7 +160,8 @@
         "priority": 1.0,
         "parking_space_id": "DTLA_PARK11",
         "fato_id": null,
-        "speed": 0
+        "arrival_fix_resource": null,
+        "departure_fix_resource": null
     },
     "passenger_0": {
         "location": "LAX_GATE",
@@ -254,80 +276,45 @@
         "vertiport_departure_time": 7.97
     },
     "passenger_16": {
-        "location": "DTLA_GATE",
+        "location": "DTLA_ROOM",
         "origin_vertiport_id": "DTLA",
         "destination_vertiport_id": "LAX",
         "vertiport_arrival_time": 7.93,
-        "vertiport_departure_time": 11.7
+        "vertiport_departure_time": null
     },
     "passenger_17": {
-        "location": "LAX_GATE",
+        "location": "LAX_ROOM",
         "origin_vertiport_id": "LAX",
         "destination_vertiport_id": "DTLA",
         "vertiport_arrival_time": 8.4,
-        "vertiport_departure_time": 11.23
+        "vertiport_departure_time": null
     },
     "passenger_18": {
-        "location": "DTLA_GATE",
+        "location": "DTLA_ROOM",
         "origin_vertiport_id": "DTLA",
         "destination_vertiport_id": "LAX",
         "vertiport_arrival_time": 8.87,
-        "vertiport_departure_time": 11.7
+        "vertiport_departure_time": null
     },
     "passenger_19": {
-        "location": "LAX_GATE",
+        "location": "LAX_ROOM",
         "origin_vertiport_id": "LAX",
         "destination_vertiport_id": "DTLA",
         "vertiport_arrival_time": 9.33,
-        "vertiport_departure_time": 11.23
+        "vertiport_departure_time": null
     },
     "passenger_20": {
-        "location": "DTLA_GATE",
+        "location": "DTLA_ROOM",
         "origin_vertiport_id": "DTLA",
         "destination_vertiport_id": "LAX",
         "vertiport_arrival_time": 9.8,
-        "vertiport_departure_time": 11.7
+        "vertiport_departure_time": null
     },
     "passenger_21": {
-        "location": "LAX_GATE",
+        "location": "LAX_ROOM",
         "origin_vertiport_id": "LAX",
         "destination_vertiport_id": "DTLA",
         "vertiport_arrival_time": 10.27,
-        "vertiport_departure_time": 11.23
-    },
-    "passenger_22": {
-        "location": "LAX_GATE",
-        "origin_vertiport_id": "LAX",
-        "destination_vertiport_id": "DTLA",
-        "vertiport_arrival_time": 10.73,
-        "vertiport_departure_time": 11.23
-    },
-    "passenger_23": {
-        "location": "DTLA_ROOM",
-        "origin_vertiport_id": "DTLA",
-        "destination_vertiport_id": "LAX",
-        "vertiport_arrival_time": 11.2,
-        "vertiport_departure_time": 11.7
-    },
-    "passenger_24": {
-        "location": "LAX_ROOM",
-        "origin_vertiport_id": "LAX",
-        "destination_vertiport_id": "DTLA",
-        "vertiport_arrival_time": 11.67,
-        "vertiport_departure_time": null
-    },
-    "passenger_25": {
-        "location": "DTLA_ROOM",
-        "origin_vertiport_id": "DTLA",
-        "destination_vertiport_id": "LAX",
-        "vertiport_arrival_time": 12.13,
-        "vertiport_departure_time": null
-    },
-    "passenger_26": {
-        "location": "LAX_ROOM",
-        "origin_vertiport_id": "LAX",
-        "destination_vertiport_id": "DTLA",
-        "vertiport_arrival_time": 12.6,
         "vertiport_departure_time": null
     },
     "Structural Entities": {
@@ -377,6 +364,180 @@
                 "num_jobs_in_queue": 0
             }
         },
+        "DTLA_LAX": {
+            "DTLA_hover_fix": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_departure_fix": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_1": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_2": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_3": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_4": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_5": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_6": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_7": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_8": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_9": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_10": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_11": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_12": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_13": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_14": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_15": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_16": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_17": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_18": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_19": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_20": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_21": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_22": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_23": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_24": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_25": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_26": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_27": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_28": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_29": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_30": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_31": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_32": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_33": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_34": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_35": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_36": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_37": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "DTLA_LAX_waypoint_38": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_holding_unit": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_approach_fix": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_hover_fix": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            }
+        },
         "LAX_DTLA": {
             "LAX_hover_fix": {
                 "num_jobs_in_service": 0,
@@ -406,6 +567,138 @@
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
             },
+            "LAX_DTLA_waypoint_6": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_7": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_8": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_9": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_10": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_11": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_12": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_13": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_14": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_15": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_16": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_17": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_18": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_19": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_20": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_21": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_22": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_23": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_24": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_25": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_26": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_27": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_28": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_29": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_30": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_31": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_32": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_33": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_34": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_35": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_36": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_37": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
+            "LAX_DTLA_waypoint_38": {
+                "num_jobs_in_service": 0,
+                "num_jobs_in_queue": 0
+            },
             "DTLA_holding_unit": {
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
@@ -415,44 +708,6 @@
                 "num_jobs_in_queue": 0
             },
             "DTLA_hover_fix": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            }
-        },
-        "DTLA_LAX": {
-            "DTLA_departure_fix": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "DTLA_LAX_waypoint_1": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "DTLA_LAX_waypoint_2": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "DTLA_LAX_waypoint_3": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "DTLA_LAX_waypoint_4": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "DTLA_LAX_waypoint_5": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "LAX_holding_unit": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "LAX_approach_fix": {
-                "num_jobs_in_service": 0,
-                "num_jobs_in_queue": 0
-            },
-            "LAX_hover_fix": {
                 "num_jobs_in_service": 0,
                 "num_jobs_in_queue": 0
             }
