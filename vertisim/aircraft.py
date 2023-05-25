@@ -19,7 +19,6 @@ class Aircraft:
                  env, 
                  tail_number, 
                  input_cruise_speed,     
-                 altitude,            
                  origin_vertiport_id,
                  destination_vertiport_id,
                  passengers_onboard, 
@@ -35,7 +34,7 @@ class Aircraft:
         self.env = env
         self.tail_number = tail_number
         self.input_cruise_speed = input_cruise_speed
-        self.altitude = altitude
+        self.altitude = self.get_node_altitude(location)
         self._soc = soc
         self._speed = 0
         self._vertical_speed = 0

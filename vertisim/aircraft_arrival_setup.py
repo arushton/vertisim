@@ -34,6 +34,35 @@ class AircraftArrivalSetup:
         self.structural_entity_groups = structural_entity_groups
         self.event_saver = event_saver
         self.num_aircraft = None
+            
+    @staticmethod
+    def validate_columns(dataframe: pd.DataFrame, required_columns: list, optional_columns: dict, check_none_columns: list) -> None:
+        """
+        Validate required columns, optional columns and columns to check for None values.
+        :param dataframe: DataFrame to be validated.
+        :param required_columns: A list of required column names.
+        :param optional_columns: A dictionary of optional column names and their default values.
+        :param check_none_columns: A list of column names to check for None values.
+        :return: None.
+        """
+        for column in required_columns:
+            # Check if the column exists
+            if column not in dataframe.columns:
+                raise ValueError(f'{column} column does not exist in the aircraft arrival process file.')
+        
+        for column in check_none_columns:
+            # Check for None values in the column
+            if check_if_none_exists(dataframe[column]):
+                raise ValueError(f'{column} column has None value.')
+        
+        for column, default_value in optional_columns.items():
+            if column not in dataframe.columns:
+                dataframe[column] = default_value
+                print(
+                    f"{column} is not defined in the input file. The default value of {default_value} is used. If you "
+                    "want to define the initial value for each aircraft type, please add the column "
+                    f"'{column}' to the input file."
+                )
 
     def check_aircraft_arrival_schedule(self, aircraft_arrival_schedule: pd.DataFrame):
         """
@@ -41,89 +70,35 @@ class AircraftArrivalSetup:
         :param aircraft_arrival_schedule:
         :return:
         """
-        # Check if aircraft arrival time exists in the input file.
-        if 'aircraft_arrival_time' not in aircraft_arrival_schedule.columns:
-            raise ValueError('aircraft_arrival_time column is not exist in the aircraft arrival process file.')
-
-        # Check if there is any None value on the aircraft arrival time column.
-        if check_if_none_exists(aircraft_arrival_schedule['aircraft_arrival_time']):
-            raise ValueError('aircraft_arrival_time column has None value.')
-
-        # Check if aircraft departure time exists in the input file.
-        if 'aircraft_departure_time' not in aircraft_arrival_schedule.columns:
-            raise ValueError('aircraft_departure_time column is not exist in the aircraft arrival process file.')
-
-        # Check if there is any None values exists in the aircraft_departure_time column.
-        if check_if_none_exists(aircraft_arrival_schedule['aircraft_departure_time']):
-            raise ValueError('aircraft_departure_time column has None value.')
-
-        # Check if tail number exists in the input file.
-        if 'tail_number' not in aircraft_arrival_schedule.columns:
-            raise ValueError('tail_number column is not exist in the aircraft arrival process file.')
+        required_columns = [
+            'aircraft_arrival_time',
+            'aircraft_departure_time',
+            'tail_number',
+            'origin_vertiport_id',
+            'destination_vertiport_id',
+            'location',
+            'speed'
+            # 'passengers_onboard'
+        ]
         
-        # Check None values in the tail number column.
-        if check_if_none_exists(aircraft_arrival_schedule['tail_number']):
-            raise ValueError('tail_number column has None value.')
-
-        # Check if vertiport_id column exists in the input file.
-        if 'origin_vertiport_id' not in aircraft_arrival_schedule.columns:
-            raise ValueError('origin_vertiport_id column is not exist in the aircraft arrival process file.')
+        check_none_columns = [
+            'aircraft_arrival_time',
+            'aircraft_departure_time',
+            'tail_number',
+            'origin_vertiport_id',
+            'destination_vertiport_id',
+            # 'passengers_onboard'
+        ]
         
-        # Check None values in the vertiport_id column.
-        if check_if_none_exists(aircraft_arrival_schedule['origin_vertiport_id']):
-            raise ValueError('origin_vertiport_id column has None value.')
+        optional_columns = {
+            # Column name: default value
+            'serviced_time_at_the_location': 0,
+            'soc': self.aircraft_params['max_init_soc'],
+            'priority': 1,
+            'interarrival_time': compute_interarrival_times_from_schedule(aircraft_arrival_schedule['arrival_time'])
+        }
+        AircraftArrivalSetup.validate_columns(aircraft_arrival_schedule, required_columns, optional_columns, check_none_columns)
 
-        # Check if destination_vertiport_id column exists in the input file.
-        if 'destination_vertiport_id' not in aircraft_arrival_schedule.columns:
-            raise ValueError('destination_vertiport_id column is not exist in the aircraft arrival process file.')
-        
-        # Check None values in the destination_vertiport_id column.
-        if check_if_none_exists(aircraft_arrival_schedule['destination_vertiport_id']):
-            raise ValueError('destination_vertiport_id column has None value.')
-
-        # Check if passengers_onboard column exists in the input file.
-        if 'passengers_onboard' not in aircraft_arrival_schedule.columns:
-            raise ValueError('passengers_onboard column is not exist in the aircraft arrival process file.')
-        
-        # Check None values in the passengers_onboard column.
-        if check_if_none_exists(aircraft_arrival_schedule['passengers_onboard']):
-            raise ValueError('passengers_onboard column has None value.')
-
-        # Check if location column exists in the input file.
-        if 'location' not in aircraft_arrival_schedule.columns:
-            raise ValueError('location column is not exist in the aircraft arrival process file.')
-        
-        # Check None values in the location column.
-        if check_if_none_exists(aircraft_arrival_schedule['location']):
-            raise ValueError('location column has None value.')
-
-        # Check if serviced_time_at_the_location column exists in the input file.
-        if 'serviced_time_at_the_location' not in aircraft_arrival_schedule.columns:
-            aircraft_arrival_schedule['serviced_time_at_the_location'] = 0
-            print(
-                "serviced_time_at_the_location is not defined in the input file. The default serviced_time_at_the_location of 0 is used. If you want to define the serviced_time_at_the_location for each aircraft type, please add the column 'serviced_time_at_the_location' to the input file."
-            )
-
-        # Check if initial state of charge exists in the input file.
-        if 'soc' not in aircraft_arrival_schedule.columns:
-            aircraft_arrival_schedule['soc'] = self.aircraft_params['max_init_soc']
-            print(
-                f"State of charge is not defined in the input file. The default initial state of charge of {self.aircraft_params['max_init_soc']} is used. If you "
-                "want to define the initial state of charge for each aircraft type, please add the column "
-                "'max_init_soc' to the input file.")
-        
-        # Check if priority exists in the input file.
-        if 'priority' not in aircraft_arrival_schedule.columns:
-            aircraft_arrival_schedule['priority'] = 1
-            print(
-                f"Priority is not defined in the input file. The default priority of 1 is used. If you "
-                "want to define the priority for each aircraft type, please add the column "
-                "'priority' to the input file.")
-
-        # Check if interarrival column time exists in the input file.
-        if 'interarrival_time' not in aircraft_arrival_schedule.columns:
-            aircraft_arrival_schedule['interarrival_time'] = compute_interarrival_times_from_schedule(
-                aircraft_arrival_schedule['arrival_time'])
             
     def setup_aircraft_arrival(self):
         if self.aircraft_arrival_schedule_file_path is not None:
@@ -157,86 +132,45 @@ class AircraftArrivalSetup:
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
         aircraft_arrival_schedule = self.setup_aircraft_arrival()
-
-        for tail_number in aircraft_arrival_schedule.tail_number:
-            # Get the departure time of the aircraft.
-            departure_time = aircraft_arrival_schedule.loc[aircraft_arrival_schedule.tail_number == tail_number,
-                                                                'aircraft_departure_time'].values[0]
-
-            # Get the interarrival time of the aircraft.
-            interarrival_time = aircraft_arrival_schedule.loc[aircraft_arrival_schedule.tail_number == tail_number,
-                                                              'interarrival_time'].values[0]
-            # Get the initial state of charge of the aircraft.
-            soc = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'soc'].values[0]
-            
-            input_cruise_speed = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'speed'].values[0]
-            
-            # Get the altitude of the aircraft.
-            altitude = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'altitude'].values[0]
-            
-            # Get the arrival vertiport id of the aircraft.
-            origin_vertiport_id = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'origin_vertiport_id'].values[0]
-            
-            # Get the destination vertiport id of the aircraft.
-            destination_vertiport_id = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'destination_vertiport_id'].values[0]
-            
-            # Get the passengers onboard of the aircraft.
-            passengers_onboard = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'passengers_onboard'].values[0]
-            
-            # Get the initial location of the aircraft.
-            location = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'location'].values[0]
-            
-            # Get the serviced time at the location
-            serviced_time_at_the_location = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'serviced_time_at_the_location'].values[0]
         
-            # Get the priority of the aircraft.
-            priority = \
-                aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, 'priority'].values[0]
+        for tail_number in aircraft_arrival_schedule.tail_number:
+            # Fields to retrieve for each aircraft.
+            fields = ['aircraft_departure_time', 'interarrival_time', 'soc', 'speed', 
+                    'origin_vertiport_id', 'destination_vertiport_id', 'passengers_onboard', 'location',
+                    'serviced_time_at_the_location', 'priority']
 
-            yield self.env.timeout(sec_to_ms(interarrival_time))
-                    
+            # Create a dictionary to store the retrieved values.
+            aircraft_data = {}
+
+            for field in fields:
+                # Get the value of the field for the aircraft.
+                aircraft_data[field] = aircraft_arrival_schedule.loc[
+                    aircraft_arrival_schedule.tail_number == tail_number, field].values[0]
+
+            yield self.env.timeout(sec_to_ms(aircraft_data['interarrival_time']))
+
             if self.aircraft_arrival_schedule_file_path is not None:
                 yield self.env.process(self.scheduler.initiate_fixed_schedule_from_file()) 
             else:
-                self.env.process(                   
-                # Simulate the aircraft.
-                self.initiate_aircraft_arrival(tail_number=tail_number,
-                                            soc=soc,
-                                            input_cruise_speed=input_cruise_speed,
-                                            altitude=altitude,
-                                            origin_vertiport_id=origin_vertiport_id,
-                                            destination_vertiport_id=destination_vertiport_id,
-                                            passengers_onboard=passengers_onboard,
-                                            location=location,
-                                            serviced_time_at_the_location=serviced_time_at_the_location,
-                                            departure_time=departure_time,
-                                            priority=priority)
+                self.env.process(
+                    # Simulate the aircraft.
+                    self.initiate_aircraft_arrival(tail_number=tail_number,
+                                                soc=aircraft_data['soc'],
+                                                input_cruise_speed=aircraft_data['speed'],
+                                                origin_vertiport_id=aircraft_data['origin_vertiport_id'],
+                                                destination_vertiport_id=aircraft_data['destination_vertiport_id'],
+                                                passengers_onboard=aircraft_data['passengers_onboard'],
+                                                location=aircraft_data['location'],
+                                                serviced_time_at_the_location=aircraft_data['serviced_time_at_the_location'],
+                                                departure_time=aircraft_data['aircraft_departure_time'],
+                                                priority=aircraft_data['priority'])
                 )
-
 
 
     def initiate_aircraft_arrival(self, 
                                   tail_number: str,
                                   soc: int,
                                   input_cruise_speed: int,
-                                  altitude: int,
                                   origin_vertiport_id: str,
                                   destination_vertiport_id: str,
                                   passengers_onboard: List,
@@ -251,7 +185,6 @@ class AircraftArrivalSetup:
                             destination_vertiport_id=destination_vertiport_id,
                             passengers_onboard=passengers_onboard,
                             location=location,
-                            altitude=altitude,
                             serviced_time_at_the_location=serviced_time_at_the_location,
                             departure_time=departure_time,
                             soc=soc,
