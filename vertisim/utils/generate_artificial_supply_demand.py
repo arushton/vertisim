@@ -3,6 +3,7 @@ import numpy as np
 import random
 import pandas as pd
 from utils.distribution_generator import DistributionGenerator
+from utils.units import sec_to_ms
 from utils.helpers import cumulative_sum_array, nested_dict_filter_keys
 from utils.weighted_random_chooser import weighted_random_choose_exclude_element, random_choose_exclude_element
 from typing import Dict
@@ -14,7 +15,7 @@ def generate_aircraft_network_schedule(vertiport_configs: Dict,
     """
     Generate artificial aircraft supply for each vertiport in the network.
     """
-    network_schedule = pd.DataFrame(columns=['tail_number', 'aircraft_arrival_time', 'aircraft_departure_time', 
+    network_schedule = pd.DataFrame(columns=['tail_number', 'aircraft_arrival_time', 'aircraft_pushback_time', 
                                              'interarrival_time', 'origin_vertiport_id', 'destination_vertiport_id', 
                                              'passengers_onboard', 'location', 'soc'])
     for vertiport_id, vertiport_config in vertiport_configs.items():
@@ -60,11 +61,11 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
         if aircraft_arrival_process['aircraft_interarrival_constant'] is None and aircraft_arrival_process['aircraft_arrival_distribution'] is None:
             raise ValueError('Either aircraft_interarrival_constant or aircraft_arrival_distribution must be defined.')
         if aircraft_arrival_process['aircraft_interarrival_constant'] is not None:
-            interarrival_times = [aircraft_arrival_process['aircraft_interarrival_constant']] * num_aircraft
+            interarrival_times = [sec_to_ms(aircraft_arrival_process['aircraft_interarrival_constant'])] * num_aircraft
         else:
             distribution = DistributionGenerator(distribution_params=aircraft_arrival_process['aircraft_arrival_distribution'],
                                                 max_val_in_dist=aircraft_arrival_process['aircraft_arrival_distribution']['max_val_in_dist'])
-            interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_aircraft)]
+            interarrival_times = [sec_to_ms(distribution.pick_number_from_distribution()) for _ in range(num_aircraft)]
         soc = [random.randint(min_init_soc, max_init_soc) for _ in range(num_aircraft)]
     else:
         # If network simulation, aircraft start from the ground with max_init_soc.
@@ -77,7 +78,7 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
 
 
     aircraft_arrival_times = cumulative_sum_array(interarrival_times)
-    aircraft_departure_times = [None for _ in range(num_aircraft)]
+    aircraft_pushback_times = [None for _ in range(num_aircraft)]
     origin_vertiport_id = [vertiport_id for _ in range(num_aircraft)]
     destination_vertiport_id = [vertiport_id for _ in range(num_aircraft)]
     passengers_onboard = [[] for _ in range(num_aircraft)]
@@ -87,7 +88,7 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
 
 
     return pd.DataFrame({'aircraft_arrival_time': aircraft_arrival_times,
-                         'aircraft_departure_time': aircraft_departure_times,
+                         'aircraft_pushback_time': aircraft_pushback_times,
                          'interarrival_time': interarrival_times,
                          'origin_vertiport_id': origin_vertiport_id,
                          'destination_vertiport_id': destination_vertiport_id,

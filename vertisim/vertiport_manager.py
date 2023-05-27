@@ -1,11 +1,12 @@
 import simpy
 import networkx as nx
 from typing import Any, Dict
-from utils.units import sec_to_ms
+from utils.units import sec_to_ms, ms_to_sec
 from utils.distribution_generator import DistributionGenerator
 from utils.helpers import get_passenger_ids_from_passenger_list, calculate_passenger_consolidation_time, check_whether_node_exists
-from battery_model import BatteryModel
+from aircraft.battery_model import BatteryModel
 import pandas as pd
+from collections import defaultdict
 from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
 from typing import List, Union
 
@@ -29,6 +30,7 @@ class VertiportManager:
                  charging_interuption: bool,
                  event_saver: object,
                  network_simulation: bool,
+                 fixed_schedule: bool,
                  node_locations: Dict):
         self.env = env
         self.vertiports = vertiports
@@ -48,14 +50,19 @@ class VertiportManager:
         self.event_saver = event_saver
         self.network_simulation = network_simulation
         self.node_locations = node_locations
-        self.fixed_flight_schedule = None
+        self.fixed_schedule = fixed_schedule
         self.aircraft_agents = {}
         self.passenger_agents = {}
+        self.flight_times = defaultdict(list)
         # if not self.network_simulation:
         self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()
         self.taxi_resource = simpy.Resource(self.env, 1)
-        if not self.only_aircraft_simulation and self.max_flight_waiting_time is not False:
+        if (
+            not self.only_aircraft_simulation
+            and not self.fixed_schedule
+            and self.max_flight_waiting_time
+        ):
             self.env.process(self.check_passenger_max_waiting_time_threshold())
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
@@ -516,49 +523,136 @@ class VertiportManager:
                                                          departing_passengers=departing_passengers)
                                                          )    
 
-    def reserve_aircraft(self, origin_vertiport_id: Any, dest_vertiport_id: int, departing_passengers: list,):
+    # def reserve_aircraft(self, origin_vertiport_id: Any, dest_vertiport_id: int, departing_passengers: list, tail_number: str = None):
 
-        # Get the first available aircraft. # TODO: Implement optimized aircraft allocation algorithms
-        aircraft = yield self.vertiports[origin_vertiport_id].available_aircraft_store.get()
+    #     aircraft_allocation_start_time = self.env.now
 
-        # After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight
-        # list
-        if len(departing_passengers) < self.aircraft_params['pax'] and \
+    #     if tail_number is None:
+    #         aircraft = yield self.vertiports[origin_vertiport_id].available_aircraft_store.get()
+    #     elif type(tail_number) in [int, float, str]:
+    #         aircraft = yield self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
+
+    #     aircraft_allocation_end_time = self.env.now
+    #     self.event_saver.save_aircraft_allocation_time(vertiport_id=origin_vertiport_id,
+    #                                                     tail_number=aircraft.tail_number,
+    #                                                     allocation_time=aircraft_allocation_end_time - aircraft_allocation_start_time)
+    #     # After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight
+    #     # list
+    #     if len(departing_passengers) < self.aircraft_params['pax'] and \
+    #             len(departing_passengers[0].waiting_room_store.items) > 0:
+    #         departing_passengers.extend(self.scheduler.last_call_check(
+    #             current_waiting_room=departing_passengers[0].waiting_room_store,
+    #             num_departing_passengers=len(departing_passengers)))   
+
+    #     # Save the aircraft allocation time
+    #     self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='aircraft_allocation')
+
+    #     # Save the aircraft idle time
+    #     self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
+    #                                                 agent_id=aircraft.tail_number,
+    #                                                 charging_end_time=aircraft.charging_end_time)
+            
+    #     aircraft.passengers_onboard = departing_passengers
+        
+
+    #     # Save total passenger waiting time until the flight assignment
+    #     for passenger in aircraft.passengers_onboard:
+    #         self.event_saver.save_passenger_waiting_time(vertiport_id=origin_vertiport_id,
+    #                                                         passenger_id=passenger.passenger_id,
+    #                                                         waiting_time=self.env.now - passenger.waiting_room_arrival_time)
+
+    #     # Save passenger-flight assignment time
+    #     for passenger in aircraft.passengers_onboard:
+    #         self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='flight_assignment')
+    #         passenger.flight_assignment_time = self.env.now
+
+    #     self.env.process(self.simulate_passenger_departure(departing_passengers=departing_passengers))
+
+    #     # Simulate aircraft departure process
+    #     yield self.env.process(
+    #         self.simulate_aircraft_departure_process(aircraft=aircraft,
+    #                                                     origin_vertiport_id=origin_vertiport_id, 
+    #                                                     dest_vertiport_id=dest_vertiport_id)
+    #     )
+
+    def reserve_aircraft(self, origin_vertiport_id: Any, dest_vertiport_id: int, departing_passengers: list, tail_number: str = None):
+        # Start tracking aircraft allocation time
+        aircraft_allocation_start_time = self.env.now
+        # Retrieve aircraft from the store
+        aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number)   
+        # Measure and save the aircraft allocation time
+        self.save_aircraft_allocation_time(origin_vertiport_id, aircraft, aircraft_allocation_start_time)
+
+        # Check the waiting room for additional passengers if there is still space on the aircraft
+        departing_passengers = self.add_additional_passengers_if_needed(departing_passengers)
+
+        # Save aircraft allocation and idle times
+        self.save_aircraft_times(origin_vertiport_id, aircraft)
+
+        # Assign passengers to the aircraft
+        aircraft.passengers_onboard = departing_passengers
+
+        # Save total passenger waiting time and flight assignment time
+        self.save_passenger_times(origin_vertiport_id, aircraft.passengers_onboard)
+
+        # Start the passenger departure process
+        self.env.process(self.simulate_passenger_departure(departing_passengers=departing_passengers))
+
+        # Start the aircraft departure process
+        yield self.env.process(
+            self.simulate_aircraft_departure_process(aircraft=aircraft,
+                                                    origin_vertiport_id=origin_vertiport_id, 
+                                                    dest_vertiport_id=dest_vertiport_id)
+        )
+
+    def retrieve_aircraft(self, origin_vertiport_id, tail_number):
+        if tail_number is None:
+            return self.vertiports[origin_vertiport_id].available_aircraft_store.get()
+        elif isinstance(tail_number, (int, str)):
+            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
+        else:
+            raise ValueError("Tail numbers should be a string or an integer.")
+
+    def save_aircraft_allocation_time(self, origin_vertiport_id, aircraft, start_time):
+        aircraft_allocation_end_time = self.env.now
+        self.event_saver.save_aircraft_allocation_time(vertiport_id=origin_vertiport_id,
+                                                    tail_number=aircraft.tail_number,
+                                                    allocation_time=aircraft_allocation_end_time - start_time)
+
+    def add_additional_passengers_if_needed(self, departing_passengers):
+        if 0 < len(departing_passengers) < self.aircraft_params['pax'] and \
                 len(departing_passengers[0].waiting_room_store.items) > 0:
             departing_passengers.extend(self.scheduler.last_call_check(
                 current_waiting_room=departing_passengers[0].waiting_room_store,
                 num_departing_passengers=len(departing_passengers)))   
+        return departing_passengers
 
-        # Save the aircraft allocation time
+    def save_aircraft_times(self, origin_vertiport_id, aircraft):
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='aircraft_allocation')
-    
-        # Save the aircraft idle time
         self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
-                                                 agent_id=aircraft.tail_number,
-                                                 charging_end_time=aircraft.charging_end_time)
-            
-        aircraft.passengers_onboard = departing_passengers
-        
+                                                agent_id=aircraft.tail_number,
+                                                charging_end_time=aircraft.charging_end_time)
 
-        # Save total passenger waiting time until the flight assignment
-        for passenger in aircraft.passengers_onboard:
+    def save_passenger_times(self, origin_vertiport_id, passengers):
+        for passenger in passengers:
             self.event_saver.save_passenger_waiting_time(vertiport_id=origin_vertiport_id,
-                                                         passenger_id=passenger.passenger_id,
-                                                         waiting_time=self.env.now - passenger.waiting_room_arrival_time)
+                                                        passenger_id=passenger.passenger_id,
+                                                        waiting_time=self.env.now - passenger.waiting_room_arrival_time)
+            self.save_flight_assignment_times(passenger)
 
-        # Save passenger-flight assignment time
-        for passenger in aircraft.passengers_onboard:
-            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='flight_assignment')
-            passenger.flight_assignment_time = self.env.now
+    def save_flight_assignment_times(self, passenger):
+        self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='flight_assignment')
+        passenger.flight_assignment_time = self.env.now
 
+    def simulate_passenger_departure(self, departing_passengers):
         self.env.process(self.simulate_passenger_departure(departing_passengers=departing_passengers))
 
-        # Simulate aircraft departure process
+    def simulate_aircraft_departure(self, aircraft, origin_vertiport_id, dest_vertiport_id):
         yield self.env.process(
             self.simulate_aircraft_departure_process(aircraft=aircraft,
-                                                     origin_vertiport_id=origin_vertiport_id, 
-                                                     dest_vertiport_id=dest_vertiport_id)
-        )
+                                                    origin_vertiport_id=origin_vertiport_id,
+                                                    dest_vertiport_id=dest_vertiport_id))
+
 
     def check_passenger_max_waiting_time_threshold(self):
         """
@@ -571,7 +665,6 @@ class VertiportManager:
 
             if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold(
                     sec_to_ms(self.max_flight_waiting_time)):
-
 
                 for origin in departing_passenger_groups:
                     for destination in departing_passenger_groups[origin]:
@@ -628,9 +721,10 @@ class VertiportManager:
         passengers_waiting_room = self.vertiports[passenger.origin_vertiport_id].waiting_room_stores[passenger.dest_vertiport_id]
         passengers_waiting_room.put(passenger)
         passenger.waiting_room_store = passengers_waiting_room
-        yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
-                                                      dest_vertiport_id=passenger.dest_vertiport_id, 
-                                                      passengers_waiting_room=passengers_waiting_room))
+        if not self.fixed_schedule:
+            yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
+                                                        dest_vertiport_id=passenger.dest_vertiport_id, 
+                                                        passengers_waiting_room=passengers_waiting_room))
 
     # -------------------------
 
@@ -860,6 +954,13 @@ class VertiportManager:
 
         # Save pushback time
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='pushback') 
+        self.event_saver.save_flight_info(origin_vertiport_id=aircraft.origin_vertiport_id,
+                                          destination_vertiport_id=aircraft.destination_vertiport_id,
+                                          tail_number=aircraft.tail_number,
+                                          aircraft_pushback_time=self.env.now,
+                                          passengers=get_passenger_ids_from_passenger_list(aircraft.passengers_onboard),
+                                          aircraft_model=aircraft.aircraft_model,
+                                          event_type='pushback')        
 
         # Save total transfer time of a passenger
         for passenger in aircraft.passengers_onboard:
@@ -870,14 +971,6 @@ class VertiportManager:
         # Taxi-out process
         yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='departure'))
 
-        # Save take-off info
-        self.event_saver.save_flight_info(origin_vertiport_id=aircraft.origin_vertiport_id,
-                                          destination_vertiport_id=aircraft.destination_vertiport_id,
-                                          tail_number=aircraft.tail_number,
-                                          aircraft_arrival_time=aircraft.arrival_time,
-                                          passengers=get_passenger_ids_from_passenger_list(aircraft.passengers_onboard),
-                                          aircraft_model=aircraft.aircraft_model,
-                                          event_type='take_off')
         
         yield self.env.process(self.departure_fix_request(aircraft=aircraft))
 

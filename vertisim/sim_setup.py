@@ -7,7 +7,7 @@ import simpy
 from typing import Dict, List
 import pandas as pd
 from collections import defaultdict
-from aircraft_arrival_setup import AircraftArrivalSetup
+from aircraft.aircraft_arrival_setup import AircraftArrivalSetup
 from event_saver import EventSaver
 from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
 from passenger_arrival_setup import PassengerArrivalSetup
@@ -17,10 +17,9 @@ from scheduler import Scheduler
 from run_step_by_step_simulation import run_step_by_step_simulation
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
-from utils.helpers import set_seed, get_all_aircraft_models, create_dict_for_fixes
+from utils.helpers import set_seed, get_all_aircraft_models, create_dict_for_fixes, check_not_none
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
-from utils.get_state_variables import get_state_variables
 from utils.units import sec_to_ms
 
 
@@ -207,7 +206,8 @@ class SimSetup:
         return Scheduler(env=self.env,
                             vertiports=self.vertiports,
                             vertiport_manager=None,
-                            aircraft_capacity=self.aircraft_params['pax']
+                            aircraft_capacity=self.aircraft_params['pax'],
+                            is_fixed_schedule=self.fixed_schedule
                             )
 
     def create_airspace(self):
@@ -258,6 +258,7 @@ class SimSetup:
             charging_interuption=self.sim_params['charge_interruption'],
             event_saver=self.event_saver,
             network_simulation=self.sim_params['network_simulation'],
+            fixed_schedule=check_not_none(self.network_and_demand['aircraft_schedule_file_name']),
             node_locations=self.node_locations
         )
     

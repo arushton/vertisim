@@ -159,8 +159,8 @@ DEFAULT_AIRCRAFT_PARAMS = {
     # FLIGHT SPEED PARAMETERS
     # -----------------
     'cruise_speed': 120,  # mph
-    'vertical_takeoff_speed': 5.5,  # mph # TODO
-    'vertical_landing_speed': 5.5,  # mph
+    'vertical_takeoff_velocity': 5.5,  # mph # TODO
+    'vertical_landing_velocity': 5.5,  # mph
     'climb_speed': 60,  # mph
     'descent_speed': 60,  # mph
 

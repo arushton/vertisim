@@ -40,7 +40,7 @@ network_and_demand = {
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated.
     # Priority is given to the demand files.
-    'aircraft_schedule_file_name': None,  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    'aircraft_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
     'passenger_schedule_file_name': None,  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
@@ -138,7 +138,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/new_route.xls',
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/lax_dtla_route.xls',
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 0.25,  # miles
@@ -192,8 +192,10 @@ aircraft_params = {
     
     # MISSION PARAMETERS
     # -----------------
-    'vertical_takeoff_speed': 5.5,  # m/s
-    'vertical_landing_speed': 5.5,  # m/s
+    'vertical_takeoff_velocity': 5.5,  # m/s
+    'vertical_landing_velocity': 5.5,  # m/s
+    'max_vertical_velocity': 6,  # m/s
+    'max_horizontal_velocity': 89,  # m/s - 173 knots | 200 mph
     # # Altitude
     'ground_altitude': 0,  # m
     'hover_altitude': 15,  # m
@@ -229,10 +231,10 @@ aircraft_params = {
     'cd_0': 0.015,  # Zero lift drag coefficient
     'cl_max': 1.5,  # Maximum lift coefficient
     'ld_max': 18,  # Maximum lift to drag ratio
-    'n_hover': 0.85,  # Hover efficiency
-    'n_climb': 0.85,  # Climb efficiency
-    'n_descend': 0.85,  # Descend efficiency
-    'n_cruise': 0.90,  # Cruise efficiency
+    'eta_hover': 0.85,  # Hover efficiency
+    'eta_climb': 0.85,  # Climb efficiency
+    'eta_descend': 0.85,  # Descend efficiency
+    'eta_cruise': 0.90,  # Cruise efficiency
     'atmosphere_condition': 'good', # good, bad
 
 

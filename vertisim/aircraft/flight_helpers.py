@@ -17,50 +17,24 @@ def lift_induced_drag_coef(cd_0: float, ld_max: float) -> float:
     """
     return 1 / (4*cd_0*ld_max**2)
 
-
-def min_power_speed_for_climb_descend(atmosphere_condition: str, 
-                                      altitude: float, 
-                                      mtom: float, 
-                                      cd_0: float, 
-                                      wing_area: float, 
-                                      ld_max: float) -> float:
+def climb_power_consumption_for_lift(tom, vertical_velocity):
     """
     From the paper:
     The promise of energy-efficient battery-powered urban aircraft   
 
-    Parameters
-    ----------
-    atmosphere_condition : str
-        'good' or 'bad'
-    altitude : float
-        altitude in m
-    mtom : float
-        maximum take-off mass in kg
-    cd_0 : float
-        zero-lift drag coefficient
-    wing_area : float
-        wing area in m^2
-    ld_max : float
-        maximum lift-to-drag ratio
+    tom: take-off mass in kg 
+    """    
+    return weight(tom)*vertical_velocity
 
-    Returns
-    -------
-    float
-        minimum power speed in m/s
-    """
-    weight_term = 2 * weight(mtom) / (rho(altitude, atmosphere_condition) * wing_area)
-    drag_term = np.sqrt(lift_induced_drag_coef(cd_0, ld_max) / (3 * cd_0))
-    return round(np.sqrt(weight_term * drag_term))
-
-def max_range_speed(atmosphere_condition, altitude, mtom, cd_0, wing_area, ld_max):
+def climb_power_consumption_for_drag(altitude, atmosphere_condition, wing_area, cd_0, ld_max, tom, horizontal_speed):
     """
     From the paper:
-    The promise of energy-efficient battery-powered urban aircraft    
-    """    
-    term1 = 2*weight(mtom) / (rho(altitude, atmosphere_condition) * wing_area)
-    term2 = np.sqrt(lift_induced_drag_coef(cd_0=cd_0, ld_max=ld_max) / cd_0)    
-    return round(np.sqrt(term1 * term2))
-
+    The promise of energy-efficient battery-powered urban aircraft
+    """
+    term2 = 1/2 * rho(altitude, atmosphere_condition) * wing_area * cd_0 * horizontal_speed ** 3
+    term3 = lift_induced_drag_coef(cd_0, ld_max) * weight(tom)**2 / (1/2*rho(altitude, atmosphere_condition) \
+                                    * wing_area * horizontal_speed)   
+    return term2 + term3
 
 def weight(mass):
     """
@@ -91,7 +65,6 @@ def atmosphere_params(condition: str):
     else:
         raise ValueError('Invalid atmosphere condition. Choose between "good" and "bad"')
 
-
 def rho(altitude: float, atmosphere_condition: str='good'):
     """
     Computes the air density at a given altitude
@@ -100,7 +73,6 @@ def rho(altitude: float, atmosphere_condition: str='good'):
     """
     tgl, dgl = atmosphere_params(atmosphere_condition)
     return round(dgl * (temperature(altitude)/tgl)**((G_CONSTANT/(287*6.5*10**-3))-1), 4)
-
 
 def stall_speed(atmosphere_condition, altitude, mtom, wing_area, cl_max):
     """

@@ -71,6 +71,7 @@ def create_vertiport_manager(env,
                              charging_interuption,
                              event_saver,
                              network_simulation,
+                             fixed_schedule,
                              node_locations):
     return VertiportManager(env=env,
                             vertiports=vertiports,
@@ -89,4 +90,5 @@ def create_vertiport_manager(env,
                             charging_interuption=charging_interuption,
                             event_saver=event_saver,
                             network_simulation=network_simulation,
+                            fixed_schedule=fixed_schedule,
                             node_locations=node_locations)

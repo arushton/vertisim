@@ -1,5 +1,6 @@
 from collections import defaultdict
 from utils.helpers import timestamp_to_datetime
+from utils.units import ms_to_sec
 from typing import Dict, Any, Union
 
 
@@ -18,6 +19,7 @@ class EventSaver:
         self.passenger_agent_trajectory = defaultdict(dict)
         self.flight_schedule = defaultdict(dict)
         self.passenger_consolidation_time = defaultdict(lambda: defaultdict(dict))
+        self.aircraft_allocation_time = defaultdict(dict)
         self.aircraft_arrival_queue_count = defaultdict(dict)
         self.passenger_departure_queue_count = defaultdict(dict)
         self.aircraft_departure_queue_count = defaultdict(dict)
@@ -51,6 +53,9 @@ class EventSaver:
         self.passenger_consolidation_time[vertiport_id][time]['passenger_ids'] = passenger_ids
         self.passenger_consolidation_time[vertiport_id][time]['wr_number'] = wr_number
         self.passenger_consolidation_time[vertiport_id][time]['consolidation_time'] = consolidation_time
+    
+    def save_aircraft_allocation_time(self, vertiport_id, tail_number, allocation_time):
+        self.aircraft_allocation_time[vertiport_id][tail_number] = allocation_time
 
     def save_passenger_waiting_time(self, vertiport_id: Any, passenger_id: Any, waiting_time: float) -> None:
         self.passenger_waiting_time[vertiport_id][passenger_id] = waiting_time
@@ -150,7 +155,7 @@ class EventSaver:
                          origin_vertiport_id: Any, 
                          destination_vertiport_id: Any,
                          tail_number: int, 
-                         aircraft_arrival_time: float,
+                         aircraft_pushback_time: float,
                          passengers: list, 
                          aircraft_model: str, 
                          event_type: str):
@@ -168,7 +173,7 @@ class EventSaver:
         self.flight_schedule[time]['tail_number'] = f'aircraft{tail_number}'
         self.flight_schedule[time]['origin_vertiport_id'] = origin_vertiport_id
         self.flight_schedule[time]['destination_vertiport_id'] = destination_vertiport_id
-        self.flight_schedule[time]['aircraft_arrival_time'] = aircraft_arrival_time
+        self.flight_schedule[time]['aircraft_pushback_time'] = ms_to_sec(aircraft_pushback_time)
         self.flight_schedule[time]['passengers'] = passengers
         self.flight_schedule[time]['event'] = event_type
         self.flight_schedule[time]['aircraft_model'] = aircraft_model

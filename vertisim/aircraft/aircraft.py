@@ -1,13 +1,16 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value
+from utils.distance import haversine_dist
 from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
 import random
+from aircraft.optimize_velocity import VelocityOptimizer
 from utils.distance import distance_3d
-from utils.flight_helpers import weight, lift_induced_drag_coef, rho, rotor_disk_area, \
-    min_power_speed_for_climb_descend, lift_induced_drag_coef, max_range_speed, stall_speed
+from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
 from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
+from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
+    cruise_phase_power, descend_transition_phase_power
 
 
 class Aircraft:
@@ -31,13 +34,15 @@ class Aircraft:
                  aircraft_params, 
                  vertiport_manager, 
                  event_saver):
-        self.env = env
+        self.env = env        
         self.tail_number = tail_number
+        self.vertiport_manager = vertiport_manager
+        self.event_saver = event_saver        
         self.input_cruise_speed = input_cruise_speed
         self.altitude = self.get_node_altitude(location)
         self._soc = soc
         self._speed = 0
-        self._vertical_speed = 0
+        self._vertical_velocity = 0
         self._origin_vertiport_id = origin_vertiport_id   
         self._destination_vertiport_id = destination_vertiport_id
         self._location = location
@@ -47,7 +52,9 @@ class Aircraft:
         self._departure_time = departure_time
         self._priority = priority    
 
-        self.aircraft_params = aircraft_params    
+        self.aircraft_params = aircraft_params
+        self.max_vertical_velocity = self.aircraft_params['max_vertical_velocity'] 
+        self.max_horizontal_velocity = self.aircraft_params['max_horizontal_velocity']   
 
         self.flight_phase = 'ground' # ['ground', 'cruise', 'descend', 'descend_transition', 'hover_descend', 'hover_climb', 'climb_transition', 'climb', 'holding']
         self.charging_start_time = None
@@ -58,6 +65,8 @@ class Aircraft:
         self.assigned_fato_resource = None
         self.holding_time = None
         self.flight_direction = None
+        self.flight_time = None
+        self.turnaround_time = None
 
         self.arrival_fix_usage_request = None
         self.arrival_fix_resource = None
@@ -74,11 +83,11 @@ class Aircraft:
 
         self.ground_taxi_speed = self.aircraft_params['ground_taxi_speed']
 
-        # Not used
+        # -------- Not used ------------
         self.hover_altitude = aircraft_params['hover_altitude']
         self.cruise_altitude = aircraft_params['cruise_altitude']
         self.ground_altitude = self.aircraft_params['ground_altitude'] 
-        # self.climb_transition_end_altitude = self.hover_altitude + self.aircraft_params['time_climb_transition'] * self.vertical_takeoff_speed
+        # ------------------------------
 
         self.mtom = self.aircraft_params['mtom'] # Max takeoff mass
         self.wing_area = self.aircraft_params['wing_area'] # Wing area (m^2)
@@ -88,17 +97,13 @@ class Aircraft:
         self.cd_0 = self.aircraft_params['cd_0'] # Zero lift drag coefficient
         self.cl_max = self.aircraft_params['cl_max'] # Max lift coefficient
         self.ld_max = self.aircraft_params['ld_max'] # Max lift to drag ratio
-        self.n_hover = self.aircraft_params['n_hover'] # Hover efficiency
-        self.n_descend = self.aircraft_params['n_descend'] # Descend efficiency
-        self.n_climb = self.aircraft_params['n_climb'] # Climb efficiency
-        self.n_cruise = self.aircraft_params['n_cruise'] # Cruise efficiency
+        self.eta_hover = self.aircraft_params['eta_hover'] # Hover efficiency
+        self.eta_descend = self.aircraft_params['eta_descend'] # Descend efficiency
+        self.eta_climb = self.aircraft_params['eta_climb'] # Climb efficiency
+        self.eta_cruise = self.aircraft_params['eta_cruise'] # Cruise efficiency
         self.atmosphere_condition = self.aircraft_params['atmosphere_condition']   
 
-        self.stall_speed = stall_speed(atmosphere_condition=self.atmosphere_condition,
-                                       altitude=self.cruise_altitude,
-                                       mtom=self.mtom, 
-                                       wing_area=self.wing_area, 
-                                       cl_max=self.cl_max)
+        self.stall_speed = self.compute_stall_speed()
 
         self.time_passenger_embark_disembark = sec_to_ms(aircraft_params['time_passenger_embark_disembark'])
         self.time_descend = sec_to_ms(aircraft_params['time_descend'])
@@ -119,9 +124,8 @@ class Aircraft:
         self.time_hover_climb = sec_to_ms(aircraft_params['time_hover_climb'])
         self.time_climb_transition = sec_to_ms(aircraft_params['time_climb_transition'])
         self.time_climb = sec_to_ms(aircraft_params['time_climb'])
-        self.vertiport_manager = vertiport_manager
-        self.event_saver = event_saver
         self.soc_required_to_complete_mission = 30 # TODO: Complete calc_soc_required_for_flight function
+        self.velocity_optimizer = VelocityOptimizer(aircraft_params=self.aircraft_params)
 
     @property
     def soc(self):
@@ -151,12 +155,12 @@ class Aircraft:
         self._speed = value
 
     @property
-    def vertical_speed(self):
-        return self._vertical_speed
+    def vertical_velocity(self):
+        return self._vertical_velocity
     
-    @vertical_speed.setter
-    def vertical_speed(self, value):
-        self._vertical_speed = value
+    @vertical_velocity.setter
+    def vertical_velocity(self, value):
+        self._vertical_velocity = value
 
     # @property
     # def altitude(self):
@@ -252,62 +256,214 @@ class Aircraft:
             f"  - Departure Time: {self.departure_time}\n" \
             f"  - Location: {self.location}\n" \
             f"  - Serviced Time at Location: {self.serviced_time_at_the_location}\n"
+    
+    def compute_stall_speed(self):
+            return stall_speed(atmosphere_condition=self.atmosphere_condition,
+                               altitude=self.altitude,
+                               mtom=self.mtom,
+                               wing_area=self.wing_area,
+                               cl_max=self.cl_max)
+    
+    def compute_air_speed(self, origin: str, 
+                          destination: str, 
+                          horizontal_speed: float, 
+                          vertical_velocity: float) -> tuple[float, float]:
+        horizontal_travel_time = self.compute_travel_time_from_horizontal_velocity(
+            origin=origin, destination=destination, horizontal_speed=horizontal_speed)
+        
+        vertical_travel_time = self.compute_travel_time_from_vertical_velocity(
+            origin=origin, destination=destination, vertical_velocity=vertical_velocity)
 
+        return self.adjust_speeds_based_on_travel_time(
+            origin, destination, horizontal_speed, horizontal_travel_time, vertical_velocity, vertical_travel_time)
+        
+    def adjust_speeds_based_on_travel_time(self, 
+                                           origin, 
+                                           destination, 
+                                           horizontal_speed, 
+                                           horizontal_travel_time, 
+                                           vertical_velocity, 
+                                           vertical_travel_time):
+        if horizontal_travel_time > vertical_travel_time:
+            power_consumption_for_lift = climb_power_consumption_for_lift(tom=self.tom, vertical_velocity=vertical_velocity)
+            power_consumption_for_drag = climb_power_consumption_for_drag(altitude=self.altitude,
+                                                                          atmosphere_condition=self.atmosphere_condition,
+                                                                          wing_area=self.wing_area,
+                                                                          cd_0=self.cd_0,
+                                                                          ld_max=self.ld_max,
+                                                                          tom=self.tom,
+                                                                          horizontal_speed=horizontal_speed)
+            if power_consumption_for_lift >= power_consumption_for_drag:
+                # Reduce vertical speed
+                return self.adjust_speeds_for_vertical_travel_time(
+                    origin,
+                    destination,
+                    horizontal_speed,
+                    horizontal_travel_time,
+                )
+            else:
+                # Increase horizontal speed
+                return self.adjust_speeds_for_horizontal_travel_time(
+                    origin,
+                    destination,
+                    horizontal_speed,
+                    vertical_velocity,
+                    horizontal_travel_time,
+                    vertical_travel_time
+                )
+        elif horizontal_travel_time < vertical_travel_time:
+            # Increase horizontal speed
+            return self.adjust_speeds_for_horizontal_travel_time(
+                origin,
+                destination,
+                horizontal_speed,
+                vertical_velocity,
+                horizontal_travel_time,
+                vertical_travel_time
+            )
+        else:
+            return horizontal_speed, vertical_velocity
+
+    def adjust_speeds_for_vertical_travel_time(self, origin, destination, horizontal_speed, horizontal_travel_time):
+        vertical_velocity = self.compute_vertical_velocity_from_time(
+            origin=origin,
+            destination=destination,
+            time=horizontal_travel_time)
+        return horizontal_speed, vertical_velocity
+
+    def adjust_speeds_for_horizontal_travel_time(self, origin, destination, horizontal_speed, vertical_velocity, horizontal_travel_time, vertical_travel_time):
+        horizontal_speed = self.compute_horizontal_speed_from_time(
+            origin=origin,
+            destination=destination,
+            time=vertical_travel_time
+        )
+
+        if horizontal_speed > self.max_horizontal_velocity:
+            horizontal_speed = self.max_horizontal_velocity
+            vertical_velocity = self.compute_vertical_velocity_from_time(
+                origin=origin,
+                destination=destination,
+                time=horizontal_travel_time
+            )
+        return horizontal_speed, vertical_velocity    
+
+    def compute_travel_time_from_horizontal_velocity(self, origin: str, destination: str, horizontal_speed: float) -> float:
+        """
+        Computes the travel time between two locations given the horizontal speed in m/s. Returns the travel time in secs.
+        """
+        distance = self.vertiport_manager.airspace.waypoint_distances[origin][destination]
+        return round(distance / horizontal_speed)
+    
+    def compute_horizontal_speed_from_time(self, origin: str, destination: str, time: float) -> float:
+        """
+        Computes the horizontal speed between two locations given the travel time in secs. Returns the horizontal speed in m/s.
+        """
+        distance = self.vertiport_manager.airspace.waypoint_distances[origin][destination]
+        horizontal_speed = round(distance / time)
+        if horizontal_speed > self.max_horizontal_velocity:
+            return self.max_horizontal_velocity
+        else:
+            return horizontal_speed
+    
+    def compute_travel_time_from_vertical_velocity(self, origin: str, destination: str, vertical_velocity: float) -> float:
+        """
+        Computes the travel time between two locations given the vertical speed in m/s.
+        """
+        origin_altitude = self.get_node_altitude(origin)
+        destination_altitude = self.get_node_altitude(destination)
+        altitude_difference = abs(destination_altitude - origin_altitude)
+        return round(altitude_difference / vertical_velocity)
+
+    def compute_vertical_velocity_from_time(self, origin: str, destination: str, time: float) -> float:
+        """
+        Computes the vertical speed between two locations given the travel time in secs. Returns the vertical speed in m/s.
+        """
+        origin_altitude = self.get_node_altitude(origin)
+        destination_altitude = self.get_node_altitude(destination)
+        altitude_difference = abs(destination_altitude - origin_altitude)
+        return round(altitude_difference / time)
+                                                                                        
     def aircraft_landing_process(self):
-        self.setup_for_descend()
-        yield self.env.process(self.descend_to_final_approach_fix())
+        final_approach_fix = self.vertiport_manager.get_second_to_last_airlink_node_id(flight_direction=self.flight_direction)
+        self.setup_for_descend(final_approach_fix)
+        yield self.env.process(self.descend_to_final_approach_fix(final_approach_fix))
         yield self.env.process(self.descend_transition())
         yield self.env.process(self.hover_descend())
         yield self.env.process(self.post_landing_procedures())
 
-    def setup_for_descend(self):
-        min_power_speed = min_power_speed_for_climb_descend(atmosphere_condition=self.atmosphere_condition,
-                                                            altitude=self.altitude,
-                                                            mtom=self.compute_flight_mass(),
-                                                            cd_0=self.cd_0,
-                                                            wing_area=self.wing_area,
-                                                            ld_max=self.ld_max)
-        self.speed = min_power_speed
-        self.vertical_speed = self.aircraft_params['vertical_landing_speed']
+    def guess_initial_velocity(self):
+        return [self.speed, np.mean([self.vertical_velocity, self.max_vertical_velocity])]
+
+    def setup_for_descend(self, final_approach_fix):
+        horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, final_approach_fix)
+        initial_velocity_guess = self.guess_initial_velocity()
+        self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
+                                                V=initial_velocity_guess,
+                                                tom=self.tom,
+                                                altitude=self.altitude,
+                                                horizontal_distance=horizontal_distance,
+                                                vertical_distance=vertical_distance,
+                                                cost_type='descend'
+                                                )
         self.flight_phase = 'descend'
 
-    def descend_to_final_approach_fix(self):
-        final_approach_fix = self.vertiport_manager.get_second_to_last_airlink_node_id(flight_direction=self.flight_direction)
-        holding_to_faf = self.get_node_altitude(self.location) - self.get_node_altitude(final_approach_fix)
-        descend_time = round(holding_to_faf/self.vertical_speed)
-        descend_energy_consumption = self.descend_energy_consumption(min_power_speed=self.speed,
+    def descend_to_final_approach_fix(self, final_approach_fix):      
+        descend_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location,
+                                                                      destination=final_approach_fix,
+                                                                      horizontal_speed=self.speed)
+        descend_energy_consumption = round(self.descend_energy_consumption(velocity=self.speed,
                                                                     descend_end_altitude=self.get_node_altitude(final_approach_fix),
-                                                                    descend_time=descend_time)
+                                                                    descend_time=descend_time), 2)
         yield self.env.timeout(sec_to_ms(descend_time))
+        # if self.tail_number == 0:
+        #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {descend_time}, {self.flight_phase} energy consumption: {descend_energy_consumption} from {self.location} to {final_approach_fix}")             
         self.update_aircraft_state(final_approach_fix, descend_energy_consumption, 'final_approach_fix_arrival')
         yield self.env.process(self.vertiport_manager.fato_pad_request(aircraft=self, operation_type='arrival'))
 
     def descend_transition(self):
         self.flight_phase = 'descend_transition'
         hover_fix_id = self.vertiport_manager.get_last_airlink_node_id(flight_direction=self.flight_direction)
-        faf_to_hover = self.get_node_altitude(self.location) - self.get_node_altitude(hover_fix_id)
-        descend_transition_time = round(faf_to_hover/self.vertical_speed)
-        descend_transition_energy_consumption = self.descend_transition_energy_consumption(min_power_speed=self.speed,
+        horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, hover_fix_id)
+        initial_velocity_guess = self.guess_initial_velocity()
+        self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
+                                                V=initial_velocity_guess,
+                                                tom=self.tom,
+                                                altitude=self.altitude,
+                                                horizontal_distance=horizontal_distance,
+                                                vertical_distance=vertical_distance,
+                                                cost_type='descend_transition'
+                                                )
+        # Descend speed is zero at the end of the descend transition. So, we get the average speed.
+        descend_transition_time = round(vertical_distance/self.vertical_velocity) * 2
+        descend_transition_energy_consumption = round(self.descend_transition_energy_consumption(velocity=round(self.speed/2),
                                                                                         descend_transition_end_altitude=self.get_node_altitude(hover_fix_id),
-                                                                                        descend_transition_time=descend_transition_time)
+                                                                                        descend_transition_time=descend_transition_time), 2)
         yield self.env.timeout(sec_to_ms(descend_transition_time))
+        # if self.tail_number == 0:
+        #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {descend_transition_time}, {self.flight_phase} energy consumption: {descend_transition_energy_consumption} from {self.location} to {hover_fix_id}")                
         self.speed = 0
         self.update_aircraft_state(hover_fix_id, descend_transition_energy_consumption, 'hover_fix_arrival')
         self.vertiport_manager.release_fix_resource(aircraft=self, operation='arrival')
 
     def hover_descend(self):
         self.flight_phase = 'hover_descend'
-        hover_to_fato = self.get_node_altitude(self.location) - self.get_node_altitude(self.assigned_fato_id)
-        hover_descend_time = round(hover_to_fato/self.vertical_speed) 
+        self.vertical_velocity = self.aircraft_params['vertical_landing_velocity']
+        hover_descend_time = self.compute_travel_time_from_vertical_velocity(origin=self.location,
+                                                        destination=self.assigned_fato_id,
+                                                        vertical_velocity=self.vertical_velocity)
         hover_descend_time += ms_to_sec(self.time_rotor_spin_down)
         yield self.env.timeout(sec_to_ms(hover_descend_time))
-        hover_descend_energy_consumption = self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.assigned_fato_id),
+        hover_descend_energy_consumption = round(self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.assigned_fato_id),
                                                                                             hover_altitude=self.get_node_altitude(self.location),
                                                                                             hover_time=hover_descend_time,
-                                                                                            operation='landing')
-        self.vertical_speed = 0
+                                                                                            operation='landing'), 2)
+        # if self.tail_number == 0:
+        #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {hover_descend_time}, {self.flight_phase} energy consumption: {hover_descend_energy_consumption} from {self.location} to {self.assigned_fato_id}")           
+        self.vertical_velocity = 0
         self.update_aircraft_state(self.assigned_fato_id, hover_descend_energy_consumption, 'landed')
         self.arrival_time = self.env.now
+        self.flight_time = self.arrival_time - self.departure_time
+        self.vertiport_manager.flight_times[self.tail_number].append(self.flight_time)
 
     def post_landing_procedures(self):
         yield self.env.timeout(self.time_post_landing_safety_checks)
@@ -319,7 +475,6 @@ class Aircraft:
         self.altitude = self.get_node_altitude(location)
         self.location = location
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event=event)
-
 
     def taxi(self, 
              taxi_route: list, 
@@ -520,42 +675,51 @@ class Aircraft:
 
         yield self.env.timeout(self.time_tug_disconnection)
         yield self.env.timeout(self.time_pre_take_off_check_list)
+        self.turnaround_time = self.env.now - self.arrival_time
 
     def hover_climb(self):
         """Hover climb phase of the takeoff."""
         self.flight_phase = 'hover_climb'
         self.speed = 0 # horizontal speed
-        self.vertical_speed = self.aircraft_params['vertical_takeoff_speed']
-
+        self.vertical_velocity = self.aircraft_params['vertical_takeoff_velocity']
         hover_fix_id = self.vertiport_manager.get_first_airlink_node_id(flight_direction=self.flight_direction)
-        fato_to_hover = self.get_node_altitude(hover_fix_id) - self.get_node_altitude(self.location)
-        hover_climb_time = round(fato_to_hover / self.vertical_speed)
+        hover_climb_time = self.compute_travel_time_from_vertical_velocity(origin=self.location,
+                                                                           destination=hover_fix_id,
+                                                                           vertical_velocity=self.vertical_velocity)
         hover_climb_time += ms_to_sec(self.time_rotor_spin_up)
-        hover_climb_energy_consumption = self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.location),
+        hover_climb_energy_consumption = round(self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.location),
                                                                                         hover_altitude=self.get_node_altitude(hover_fix_id),
                                                                                         hover_time=hover_climb_time,
-                                                                                        operation='takeoff')
+                                                                                        operation='takeoff'), 2)
         yield self.env.timeout(sec_to_ms(hover_climb_time))
         self.update_aircraft_state(hover_fix_id, hover_climb_energy_consumption, 'hover_climb_end')
+        # if self.tail_number == 0:
+        #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {hover_climb_time}, {self.flight_phase} energy consumption: {hover_climb_energy_consumption} from {self.location} to {hover_fix_id}")             
 
     def climb_transition(self):
         """Climb transition phase of the takeoff."""
         self.flight_phase = 'climb_transition'
         departure_fix_id = self.vertiport_manager.get_second_airlink_node_id(flight_direction=self.flight_direction)
-        hover_to_departure_fix = self.get_node_altitude(departure_fix_id) - self.get_node_altitude(self.location)
-        climb_transition_time = round(hover_to_departure_fix / self.vertical_speed)
-        min_power_speed = min_power_speed_for_climb_descend(atmosphere_condition=self.atmosphere_condition,
-                                                            altitude=self.altitude,
-                                                            mtom=self.compute_flight_mass(),
-                                                            cd_0=self.cd_0,
-                                                            wing_area=self.wing_area,
-                                                            ld_max=self.ld_max)
-        climb_transition_energy_consumption = self.climb_transition_energy_consumption(min_power_speed=min_power_speed,
+        horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, departure_fix_id)
+        initial_velocity_guess = self.guess_initial_velocity()
+        self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
+                                                V=initial_velocity_guess,
+                                                tom=self.tom,
+                                                altitude=self.altitude,
+                                                horizontal_distance=horizontal_distance,
+                                                vertical_distance=vertical_distance,
+                                                cost_type='climb_transition')
+
+        # The speed is averaged because aircraft don't have forward velocity at the beginning of the climb transition phase
+        climb_transition_time = round(vertical_distance / self.vertical_velocity) * 2
+        climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=round(self.speed/2, 2),
                                                                                     climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
-                                                                                    climb_transition_time=climb_transition_time)
+                                                                                    climb_transition_time=climb_transition_time), 2)
+    
+        # if self.tail_number == 0:
+        #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {climb_transition_time}, {self.flight_phase} energy consumption: {climb_transition_energy_consumption} from {self.location} to {departure_fix_id}")     
         
         yield self.env.timeout(sec_to_ms(climb_transition_time))
-        self.speed = min_power_speed
         self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
 
     def release_fato_and_departure_fix(self):
@@ -572,16 +736,27 @@ class Aircraft:
         self.flight_phase = 'climb'
         first_waypoint = self.vertiport_manager.get_third_airlink_node_id(flight_direction=self.flight_direction)
         first_waypoint_resource = self.vertiport_manager.get_third_airlink_resource(flight_direction=self.flight_direction)
-        dp_to_cruise_altitude = self.get_node_altitude(first_waypoint) - self.get_node_altitude(self.location)
-        climb_time = round(dp_to_cruise_altitude / self.vertical_speed)
+        horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, first_waypoint)
+        initial_velocity_guess = self.guess_initial_velocity()
+        self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
+                                                V=initial_velocity_guess,
+                                                tom=self.tom,
+                                                altitude=self.altitude,
+                                                horizontal_distance=horizontal_distance,
+                                                vertical_distance=vertical_distance,
+                                                cost_type='climb_transition'
+                                                )        
+        climb_time = round(vertical_distance / self.vertical_velocity)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
-        climb_energy_consumption = self.climb_energy_consumption(min_power_speed=self.speed,
+        climb_energy_consumption = round(self.climb_energy_consumption(velocity=self.speed,
                                                                 climb_end_altitude=self.get_node_altitude(first_waypoint),
-                                                                climb_time=climb_time)
+                                                                climb_time=climb_time), 2)
+        # if self.tail_number == 0:
+        #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {climb_time}, {self.flight_phase} energy consumption: {climb_energy_consumption} from {self.location} to {first_waypoint}")             
         self.update_aircraft_state(first_waypoint, climb_energy_consumption, 'climb_end')
-
+        self.vertical_velocity = 0
 
     def fly_in_the_airspace(self, user_modification=False):
         """
@@ -611,13 +786,10 @@ class Aircraft:
         for waypoint_id, resource in list(airlink_resources.items())[starting_index:-2]:
             with resource.request() as req:
                 yield req
-                self.speed = max_range_speed(atmosphere_condition=self.atmosphere_condition,
-                                            altitude=self.altitude,
-                                            mtom=self.compute_flight_mass(),
-                                            cd_0=self.cd_0,
-                                            wing_area=self.wing_area,
-                                            ld_max=self.ld_max)                
-                link_traversal_time = sec_to_ms(round(miles_to_m(self.vertiport_manager.airspace.airlink_segment_length_miles) / self.speed))
+                self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
+                                                                                     destination=waypoint_id, 
+                                                                                     horizontal_speed=self.speed)
                 yield self.env.timeout(link_traversal_time)
             # Compute energy consumption
             cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=ms_to_sec(link_traversal_time))
@@ -627,6 +799,7 @@ class Aircraft:
             aircraft=self, arriving_passengers=self.passengers_onboard)
         )
 
+    # ==================== CHARGING METHODS ====================
     def request_charger(self):
         """
         This method is used when the charger configuration is normal (any parking pads can use any chargers).
@@ -652,7 +825,6 @@ class Aircraft:
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
-
         if self.soc >= self.soc_required_to_complete_mission:
             self.set_charging_time_trackers()
             self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed') 
@@ -741,6 +913,7 @@ class Aircraft:
         int
             The soc level of the aircraft after the charging time.
         """
+        print(f'charge_time: {charge_time}, initial_soc: {initial_soc}')
         # Get the time at initial soc level
         initial_soc_time = df[df.soc == initial_soc]['time_sec'].values[0]
         # Get the time at final soc level
@@ -748,7 +921,6 @@ class Aircraft:
         # Get the soc at final soc level
         idx_final_soc = df['time_sec'].sub(final_soc_time).abs().idxmin()
         return df.loc[idx_final_soc]['soc']
-
 
     def soc_charge_update(self) -> None:
         """
@@ -778,137 +950,101 @@ class Aircraft:
         self.event_saver.aircraft_dict[self.tail_number]['passenger_unloading_finished'] = \
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
 
+    # ================= ENERGY CONSUMPTION METHODS ====================
+
     def vertical_takeoff_landing_energy_consumption(self, fato_altitude: float, hover_altitude, hover_time: float, operation: str) -> float:
-        start_density = rho(altitude=fato_altitude, atmosphere_condition=self.atmosphere_condition) # This doesn't matter whether the operation is takeoff or landing as we take the average of the two.
-        end_density = rho(altitude=hover_altitude, atmosphere_condition=self.atmosphere_condition)
         self.tom = self.compute_flight_mass() # Takeoff mass
-
-        term1 = self.f * weight(self.tom) / self.FoM
-        term2_start = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * start_density))
-        term2_end = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * end_density))
-        term3 = weight(self.tom) * self.vertical_speed / 2
-
-        start_power = max(watt_to_kw((term1 * term2_start + term3) / self.n_hover), 0)
-        end_power = max(watt_to_kw((term1 * term2_end + term3) / self.n_hover), 0)
-
-        # if self.tail_number == 0:
-        #     print(f'vertical_start_power: {start_power}, end_power: {end_power} for vertical {operation}, hover_time: {hover_time}, location: {self.location}, start_altitude: {self.altitude}, end_altitude: {hover_altitude}')
-        #     print(f'energy: {sec_to_hr((start_power + end_power) / 2 * hover_time)}')
+        vertical_takeoff_landing_power = vertical_takeoff_landing_phase_power(start_altitude=fato_altitude,
+                                                                              end_altitude=hover_altitude,
+                                                                              aircraft_params=self.aircraft_params,
+                                                                              tom=self.tom,
+                                                                              vertical_velocity=self.vertical_velocity)
+        vertical_takeoff_landing_power = watt_to_kw(vertical_takeoff_landing_power)
 
         if operation == 'takeoff':
-            return sec_to_hr((start_power + end_power) / 2 * hover_time) # kWh - time units need to be seconds
+            return sec_to_hr(vertical_takeoff_landing_power * hover_time) # kWh - time units need to be seconds
         elif operation == 'landing':
-            return sec_to_hr((start_power + end_power) / 2 * hover_time)
+            return sec_to_hr(vertical_takeoff_landing_power * hover_time)
         else:
             raise ValueError('operation must be either takeoff or landing')
 
 
-    def climb_transition_energy_consumption(self, min_power_speed: float, 
+    def climb_transition_energy_consumption(self, velocity: float, 
                                             climb_transition_end_altitude: float,
                                             climb_transition_time: float) -> float:
-        term1_start = self.f * weight(self.tom) / self.FoM
-        term2_start = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * rho(self.altitude, self.atmosphere_condition)))
-        climb_transition_start_power = max(watt_to_kw((term1_start * term2_start)/ self.n_hover), 0)
+        climb_transition_power = climb_transition_phase_power(start_altitude=self.altitude, 
+                                                              end_altitude=climb_transition_end_altitude, 
+                                                              aircraft_params=self.aircraft_params, 
+                                                              tom=self.tom, 
+                                                              vertical_velocity=self.vertical_velocity, 
+                                                              velocity=velocity)
+        climb_transition_power = watt_to_kw(climb_transition_power)
 
-        term1_end = weight(self.tom) * self.vertical_speed
-        term2_end = 1/2 * rho(climb_transition_end_altitude, self.atmosphere_condition) \
-            * self.wing_area * self.cd_0 * min_power_speed ** 3
-        term3_end = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) \
-            * weight(self.tom)**2 / (1/2*rho(climb_transition_end_altitude, self.atmosphere_condition) \
-                                       * self.wing_area * min_power_speed)
-        climb_transition_end_power = max(watt_to_kw((term1_end + term2_end + term3_end) / self.n_climb), 0)
-
-        # if self.tail_number == 0:
-        #     print(f'climb_transition_start_power: {climb_transition_start_power}, climb_transition_end_power: {climb_transition_end_power}, climb_transition_time: {climb_transition_time}, location: {self.location}, start_altitude: {self.altitude}, end_altitude: {climb_transition_end_altitude}')
-        #     print(f'energy: {sec_to_hr((climb_transition_start_power + climb_transition_end_power) / 2 * climb_transition_time)}')
-
-        return sec_to_hr((climb_transition_start_power + climb_transition_end_power) / 2 * climb_transition_time)
+        return sec_to_hr(climb_transition_power * climb_transition_time)
     
-    def descend_transition_energy_consumption(self, min_power_speed: float, 
+    def descend_transition_energy_consumption(self, velocity: float, 
                                               descend_transition_end_altitude: float, 
                                               descend_transition_time: float) -> float:
         """
         Computes the energy consumption during the descend transition phase.
-        :param min_power_speed: Minimum power speed (m/s)
+        :param velocity: Velocity (m/s)
         :param descend_transition_end_altitude: Altitude at the end of the descend transition phase (meters)
         :param descend_transition_time: Time spent in the descend transition phase (seconds)
         :return: Energy consumption during the descend transition phase (kWh)
         """
-        term1_start = weight(self.tom) * self.vertical_speed
-        term2_start = 1/2 * rho(self.altitude, self.atmosphere_condition) \
-            * self.wing_area * self.cd_0 * min_power_speed ** 3
-        term3_start = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) \
-            * weight(self.tom)**2 / (1/2*rho(self.altitude, self.atmosphere_condition) * min_power_speed * self.wing_area)
-        descend_transition_start_power = max(watt_to_kw(-term1_start + term2_start / self.n_climb + term3_start / self.n_climb), 0)
+        descend_transition_power = descend_transition_phase_power(start_altitude=self.altitude,
+                                                                  end_altitude=descend_transition_end_altitude,
+                                                                  aircraft_params=self.aircraft_params,
+                                                                  tom=self.tom,
+                                                                  vertical_velocity=self.vertical_velocity,
+                                                                  velocity=velocity)
+        descend_transition_power = watt_to_kw(descend_transition_power)
 
-        term1_end = self.f * weight(self.tom) / self.FoM
-        term2_end = np.sqrt(self.f * weight(self.tom) / rotor_disk_area(self.tom, self.disk_load) / (2 * rho(descend_transition_end_altitude, self.atmosphere_condition)))
-        descend_transition_end_power = max(watt_to_kw((term1_end * term2_end)/ self.n_hover), 0) 
+        return sec_to_hr(descend_transition_power * descend_transition_time)
 
-        # if self.tail_number == 0:
-        #     print(f'descend_transition_start_power: {descend_transition_start_power}, descend_transition_end_power: {descend_transition_end_power}, descend_transition_time: {descend_transition_time}, location: {self.location}, descend_trans_start_altitude: {self.altitude}, descend_transition_end_altitude: {descend_transition_end_altitude}')
-        #     print(f'energy: {sec_to_hr((descend_transition_start_power + descend_transition_end_power) / 2 * descend_transition_time)}')
+    def climb_energy_consumption(self, velocity: float, climb_end_altitude: float, climb_time: float) -> float:
+        climb_power = climb_phase_power(start_altitude=self.altitude, 
+                                        end_altitude=climb_end_altitude, 
+                                        aircraft_params=self.aircraft_params, 
+                                        tom=self.tom, 
+                                        vertical_velocity=self.vertical_velocity, 
+                                        velocity=velocity)
+        climb_power = watt_to_kw(climb_power)
 
-        return sec_to_hr((descend_transition_start_power + descend_transition_end_power) / 2 * descend_transition_time)
-
-    def climb_energy_consumption(self, min_power_speed: float, climb_end_altitude: float, climb_time: float) -> float:
-        K = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) * 4/3 # New K to account for L/D correction
-
-        term1_start = weight(self.tom) * self.vertical_speed
-        term2_start = 1/2 * rho(self.altitude, self.atmosphere_condition) \
-            * self.wing_area * self.cd_0 * min_power_speed ** 3
-        term3_start = K * weight(self.tom)**2 / (1/2*rho(self.altitude, self.atmosphere_condition) \
-                                       * self.wing_area * min_power_speed)
-        climb_start_power = max(watt_to_kw((term1_start + term2_start + term3_start) / self.n_climb), 0)
-
-        term1_end = weight(self.tom) * self.vertical_speed
-        term2_end = 1/2 * rho(climb_end_altitude, self.atmosphere_condition) \
-            * self.wing_area * self.cd_0 * min_power_speed ** 3
-        term3_end = K * weight(self.tom)**2 / (1/2*rho(climb_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
-        climb_end_power = max(watt_to_kw(term1_end + term2_end / self.n_climb + term3_end / self.n_climb), 0)
-
-        # if self.tail_number == 0:
-        #     print(f'climb_start_power: {climb_start_power}, climb_end_power: {climb_end_power}, climb_time: {climb_time}, location: {self.location},climb_start_altitude: {self.altitude}, climb_end_altitude: {climb_end_altitude}')
-        #     print(f'energy: {sec_to_hr((climb_start_power + climb_end_power) / 2 * climb_time)}')
-
-        return sec_to_hr((climb_start_power + climb_end_power) / 2 * climb_time)
+        return sec_to_hr(climb_power * climb_time)
     
-    def descend_energy_consumption(self, min_power_speed: float, descend_end_altitude: float, descend_time: float) -> float:
+    def descend_energy_consumption(self, velocity: float, descend_end_altitude: float, descend_time: float) -> float:
         """
         Computes the energy consumption during the descent phase of the mission.
-        :param min_power_speed: The minimum power speed of the aircraft in meters per second.
+        :param min_power_velocity: The minimum power speed of the aircraft in meters per second.
         :param descend_end_altitude: The altitude at which the descent ends in meters.
         :param descend_time: The time spent in the descent phase in seconds.
         :return: The energy consumption during the descent phase of the mission in kWh.
         """
-        K = lift_induced_drag_coef(cd_0=self.cd_0, ld_max=self.ld_max) * 4/3
+        descend_power = descend_phase_power(start_altitude=self.altitude,
+                                            end_altitude=descend_end_altitude,
+                                            aircraft_params=self.aircraft_params,
+                                            tom=self.tom,
+                                            vertical_velocity=self.vertical_velocity,
+                                            velocity=velocity)
+        descend_power = watt_to_kw(descend_power)
 
-        term1_start = weight(self.tom) * self.vertical_speed
-        term2_start = 1/2 * rho(self.altitude, self.atmosphere_condition) \
-            * self.wing_area * self.cd_0 * min_power_speed ** 3
-        term3_start = K * weight(self.tom)**2 / (1/2*rho(self.altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
-        descend_start_power = max(watt_to_kw(-term1_start + term2_start / self.n_climb + term3_start / self.n_climb), 0)
-
-        term1_end = weight(self.tom) * self.vertical_speed
-        term2_end = 1/2 * rho(descend_end_altitude, self.atmosphere_condition) \
-            * self.wing_area * self.cd_0 * min_power_speed ** 3
-        term3_end = K * weight(self.tom)**2 / (1/2*rho(descend_end_altitude, self.atmosphere_condition) * self.wing_area * min_power_speed)
-        descend_end_power = max(watt_to_kw(-term1_end + term2_end/ self.n_climb + term3_end/ self.n_climb), 0)
-
-        # if self.tail_number == 0:
-        #     print(f'descend_start_power: {descend_start_power}, descend_end_power: {descend_end_power}, descend_time: {descend_time}, location: {self.location}, descend_start_altitude: {self.altitude}, descend_end_altitude: {descend_end_altitude}')
-        #     print(f'energy: {sec_to_hr((descend_start_power + descend_end_power) / 2 * descend_time)}')
-
-        return sec_to_hr((descend_start_power + descend_end_power) / 2 * descend_time)
+        return sec_to_hr(descend_power * descend_time)
     
     def cruise_energy_consumption(self, velocity, time_cruise) -> float:
         cruise_velocity = min(self.input_cruise_speed, velocity)
         cruise_velocity = max(cruise_velocity, self.stall_speed)
-        cruise_power = max(watt_to_kw((weight(self.tom) * cruise_velocity) / (0.85*self.ld_max) / self.n_cruise), 0)
+        cruise_power = cruise_phase_power(cruise_velocity=cruise_velocity,
+                                          aircraft_params=self.aircraft_params,
+                                          tom=self.tom)
+        cruise_power = watt_to_kw(cruise_power)
         return sec_to_hr(cruise_power * time_cruise)
     
     def update_holding_energy_consumption(self, time_holding) -> float:
-        holding_power = max(watt_to_kw((weight(self.tom) * self.speed) / (0.85*self.ld_max) / self.n_cruise), 0)
+        holding_power = cruise_phase_power(cruise_velocity=self.speed,
+                                           aircraft_params=self.aircraft_params,
+                                           tom=self.tom)
+        holding_power = watt_to_kw(holding_power)
         holding_energy = ms_to_hr(holding_power * time_holding)
         self.soc_discharge_update(holding_energy)
     
@@ -918,8 +1054,8 @@ class Aircraft:
         if self.soc <= 20 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
             self.priority = 0
 
-    def update_altitude(self, vertical_speed, time):
-        self.altitude += vertical_speed * time
+    def update_altitude(self, vertical_velocity, time):
+        self.altitude += vertical_velocity * time
         self.altitude = max(self.altitude, 0)
 
     def compute_flight_mass(self, num_passenger= None) -> float:
@@ -927,14 +1063,32 @@ class Aircraft:
             return self.mtom - (self.aircraft_params['pax']-num_passenger)*self.aircraft_params['pax_mass']
         return self.mtom - (self.aircraft_params['pax']-len(self.passengers_onboard))*self.aircraft_params['pax_mass']
 
-    def get_node_latitude(self, node_id):
+    def get_node_latitude(self, node_id) -> float:
         return self.vertiport_manager.node_locations[node_id][0]
     
-    def get_node_longitude(self, node_id):
+    def get_node_longitude(self, node_id) -> float:
         return self.vertiport_manager.node_locations[node_id][1]
     
-    def get_node_altitude(self, node_id):
+    def get_node_altitude(self, node_id) -> float:
         return self.vertiport_manager.node_locations[node_id][2]
+    
+    def get_altitude_difference(self, node_id_1, node_id_2) -> float:
+        """
+        Returns the altitude difference between two nodes in meters.
+        """
+        return abs(self.get_node_altitude(node_id_1) - self.get_node_altitude(node_id_2))
+    
+    def get_horizontal_distance(self, node_id_1, node_id_2) -> float:
+        """
+        Returns the horizontal distance between two nodes in meters.
+        """
+        return self.vertiport_manager.airspace.waypoint_distances[node_id_1][node_id_2]
+
+    def horizontal_and_vertical_distance(self, node_id_1, node_id_2) -> float:
+        """
+        Returns the horizontal and vertical distance between two nodes in meters.
+        """
+        return self.get_horizontal_distance(node_id_1, node_id_2), self.get_altitude_difference(node_id_1, node_id_2)
 
 
     

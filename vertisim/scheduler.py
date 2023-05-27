@@ -7,18 +7,30 @@ class Scheduler:
     def __init__(self, env: object,
                  vertiports: object,
                  vertiport_manager: object,
-                 aircraft_capacity: int = None):
+                 aircraft_capacity: int = None,
+                 is_fixed_schedule: bool = False):
         self.env = env
         self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
         self.vertiport_manager = vertiport_manager
-        self.fixed_flight_schedule = None
+        self.is_fixed_schedule = is_fixed_schedule
+        self.flight_schedule = None
 
     def initiate_fixed_schedule_from_file(self):
-        # TODO: Implement this method
-        # Timeout the event times from the current time. Then start the arrival process
-        # for tail_number in self.fixed_flight_schedule.tail_number:
-        pass
+        for _, row in self.flight_schedule.iterrows():
+            pushback_interarrival_time = row['pushback_interarrival_time']
+            origin_vertiport_id = row['origin_vertiport_id']
+            destination_vertiport_id = row['destination_vertiport_id']
+            yield self.env.timeout(pushback_interarrival_time)
+            # Get the waiting room for the destination
+            waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
+            # Get the departing passengers from the waiting room
+            departing_passengers = self.collect_any_departing_passengers(waiting_room)
+            self.env.process(self.vertiport_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
+                                                                     dest_vertiport_id=destination_vertiport_id,
+                                                                     departing_passengers=departing_passengers,
+                                                                     tail_number=row['tail_number']))
+
 
     def check_max_waiting_time_threshold(self, max_flight_waiting_time):
         """
@@ -67,6 +79,18 @@ class Scheduler:
             departing_passengers.append(current_waiting_room.items[0])
             # Remove the agent from the current_waiting_room
             current_waiting_room.get()
+        return departing_passengers
+    
+    def collect_any_departing_passengers(self, waiting_room):
+        """
+        Collects any departing passengers from the waiting room
+        """
+        departing_passengers = []
+        for _ in range(min(self.aircraft_capacity, len(waiting_room.items))):
+            # Collect agents from the waiting room as FIFO)
+            departing_passengers.append(waiting_room.items[0])
+            # Remove the agent from the current_waiting_room
+            waiting_room.get()
         return departing_passengers
 
 

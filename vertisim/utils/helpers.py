@@ -336,6 +336,17 @@ def careful_round(value, decimal_places=2):
     """
     return None if value is None else round(value, decimal_places)
 
+def careful_conversion(value):
+    """
+    Convert a value to float if it is not None.
+    """
+    if value is None:
+        return None
+    elif isinstance(value, str):
+        return float(value)
+    else:
+        return value
+
 
 def create_dict_for_fixes(airspace_nodes: Dict) -> Dict:
     """
@@ -349,6 +360,13 @@ def create_dict_for_fixes(airspace_nodes: Dict) -> Dict:
             elif 'departure' in value.lower():
                 fix_nodes['departure_fix_node'].append(value)
     return fix_nodes
+
+
+def check_not_none(value):
+    """
+    Check whether a value is None.
+    """
+    return value is not None
 
 
 

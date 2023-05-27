@@ -28,7 +28,7 @@ class VertiportConfig:
         self.edge_store = self.add_edges_to_store()
         self.charger_resource = simpy.Resource(self.env, capacity=self.vertiport_data['num_chargers'])
         self.waiting_room_stores = self.create_waiting_room_stores()
-        self.available_aircraft_store = simpy.Store(self.env)
+        self.available_aircraft_store = simpy.FilterStore(self.env)
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
