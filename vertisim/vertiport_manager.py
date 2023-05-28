@@ -708,6 +708,10 @@ class VertiportManager:
         aircraft.holding_time = holding_end - holding_start
         aircraft.update_holding_energy_consumption(aircraft.holding_time)
 
+        self.event_saver.save_aircraft_holding_time(vertiport_id=aircraft.destination_vertiport_id,
+                                                    agent_id=aircraft.tail_number,
+                                                    waiting_time=aircraft.holding_time)        
+
         aircraft.arrival_fix_resource = arrival_fix_resource
         aircraft.arrival_fix_usage_request = arrival_fix_usage_request  
 
@@ -817,12 +821,6 @@ class VertiportManager:
             parking_space_id = assigned_fato_id
 
     def simulate_landing_process(self, aircraft: object):
-        # Save aircraft arrival queue waiting time
-        aircraft.holding_time = self.env.now - aircraft.arrival_time
-        self.event_saver.save_aircraft_holding_time(vertiport_id=aircraft.destination_vertiport_id,
-                                                    agent_id=aircraft.tail_number,
-                                                    waiting_time=aircraft.holding_time)
-    
         # Save FATO usage start time
         self.event_saver.update_fato_usage_tracker(vertiport_id=aircraft.destination_vertiport_id,
                                                    fato_usage=1)

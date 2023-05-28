@@ -372,7 +372,7 @@ class SimSetup:
                                   passenger_waiting_time=self.event_saver.passenger_waiting_time,
                                   passenger_transfer_time=self.event_saver.passenger_transfer_time,
                                   passenger_departure_queue_waiting_time=self.event_saver.passenger_departure_queue_waiting_time,
-                                  aircraft_arrival_queue_waiting_time=self.event_saver.aircraft_arrival_queue_waiting_time,
+                                  aircraft_holding_time=self.event_saver.aircraft_holding_time,
                                   aircraft_charging_times=self.event_saver.aircraft_charging_times,
                                   aircraft_taxi_times=self.event_saver.aircraft_taxi_times,
                                   flight_schedule=self.event_saver.flight_schedule,

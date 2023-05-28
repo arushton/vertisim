@@ -26,7 +26,7 @@ class EventSaver:
         self.passenger_waiting_time = defaultdict(dict)
         self.passenger_transfer_time = defaultdict(dict)
         self.passenger_departure_queue_waiting_time = defaultdict(dict)
-        self.aircraft_arrival_queue_waiting_time = defaultdict(dict)
+        self.aircraft_holding_time = defaultdict(dict)
         self.aircraft_idle_time_tracker = defaultdict(dict)
         self.aircraft_charging_times = defaultdict(dict)
         self.aircraft_taxi_times = defaultdict(dict)
@@ -91,8 +91,8 @@ class EventSaver:
         self.aircraft_departure_queue_count[vertiport_id][time] = last_value + queue_update
 
     def save_aircraft_holding_time(self, vertiport_id, agent_id, waiting_time):
-        # TODO: Change the all instances of aircraft_arrival_queue_waiting_time to aircraft_holding_time
-        self.aircraft_arrival_queue_waiting_time[vertiport_id][agent_id] =  waiting_time
+        # TODO: Change the all instances of aircraft_holding_time to aircraft_holding_time
+        self.aircraft_holding_time[vertiport_id][agent_id] =  waiting_time
 
     def save_aircraft_charging_time(self, vertiport_id, aircraft_id, charging_time):
         self.aircraft_charging_times[vertiport_id][aircraft_id] = charging_time

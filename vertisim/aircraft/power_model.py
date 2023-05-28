@@ -1,5 +1,4 @@
 from aircraft.flight_helpers import rho, weight, temperature, lift_induced_drag_coef, rotor_disk_area, G_CONSTANT
-from utils.units import watt_to_kw
 import numpy as np
 
 def transition_power(altitude, aircraft_params, tom):
@@ -58,7 +57,7 @@ def climb_phase_power(start_altitude, end_altitude, aircraft_params, tom, vertic
     return (climb_start_power + climb_end_power)/2
     
 def cruise_phase_power(cruise_velocity, aircraft_params, tom):
-    return max(watt_to_kw((weight(tom) * cruise_velocity) / (0.85*aircraft_params['ld_max']) / aircraft_params['eta_cruise']), 0)
+    return max((weight(tom) * cruise_velocity) / (0.85*aircraft_params['ld_max']) / aircraft_params['eta_cruise'], 0)
 
 def descend_phase_power(start_altitude, end_altitude, aircraft_params, tom, vertical_velocity, velocity):
     k_multiplier = 4/3  # New K to account for L/D correction

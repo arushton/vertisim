@@ -803,8 +803,10 @@ class Aircraft:
     def request_charger(self):
         """
         This method is used when the charger configuration is normal (any parking pads can use any chargers).
+        Returns the charger resource that is used by the aircraft and the charging request.
         """
-        return self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource.request()
+        used_charger_resource = self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource
+        return used_charger_resource, used_charger_resource.request()
 
     def get_charging_time(self):
         """
@@ -834,13 +836,14 @@ class Aircraft:
         if shared_charger:
             used_charger_resource, selected_charging_request = self.handle_shared_charger(parking_space)
         else:
-            selected_charging_request = self.env.process(self.handle_fixed_charger())
+            used_charger_resource, selected_charging_request = self.request_charger()
+            yield selected_charging_request
 
         self.start_charging_process()
         yield self.env.timeout(self.get_charging_time())
         self.end_charging_process()
         self.soc_charge_update()
-        self.release_charger_resource(shared_charger, used_charger_resource, selected_charging_request)
+        self.release_charger_resource(used_charger_resource, selected_charging_request)
 
     def set_charging_time_trackers(self):
         self.charging_start_time = self.env.now
@@ -875,11 +878,6 @@ class Aircraft:
                 else:
                     charger_req.cancel()
 
-    def handle_fixed_charger(self):
-        charging_request = self.request_charger()
-        yield charging_request
-        return charging_request
-
     def start_charging_process(self):
         self.charging_start_time = self.env.now
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_start')
@@ -888,11 +886,8 @@ class Aircraft:
         self.charging_end_time = self.env.now
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_end')
 
-    def release_charger_resource(self, shared_charger: bool, used_charger_resource: object, selected_charging_request: object):
-        if shared_charger:
-            used_charger_resource.release(selected_charging_request)
-        else:
-            self.vertiport_manager.vertiports[self.destination_vertiport_id].charger_resource.release(selected_charging_request)
+    def release_charger_resource(self, used_charger_resource: object, selected_charging_request: object):
+        used_charger_resource.release(selected_charging_request)
 
     @staticmethod
     def calc_soc_from_charge_time(charge_time: int, initial_soc: int, df: pd.DataFrame) -> int:
@@ -913,7 +908,6 @@ class Aircraft:
         int
             The soc level of the aircraft after the charging time.
         """
-        print(f'charge_time: {charge_time}, initial_soc: {initial_soc}')
         # Get the time at initial soc level
         initial_soc_time = df[df.soc == initial_soc]['time_sec'].values[0]
         # Get the time at final soc level
