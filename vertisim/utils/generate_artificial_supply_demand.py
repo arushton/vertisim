@@ -61,11 +61,11 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
         if aircraft_arrival_process['aircraft_interarrival_constant'] is None and aircraft_arrival_process['aircraft_arrival_distribution'] is None:
             raise ValueError('Either aircraft_interarrival_constant or aircraft_arrival_distribution must be defined.')
         if aircraft_arrival_process['aircraft_interarrival_constant'] is not None:
-            interarrival_times = [sec_to_ms(aircraft_arrival_process['aircraft_interarrival_constant'])] * num_aircraft
+            interarrival_times = [aircraft_arrival_process['aircraft_interarrival_constant']] * num_aircraft
         else:
             distribution = DistributionGenerator(distribution_params=aircraft_arrival_process['aircraft_arrival_distribution'],
                                                 max_val_in_dist=aircraft_arrival_process['aircraft_arrival_distribution']['max_val_in_dist'])
-            interarrival_times = [sec_to_ms(distribution.pick_number_from_distribution()) for _ in range(num_aircraft)]
+            interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_aircraft)]
         soc = [random.randint(min_init_soc, max_init_soc) for _ in range(num_aircraft)]
     else:
         # If network simulation, aircraft start from the ground with max_init_soc.

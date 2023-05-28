@@ -185,7 +185,7 @@ class AircraftArrivalSetup:
                 aircraft_data[field] = aircraft_arrival_schedule.loc[
                     aircraft_arrival_schedule.tail_number == tail_number, field].values[0]
 
-            yield self.env.timeout(aircraft_data['interarrival_time'])
+            yield self.env.timeout(sec_to_ms(aircraft_data['interarrival_time']))
 
             self.env.process(
                 # Simulate the aircraft.

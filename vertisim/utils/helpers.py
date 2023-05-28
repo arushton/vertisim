@@ -26,7 +26,7 @@ def compute_interarrival_times_from_schedule(schedule):
     :param schedule:
     :return:
     """
-    return sec_to_ms(np.diff(schedule, prepend=0))
+    return np.diff(schedule, prepend=0)
 
 
 def cumulative_sum_array(array: Union[np.ndarray, List]) -> np.ndarray:

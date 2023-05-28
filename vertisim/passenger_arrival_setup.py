@@ -70,6 +70,7 @@ class PassengerArrivalSetup:
     def create_passenger_arrival(self):
         # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
+        print(passenger_arrival_schedule)
 
         if not self.network_simulation:
             if self.aircraft_params['time_charging']:
