@@ -27,7 +27,7 @@ class Scheduler:
             # Get the departing passengers from the waiting room
             departing_passengers = self.collect_any_departing_passengers(waiting_room)
             self.env.process(self.vertiport_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
-                                                                     dest_vertiport_id=destination_vertiport_id,
+                                                                     destination_vertiport_id=destination_vertiport_id,
                                                                      departing_passengers=departing_passengers,
                                                                      tail_number=row['tail_number']))
 

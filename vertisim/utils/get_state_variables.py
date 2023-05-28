@@ -41,7 +41,7 @@ def collect_flow_entity_state_variables(aircraft_agents: Dict, passenger_agents:
         passenger_states[passenger_id] = {
             'location': passenger.location,
             'origin_vertiport_id': passenger.origin_vertiport_id,
-            'destination_vertiport_id': passenger.dest_vertiport_id,
+            'destination_vertiport_id': passenger.destination_vertiport_id,
             'vertiport_arrival_time': careful_round(ms_to_min(passenger.vertiport_arrival_time), 2),
             'vertiport_departure_time': careful_round(ms_to_min(passenger.departure_time), 2)
         }

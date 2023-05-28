@@ -12,7 +12,7 @@ class Passenger:
 
     def __init__(self, env, passenger_id,
                  origin_vertiport_id: Any,
-                 dest_vertiport_id: Any,
+                 destination_vertiport_id: Any,
                  location: str,
                  car_to_entrance_walking_time_constant: Union[float, None],
                  security_check_time_constant: Union[float, None],
@@ -25,7 +25,7 @@ class Passenger:
         self.env = env
         self.passenger_id = passenger_id
         self.origin_vertiport_id = origin_vertiport_id
-        self.dest_vertiport_id = dest_vertiport_id
+        self.destination_vertiport_id = destination_vertiport_id
         self.location = location
         self.car_to_entrance_walking_time_constant = car_to_entrance_walking_time_constant
         self.security_check_time_constant = security_check_time_constant

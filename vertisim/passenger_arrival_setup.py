@@ -50,6 +50,9 @@ class PassengerArrivalSetup:
         if self.passenger_arrival_schedule_file_path is not None:
             # Load passenger arrival schedule from the path provided on self.passenger_arrival_schedule.
             passenger_arrival_schedule = read_input_file(self.passenger_arrival_schedule_file_path)
+            # Sort the passenger arrival schedule by passenger_arrival_time
+            passenger_arrival_schedule.sort_values(by='passenger_arrival_time', inplace=True)
+            passenger_arrival_schedule.reset_index(drop=True, inplace=True)
             # Check if the columns of the input file are correct.
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
             print("Success: Passenger arrival schedule loaded from file.")
@@ -97,7 +100,7 @@ class PassengerArrivalSetup:
             # Get the passenger's origin vertiport id
             origin_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'origin_vertiport_id'].values[0]
             # Get the passenger's destination vertiport id
-            dest_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'dest_vertiport_id'].values[0]
+            destination_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'destination_vertiport_id'].values[0]
             # Get the location of the passenger
             passenger_location = f'{origin_vertiport_id}_ENTRANCE'
 
@@ -108,21 +111,21 @@ class PassengerArrivalSetup:
                     passenger_id=passenger_id,
                     location=passenger_location,
                     origin_vertiport_id=origin_vertiport_id,
-                    dest_vertiport_id=dest_vertiport_id
+                    destination_vertiport_id=destination_vertiport_id
             )
 
     def initiate_passenger_arrival(self, 
                                    passenger_id: int,
                                    location: str,
                                    origin_vertiport_id: Any,
-                                   dest_vertiport_id: Any):
+                                   destination_vertiport_id: Any):
         # Create a passenger object
         passenger = Passenger(
             env=self.env,
             passenger_id=passenger_id,
             location=location,
             origin_vertiport_id=origin_vertiport_id,
-            dest_vertiport_id=dest_vertiport_id,
+            destination_vertiport_id=destination_vertiport_id,
             car_to_entrance_walking_time_constant=sec_to_ms(self.passenger_params['car_to_entrance_walking_time_constant']),
             security_check_time_constant=sec_to_ms(self.passenger_params['security_check_time_constant']),
             waiting_room_to_boarding_gate_walking_time_constant=sec_to_ms(self.passenger_params['waiting_room_to_boarding_gate_walking_time_constant']),

@@ -139,12 +139,12 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
         raise ValueError('Number of vertiports and the length of demand_probabilities must be the same.')
     
     if network_simulation:
-        dest_vertiport_ids = weighted_random_choose_exclude_element(elements_list=vertiport_ids, 
+        destination_vertiport_ids = weighted_random_choose_exclude_element(elements_list=vertiport_ids, 
                                                                     exclude_element=origin_vertiport_id,
                                                                     probabilities=demand_probabilities, 
                                                                     num_selection=num_passengers)
     else:
-        dest_vertiport_ids = random_choose_exclude_element(elements_list=vertiport_ids,
+        destination_vertiport_ids = random_choose_exclude_element(elements_list=vertiport_ids,
                                                            exclude_element=origin_vertiport_id,
                                                            num_selection=num_passengers)
 
@@ -160,4 +160,4 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
     return pd.DataFrame({'passenger_arrival_time': passenger_arrival_times,
                          'interarrival_time': interarrival_times,
                          'origin_vertiport_id': origin_vertiport_id,
-                         'dest_vertiport_id': dest_vertiport_ids})
+                         'destination_vertiport_id': destination_vertiport_ids})
