@@ -790,9 +790,9 @@ class Aircraft:
                 link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                      destination=waypoint_id, 
                                                                                      horizontal_speed=self.speed)
-                yield self.env.timeout(link_traversal_time)
+                yield self.env.timeout(sec_to_ms(link_traversal_time))
             # Compute energy consumption
-            cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=ms_to_sec(link_traversal_time))
+            cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time)
             self.update_aircraft_state(waypoint_id, cruise_energy_consumption, 'cruise')         
 
         yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(

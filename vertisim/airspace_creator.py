@@ -1,6 +1,7 @@
 from utils.distance import haversine_dist
 import numpy as np
 from typing import List, Dict
+from utils.read_files import read_input_file
 from collections import defaultdict
 import pandas as pd
 
@@ -21,7 +22,8 @@ class AirspaceCreator:
 
 
     def read_waypoint_locations_from_file(self):
-        waypoints = pd.read_excel(self.airspace_params['airspace_layout_file_path'], sheet_name='new_route')
+        waypoints = read_input_file(file_path=self.airspace_params['airspace_layout_file_path'], 
+                                    sheet_name=self.airspace_params['airspace_layout_sheet_name'])
         waypoint_ids = defaultdict(list)
         waypoint_locations = defaultdict(dict)
         for _, row in waypoints.iterrows():

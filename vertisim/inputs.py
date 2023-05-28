@@ -32,19 +32,19 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{str(cwd)}/input/network_of_2_vertiports.csv',
-    'vertiport_layout_file_path': f'{str(cwd)}/input/skyport_layouts/skyport_layout.xls',
+    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_of_2_vertiports.csv',
+    'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated.
     # Priority is given to the demand files.
-    'aircraft_schedule_file_name': None,#'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
-    'passenger_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'aircraft_schedule_file_name': None,#'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    'passenger_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
-    'demand_probabilities': [0.3, 0.7], # The probability of the demand to be generated for each vertiport.
+    'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
 
     'vertiports': {
     # Input specifications for each vertiport.
@@ -74,7 +74,7 @@ network_and_demand = {
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/40  # seconds
+                        'scale': 3600/60  # seconds
                         # 'param3': None,
                         # 'param4': None
                     },
@@ -121,7 +121,7 @@ network_and_demand = {
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/100  # seconds
+                        'scale': 3600/60  # seconds
                     },
                     'max_val_in_dist': None,  # seconds
                 },
@@ -138,7 +138,8 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/lax_dtla_route.xls',
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/new_route.csv',
+    'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 0.25,  # miles
@@ -261,7 +262,7 @@ aircraft_params = {
         'max_val_in_dist': None,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
-    'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/input/aircraft_energy_consumption',
+    'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/input/aircraft/energy_consumption',
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
     'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
     'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
