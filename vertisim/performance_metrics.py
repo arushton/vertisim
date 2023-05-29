@@ -71,6 +71,7 @@ class PerformanceMetrics:
             self.compute_total_passenger_throughput()
             self.compute_average_passenger_throughput()
             self.compute_load_factor_stats()
+            self.compute_empty_flights()
             self.compute_aircraft_idle_time_stats()
             self.calculate_passenger_departure_queue_waiting_times_stats()
         self.calculate_aircraft_arrival_queue_count_stats()
@@ -229,9 +230,15 @@ class PerformanceMetrics:
 
     def compute_average_charge_time(self):
         # Computes the average charge time
-        for vertiport_id, data in self.aircraft_charging_times.items():
-            charge_times = list(data.values())
-            self.performance_metrics[vertiport_id]['average_charge_time'] = round(ms_to_min(np.mean(charge_times)), 2)
+        if self.aircraft_charging_times:
+            for vertiport_id, data in self.aircraft_charging_times.items():
+                if charge_times := list(data.values()):
+                    self.performance_metrics[vertiport_id]['average_charge_time'] = round(ms_to_min(np.mean(charge_times)), 2)
+                else:
+                    self.performance_metrics[vertiport_id]['average_charge_time'] = 0
+        else:
+            for vertiport_id in self.vertiport_ids:
+                self.performance_metrics[vertiport_id]['average_charge_time'] = 0
 
     def compute_average_taxi_time(self):
         # Computes the average taxi time
@@ -283,6 +290,14 @@ class PerformanceMetrics:
                 <= self.sim_start_timestamp + second * self.hour
             )
             self.performance_metrics[vertiport_id]['passenger_throughput'] = total_passengers / interval_length
+
+    def compute_empty_flights(self):
+        # Computes the number of empty flights
+        for vertiport_id in self.vertiport_ids:
+            self.performance_metrics[vertiport_id]['empty_flights'] = 0
+            for _, value in self.passenger_time_tracker[vertiport_id].items():
+                if value == 0:
+                    self.performance_metrics[vertiport_id]['empty_flights'] += 1
 
     def get_time_interval(self, total_sim_time: int) -> List[int]:
         """
@@ -548,6 +563,11 @@ class PerformanceMetrics:
         for vertiport_id in self.vertiport_ids:
             print(f"FATO utilization at {vertiport_id}: {self.performance_metrics[vertiport_id]['fato_utilization']}%")
 
+    def print_total_empty_flights(self):
+        print("\n")
+        for vertiport_id in self.vertiport_ids:
+            print(f"Total empty flights from {vertiport_id}: {self.performance_metrics[vertiport_id]['empty_flights']}")
+
     def print_verbose_performance_metrics(self):
         if not self.only_aircraft_simulation:
             self.print_passenger_consolidation_time_stats()
@@ -566,6 +586,7 @@ class PerformanceMetrics:
         self.print_aircraft_throughput_stats_for_each_hr_verbose()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
+        self.print_total_empty_flights()
         # self.plot_aircraft_arrival_queue_count()
 
     def print_performance_metrics(self):
@@ -577,4 +598,5 @@ class PerformanceMetrics:
         self.print_total_aircraft_throughput()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
+        self.print_total_empty_flights()
         # self.plot_aircraft_arrival_queue_count()

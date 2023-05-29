@@ -70,11 +70,11 @@ network_and_demand = {
             # depending on the distribution you use.
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-                'num_passengers': 250,  # Number of passengers to be generated
+                'num_passengers': 1500,  # Number of passengers to be generated
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/40  # seconds
+                        'scale': 3600/60  # seconds
                         # 'param3': None,
                         # 'param4': None
                     },
@@ -117,11 +117,11 @@ network_and_demand = {
             # Passenger Arrival Process
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,
-                'num_passengers': 250,  
+                'num_passengers': 1500,  
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/100  # seconds
+                        'scale': 3600/60  # seconds
                     },
                     'max_val_in_dist': None,  # seconds
                 },
