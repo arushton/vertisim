@@ -31,12 +31,35 @@ class EventSaver:
         self.aircraft_charging_times = defaultdict(dict)
         self.aircraft_taxi_times = defaultdict(dict)
         self.fato_usage_tracker = defaultdict(dict)
+        self.flight_time_tracker = defaultdict(dict)
+        self.flight_count_tracker = defaultdict(int)
+        self.load_factor_tracker = defaultdict(list)
+        self.passenger_count_tracker = defaultdict(int)
+        self.passenger_time_tracker = defaultdict(dict)
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.passenger_departure_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.aircraft_departure_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.fato_usage_tracker[vertiport_id][self.sim_start_timestamp] = 0
+            self.flight_count_tracker[vertiport_id] = 0
+            self.passenger_count_tracker[vertiport_id] = 0
+            self.passenger_time_tracker[vertiport_id][self.sim_start_timestamp] = 0
 
+    def update_flight_tracker(self, vertiport_id):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='aircraft')
+        self.flight_time_tracker[vertiport_id][time] = 1
+        self.flight_count_tracker[vertiport_id] += 1
+
+    def update_load_factor_tracker(self, vertiport_id, load_factor):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='aircraft')
+        self.load_factor_tracker[vertiport_id].append(load_factor)
+        self.passenger_count_tracker[vertiport_id] += load_factor
+        self.passenger_time_tracker[vertiport_id][time] = load_factor
+    
     def update_fato_usage_tracker(self, vertiport_id, fato_usage):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
@@ -91,14 +114,19 @@ class EventSaver:
         self.aircraft_departure_queue_count[vertiport_id][time] = last_value + queue_update
 
     def save_aircraft_holding_time(self, vertiport_id, agent_id, waiting_time):
-        # TODO: Change the all instances of aircraft_holding_time to aircraft_holding_time
-        self.aircraft_holding_time[vertiport_id][agent_id] =  waiting_time
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        self.aircraft_holding_time[vertiport_id][time] =  waiting_time
 
     def save_aircraft_charging_time(self, vertiport_id, aircraft_id, charging_time):
-        self.aircraft_charging_times[vertiport_id][aircraft_id] = charging_time
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)        
+        self.aircraft_charging_times[vertiport_id][time] = charging_time
 
     def save_aircraft_taxi_time(self, vertiport_id, aircraft_id, taxi_time):
-        self.aircraft_taxi_times[vertiport_id][aircraft_id] = taxi_time
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)        
+        self.aircraft_taxi_times[vertiport_id][time] = taxi_time
     
     def save_aircraft_idle_time(self, vertiport_id: Any, agent_id: int, charging_end_time: int) -> None:
         """
@@ -113,7 +141,7 @@ class EventSaver:
         charging_end_time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                                 sim_time=charging_end_time)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.aircraft_idle_time_tracker[vertiport_id][agent_id] = time - charging_end_time
+        self.aircraft_idle_time_tracker[vertiport_id][time] = time - charging_end_time
 
 
     def save_agent_state(self,

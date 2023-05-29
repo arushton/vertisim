@@ -902,7 +902,7 @@ class VertiportManager:
                 boarding_time=boarding_time
             )
 
-        if not self.only_aircraft_simulation:
+        if not self.only_aircraft_simulation and len(aircraft.passengers_onboard) > 0:
             # Decrease the passenger departure queue counter
             self.event_saver.update_passenger_departure_queue_counter(vertiport_id=aircraft.origin_vertiport_id,
                                                                       queue_update=-1)
@@ -947,7 +947,14 @@ class VertiportManager:
             )
         ) 
 
+        self.update_flight_info(aircraft=aircraft)
+
         yield self.env.process(aircraft.fly_in_the_airspace())
+        
+    def update_flight_info(self, aircraft: object):
+        self.event_saver.update_flight_tracker(vertiport_id=aircraft.origin_vertiport_id)
+        self.event_saver.update_load_factor_tracker(vertiport_id=aircraft.origin_vertiport_id, 
+                                                    load_factor=len(aircraft.passengers_onboard))
         
     def departure_fix_request(self, aircraft):
         # Request departure fix resource

@@ -70,7 +70,7 @@ class SimSetup:
         self.run_simulation()
 
         self.sim_id = self.set_sim_id()
-        self.performance_metrics = None #self.calculate_performance_metrics()
+        self.performance_metrics = self.calculate_performance_metrics()
         self.save_results()
 
     def create_environment(self):
@@ -378,6 +378,12 @@ class SimSetup:
                                   flight_schedule=self.event_saver.flight_schedule,
                                   fato_usage_tracker=self.event_saver.fato_usage_tracker,
                                   aircraft_idle_time_tracker=self.event_saver.aircraft_idle_time_tracker,
+                                  flight_time_tracker=self.event_saver.flight_time_tracker,
+                                  flight_count_tracker=self.event_saver.flight_count_tracker,
+                                  load_factor_tracker=self.event_saver.load_factor_tracker,
+                                  passenger_count_tracker=self.event_saver.passenger_count_tracker,
+                                  passenger_time_tracker=self.event_saver.passenger_time_tracker,
+                                  vertiport_ids=self.vertiport_ids,
                                   sim_id=self.sim_id,
                                   verbose=self.sim_params['verbose']).performance_metrics
 
