@@ -4,7 +4,7 @@ from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, hr_to_ms, m
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
-import random
+from collections import defaultdict
 from aircraft.optimize_velocity import VelocityOptimizer
 from utils.distance import distance_3d
 from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
