@@ -44,7 +44,7 @@ network_and_demand = {
     'passenger_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
-    'demand_probabilities': [0.3, 0.7], # The probability of the demand to be generated for each vertiport.
+    'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
 
     'vertiports': {
     # Input specifications for each vertiport.
@@ -70,7 +70,7 @@ network_and_demand = {
             # depending on the distribution you use.
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-                'num_passengers': 1500,  # Number of passengers to be generated
+                'num_passengers': 300,  # Number of passengers to be generated
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
@@ -117,7 +117,7 @@ network_and_demand = {
             # Passenger Arrival Process
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,
-                'num_passengers': 1500,  
+                'num_passengers': 300,  
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {

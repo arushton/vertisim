@@ -829,7 +829,9 @@ class Aircraft:
         """
         if self.soc >= self.soc_required_to_complete_mission:
             self.set_charging_time_trackers()
-            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed') 
+            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')
+            # After deboarding the passengers aircraft will be ready for the next flight.
+            yield self.env.timeout(self.time_passenger_embark_disembark)
             return
         
         # If the chargers are shared, request all of the chargers that the parking pad has access to.

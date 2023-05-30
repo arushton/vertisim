@@ -289,7 +289,7 @@ class PerformanceMetrics:
                 <= key
                 <= self.sim_start_timestamp + second * self.hour
             )
-            self.performance_metrics[vertiport_id]['passenger_throughput'] = total_passengers / interval_length
+            self.performance_metrics[vertiport_id]['passenger_throughput'] = round(total_passengers / interval_length, 2)
 
     def compute_empty_flights(self):
         # Computes the number of empty flights
@@ -490,7 +490,7 @@ class PerformanceMetrics:
         print("")
 
     def print_aircraft_idle_time_stats(self):
-        print("\n")
+        print(" ")
         print("Aircraft idle time statistics in minutes:")
         print("-----------------------------")
         df = pd.DataFrame(
@@ -507,7 +507,7 @@ class PerformanceMetrics:
         print("")
 
     def print_aircraft_throughput_stats_for_each_hr_verbose(self):
-        print("\n")
+        print(" ")
         print("Aircraft throughput statistics for each hour:")
         print("-----------------------------")
         total_aircraft_at_each_hour = self.compute_aircraft_throughput_for_each_hour()
@@ -547,6 +547,7 @@ class PerformanceMetrics:
             print(f"Total aircraft throughput at {vertiport_id}: {self.performance_metrics[vertiport_id]['aircraft_throughput']['total']}")
 
     def print_average_aircraft_throughput(self):
+        print(" ")
         for vertiport_id in self.vertiport_ids:
             print(f"Average aircraft throughput in 1 hour at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['aircraft_throughput']['mean'], 2)}")
 
@@ -559,12 +560,12 @@ class PerformanceMetrics:
             print(f"Average passenger throughput in 1 hour at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['passenger_throughput'] / self.performance_metrics['total_simulated_time'], 2)}")
 
     def print_fato_utilization(self):
-        print("\n")
+        print(" ")
         for vertiport_id in self.vertiport_ids:
             print(f"FATO utilization at {vertiport_id}: {self.performance_metrics[vertiport_id]['fato_utilization']}%")
 
     def print_total_empty_flights(self):
-        print("\n")
+        print(" ")
         for vertiport_id in self.vertiport_ids:
             print(f"Total empty flights from {vertiport_id}: {self.performance_metrics[vertiport_id]['empty_flights']}")
 
@@ -573,7 +574,7 @@ class PerformanceMetrics:
             self.print_passenger_consolidation_time_stats()
             self.print_passenger_waiting_time_stats()
             self.print_passenger_transfer_time_stats()
-            self.print_passenger_departure_queue_count_stats()
+            # self.print_passenger_departure_queue_count_stats()
             self.print_avg_load_factor()
             self.print_aircraft_idle_time_stats()
             self.print_total_passenger_throughput()
