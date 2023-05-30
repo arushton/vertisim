@@ -31,11 +31,13 @@ class EventSaver:
         self.aircraft_charging_times = defaultdict(dict)
         self.aircraft_taxi_times = defaultdict(dict)
         self.fato_usage_tracker = defaultdict(dict)
-        self.flight_time_tracker = defaultdict(dict)
+        self.flight_and_time_tracker = defaultdict(dict)
         self.flight_count_tracker = defaultdict(int)
+        self.flight_time_tracker = defaultdict(dict)
         self.load_factor_tracker = defaultdict(list)
         self.passenger_count_tracker = defaultdict(int)
         self.passenger_time_tracker = defaultdict(dict)
+        self.aircraft_energy_consumption_tracker = defaultdict(dict)
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.passenger_departure_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -45,11 +47,21 @@ class EventSaver:
             self.passenger_count_tracker[vertiport_id] = 0
             self.passenger_time_tracker[vertiport_id][self.sim_start_timestamp] = 0
 
+    def update_aircraft_energy_consumption_tracker(self, flight_direction, energy_consumption):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        self.aircraft_energy_consumption_tracker[flight_direction][time] = energy_consumption
+    
+    def update_flight_time_tracker(self, flight_direction, flight_time):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        self.flight_time_tracker[flight_direction][time] = flight_time
+
     def update_flight_tracker(self, vertiport_id):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.flight_time_tracker[vertiport_id][time] = 1
+        self.flight_and_time_tracker[vertiport_id][time] = 1
         self.flight_count_tracker[vertiport_id] += 1
 
     def update_load_factor_tracker(self, vertiport_id, load_factor):

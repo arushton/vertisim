@@ -11,15 +11,20 @@ def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> pd.DataFrame:
     """
     file_type = detect_file_type(file_path)
     if file_type == 'csv':
-        return pd.read_csv(file_path)
+        df = pd.read_csv(file_path)
     elif file_type == 'parquet':
-        return pd.read_parquet(file_path)
+        df = pd.read_parquet(file_path)
     elif file_type == 'hdf5':
-        return pd.read_hdf(file_path)
+        df = pd.read_hdf(file_path)
     elif file_type in ['xlsx', 'xls']:
-        return pd.read_excel(file_path, sheet_name=sheet_name)
+        df = pd.read_excel(file_path, sheet_name=sheet_name)
     else:
         raise ValueError(f'The file type is not supported: {file_path}')
+
+    # Filter out empty rows
+    df = df.dropna(how='all')
+
+    return df
 
 
 def detect_file_type(file_path: str) -> str:

@@ -70,7 +70,7 @@ network_and_demand = {
             # depending on the distribution you use.
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-                'num_passengers': 300,  # Number of passengers to be generated
+                'num_passengers': 1500,  # Number of passengers to be generated
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
@@ -117,7 +117,7 @@ network_and_demand = {
             # Passenger Arrival Process
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,
-                'num_passengers': 300,  
+                'num_passengers': 1500,  
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
@@ -138,7 +138,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/new_route.csv',
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/lax_dtla_route.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.

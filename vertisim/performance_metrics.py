@@ -27,11 +27,13 @@ class PerformanceMetrics:
                 flight_schedule,
                 fato_usage_tracker, 
                 aircraft_idle_time_tracker,
-                flight_time_tracker,
+                flight_and_time_tracker,
                 flight_count_tracker,
+                flight_time_tracker,
                 load_factor_tracker,
                 passenger_count_tracker,
                 passenger_time_tracker,
+                aircraft_energy_consumption_tracker,
                 vertiport_ids,
                 sim_id, 
                 verbose=False):
@@ -51,11 +53,13 @@ class PerformanceMetrics:
         self.flight_schedule = flight_schedule
         self.fato_usage_tracker = fato_usage_tracker
         self.aircraft_idle_time_tracker = aircraft_idle_time_tracker
-        self.flight_time_tracker = flight_time_tracker
+        self.flight_and_time_tracker = flight_and_time_tracker
         self.flight_count_tracker = flight_count_tracker
+        self.flight_time_tracker = flight_time_tracker
         self.load_factor_tracker = load_factor_tracker
         self.passenger_count_tracker = passenger_count_tracker
         self.passenger_time_tracker = passenger_time_tracker
+        self.aircraft_energy_consumption_tracker = aircraft_energy_consumption_tracker
         self.vertiport_ids = vertiport_ids
         self.sim_id = sim_id
         self.hour = 60 * 60 * 1000
@@ -79,6 +83,8 @@ class PerformanceMetrics:
         self.compute_average_and_total_aircraft_throughput()
         self.compute_fato_utilization()
         self.calculate_aircraft_holding_times_stats()
+        self.compute_flight_time_stats()
+        self.compute_energy_consumption_stats()
         self.compute_average_charge_time()
         self.compute_average_taxi_time()
         self.compute_turnaround_duration()
@@ -200,6 +206,26 @@ class PerformanceMetrics:
                 aircraft_departure_queue_count)
             self.performance_metrics[vertiport_id]['aircraft_departure_queue_count']['min'] = np.min(
                 aircraft_departure_queue_count)
+
+    def compute_flight_time_stats(self):
+        # Creates a dictionary entry for flight time statistics including mean, median, standard deviation,
+        for flight_direction, data in self.flight_time_tracker.items():
+            flight_times = np.array(list(data.values()))
+            self.performance_metrics[flight_direction]['flight_time']['mean'] = round(ms_to_min(np.mean(flight_times)), 2)
+            self.performance_metrics[flight_direction]['flight_time']['median'] = round(ms_to_min(np.median(flight_times)), 2)
+            self.performance_metrics[flight_direction]['flight_time']['std'] = round(ms_to_min(np.std(flight_times)), 2)
+            self.performance_metrics[flight_direction]['flight_time']['max'] = round(ms_to_min(np.max(flight_times)), 2)
+            self.performance_metrics[flight_direction]['flight_time']['min'] = round(ms_to_min(np.min(flight_times)), 2)
+        
+    def compute_energy_consumption_stats(self):
+        # Creates a dictionary entry for energy consumption statistics including mean, median, standard deviation,
+        for flight_direction, data in self.aircraft_energy_consumption_tracker.items():
+            energy_consumptions = np.array(list(data.values()))
+            self.performance_metrics[flight_direction]['energy_consumption']['mean'] = round(np.mean(energy_consumptions), 2)
+            self.performance_metrics[flight_direction]['energy_consumption']['median'] = round(np.median(energy_consumptions), 2)
+            self.performance_metrics[flight_direction]['energy_consumption']['std'] = round(np.std(energy_consumptions), 2)
+            self.performance_metrics[flight_direction]['energy_consumption']['max'] = round(np.max(energy_consumptions), 2)
+            self.performance_metrics[flight_direction]['energy_consumption']['min'] = round(np.min(energy_consumptions), 2)
 
     def calculate_aircraft_holding_times_stats(self):
         # Creates a dataframe for aircraft arrival queue waiting times statistics including mean, median, standard deviation,  
@@ -335,11 +361,11 @@ class PerformanceMetrics:
         total_sim_time = self.calculate_total_simulated_time()
         first, second = self.get_time_interval(total_sim_time)
         interval_length = second - first
-        total_aircraft = 0
         for vertiport_id in self.vertiport_ids:
+            total_aircraft = 0
             total_aircraft += sum(
                 value
-                for key, value in self.flight_time_tracker[vertiport_id].items()
+                for key, value in self.flight_and_time_tracker[vertiport_id].items()
                 if self.sim_start_timestamp + self.hour * first
                 <= key
                 <= self.sim_start_timestamp + second * self.hour
@@ -355,7 +381,7 @@ class PerformanceMetrics:
         for vertiport_id in self.vertiport_ids:
             for time_interval in range(first, second):
                 total_aircraft_at_each_hour[vertiport_id][time_interval] = 0
-                for key, value in self.flight_time_tracker[vertiport_id].items():
+                for key, value in self.flight_and_time_tracker[vertiport_id].items():
                     if self.sim_start_timestamp + self.hour * time_interval <= key <= self.sim_start_timestamp + self.hour * (time_interval + 1):
                         total_aircraft_at_each_hour[vertiport_id][time_interval] += 1
         return total_aircraft_at_each_hour
@@ -506,6 +532,40 @@ class PerformanceMetrics:
         print(df)
         print("")
 
+    def print_flight_time_stats(self):
+        print(" ")
+        print("Flight time statistics in minutes:")
+        print("-----------------------------")
+        df = pd.DataFrame(
+            {
+                'mean': self.performance_metrics[flight_direction]['flight_time']['mean'],
+                'median': self.performance_metrics[flight_direction]['flight_time']['median'],
+                'std': self.performance_metrics[flight_direction]['flight_time']['std'],
+                'max': self.performance_metrics[flight_direction]['flight_time']['max'],
+                'min': self.performance_metrics[flight_direction]['flight_time']['min']
+            } for flight_direction in self.flight_time_tracker.keys()
+        )
+        df.index = self.flight_time_tracker.keys()
+        print(df)
+        print("")
+
+    def print_energy_consumption_stats(self):
+        print(" ")
+        print("Energy consumption statistics in kWh:")
+        print("-----------------------------")
+        df = pd.DataFrame(
+            {
+                'mean': self.performance_metrics[flight_direction]['energy_consumption']['mean'],
+                'median': self.performance_metrics[flight_direction]['energy_consumption']['median'],
+                'std': self.performance_metrics[flight_direction]['energy_consumption']['std'],
+                'max': self.performance_metrics[flight_direction]['energy_consumption']['max'],
+                'min': self.performance_metrics[flight_direction]['energy_consumption']['min']
+            } for flight_direction in self.aircraft_energy_consumption_tracker.keys()
+        )
+        df.index = self.aircraft_energy_consumption_tracker.keys()
+        print(df)
+        print("")
+
     def print_aircraft_throughput_stats_for_each_hr_verbose(self):
         print(" ")
         print("Aircraft throughput statistics for each hour:")
@@ -559,6 +619,10 @@ class PerformanceMetrics:
         for vertiport_id in self.vertiport_ids:
             print(f"Average passenger throughput in 1 hour at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['passenger_throughput'] / self.performance_metrics['total_simulated_time'], 2)}")
 
+    def print_average_charge_time(self):
+        for vertiport_id in self.vertiport_ids:
+            print(f"Average charge time at {vertiport_id}: {self.performance_metrics[vertiport_id]['average_charge_time']}")
+
     def print_fato_utilization(self):
         print(" ")
         for vertiport_id in self.vertiport_ids:
@@ -582,8 +646,11 @@ class PerformanceMetrics:
         self.print_aircraft_arrival_queue_count_stats()
         self.print_aircraft_departure_queue_count_stats()
         self.print_aircraft_holding_times_stats()
+        self.print_average_charge_time()
         self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
+        self.print_flight_time_stats()
+        self.print_energy_consumption_stats()
         self.print_aircraft_throughput_stats_for_each_hr_verbose()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
@@ -596,6 +663,7 @@ class PerformanceMetrics:
             self.print_total_passenger_throughput()
             self.print_average_passenger_throughput()
         self.print_total_simulated_time()
+        self.print_average_charge_time()
         self.print_total_aircraft_throughput()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
