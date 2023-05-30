@@ -105,8 +105,7 @@ class SimSetup:
         """
         Returns the vertiport ids
         """
-        return list(set(self.vertiport_distances['origin_vertiport_id'].to_list() + 
-                        self.vertiport_distances['destination_vertiport_id'].to_list()))
+        return list(self.network_and_demand['vertiports'].keys())
 
     def check_inputs(self):
         """

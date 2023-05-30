@@ -479,6 +479,13 @@ class VertiportManager:
         """
         return self.vertiports[vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
 
+    def check_num_available_aircraft(self, vertiport_id: Any) -> int:
+        """
+        Checks the number of available aircraft in the available aircraft store
+        :return: int
+        """
+        return len(self.vertiports[vertiport_id].available_aircraft_store.items)    
+
     # def put_aircraft_into_active_aircraft_store(self, aircraft):
     #     """
     #     Puts the aircraft into the active aircraft store
@@ -680,8 +687,9 @@ class VertiportManager:
     def check_holding_aircraft(self, flight_direction: str, vertiport_id: Any):
         arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction)
         if len(arrival_fix_resource.queue) > 1:
-            self.env.process(self.assign_empty_flight(vertiport_id=vertiport_id))
-            self.env.process(self.assign_empty_flight(vertiport_id=vertiport_id))
+            num_queued = min(len(arrival_fix_resource.queue), self.check_num_available_aircraft(vertiport_id))
+            for _ in range(num_queued):
+                self.env.process(self.assign_empty_flight(vertiport_id=vertiport_id))
 
     def assign_empty_flight(self, vertiport_id: Any):
         # TODO: Check the waiting rooms of the other vertiports and pick the one with the highest number of passengers
