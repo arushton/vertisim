@@ -32,6 +32,7 @@ class VertiportManager:
                  event_saver: object,
                  network_simulation: bool,
                  fixed_schedule: bool,
+                 flight_rebalancing: bool,
                  node_locations: Dict):
         self.env = env
         self.vertiports = vertiports
@@ -52,6 +53,7 @@ class VertiportManager:
         self.network_simulation = network_simulation
         self.node_locations = node_locations
         self.fixed_schedule = fixed_schedule
+        self.flight_rebalancing = flight_rebalancing
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.flight_times = defaultdict(list)
@@ -561,13 +563,114 @@ class VertiportManager:
                                                     destination_vertiport_id=destination_vertiport_id)
         )
 
-    def retrieve_aircraft(self, origin_vertiport_id, tail_number):
+    def find_aircraft_by_tail_number(self, vertiport_id, tail_number):
+        """
+        Search for an aircraft by its tail number in the specified vertiport's available aircraft store.
+        Returns the aircraft if found, otherwise None.
+        """
+        return next(
+            (
+                aircraft
+                for aircraft in self.vertiports[
+                    vertiport_id
+                ].available_aircraft_store.items
+                if aircraft.tail_number == tail_number
+            ),
+            None,
+        )
+
+    def find_aircraft_by_soc(self, vertiport_id, soc):
+        """
+        Search for an aircraft by its SOC (State of Charge) in the specified vertiport's available aircraft store.
+        Returns the aircraft if found, otherwise None.
+        """
+        return next(
+            (
+                aircraft
+                for aircraft in self.vertiports[
+                    vertiport_id
+                ].available_aircraft_store.items
+                if abs(aircraft.soc - soc) <= 5
+            ),
+            None,
+        )
+
+    def retrieve_aircraft(self, origin_vertiport_id, tail_number=None):
         if tail_number is None:
             return self.vertiports[origin_vertiport_id].available_aircraft_store.get()
         elif isinstance(tail_number, (int, str)):
             return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
         else:
             raise ValueError("Tail numbers should be a string or an integer.")
+        
+    # def retrieve_aircraft(self, origin_vertiport_id, tail_number=None, soc=None):
+    #     """
+    #     Retrieve an aircraft from a specific vertiport.
+
+    #     Args:
+    #         origin_vertiport_id: The ID of the vertiport to retrieve the aircraft from.
+    #         tail_number: The tail number of the aircraft to retrieve (default is None).
+    #         soc: The State of Charge (SOC) of the aircraft to retrieve (default is None).
+
+    #     Returns:
+    #         The requested aircraft, or None if no suitable aircraft was found.
+    #     """
+    #     # Define the wait time (in seconds)
+    #     wait_time = sec_to_ms(10)  
+
+    #     # Handle the case where neither tail_number nor soc are specified
+    #     if tail_number is None and soc is None:
+    #         aircraft_request = self.vertiports[origin_vertiport_id].available_aircraft_store.get()
+    #         return (yield aircraft_request)
+
+    #     # Handle the case where only tail_number is specified
+    #     if tail_number is not None and soc is None:
+    #         self.validate_tail_number(tail_number)
+    #         return (yield from self.retrieve_aircraft_by_tail_number(origin_vertiport_id, tail_number, wait_time))
+
+    #     # Handle the case where only soc is specified
+    #     if tail_number is None and soc is not None:
+    #         self.validate_soc(soc)
+    #         return (yield from self.retrieve_aircraft_by_soc(origin_vertiport_id, soc, wait_time))
+
+    #     # Handle the case where both tail_number and soc are specified
+    #     self.validate_tail_number(tail_number)
+    #     self.validate_soc(soc)
+    #     return (yield from self.retrieve_aircraft_by_tail_and_soc(origin_vertiport_id, tail_number, soc, wait_time))
+
+    def validate_tail_number(self, tail_number):
+        if not isinstance(tail_number, (int, str)):
+            raise ValueError("Tail numbers should be a string or an integer.")
+
+    def validate_soc(self, soc):
+        if not isinstance(soc, (int, float)):
+            raise ValueError("SOC should be an integer or a float.")
+
+    def retrieve_aircraft_by_tail_number(self, vertiport_id, tail_number, wait_time):
+        while True:
+            if aircraft := self.find_aircraft_by_tail_number(vertiport_id, tail_number):
+                aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == aircraft)
+                return (yield aircraft_request)
+            else:
+                yield self.env.timeout(wait_time)
+
+    def retrieve_aircraft_by_soc(self, vertiport_id, soc, wait_time):
+        while True:
+            if suitable_aircraft := self.find_aircraft_by_soc(vertiport_id, soc):
+                aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == suitable_aircraft)
+                return (yield aircraft_request)
+            else:
+                yield self.env.timeout(wait_time)
+
+    def retrieve_aircraft_by_tail_and_soc(self, vertiport_id, tail_number, soc, wait_time):
+        while True:
+            aircraft = self.find_aircraft_by_tail_number(vertiport_id, tail_number)
+            if aircraft and abs(aircraft.soc - soc) <= 5:
+                aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == aircraft)
+                return (yield aircraft_request)
+            else:
+                yield self.env.timeout(wait_time)
+
 
     def save_aircraft_allocation_time(self, origin_vertiport_id, aircraft, start_time):
         aircraft_allocation_end_time = self.env.now
@@ -709,7 +812,8 @@ class VertiportManager:
         
         # Request arrival fix resource
         arrival_fix_usage_request, arrival_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction, operation_type='arrival')
-        self.check_holding_aircraft(flight_direction=aircraft.flight_direction, vertiport_id=aircraft.destination_vertiport_id)
+        if self.flight_rebalancing:
+            self.check_holding_aircraft(flight_direction=aircraft.flight_direction, vertiport_id=aircraft.destination_vertiport_id)
         yield arrival_fix_usage_request
 
         holding_end = self.env.now

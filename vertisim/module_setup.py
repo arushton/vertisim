@@ -72,6 +72,7 @@ def create_vertiport_manager(env,
                              event_saver,
                              network_simulation,
                              fixed_schedule,
+                             flight_rebalancing,
                              node_locations):
     return VertiportManager(env=env,
                             vertiports=vertiports,
@@ -91,4 +92,5 @@ def create_vertiport_manager(env,
                             event_saver=event_saver,
                             network_simulation=network_simulation,
                             fixed_schedule=fixed_schedule,
+                            flight_rebalancing=flight_rebalancing,
                             node_locations=node_locations)

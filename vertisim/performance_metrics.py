@@ -97,8 +97,9 @@ class PerformanceMetrics:
 
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
-            consolidation_times = [details['consolidation_time'] for details in data.values()]
-            if consolidation_times:
+            if consolidation_times := [
+                details['consolidation_time'] for details in data.values()
+            ]:
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['mean'] = round(
                     ms_to_min(np.mean(consolidation_times)), 2)
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['median'] = round(
@@ -332,7 +333,8 @@ class PerformanceMetrics:
         :return: Start of interval, end of interval
         """
         if total_sim_time < 4:
-            raise ValueError(f'Simulation time is less than 4 hours ({total_sim_time} hrs). Simulation ID: {self.sim_id}')
+            return 0, 2
+            # raise ValueError(f'Simulation time is less than 4 hours ({total_sim_time} hrs). Simulation ID: {self.sim_id}')
         elif 4 < total_sim_time <= 5:
             return 2, 4
         elif 5 < total_sim_time <= 6:
@@ -413,7 +415,7 @@ class PerformanceMetrics:
                 'std': self.performance_metrics[vertiport_id]['passenger_consolidation_time']['std'],
                 'max': self.performance_metrics[vertiport_id]['passenger_consolidation_time']['max'],
                 'min': self.performance_metrics[vertiport_id]['passenger_consolidation_time']['min']
-            } for vertiport_id in self.vertiport_ids
+            } for vertiport_id in self.vertiport_ids if self.performance_metrics[vertiport_id]['passenger_consolidation_time']
         )
         df.index = self.vertiport_ids
         print(df)

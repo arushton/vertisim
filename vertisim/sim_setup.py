@@ -258,6 +258,7 @@ class SimSetup:
             event_saver=self.event_saver,
             network_simulation=self.sim_params['network_simulation'],
             fixed_schedule=check_not_none(self.network_and_demand['aircraft_schedule_file_name']),
+            flight_rebalancing=self.sim_params['flight_rebalancing'],
             node_locations=self.node_locations
         )
     

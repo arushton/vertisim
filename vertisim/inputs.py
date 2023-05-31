@@ -18,6 +18,7 @@ sim_params = {
     'max_passenger_waiting_time': 600,  # seconds
     'charge_interruption': False,
     'step_by_step_sim': False,
+    'flight_rebalancing': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
@@ -40,8 +41,8 @@ network_and_demand = {
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated.
     # Priority is given to the demand files.
-    'aircraft_schedule_file_name': None,#'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
-    'passenger_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'aircraft_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
@@ -70,7 +71,7 @@ network_and_demand = {
             # depending on the distribution you use.
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-                'num_passengers': 300,  # Number of passengers to be generated
+                'num_passengers': 500,  # Number of passengers to be generated
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
@@ -84,8 +85,7 @@ network_and_demand = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
-                'initial_parking_occupancy': 4,  # The # of the parking spaces that are occupied with aircraft at the beginning of the sim.
+                'num_initial_aircraft_in_vertiport': 2,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -117,7 +117,7 @@ network_and_demand = {
             # Passenger Arrival Process
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,
-                'num_passengers': 300,  
+                'num_passengers': 500,  
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
@@ -128,7 +128,7 @@ network_and_demand = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,
+                'num_initial_aircraft_in_vertiport': 2,
                 'initial_arrival_queue_state': 0
             }
         }     
