@@ -436,7 +436,7 @@ class Aircraft:
                                                 cost_type='descend_transition'
                                                 )
         # Descend speed is zero at the end of the descend transition. So, we get the average speed.
-        descend_transition_time = round(vertical_distance/self.vertical_velocity) * 2
+        descend_transition_time = round(horizontal_distance/self.speed) * 2
         descend_transition_energy_consumption = round(self.descend_transition_energy_consumption(velocity=round(self.speed/2),
                                                                                         descend_transition_end_altitude=self.get_node_altitude(hover_fix_id),
                                                                                         descend_transition_time=descend_transition_time), 2)
@@ -718,7 +718,7 @@ class Aircraft:
                                                 cost_type='climb_transition')
 
         # The speed is averaged because aircraft don't have forward velocity at the beginning of the climb transition phase
-        climb_transition_time = round(vertical_distance / self.vertical_velocity) * 2
+        climb_transition_time = round(horizontal_distance / self.speed) * 2
         climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=round(self.speed/2, 2),
                                                                                     climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
                                                                                     climb_transition_time=climb_transition_time), 2)
@@ -752,9 +752,8 @@ class Aircraft:
                                                 altitude=self.altitude,
                                                 horizontal_distance=horizontal_distance,
                                                 vertical_distance=vertical_distance,
-                                                cost_type='climb_transition'
-                                                )        
-        climb_time = round(vertical_distance / self.vertical_velocity)
+                                                cost_type='climb_transition')
+        climb_time = round(horizontal_distance / self.speed)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
