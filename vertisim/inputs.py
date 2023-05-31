@@ -155,9 +155,9 @@ airspace_params = {
 passenger_params = {
     'randomize_constants': False,  # If true, the constants will be randomized. If false, the constants will be used as
     # it is.
-    'car_to_entrance_walking_time_constant': 30,  # secs
+    'car_to_entrance_walking_time_constant': 0, #30,  # secs
     'car_to_entrance_walking_time_dist': None,
-    'security_check_time_constant': 30,  # secs
+    'security_check_time_constant': 0, #30,  # secs
     'security_check_time_dist': None,
     # 'security_check_time_dist': {
     #     'distribution_name': 'expon',
@@ -169,13 +169,13 @@ passenger_params = {
     #     },
     #     'max_val_in_dist': 60
     # },
-    'waiting_room_to_boarding_gate_walking_time_constant': 30,  # secs
+    'waiting_room_to_boarding_gate_walking_time_constant': 0, #30,  # secs
     'waiting_room_to_boarding_gate_walking_time_dist': None,
-    'boarding_gate_to_aircraft_time_constant': 19.7,  # secs
+    'boarding_gate_to_aircraft_time_constant': 0, #19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
-    'embark_disembark_time_constant': 70,  # secs
+    'embark_disembark_time_constant': 0, #70,  # secs
     'embark_disembark_time_dist': None,
-    'deboard_aircraft_and_walk_to_exit_constant': 120,  # secs
+    'deboard_aircraft_and_walk_to_exit_constant': 0, #120,  # secs
     'deboard_aircraft_and_walk_to_exit_dist': None,
 }
 
@@ -197,6 +197,7 @@ aircraft_params = {
     'vertical_landing_velocity': 5.5,  # m/s
     'max_vertical_velocity': 6,  # m/s
     'max_horizontal_velocity': 89,  # m/s - 173 knots | 200 mph
+    'cruise_velocity': 72, # or None m/s - 140 knots | 160 mph
     # # Altitude
     'ground_altitude': 0,  # m
     'hover_altitude': 15,  # m
@@ -215,8 +216,8 @@ aircraft_params = {
     'time_hover_descend': 15,  # sec - NOT USED
     'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
-    'ground_taxi_speed': 3.67,  # ft/s
-    'time_passenger_embark_disembark': 60 * 2,  # secs
+    'ground_taxi_speed': 1000, # 3.67 # ft/s
+    'time_passenger_embark_disembark': 0, #60 * 2,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
     'time_post_charging_processes': 0,  # sec'

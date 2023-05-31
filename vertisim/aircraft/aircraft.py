@@ -795,7 +795,10 @@ class Aircraft:
         for waypoint_id, resource in list(airlink_resources.items())[starting_index:-2]:
             with resource.request() as req:
                 yield req
-                self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                if self.aircraft_params['cruise_velocity']:
+                    self.speed = self.aircraft_params['cruise_velocity']
+                else:
+                    self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
                 link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                      destination=waypoint_id, 
                                                                                      horizontal_speed=self.speed)
