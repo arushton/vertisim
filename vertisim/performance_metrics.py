@@ -258,8 +258,8 @@ class PerformanceMetrics:
     def compute_average_charge_time(self):
         # Computes the average charge time
         if self.aircraft_charging_times:
-            for vertiport_id, data in self.aircraft_charging_times.items():
-                if charge_times := list(data.values()):
+            for vertiport_id in self.vertiport_ids:
+                if charge_times := list(self.aircraft_charging_times['vertiport_id'].values()):
                     self.performance_metrics[vertiport_id]['average_charge_time'] = round(ms_to_min(np.mean(charge_times)), 2)
                 else:
                     self.performance_metrics[vertiport_id]['average_charge_time'] = 0

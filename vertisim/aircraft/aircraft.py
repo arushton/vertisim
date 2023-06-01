@@ -454,7 +454,7 @@ class Aircraft:
         hover_descend_time = self.compute_travel_time_from_vertical_velocity(origin=self.location,
                                                         destination=self.assigned_fato_id,
                                                         vertical_velocity=self.vertical_velocity)
-        hover_descend_time += ms_to_sec(self.time_rotor_spin_down)
+        hover_descend_time += round(ms_to_sec(self.time_rotor_spin_down))
         yield self.env.timeout(sec_to_ms(hover_descend_time))
         hover_descend_energy_consumption = round(self.vertical_takeoff_landing_energy_consumption(fato_altitude=self.get_node_altitude(self.assigned_fato_id),
                                                                                             hover_altitude=self.get_node_altitude(self.location),
@@ -472,8 +472,8 @@ class Aircraft:
         self.total_energy_consumption = 0
 
     def post_landing_procedures(self):
-        yield self.env.timeout(self.time_post_landing_safety_checks)
-        yield self.env.timeout(self.time_tug_connection)
+        yield self.env.timeout(round(self.time_post_landing_safety_checks))
+        yield self.env.timeout(round(self.time_tug_connection))
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='ready_for_taxi_in')
 
     def update_aircraft_state(self, location, energy_consumption, event):
@@ -520,6 +520,7 @@ class Aircraft:
             vertiport_id = self.destination_vertiport_id
         elif operation_type == 'departure':
             vertiport_id = self.origin_vertiport_id
+            self.departure_time = self.env.now
         # Check whether the vertiport has a parking pad or not. If it has a parking pad then the aircraft will taxi. Otherwise, it will be parked on the FATO pad.
         if len(taxi_route) == 0:
             if operation_type == 'arrival':
@@ -671,7 +672,6 @@ class Aircraft:
 
     def initial_takeoff_procedure(self, take_off_fato_id):
         """Initial takeoff procedures, including updating location, departure time and passenger records."""
-        self.departure_time = self.env.now
         self.location = take_off_fato_id
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='fato_arrival')
 
@@ -679,8 +679,8 @@ class Aircraft:
             passenger.departure_time = self.env.now    
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='fato_arrival')    
 
-        yield self.env.timeout(self.time_tug_disconnection)
-        yield self.env.timeout(self.time_pre_take_off_check_list)
+        yield self.env.timeout(round(self.time_tug_disconnection))
+        yield self.env.timeout(round(self.time_pre_take_off_check_list))
         self.turnaround_time = self.env.now - self.arrival_time
 
     def hover_climb(self):
@@ -698,7 +698,7 @@ class Aircraft:
                                                                                         hover_time=hover_climb_time,
                                                                                         operation='takeoff'), 2)
         self.total_energy_consumption += hover_climb_energy_consumption
-        yield self.env.timeout(sec_to_ms(hover_climb_time))
+        yield self.env.timeout(round(sec_to_ms(hover_climb_time)))
         self.update_aircraft_state(hover_fix_id, hover_climb_energy_consumption, 'hover_climb_end')
         # if self.tail_number == 0:
         #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {hover_climb_time}, {self.flight_phase} energy consumption: {hover_climb_energy_consumption} from {self.location} to {hover_fix_id}")             
@@ -727,7 +727,7 @@ class Aircraft:
         # if self.tail_number == 0:
         #     print(f"Aircraft {self.tail_number} speed: {self.speed}, vertical velocity: {self.vertical_velocity} during {self.flight_phase}, {self.flight_phase} time: {climb_transition_time}, {self.flight_phase} energy consumption: {climb_transition_energy_consumption} from {self.location} to {departure_fix_id}")     
         
-        yield self.env.timeout(sec_to_ms(climb_transition_time))
+        yield self.env.timeout(round(sec_to_ms(climb_transition_time)))
         self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
 
     def release_fato_and_departure_fix(self):
@@ -756,7 +756,7 @@ class Aircraft:
         climb_time = round(horizontal_distance / self.speed)
         with first_waypoint_resource.request() as req:
             yield req
-            yield self.env.timeout(sec_to_ms(climb_time))
+            yield self.env.timeout(round(sec_to_ms(climb_time)))
         climb_energy_consumption = round(self.climb_energy_consumption(velocity=self.speed,
                                                                 climb_end_altitude=self.get_node_altitude(first_waypoint),
                                                                 climb_time=climb_time), 2)
@@ -801,7 +801,7 @@ class Aircraft:
                 link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                      destination=waypoint_id, 
                                                                                      horizontal_speed=self.speed)
-                yield self.env.timeout(sec_to_ms(link_traversal_time))
+                yield self.env.timeout(round(sec_to_ms(link_traversal_time)))
             # Compute energy consumption
             cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time)
             self.total_energy_consumption += cruise_energy_consumption
@@ -843,7 +843,7 @@ class Aircraft:
             self.set_charging_time_trackers()
             self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')
             # After deboarding the passengers aircraft will be ready for the next flight.
-            yield self.env.timeout(self.time_passenger_embark_disembark)
+            yield self.env.timeout(round(self.time_passenger_embark_disembark))
             return
         
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
@@ -854,7 +854,7 @@ class Aircraft:
             yield selected_charging_request
 
         self.start_charging_process()
-        yield self.env.timeout(self.get_charging_time())
+        yield self.env.timeout(round(self.get_charging_time()))
         self.end_charging_process()
         self.soc_charge_update()
         self.release_charger_resource(used_charger_resource, selected_charging_request)
@@ -954,7 +954,7 @@ class Aircraft:
 
     def unload_passengers(self, passenger_disembark_time):
         # TODO: check
-        yield self.env.timeout(passenger_disembark_time)
+        yield self.env.timeout(round(passenger_disembark_time))
         self.event_saver.aircraft_dict[self.tail_number]['passenger_unloading_finished'] = \
             timestamp_to_datetime(self.event_saver.sim_start_timestamp, self.env.now)
 
