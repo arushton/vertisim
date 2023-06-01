@@ -316,7 +316,7 @@ class PerformanceMetrics:
                 <= key
                 <= self.sim_start_timestamp + second * self.hour
             )
-            self.performance_metrics[vertiport_id]['passenger_throughput'] = round(total_passengers / interval_length, 2)
+            self.performance_metrics[vertiport_id]['average_passenger_throughput'] = round(total_passengers / interval_length, 2)
 
     def compute_empty_flights(self):
         # Computes the number of empty flights
@@ -619,7 +619,7 @@ class PerformanceMetrics:
 
     def print_average_passenger_throughput(self):
         for vertiport_id in self.vertiport_ids:
-            print(f"Average passenger throughput in 1 hour at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['passenger_throughput'] / self.performance_metrics['total_simulated_time'], 2)}")
+            print(f"Average passenger throughput in 1 hour at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['average_passenger_throughput'], 2)}")
 
     def print_average_charge_time(self):
         for vertiport_id in self.vertiport_ids:

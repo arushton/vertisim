@@ -812,7 +812,7 @@ class VertiportManager:
         
         # Request arrival fix resource
         arrival_fix_usage_request, arrival_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction, operation_type='arrival')
-        if self.flight_rebalancing:
+        if self.flight_rebalancing and not self.fixed_schedule:
             self.check_holding_aircraft(flight_direction=aircraft.flight_direction, vertiport_id=aircraft.destination_vertiport_id)
         yield arrival_fix_usage_request
 

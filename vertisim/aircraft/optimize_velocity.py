@@ -137,10 +137,10 @@ class VelocityOptimizer:
         min_power_velocity = self.min_power_velocity_for_climb_descend(altitude=altitude, tom=tom)
         if cost_type in ['climb_transition', 'descend_transition']:
             bounds = [(round(min_power_velocity/2, 2), min_power_velocity), 
-                      (0, self.aircraft_params['max_vertical_velocity'])]
+                      (1, self.aircraft_params['max_vertical_velocity'])]
         else:
             bounds = [(round(min_power_velocity/2), self.aircraft_params['max_horizontal_velocity']), 
-                    (0, self.aircraft_params['max_vertical_velocity'])]
+                    (1, self.aircraft_params['max_vertical_velocity'])]
         # Initial guess for V and Vv
         x0 = [V[0], V[1]]
         # Perform optimization

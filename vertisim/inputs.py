@@ -41,8 +41,8 @@ network_and_demand = {
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated.
     # Priority is given to the demand files.
-    'aircraft_schedule_file_name': None,#'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
-    'passenger_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'aircraft_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
@@ -216,7 +216,7 @@ aircraft_params = {
     'time_hover_descend': 15,  # sec - NOT USED
     'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
-    'ground_taxi_speed': 3.67, # 3.67 # ft/s
+    'ground_taxi_speed': 1000, # 3.67 # ft/s
     'time_passenger_embark_disembark': 0, #60 * 2,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec
