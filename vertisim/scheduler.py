@@ -22,6 +22,7 @@ class Scheduler:
             origin_vertiport_id = row['origin_vertiport_id']
             destination_vertiport_id = row['destination_vertiport_id']
             yield self.env.timeout(pushback_interarrival_time)
+            print(f"Pushback initiated at {self.env.now} for flight from {origin_vertiport_id} to {destination_vertiport_id} for aircraft {row['tail_number']}.")
             # Get the waiting room for the destination
             waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
             # Get the departing passengers from the waiting room

@@ -163,8 +163,7 @@ class AircraftArrivalSetup:
         :return:
         """
         # Convert the columns to milliseconds.
-        aircraft_arrival_schedule['aircraft_arrival_time'] = sec_to_ms(aircraft_arrival_schedule['aircraft_arrival_time'])
-        aircraft_arrival_schedule['aircraft_pushback_time'] = sec_to_ms(aircraft_arrival_schedule['aircraft_pushback_time'])
+        aircraft_arrival_schedule['pushback_interarrival_time'] = sec_to_ms(aircraft_arrival_schedule['pushback_interarrival_time'])
         return aircraft_arrival_schedule
 
     def create_aircraft_arrival(self):
