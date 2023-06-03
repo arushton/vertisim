@@ -9,7 +9,7 @@ from pathlib import Path
 
 def circle(row, object_name):
     row['alt_m'] = 0
-    p = Point([row[f'{object_name}_lng'], row[f'{object_name}_lat'], row['alt_m']])
+    p = Point([row[f'{object_name}_lon'], row[f'{object_name}_lat'], row['alt_m']])
     n_points = 20
     diameter = row[f'{object_name}_diameter_ft']
     d_m = diameter

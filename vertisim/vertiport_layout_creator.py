@@ -59,11 +59,11 @@ class VertiportLayout:
         self.fato_ids = list(df[df['fato_nodes'].notna()]['fato_nodes'])
         self.fato_nodes = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_x', 'fato_y', 'fato_diameter_ft']]
         self.approach_fix_lat_lng = df[df['fato_nodes'].notna()][['fato_nodes', 'approach_fix_nodes', 'approach_fix_lat', 
-                                                                  'approach_fix_lng']]
+                                                                  'approach_fix_lon']]
         # !!! This function only supports one approach fix node. This is used in vertiport manager.
         self.approach_fix_node = self.approach_fix_lat_lng.approach_fix_nodes.iloc[0]
         self.departure_fix_lat_lng = df[df['fato_nodes'].notna()][
-            ['fato_nodes', 'departure_fix_nodes', 'departure_fix_lat', 'departure_fix_lng']]
+            ['fato_nodes', 'departure_fix_nodes', 'departure_fix_lat', 'departure_fix_lon']]
         # !!! This function only supports one approach fix node. This is used in vertiport manager.
         self.departure_fix_node = self.departure_fix_lat_lng.departure_fix_nodes.iloc[0]
 
@@ -75,28 +75,28 @@ class VertiportLayout:
             ['taxi_ramp_intersection_nodes', 'inters_x', 'inters_y', 'inters_diameter_ft']]
         self.edges = df[df['origin_node'].notna()][['origin_node', 'destination_node']]
 
-        self.fato_lat_lngs = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_lat', 'fato_lng', 'fato_diameter_ft']]
+        self.fato_lat_lngs = df[df['fato_nodes'].notna()][['fato_nodes', 'fato_lat', 'fato_lon', 'fato_diameter_ft']]
         self.fato_lat_lngs.set_index('fato_nodes', inplace=True)
 
         self.park_lat_lngs = df[df['parking_pad_nodes'].notna()][[
-            'parking_pad_nodes', 'parking_pad_lat', 'parking_pad_lng', 'parking_pad_diameter_ft']]
+            'parking_pad_nodes', 'parking_pad_lat', 'parking_pad_lon', 'parking_pad_diameter_ft']]
         self.park_lat_lngs.set_index('parking_pad_nodes', inplace=True)
 
         self.inters_lat_lngs = df[df['taxi_ramp_intersection_nodes'].notna()][[
-            'taxi_ramp_intersection_nodes', 'inters_lat', 'inters_lng', 'inters_diameter_ft']]
+            'taxi_ramp_intersection_nodes', 'inters_lat', 'inters_lon', 'inters_diameter_ft']]
         self.inters_lat_lngs.set_index('taxi_ramp_intersection_nodes', inplace=True)
 
-        self.vert_door_lat_lngs = df[df['vert_door_nodes'].notna()][['vert_door_nodes', 'vert_door_lat', 'vert_door_lng']]
+        self.vert_door_lat_lngs = df[df['vert_door_nodes'].notna()][['vert_door_nodes', 'vert_door_lat', 'vert_door_lon']]
         self.vert_door_node = self.vert_door_lat_lngs.vert_door_nodes.iloc[0]        
         self.vert_door_lat_lngs.set_index('vert_door_nodes', inplace=True)
 
         self.waiting_room_lat_lngs = df[df['waiting_room_nodes'].notna()][
-            ['waiting_room_nodes', 'waiting_room_lat', 'waiting_room_lng']]
+            ['waiting_room_nodes', 'waiting_room_lat', 'waiting_room_lon']]
         self.waiting_room_node = self.waiting_room_lat_lngs.waiting_room_nodes.iloc[0]          
         self.waiting_room_lat_lngs.set_index('waiting_room_nodes', inplace=True)      
 
         self.boarding_gate_lat_lngs = df[df['boarding_gate_nodes'].notna()][
-            ['boarding_gate_nodes', 'boarding_gate_lat', 'boarding_gate_lng']]
+            ['boarding_gate_nodes', 'boarding_gate_lat', 'boarding_gate_lon']]
         self.boarding_gate_node = self.boarding_gate_lat_lngs.boarding_gate_nodes.iloc[0]           
         self.boarding_gate_lat_lngs.set_index('boarding_gate_nodes', inplace=True)
 
@@ -182,9 +182,9 @@ class VertiportLayout:
     def compute_terminal_airspace_radius(self):
         # Compute the terminal airspace radius
         return haversine_dist(self.fato_lat_lngs['fato_lat'].iloc[0], 
-                              self.fato_lat_lngs['fato_lng'].iloc[0],
+                              self.fato_lat_lngs['fato_lon'].iloc[0],
                               self.approach_fix_lat_lng['approach_fix_lat'].iloc[0], 
-                              self.approach_fix_lat_lng['approach_fix_lng'].iloc[0],
+                              self.approach_fix_lat_lng['approach_fix_lon'].iloc[0],
                               unit='mile')
 
     def calculate_distances_matrix(self):

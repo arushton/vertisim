@@ -44,8 +44,8 @@ class SimSetup:
         set_seed(sim_params['random_seed'])
         self.env = self.create_environment()
         self.vertiport_layouts = self.create_vertiport_layout()
+        self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
-        self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids
         self.check_inputs()
         self.num_destinations = self.get_num_destinations()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
@@ -90,22 +90,25 @@ class SimSetup:
             print("Success: Vertiport layout(s) created.")
         return vertiport_layouts
     
+    def get_vertiport_ids(self) -> List:
+        """
+        Returns the vertiport ids
+        """
+        return list(self.network_and_demand['vertiports'].keys())    
+    
     def compute_vertiport_distances(self) -> pd.DataFrame:
         """
         Imports the vertiport distance
         """
         # Import vertiport distance
         vertiport_distances = calc_vertiport_distances(
-            self.network_and_demand['vertiport_network_file_path'])
+            vertiport_network_file_path=self.network_and_demand['vertiport_network_file_path'],
+            vertiport_ids=self.vertiport_ids,
+            vertiport_layouts=self.vertiport_layouts,
+            network_simulation=self.sim_params['network_simulation'])
         if self.sim_params['verbose']:
             print("Success: Vertiport network imported.")
         return vertiport_distances
-    
-    def get_vertiport_ids(self) -> List:
-        """
-        Returns the vertiport ids
-        """
-        return list(self.network_and_demand['vertiports'].keys())
 
     def check_inputs(self):
         """
@@ -261,9 +264,6 @@ class SimSetup:
             flight_rebalancing=self.sim_params['flight_rebalancing'],
             node_locations=self.node_locations
         )
-    
-    def soc_required_for_flights(self):
-        pass
 
     def create_aircraft_arrival_process(self):
         # Load or generate aircraft arrival schedule and start the aircraft arrival process

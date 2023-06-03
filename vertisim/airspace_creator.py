@@ -79,9 +79,9 @@ class AirspaceCreator:
         airlinks_start_end_endpoints = defaultdict(dict)
         for _, row in self.vertiport_distances.iterrows():
             origin_departure_fix_lat = self.vertiports[row['origin_vertiport_id']].vertiport_layout.departure_fix_lat_lng['departure_fix_lat'].iloc[0]
-            origin_departure_fix_lng = self.vertiports[row['origin_vertiport_id']].vertiport_layout.departure_fix_lat_lng['departure_fix_lng'].iloc[0]
+            origin_departure_fix_lng = self.vertiports[row['origin_vertiport_id']].vertiport_layout.departure_fix_lat_lng['departure_fix_lon'].iloc[0]
             dest_arrival_fix_lat = self.vertiports[row['destination_vertiport_id']].vertiport_layout.approach_fix_lat_lng['approach_fix_lat'].iloc[0]
-            dest_arrival_fix_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.approach_fix_lat_lng['approach_fix_lng'].iloc[0]
+            dest_arrival_fix_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.approach_fix_lat_lng['approach_fix_lon'].iloc[0]
             airlinks_start_end_endpoints[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = (origin_departure_fix_lat, 
                                                                                                                 origin_departure_fix_lng, 
                                                                                                                 dest_arrival_fix_lat, 
@@ -92,9 +92,9 @@ class AirspaceCreator:
         origin_destination_vertiport_locs = defaultdict(dict)
         for _, row in self.vertiport_distances.iterrows():
             origin_vertiport_lat = self.vertiports[row['origin_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lat'].iloc[0]
-            origin_vertiport_lng = self.vertiports[row['origin_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lng'].iloc[0]
+            origin_vertiport_lng = self.vertiports[row['origin_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lon'].iloc[0]
             dest_vertiport_lat = self.vertiports[row['destination_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lat'].iloc[0]
-            dest_vertiport_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lng'].iloc[0]
+            dest_vertiport_lng = self.vertiports[row['destination_vertiport_id']].vertiport_layout.fato_lat_lngs['fato_lon'].iloc[0]
             origin_destination_vertiport_locs[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = (origin_vertiport_lat,
                                                                                                                     origin_vertiport_lng,
                                                                                                                     dest_vertiport_lat,

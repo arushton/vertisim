@@ -368,6 +368,15 @@ def check_not_none(value):
     """
     return value is not None
 
+def create_save_path(original_path, list_of_keys):
+    # Extract the directory from the original path
+    directory = '/'.join(original_path.split('/')[:-1])
+
+    # Create the new filename using the keys from the dictionary
+    new_filename = f"network_{'_'.join(list_of_keys)}.csv"
+
+    # Create the new path by joining the directory and the new filename
+    return f"{directory}/{new_filename}"
 
 
 # def nested_dict_filter_values(d, depth, value):
