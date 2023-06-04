@@ -71,7 +71,7 @@ network_and_demand = {
             # depending on the distribution you use.
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
-                'num_passengers': 200,  # Number of passengers to be generated
+                'num_passengers': 300,  # Number of passengers to be generated
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
@@ -106,8 +106,8 @@ network_and_demand = {
                 # }
             }
         },
-        'LAX24': {
-            'layout': 'clover_1_fato_4_park_24_miles',
+        'LAX72': {
+            'layout': 'clover_1_fato_4_park_72_miles',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 4,
             'num_chargers': 4,
@@ -117,7 +117,7 @@ network_and_demand = {
             # Passenger Arrival Process
             'passenger_arrival_process': {
                 'passenger_interarrival_constant': None,
-                'num_passengers': 200,  
+                'num_passengers': 300,  
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {

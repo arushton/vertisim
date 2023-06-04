@@ -1,6 +1,6 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value
 from utils.distance import haversine_dist
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
+from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
@@ -813,8 +813,11 @@ class Aircraft:
                                                                                      horizontal_speed=self.speed)
                 yield self.env.timeout(round(sec_to_ms(link_traversal_time)))
             # Compute energy consumption
-            cruise_energy_consumption = self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time)
+            cruise_energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time), 2)
             self.total_energy_consumption += cruise_energy_consumption
+            # if self.tail_number == 0:
+            #     print(f"Aircraft {self.tail_number} V_h: {self.speed}, V_v velocity: {self.vertical_velocity}, time: {link_traversal_time}, energy consumption: {cruise_energy_consumption} during {self.flight_phase} from {self.location} to {waypoint_id}")     
+
             self.update_aircraft_state(waypoint_id, cruise_energy_consumption, 'cruise')         
 
         yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(
@@ -932,7 +935,6 @@ class Aircraft:
         int
             The soc level of the aircraft after the charging time.
         """
-        print(f'charge_time: {charge_time}, initial_soc: {initial_soc}')
         # Get the time at initial soc level
         initial_soc_time = df[df.soc == initial_soc]['time_sec'].values[0]
         # Get the time at final soc level
@@ -960,9 +962,10 @@ class Aircraft:
         """
         Updates the charge level of the aircraft using current charge time.
         """
-        if self.soc-np.floor(self.convert_kwh_soc(kwh) < 0):
+        if self.soc-np.floor(self.convert_kwh_soc(kwh)) < 0:
             soc_update = self.soc
-            print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {self.soc}, at time: {self.env.now} during {self.flight_phase} at {self.location}")
+            if self.tail_number == 0:
+                print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {self.soc}, at time: {self.env.now} during {self.flight_phase} at {self.location}")
         else:
             soc_update = np.floor(self.convert_kwh_soc(kwh))
         self.update_soc(-soc_update) # TODO: Create a soc vs time table with 0.5 increment
@@ -1074,7 +1077,8 @@ class Aircraft:
     
     def check_reserve_energy(self) -> float:
         if self.soc <= 2 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
-            print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.flight_phase} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
+            if self.tail_number == 0:
+                print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.flight_phase} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
         if self.soc <= 20 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
             self.priority = 0
 
