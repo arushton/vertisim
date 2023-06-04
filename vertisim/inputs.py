@@ -33,7 +33,7 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_of_2_vertiports.csv',
+    'vertiport_network_file_path': None, #f'{str(cwd)}/input/network/network_of_2_vertiports.csv',
     'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
 
     # DEMAND FILES.
@@ -106,8 +106,8 @@ network_and_demand = {
                 # }
             }
         },
-        'LAX72': {
-            'layout': 'clover_1_fato_4_park_72_miles',
+        'LAX12': {
+            'layout': 'clover_1_fato_4_park_12_miles',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 4,
             'num_chargers': 4,
