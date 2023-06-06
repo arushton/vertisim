@@ -1,12 +1,22 @@
+"""
+There are three ways to set up aircraft arrival (initiation) process for network simulation:
+1. Define the arrival process in the config file. It will generate an artificial schedule
+2. Define aircraft arrival/departure schedule in a csv file. It will read the schedule 
+    and create aircraft departure processes based on the schedule.
+3. Optimization output simulation: Define aircraft departure schedule and aircraft charging schedule.
+    The charge schedule should include the initial idle aircraft as well.
+"""
+
+
 import pandas as pd
 
 from aircraft.aircraft import Aircraft
 import pandas as pd
-from utils.units import sec_to_ms
+from utils.units import sec_to_ms, ms_to_sec
 from utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, careful_conversion
 from utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
 # from utils.defaults import DEFAULT_AIRCRAFT_ARRIVAL_PROCESS
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 from utils.read_files import read_input_file
 # from utils.create_arrival_process import create_aircraft_arrival_process
 
@@ -17,7 +27,8 @@ class AircraftArrivalSetup:
                  network_simulation: bool,
                  vertiport_layouts: Dict,
                  vertiport_configs: Union[Dict, None],
-                 aircraft_arrival_schedule_file_path: Union[str, None],
+                 flight_schedule_file_name: Union[str, None],
+                 charge_schedule_file_name: Union[str, None],
                  aircraft_params: Dict,
                  vertiport_manager: int,
                  scheduler: object,
@@ -26,7 +37,8 @@ class AircraftArrivalSetup:
         self.env = env
         self.network_simulation = network_simulation
         self.vertiport_layouts = vertiport_layouts
-        self.aircraft_arrival_schedule_file_path = aircraft_arrival_schedule_file_path
+        self.flight_schedule_file_name = flight_schedule_file_name
+        self.charge_schedule_file_name = charge_schedule_file_name
         self.vertiport_configs = vertiport_configs
         self.aircraft_params = aircraft_params
         self.vertiport_manager = vertiport_manager
@@ -66,52 +78,71 @@ class AircraftArrivalSetup:
                 #         f"'{column}' to the input file."
                 #     )
 
-    def check_aircraft_arrival_schedule(self, aircraft_arrival_schedule: pd.DataFrame):
+    # ---------------------------- Setup aircraft flight schedule ---------------------------- #
+    def check_aircraft_schedule(self, aircraft_schedule: pd.DataFrame):
         """
         Check if the columns of the input file are correct.
-        :param aircraft_arrival_schedule:
+        :param aircraft_schedule:
         :return:
         """
-        required_columns = [
-            'aircraft_arrival_time',
-            'aircraft_pushback_time',
-            'tail_number',
-            'origin_vertiport_id',
-            'destination_vertiport_id',
-            'location'
-            # 'passengers_onboard'
-        ]
+        if not self.charge_schedule_file_name:
+            required_columns = [
+                'aircraft_arrival_time',
+                'aircraft_pushback_time',
+                'tail_number',
+                'origin_vertiport_id',
+                'destination_vertiport_id',
+                'location',
+                'process'
+                # 'passengers_onboard'
+            ]
         
-        check_none_columns = [
-            'aircraft_arrival_time',
-            'aircraft_pushback_time',
-            'tail_number',
-            'origin_vertiport_id',
-            'destination_vertiport_id',
-            # 'passengers_onboard'
-        ]
+            check_none_columns = [
+                'aircraft_arrival_time',
+                'aircraft_pushback_time',
+                'tail_number',
+                'origin_vertiport_id',
+                'destination_vertiport_id',
+                # 'passengers_onboard'
+            ]
         
-        optional_columns = {
-            # Column name: default value
-            'serviced_time_at_the_location': 0,
-            'soc': self.aircraft_params['max_init_soc'],
-            'priority': 1,
-            'passengers_onboard': [[] for _ in range(len(aircraft_arrival_schedule))],
-            'interarrival_time': compute_interarrival_times_from_schedule(aircraft_arrival_schedule['aircraft_arrival_time']),
-            'pushback_interarrival_time': compute_interarrival_times_from_schedule(aircraft_arrival_schedule['aircraft_pushback_time'])
-        }
-        return AircraftArrivalSetup.validate_columns(aircraft_arrival_schedule, required_columns, optional_columns, check_none_columns)
+            optional_columns = {
+                # Column name: default value
+                'serviced_time_at_the_location': 0,
+                'soc': self.aircraft_params['max_init_soc'],
+                'priority': 1,
+                'passengers_onboard': [[] for _ in range(len(aircraft_schedule))],
+                # 'interarrival_time': compute_interarrival_times_from_schedule(aircraft_schedule['aircraft_arrival_time']),
+                'pushback_interarrival_time': compute_interarrival_times_from_schedule(aircraft_schedule['aircraft_arrival_time'])
+            }
+        else:
+            required_columns = [
+                'aircraft_pushback_time',
+                'origin_vertiport_id',
+                'destination_vertiport_id',
+                'soc'
+            ]
+        
+            check_none_columns = [
+                'aircraft_pushback_time',
+                'origin_vertiport_id',
+                'destination_vertiport_id',
+                'soc'
+            ]
+        
+            optional_columns = {'pushback_interarrival_time': compute_interarrival_times_from_schedule(aircraft_schedule['aircraft_pushback_time'])}
+        return AircraftArrivalSetup.validate_columns(aircraft_schedule, required_columns, optional_columns, check_none_columns)
 
         
-    def setup_aircraft_arrival(self):
-        if self.aircraft_arrival_schedule_file_path is not None:
+    def setup_aircraft_schedule(self) -> pd.DataFrame:
+        if self.flight_schedule_file_name is not None:
             return self._load_schedule_from_file()
         else:
             return self._generate_artificial_schedule()
 
     def _load_schedule_from_file(self):
         # Load and process aircraft arrival schedule
-        schedule, initial_states = self._read_and_process_schedule(self.aircraft_arrival_schedule_file_path)
+        schedule, initial_states = self._read_and_process_schedule(self.flight_schedule_file_name)
 
         # Set up scheduler with the processed schedule
         self._setup_scheduler_with_schedule(schedule)
@@ -126,65 +157,169 @@ class AircraftArrivalSetup:
             vertiport_layouts=self.vertiport_layouts,
             aircraft_params=self.aircraft_params,
             network_simulation=self.network_simulation)
-
+    
         # Get the number of aircraft
         self.num_aircraft = len(schedule)
         return schedule
 
-    def _read_and_process_schedule(self, path):
+    def _read_and_process_schedule(self, path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Load aircraft arrival schedule from the path and sort by arrival time
-        schedule = read_input_file(path).sort_values(by='aircraft_arrival_time')
+        schedule = read_input_file(path).sort_values(by='aircraft_pushback_time')
 
         # Check if the columns of the input file are correct
-        schedule = self.check_aircraft_arrival_schedule(schedule)
+        schedule = self.check_aircraft_schedule(schedule)
 
         # Convert the columns to milliseconds
-        schedule = self.convert_schedule_columns_to_ms(schedule)
+        schedule = AircraftArrivalSetup.convert_schedule_columns_to_ms(schedule, 'flight_schedule')
 
         # Get the initial state of the system from the input file
-        initial_states = self._get_initial_system_state(schedule)
+        if self.charge_schedule_file_name:
+            initial_states, initial_states_indices = AircraftArrivalSetup._get_initial_system_state_from_optimization(
+                schedule=schedule,
+                operation='flight_schedule')
+            schedule = schedule.drop(initial_states_indices)
+        else:
+            initial_states = AircraftArrivalSetup._get_initial_system_state(schedule)
         return schedule, initial_states
 
-    def _get_initial_system_state(self, schedule):
+    @staticmethod
+    def _get_initial_system_state(schedule: pd.DataFrame) -> pd.DataFrame:
         first_events = schedule.groupby('tail_number').first().reset_index()
         first_events['destination_vertiport_id'] = first_events['origin_vertiport_id']
         return first_events
+    
+    @staticmethod
+    def _get_initial_system_state_from_optimization(schedule, operation='flight_schedule') -> Tuple[pd.DataFrame, pd.DataFrame]:
+        if operation == 'flight_schedule':
+            # Get the rows that have aircraft_pushback_time = 0
+            initial_states = schedule[schedule['aircraft_pushback_time'] == 0]
+        elif operation == 'charging_schedule':
+            # Get the rows that have charging_start_time = 0
+            initial_states = schedule[schedule['charging_start_time'] == 0]
+        else:
+            raise ValueError(f"Operation {operation} is not defined correctly.")
+        # Get the indices of the rows that have 0 start time
+        initial_states_indices = initial_states.index
 
+        return initial_states, initial_states_indices
+    
     def _setup_scheduler_with_schedule(self, schedule):
         # Save the aircraft arrival schedule for the scheduler
         self.scheduler.flight_schedule = schedule
         self.scheduler.vertiport_manager = self.vertiport_manager
 
-        
-    def convert_schedule_columns_to_ms(self, aircraft_arrival_schedule: pd.DataFrame):
+    @staticmethod
+    def convert_schedule_columns_to_ms(schedule: pd.DataFrame, operation: str) -> pd.DataFrame:
         """
         Convert the columns of the aircraft arrival schedule to milliseconds.
-        :param aircraft_arrival_schedule:
+        :param aircraft_schedule:
         :return:
         """
         # Convert the columns to milliseconds.
-        aircraft_arrival_schedule['pushback_interarrival_time'] = sec_to_ms(aircraft_arrival_schedule['pushback_interarrival_time'])
-        return aircraft_arrival_schedule
+        if operation == 'flight_schedule':
+            schedule['pushback_interarrival_time'] = sec_to_ms(schedule['pushback_interarrival_time'])
+        elif operation == 'charging_schedule':
+            schedule['charge_interarrival_time'] = sec_to_ms(schedule['charge_interarrival_time'])
+        else:
+            raise ValueError('Invalid operation type for reading schedule file.')
+        return schedule
+    
+    # ---------------------------- Setup aircraft charging schedule ---------------------------- #
+
+    def setup_charge_schedule(self) -> Union[pd.DataFrame, None]:
+        if self.charge_schedule_file_name is not None:
+            return self._load_charging_schedule_from_file()
+        else:
+            return None
+        
+    def _load_charging_schedule_from_file(self) -> pd.DataFrame:
+        # Load and process aircraft arrival schedule
+        schedule, initial_states = self._read_and_process_charging_schedule(self.charge_schedule_file_name)
+        print("Success: Aircraft charging schedule loaded from file.")
+        self._setup_scheduler_with_charge_schedule(schedule)
+        return initial_states
+    
+    def _read_and_process_charging_schedule(self, path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        # Load aircraft arrival schedule from the path and sort by arrival time
+        schedule = read_input_file(path).sort_values(by='charging_start_time')
+
+        # Check if the columns of the input file are correct
+        schedule = AircraftArrivalSetup.check_charging_schedule(schedule)
+
+        # Convert the columns to milliseconds
+        schedule = AircraftArrivalSetup.convert_schedule_columns_to_ms(schedule, operation='charging_schedule')
+
+        # Get the initial state of the system from the input file
+        initial_states, initial_states_indices = AircraftArrivalSetup._get_initial_system_state_from_optimization(
+            schedule=schedule,
+            operation='charging_schedule')
+        schedule = schedule.drop(initial_states_indices)
+        return schedule, initial_states
+    
+    @staticmethod
+    def check_charging_schedule(schedule: pd.DataFrame) -> pd.DataFrame:
+        # Check if the columns of the input file are correct
+        required_columns = [
+            'vertiport_id',
+            'init_soc',
+            'target_soc',
+            'charging_start_time',
+            'process'
+        ]
+    
+        check_none_columns = [
+            'vertiport_id',
+            'init_soc',
+            'target_soc',
+            'charging_start_time',
+            'process'
+        ]
+    
+        optional_columns = {'charge_interarrival_time': compute_interarrival_times_from_schedule(schedule['charging_start_time'])}
+        return AircraftArrivalSetup.validate_columns(schedule, required_columns, optional_columns, check_none_columns)
+
+    
+    def _setup_scheduler_with_charge_schedule(self, schedule):
+        # Save the aircraft charge schedule for the scheduler
+        self.scheduler.charge_schedule = schedule
+    
+    # ---------------------------- Setup aircraft arrival schedule ---------------------------- #
 
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
-        aircraft_arrival_schedule = self.setup_aircraft_arrival()
-        
-        for tail_number in aircraft_arrival_schedule.tail_number:
+        aircraft_schedule = self.setup_aircraft_schedule()
+        charge_schedule = self.setup_charge_schedule()
+
+        if charge_schedule is None:
+            self.env.process(self._initial_aircraft_arrival_process_with_tail_number(aircraft_schedule))
+            if self.flight_schedule_file_name is not None:
+                self.env.process(self.scheduler.initiate_fixed_schedule_from_file())             
+        else:
+            process_list = [
+                self.env.process(self._initial_aircraft_arrival_process_without_tail_number(charge_schedule)),
+                self.env.process(self.scheduler.initiate_fixed_schedule_from_file()),
+                self.env.process(self.scheduler.initiate_charge_schedule_from_file())
+            ]
+            self.env.all_of(process_list)
+
+
+
+    def _initial_aircraft_arrival_process_with_tail_number(self, aircraft_schedule: pd.DataFrame):
+        for tail_number in aircraft_schedule.tail_number:
             # Fields to retrieve for each aircraft.
             fields = ['aircraft_pushback_time', 'interarrival_time', 'soc', 'speed', 
                     'origin_vertiport_id', 'destination_vertiport_id', 'passengers_onboard', 'location',
-                    'serviced_time_at_the_location', 'priority']
+                    'serviced_time_at_the_location', 'priority', 'process']
 
             # Create a dictionary to store the retrieved values.
             aircraft_data = {}
 
             for field in fields:
                 # Get the value of the field for the aircraft.
-                aircraft_data[field] = aircraft_arrival_schedule.loc[
-                    aircraft_arrival_schedule.tail_number == tail_number, field].values[0]
+                aircraft_data[field] = aircraft_schedule.loc[
+                    aircraft_schedule.tail_number == tail_number, field].values[0]
 
-            yield self.env.timeout(sec_to_ms(aircraft_data['interarrival_time']))
+            yield self.env.timeout(aircraft_data['interarrival_time'])
 
             self.env.process(
                 # Simulate the aircraft.
@@ -197,23 +332,46 @@ class AircraftArrivalSetup:
                                             location=aircraft_data['location'],
                                             serviced_time_at_the_location=aircraft_data['serviced_time_at_the_location'],
                                             departure_time=aircraft_data['aircraft_pushback_time'],
-                                            priority=aircraft_data['priority'])
-            )         
-        if self.aircraft_arrival_schedule_file_path is not None:
-            self.env.process(self.scheduler.initiate_fixed_schedule_from_file()) 
+                                            priority=aircraft_data['priority'],
+                                            initial_process=aircraft_data['process'])
+            )       
 
+    def _initial_aircraft_arrival_process_without_tail_number(self, charge_schedule: pd.DataFrame):
+        for idx, row in charge_schedule.iterrows():
+            yield self.env.timeout(row['charge_interarrival_time'])
+            # print(f"Assigned {row['process']} aircraft {idx} at {row['vertiport_id']} at time {ms_to_sec(self.env.now)} from soc {row['init_soc']} to {row['target_soc']}")
+            self.env.process(
+                # Simulate the aircraft.
+                self.initiate_aircraft_arrival(departure_time=None,
+                                               tail_number=idx,
+                                               soc=row['init_soc'],
+                                               target_soc=row['target_soc'],
+                                               input_cruise_speed=0,
+                                               origin_vertiport_id=row['vertiport_id'],
+                                               destination_vertiport_id=row['vertiport_id'],
+                                               passengers_onboard=[],
+                                               location=row['location'],
+                                               serviced_time_at_the_location=0,
+                                               priority=1,
+                                               initial_process=row['process'])
+            )
 
-    def initiate_aircraft_arrival(self, 
-                                  tail_number: str,
-                                  soc: int,
-                                  input_cruise_speed: int,
-                                  origin_vertiport_id: str,
-                                  destination_vertiport_id: str,
-                                  passengers_onboard: List,
-                                  location: str,
-                                  serviced_time_at_the_location: int,
-                                  departure_time: int,
-                                  priority: int):
+    def initiate_aircraft_arrival(self,
+                                  departure_time: int = None,
+                                  tail_number: str = None,
+                                  soc: int = 100,
+                                  target_soc = None,
+                                  input_cruise_speed: int = 72,
+                                  origin_vertiport_id: str = None,
+                                  destination_vertiport_id: str = None,
+                                  passengers_onboard: List = None,
+                                  location: str = None,
+                                  serviced_time_at_the_location: int = 0,
+                                  priority: int = 1,
+                                  initial_process: str = 'PARKING'):
+        
+        if passengers_onboard is None:
+            passengers_onboard = []
 
         aircraft = Aircraft(env=self.env,
                             tail_number=tail_number,
@@ -224,9 +382,11 @@ class AircraftArrivalSetup:
                             serviced_time_at_the_location=serviced_time_at_the_location,
                             departure_time=departure_time,
                             soc=soc,
+                            target_soc=target_soc,
                             input_cruise_speed=input_cruise_speed,
                             arrival_time=self.env.now,
                             priority=priority,
+                            initial_process=initial_process,
                             aircraft_params=self.aircraft_params,
                             vertiport_manager=self.vertiport_manager,
                             event_saver=self.event_saver
@@ -236,6 +396,9 @@ class AircraftArrivalSetup:
         # Save aircraft in aircraft_agent dictionary.
         self.vertiport_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
 
+        yield self.env.process(self.initiate_aircraft(aircraft=aircraft))
+        
+    def initiate_aircraft(self, aircraft: Aircraft):
         # Based on aircraft initial location, initiate the related process.    
         if aircraft.location in self.structural_entity_groups['fato']:
             aircraft.assigned_fato_id = aircraft.location
@@ -245,7 +408,7 @@ class AircraftArrivalSetup:
             yield self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
         elif aircraft.location in self.structural_entity_groups['approach_fix_node']:
             yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(aircraft=aircraft,
-                                                                                               arriving_passengers=passengers_onboard))
+                                                                                                     arriving_passengers=aircraft.passengers_onboard))
         elif aircraft.location in self.structural_entity_groups['departure_fix_node']:
             aircraft.flight_direction = f'{aircraft.origin_vertiport_id}_{aircraft.destination_vertiport_id}'
             yield self.env.process(self.vertiport_manager.departure_fix_request_initial_state(aircraft=aircraft))

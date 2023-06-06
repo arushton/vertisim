@@ -57,7 +57,7 @@ class SimSetup:
         self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
 
-        if self.network_and_demand['aircraft_schedule_file_name'] is not None:
+        if self.network_and_demand['flight_schedule_file_name'] is not None:
             self.fixed_schedule = True
         else:
             self.fixed_schedule = False
@@ -260,21 +260,23 @@ class SimSetup:
             charging_interuption=self.sim_params['charge_interruption'],
             event_saver=self.event_saver,
             network_simulation=self.sim_params['network_simulation'],
-            fixed_schedule=check_not_none(self.network_and_demand['aircraft_schedule_file_name']),
+            fixed_charge_schedule=check_not_none(self.network_and_demand['charge_schedule_file_name']),
+            fixed_schedule=check_not_none(self.network_and_demand['flight_schedule_file_name']),
             flight_rebalancing=self.sim_params['flight_rebalancing'],
             node_locations=self.node_locations
         )
 
     def create_aircraft_arrival_process(self):
         # Load or generate aircraft arrival schedule and start the aircraft arrival process
-        if self.network_and_demand['aircraft_schedule_file_name'] is not None:
+        if self.network_and_demand['flight_schedule_file_name'] is not None:
             # Load aircraft arrival schedule
             aircraft_arrival_process = AircraftArrivalSetup(
                 env=self.env,
                 network_simulation=self.sim_params['network_simulation'],
                 vertiport_configs=self.network_and_demand['vertiports'],
                 vertiport_layouts=self.vertiport_layouts,
-                aircraft_arrival_schedule_file_path=self.network_and_demand['aircraft_schedule_file_name'],
+                flight_schedule_file_name=self.network_and_demand['flight_schedule_file_name'],
+                charge_schedule_file_name=self.network_and_demand['charge_schedule_file_name'],
                 aircraft_params=self.aircraft_params,
                 vertiport_manager=self.vertiport_manager,
                 scheduler=self.scheduler,
@@ -288,16 +290,16 @@ class SimSetup:
                 network_simulation=self.sim_params['network_simulation'],
                 vertiport_layouts=self.vertiport_layouts,                
                 vertiport_configs=self.network_and_demand['vertiports'],
-                aircraft_arrival_schedule_file_path=None,
+                flight_schedule_file_name=None,
+                charge_schedule_file_name=None,
                 aircraft_params=self.aircraft_params,
                 vertiport_manager=self.vertiport_manager,
                 scheduler=self.scheduler,
                 structural_entity_groups=self.structural_entity_groups,                
                 event_saver=self.event_saver
             )
-        self.env.process(
-            aircraft_arrival_process.create_aircraft_arrival()
-        )
+        aircraft_arrival_process.create_aircraft_arrival()
+
         if self.sim_params['verbose']:
             print("Success: Aircraft arrival process is created.")
 

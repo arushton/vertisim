@@ -1,4 +1,4 @@
-from utils.helpers import timestamp_to_datetime, get_key_from_value
+from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order
 from utils.distance import haversine_dist
 from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
@@ -26,11 +26,13 @@ class Aircraft:
                  destination_vertiport_id,
                  passengers_onboard, 
                  soc,
+                 target_soc,
                  arrival_time, 
                  departure_time,
                  location,
                  serviced_time_at_the_location,
                  priority,
+                 initial_process,
                  aircraft_params, 
                  vertiport_manager, 
                  event_saver):
@@ -51,6 +53,7 @@ class Aircraft:
         self._arrival_time = arrival_time
         self._departure_time = departure_time
         self._priority = priority
+        self.initial_process = initial_process
 
         self.aircraft_params = aircraft_params
         self.max_vertical_velocity = self.aircraft_params['max_vertical_velocity'] 
@@ -67,7 +70,8 @@ class Aircraft:
         self.flight_direction = None
         self.flight_time = None
         self.turnaround_time = None
-        self.total_energy_consumption = 0 
+        self.total_energy_consumption = 0
+        self.target_soc = target_soc
 
         self.arrival_fix_usage_request = None
         self.arrival_fix_resource = None
@@ -75,7 +79,6 @@ class Aircraft:
         self.departure_fix_resource = None
         self.aircraft_fato_usage_request = None
         self.parking_space_usage_request = None
-
 
         self.aircraft_model = self.aircraft_params['aircraft_model']
         self.passenger_capacity = self.aircraft_params['pax']
@@ -471,9 +474,6 @@ class Aircraft:
 
         self.vertical_velocity = 0
         self.update_aircraft_state(self.assigned_fato_id, hover_descend_energy_consumption, 'landed')
-        self.arrival_time = self.env.now
-        self.flight_time = self.arrival_time - self.departure_time
-        self.event_saver.update_flight_time_tracker(flight_direction=self.flight_direction, flight_time=self.flight_time)
         self.event_saver.update_aircraft_energy_consumption_tracker(flight_direction=self.flight_direction, energy_consumption=self.total_energy_consumption)
         self.total_energy_consumption = 0
 
@@ -481,6 +481,8 @@ class Aircraft:
         yield self.env.timeout(round(self.time_post_landing_safety_checks))
         yield self.env.timeout(round(self.time_tug_connection))
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='ready_for_taxi_in')
+        self.arrival_time = self.env.now
+        self.save_flight_duration()
 
     def update_aircraft_state(self, location, energy_consumption, event):
         self.soc_discharge_update(energy_consumption)
@@ -760,7 +762,7 @@ class Aircraft:
                                                 altitude=self.altitude,
                                                 horizontal_distance=horizontal_distance,
                                                 vertical_distance=vertical_distance,
-                                                cost_type='climb_transition')
+                                                cost_type='climb')
         climb_time = round(horizontal_distance / self.speed)
         with first_waypoint_resource.request() as req:
             yield req
@@ -781,7 +783,6 @@ class Aircraft:
         Finds the location of the aircraft in the airspace from self.vertiport_manager.airspace.airlink_resources
         and traverses the airspace starting from that location        
         """      
-        self.flight_phase = 'cruise'
         # Get the airlink resources for the flight direction
         airlink_resources = self.vertiport_manager.airspace.airlink_resources[self.flight_direction]
 
@@ -804,21 +805,60 @@ class Aircraft:
         for waypoint_id, resource in list(airlink_resources.items())[starting_index:-2]:
             with resource.request() as req:
                 yield req
-                if self.aircraft_params['cruise_velocity']:
-                    self.speed = self.aircraft_params['cruise_velocity']
+                # Compute the horizontal and vertical distance between the current location and the next waypoint
+                horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, waypoint_id)
+                # If the vertical distance is not zero, then the aircraft is climbing or descending. If the previous flight phase
+                # is not cruise, then the aircraft is climbing. Otherwise, the aircraft is descending.
+                if vertical_distance != 0 and self.flight_phase != 'cruise':
+                    initial_velocity_guess = self.guess_initial_velocity()
+                    self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
+                                                            V=initial_velocity_guess,
+                                                            tom=self.tom,
+                                                            altitude=self.altitude,
+                                                            horizontal_distance=horizontal_distance,
+                                                            vertical_distance=vertical_distance,
+                                                            cost_type='climb')
+                    climb_time = round(horizontal_distance / self.speed)
+                    yield self.env.timeout(round(sec_to_ms(climb_time)))
+                    energy_consumption = round(self.climb_energy_consumption(velocity=self.speed,
+                                                                            climb_end_altitude=self.get_node_altitude(waypoint_id),
+                                                                            climb_time=climb_time), 2)
+                    self.total_energy_consumption += energy_consumption  
+                # If the vertical distance is not zero and the previous flight phase is cruise or descend, then the aircraft is descending.
+                elif vertical_distance != 0 and self.flight_phase in ['descend', 'cruise']:
+                    self.flight_phase = 'descend'
+                    initial_velocity_guess = self.guess_initial_velocity()
+                    self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
+                                                            V=initial_velocity_guess,
+                                                            tom=self.tom,
+                                                            altitude=self.altitude,
+                                                            horizontal_distance=horizontal_distance,
+                                                            vertical_distance=vertical_distance,
+                                                            cost_type='descend')
+                    descend_time = round(horizontal_distance / self.speed)
+                    yield self.env.timeout(round(sec_to_ms(descend_time)))
+                    energy_consumption = round(self.descend_energy_consumption(velocity=self.speed,
+                                                                            descend_end_altitude=self.get_node_altitude(waypoint_id),
+                                                                            descend_time=descend_time), 2)
+                    self.total_energy_consumption += energy_consumption                
                 else:
-                    self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
-                link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
-                                                                                     destination=waypoint_id, 
-                                                                                     horizontal_speed=self.speed)
-                yield self.env.timeout(round(sec_to_ms(link_traversal_time)))
-            # Compute energy consumption
-            cruise_energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time), 2)
-            self.total_energy_consumption += cruise_energy_consumption
+                    # If the vertical distance is zero, then the aircraft is in cruise
+                    self.flight_phase = 'cruise'
+                    if self.aircraft_params['cruise_velocity']:
+                        self.speed = self.aircraft_params['cruise_velocity'] 
+                    else:                   
+                        self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                    link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
+                                                                                        destination=waypoint_id, 
+                                                                                        horizontal_speed=self.speed)
+                    yield self.env.timeout(round(sec_to_ms(link_traversal_time)))
+                    # Compute energy consumption
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time), 2)
+                    self.total_energy_consumption += energy_consumption
             # if self.tail_number == 0:
             #     print(f"Aircraft {self.tail_number} V_h: {self.speed}, V_v velocity: {self.vertical_velocity}, time: {link_traversal_time}, energy consumption: {cruise_energy_consumption} during {self.flight_phase} from {self.location} to {waypoint_id}")     
 
-            self.update_aircraft_state(waypoint_id, cruise_energy_consumption, 'cruise')         
+            self.update_aircraft_state(waypoint_id, energy_consumption, 'cruise')         
 
         yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
@@ -839,8 +879,12 @@ class Aircraft:
         """
         if self.time_charging is not None:
             return max(self.time_passenger_embark_disembark, self.time_charging)
-        charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
-        charge_time = max(self.time_passenger_embark_disembark, charge_time)
+        elif self.target_soc:
+            charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
+            # print(f"Charging started at {self.destination_vertiport_id} for aircraft {self.tail_number} at SOC {self.soc} for SOC {self.target_soc} at time {ms_to_sec(self.env.now)} and will take {round(ms_to_sec(charge_time)/60,2)} mins")
+        else:
+            charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
+            charge_time = max(self.time_passenger_embark_disembark, charge_time)
         self.event_saver.save_aircraft_charging_time(vertiport_id=self.destination_vertiport_id,
                                                      aircraft_id=self.tail_number, 
                                                      charging_time=charge_time)
@@ -852,7 +896,7 @@ class Aircraft:
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
-        if self.soc >= self.soc_required_to_complete_mission:
+        if not self.target_soc and self.soc >= self.soc_required_to_complete_mission:
             self.set_charging_time_trackers()
             self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')
             # After deboarding the passengers aircraft will be ready for the next flight.
@@ -868,13 +912,19 @@ class Aircraft:
 
         self.start_charging_process()
         yield self.env.timeout(round(self.get_charging_time()))
+        # print(f"Charging ended at {self.destination_vertiport_id} for aircraft {self.tail_number} at SOC {self.soc} for SOC {self.target_soc} at time {ms_to_sec(self.env.now)}")
         self.end_charging_process()
         self.soc_charge_update()
+        # Reset the target_soc to None for the next flight
+        self.set_target_soc_none()
         self.release_charger_resource(used_charger_resource, selected_charging_request)
 
     def set_charging_time_trackers(self):
         self.charging_start_time = self.env.now
         self.charging_end_time = self.env.now
+
+    def set_target_soc_none(self):
+        self.target_soc = None
 
     def handle_shared_charger(self, parking_space: object):
         charger_requests = self.env.process(self.request_all_chargers(parking_space))
@@ -942,6 +992,28 @@ class Aircraft:
         # Get the soc at final soc level
         idx_final_soc = df['time_sec'].sub(final_soc_time).abs().idxmin()
         return df.loc[idx_final_soc]['soc']
+
+    def get_charge_time_from_soc(self, init_soc: int, target_soc: int) -> float:
+        """
+        Calculates the charge time required to reach the target soc level.
+
+        Parameters
+        ----------
+        init_soc: int
+            Initial soc level of the aircraft.
+        target_soc: int
+            Target soc level of the aircraft.
+
+        Returns
+        -------
+        float
+            Charge time required to reach the target soc level.
+        """
+        check_magnitude_order(init_soc, target_soc)
+        df = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
+        init_soc_time = df[df.soc == init_soc]['time_sec'].values[0]
+        target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
+        return sec_to_ms(target_soc_time - init_soc_time)
 
     def soc_charge_update(self) -> None:
         """
@@ -1117,6 +1189,10 @@ class Aircraft:
         Returns the horizontal and vertical distance between two nodes in meters.
         """
         return self.get_horizontal_distance(node_id_1, node_id_2), self.get_altitude_difference(node_id_1, node_id_2)
+    
+    def save_flight_duration(self):
+        self.flight_time = self.arrival_time - self.departure_time
+        self.event_saver.update_flight_time_tracker(flight_direction=self.flight_direction, flight_time=self.flight_time)
 
 
     

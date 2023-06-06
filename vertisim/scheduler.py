@@ -1,5 +1,5 @@
 from typing import Dict, Union, Callable, Optional, Dict, List
-from utils.units import sec_to_ms
+from utils.units import sec_to_ms, ms_to_sec
 from collections import defaultdict
 
 
@@ -15,22 +15,40 @@ class Scheduler:
         self.vertiport_manager = vertiport_manager
         self.is_fixed_schedule = is_fixed_schedule
         self.flight_schedule = None
+        self.charge_schedule = None
 
     def initiate_fixed_schedule_from_file(self):
+        # print('Initiating fixed schedule from file.')
         for _, row in self.flight_schedule.iterrows():
             pushback_interarrival_time = row['pushback_interarrival_time']
             origin_vertiport_id = row['origin_vertiport_id']
             destination_vertiport_id = row['destination_vertiport_id']
             yield self.env.timeout(pushback_interarrival_time)
+
+            # print(f'Flight {row["tail_number"]} is departing from {origin_vertiport_id} at {ms_to_sec(self.env.now)}.')
+
             # Get the waiting room for the destination
             waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
             # Get the departing passengers from the waiting room
             departing_passengers = self.collect_any_departing_passengers(waiting_room)
+            # print(f"Aircraft {row['tail_number']}, with soc {row['soc']} is departing with {len(departing_passengers)} passengers from {origin_vertiport_id} at {ms_to_sec(self.env.now)}.")
+            # print(f"Avaible aircraft ids: {[aircraft.tail_number for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}")
             self.env.process(self.vertiport_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
                                                                      destination_vertiport_id=destination_vertiport_id,
                                                                      departing_passengers=departing_passengers,
-                                                                     tail_number=row['tail_number']))
-
+                                                                     tail_number=row['tail_number'],
+                                                                     soc=row['soc']))
+        
+    def initiate_charge_schedule_from_file(self):
+        for _, row in self.charge_schedule.iterrows():
+            yield self.env.timeout(row['charge_interarrival_time'])
+            # print(f"Charging initiated at vertiport {row['vertiport_id']} at {ms_to_sec(self.env.now)} from {row['init_soc']} to {row['target_soc']}.")
+            # Get the aircraft that has the closes SOC to the init_soc
+            aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
+                                                                     init_soc=row['init_soc'])
+            # print(f"Got aircraft {aircraft.tail_number} with soc {aircraft.soc} at vertiport {row['vertiport_id']} at {ms_to_sec(self.env.now)} for charging.")
+            aircraft.target_soc = row['target_soc']
+            self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
 
     def check_max_waiting_time_threshold(self, max_flight_waiting_time):
         """
@@ -93,6 +111,12 @@ class Scheduler:
             waiting_room.get()
         return departing_passengers
 
+    def get_aircraft_with_closest_init_soc(self, vertiport_id, init_soc):
+        """
+        Returns the aircraft that has the closes SOC to the init_soc
+        """
+        return self.vertiports[vertiport_id].available_aircraft_store.get(
+            lambda aircraft: abs(aircraft.soc - init_soc) <= 9)
 
 def noninteruptive_aircraft_assignment_strategy(current_waiting_room,
                                                 mission_length,

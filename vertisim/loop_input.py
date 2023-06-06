@@ -51,7 +51,7 @@ def loop_input(passenger_arrival_mu,
         # Priority is given to the demand files. Use a full path. If None, passenger_arrival_generator will be used
         'passenger_schedule_file_name': None,
         # Use a full path. If None, aircraft_arrival_generator will be used.
-        'aircraft_schedule_file_name': None,
+        'flight_schedule_file_name': None,
 
         # ARTIFICIAL PASSENGER DEMAND GENERATION
         # --------------------------------------

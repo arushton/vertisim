@@ -31,6 +31,7 @@ class VertiportManager:
                  charging_interuption: bool,
                  event_saver: object,
                  network_simulation: bool,
+                 fixed_charge_schedule: bool,
                  fixed_schedule: bool,
                  flight_rebalancing: bool,
                  node_locations: Dict):
@@ -51,6 +52,7 @@ class VertiportManager:
         self.charging_interuption = charging_interuption
         self.event_saver = event_saver
         self.network_simulation = network_simulation
+        self.fixed_charge_schedule = fixed_charge_schedule
         self.node_locations = node_locations
         self.fixed_schedule = fixed_schedule
         self.flight_rebalancing = flight_rebalancing
@@ -528,16 +530,22 @@ class VertiportManager:
             # Increase passenger queue count
             self.event_saver.update_passenger_departure_queue_counter(vertiport_id=origin_vertiport_id, queue_update=1)
 
-            yield self.env.process(self.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
-                                                         destination_vertiport_id=destination_vertiport_id,
-                                                         departing_passengers=departing_passengers)
-                                                         )    
+            yield self.env.process(self.reserve_aircraft(
+                origin_vertiport_id=origin_vertiport_id,
+                destination_vertiport_id=destination_vertiport_id,
+                departing_passengers=departing_passengers)
+                )    
 
-    def reserve_aircraft(self, origin_vertiport_id: Any, destination_vertiport_id: int, departing_passengers: list, tail_number: str = None):
+    def reserve_aircraft(self, 
+                         origin_vertiport_id: Any, 
+                         destination_vertiport_id: int, 
+                         departing_passengers: list, 
+                         tail_number: str = None,
+                         soc: int = None):
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
         # Retrieve aircraft from the store
-        aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number)   
+        aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc)   
         # Measure and save the aircraft allocation time
         self.save_aircraft_allocation_time(origin_vertiport_id, aircraft, aircraft_allocation_start_time)
 
@@ -583,9 +591,7 @@ class VertiportManager:
         Returns:
             The requested aircraft, or None if no suitable aircraft was found.
         """
-        # Define the wait time (in seconds)
-        wait_time = sec_to_ms(10)  
-
+        # print('Searching for aircraft...')
         # Handle the case where neither tail_number nor soc are specified
         if tail_number is None and soc is None:
             aircraft_request = self.vertiports[origin_vertiport_id].available_aircraft_store.get()
@@ -600,7 +606,9 @@ class VertiportManager:
         # Handle the case where only soc is specified
         if tail_number is None and soc is not None:
             self.validate_soc(soc)
-            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: abs(soc - aircraft.soc) <= 5)
+            # print(f"Retrieving aircraft with SOC {soc}. Available aircraft ids: {[aircraft.tail_number for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}, their soc: {[aircraft.soc for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}")
+            # TODO: 10 is a magic number, should be a parameter
+            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: abs(soc - aircraft.soc) <= 9)
             # return (yield from self.retrieve_aircraft_by_soc(origin_vertiport_id, soc, wait_time))
 
         # Handle the case where both tail_number and soc are specified
@@ -690,9 +698,12 @@ class VertiportManager:
 
     def save_aircraft_times(self, origin_vertiport_id, aircraft):
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='aircraft_allocation')
-        self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
-                                                agent_id=aircraft.tail_number,
-                                                charging_end_time=aircraft.charging_end_time)
+        if aircraft.charging_end_time is None:
+            self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
+                                                charging_end_time=aircraft.arrival_time)
+        else:
+            self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
+                                                    charging_end_time=aircraft.charging_end_time)
 
     def save_passenger_times(self, origin_vertiport_id, passengers):
         for passenger in passengers:
@@ -841,8 +852,13 @@ class VertiportManager:
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
-            # Charging process 
-            yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))  
+            if not self.fixed_charge_schedule:
+                # Charging process
+                yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
+            else:
+                # Put aircraft into available aircraft store
+                self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                                aircraft=aircraft)           
 
         # Only FATO case and starting point is not a FATO
         elif aircraft.parking_space_id is None and aircraft.assigned_fato_id is None:
@@ -853,8 +869,13 @@ class VertiportManager:
 
             # Landing process
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))                  
-            # Charging process 
-            yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))           
+            if not self.fixed_charge_schedule:
+                # Charging process
+                yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
+            else:
+                # Put aircraft into available aircraft store
+                self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                                aircraft=aircraft)              
 
         # If the aircraft is not assigned to a parking pad but its starting location is a FATO
         elif aircraft.parking_space_id is None and \
@@ -866,22 +887,45 @@ class VertiportManager:
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival'))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
-            # Charging process 
-            yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))  
+            if not self.fixed_charge_schedule:
+                # Charging process
+                yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
+            else:
+                # Put aircraft into available aircraft store
+                self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                                aircraft=aircraft)    
         
         # Only FATO case and the starting location is a FATO
         elif aircraft.assigned_fato_id is not None:
             # Get FATO
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival', fato_id=aircraft.assigned_fato_id))
-            # Charging process
-            yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
-
+            if aircraft.initial_process in ['CHARGING', None]:
+                # Charging process
+                yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
+                aircraft.initial_process = None
+            elif aircraft.initial_process == 'PARKING':
+                # Put aircraft into available aircraft store
+                self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                                aircraft=aircraft)
+                aircraft.initial_process = None
+            else:
+                raise ValueError('Unknown initial process for the aircraft')
+            
         # If the aircraft is assigned to a parking pad
         elif aircraft.parking_space_id is not None:
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
-            # Charging process
-            yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))         
+            if aircraft.initial_process in ['CHARGING', None]:
+                # Charging process
+                yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
+                aircraft.initial_process = None
+            elif aircraft.initial_process == 'PARKING':
+                # Put aircraft into available aircraft store
+                self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                                aircraft=aircraft)
+                aircraft.initial_process = None
+            else:
+                raise ValueError('Unknown initial process for the aircraft')
     
     def parking_pad_request(self, aircraft: object, parking_space_id: Any = None):
         # parking space reservation for landing
@@ -975,8 +1019,12 @@ class VertiportManager:
         self.event_saver.save_aircraft_taxi_time(vertiport_id=aircraft.destination_vertiport_id,
                                                  aircraft_id=aircraft.tail_number, 
                                                  taxi_time=taxi_end_time-taxi_start_time)
+        
+        # Save arrival/departure time
+        # self.save_arrival_departure_time(aircraft=aircraft, operation_type=operation_type)
 
     def aircraft_charging_process(self, aircraft: object):
+
         # Charge the aircraft
         yield self.env.process(
             aircraft.charge_aircraft(
@@ -985,15 +1033,14 @@ class VertiportManager:
             )
         )
 
-        # Take out the aircraft from active aircraft list and put it into available aircraft list
-        # self.active_aircraft_store.get(lambda filt: filt == aircraft.tail_number)
-        self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id, 
+        # Put aircraft into available aircraft store
+        self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                         aircraft=aircraft)
 
         if self.only_aircraft_simulation and not self.network_simulation:
             yield self.env.process(
                 self.simulate_aircraft_departure_process(aircraft=aircraft, origin_vertiport_id=aircraft.origin_vertiport_id, destination_vertiport_id=None)
-            )
+            )     
 
     def simulate_aircraft_departure_process(self, aircraft, origin_vertiport_id, destination_vertiport_id):
         aircraft.origin_vertiport_id = origin_vertiport_id
@@ -1069,6 +1116,14 @@ class VertiportManager:
         self.event_saver.update_flight_tracker(vertiport_id=aircraft.origin_vertiport_id)
         self.event_saver.update_load_factor_tracker(vertiport_id=aircraft.origin_vertiport_id, 
                                                     load_factor=len(aircraft.passengers_onboard))
+        
+    def save_arrival_departure_time(self, aircraft: object, operation_type: str):
+        if operation_type == 'arrival':
+            aircraft.arrival_time = self.env.now
+            aircraft.flight_time = aircraft.arrival_time - aircraft.departure_time
+        elif operation_type == 'departure':
+            aircraft.departure_time = self.env.now
+        
         
     def departure_fix_request(self, aircraft):
         # Request departure fix resource

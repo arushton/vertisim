@@ -140,7 +140,7 @@ class EventSaver:
                                      sim_time=self.env.now)        
         self.aircraft_taxi_times[vertiport_id][time] = taxi_time
     
-    def save_aircraft_idle_time(self, vertiport_id: Any, agent_id: int, charging_end_time: int) -> None:
+    def save_aircraft_idle_time(self, vertiport_id: Any, charging_end_time: int) -> None:
         """
         Saves the aircraft idle time
         :param origin_vertiport_id: Origin vertiport id

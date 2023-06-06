@@ -97,7 +97,8 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
                          'passengers_onboard': passengers_onboard,
                          'location': location,
                          'serviced_time_at_the_location': serviced_time_at_the_location,
-                         'priority': priority
+                         'priority': priority,
+                         'process': ['PARKING' for _ in range(num_aircraft)]
                          })
 
 

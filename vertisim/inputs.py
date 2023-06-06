@@ -39,9 +39,12 @@ network_and_demand = {
     # DEMAND FILES.
     # ---------------------------------------------------------------
     # If these are not None, then the demand is read from these files.
-    # If these are None, then the artificial demand is generated.
-    # Priority is given to the demand files.
-    'aircraft_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/aircraft_schedule.xlsx',  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    # If these are None, then the artificial demand is generated. Priority is given to the demand files.
+    # If charge_schedule_file_name is None, then the flight_schedule should provide the tail_number and departure times.
+    # Charging times will be computed internally. If charge_schedule_file_name is not None, then the charging times will be read from the file.
+    # and aircraft assignment will be done based on the optimization output.
+    'charge_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/charge_schedule_5.csv',
+    'flight_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/flight_schedule_5.csv',
     'passenger_schedule_file_name': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
@@ -106,8 +109,8 @@ network_and_demand = {
                 # }
             }
         },
-        'LAX12': {
-            'layout': 'clover_1_fato_4_park_12_miles',
+        'DTLA': {
+            'layout': 'clover_1_fato_4_park_dtla',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 4,
             'num_chargers': 4,
@@ -138,11 +141,11 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': None, #'/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/lax_dtla_route.csv',
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/finalized_route_0602.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
-    'airlink_segment_length': 0.5,  # miles
+    'airlink_segment_length': 0.25,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
 }
