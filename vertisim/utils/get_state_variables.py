@@ -29,7 +29,7 @@ def collect_flow_entity_state_variables(aircraft_agents: Dict, passenger_agents:
             'vertiport_arrival_time': careful_round(ms_to_min(aircraft.arrival_time), 2),
             'vertiport_departure_time': careful_round(ms_to_min(aircraft.departure_time), 2),
             'holding_time': careful_round(ms_to_min(aircraft.holding_time), 2),
-            'flight_time': careful_round(ms_to_min(aircraft.flight_time), 2),
+            'flight_duration': careful_round(ms_to_min(aircraft.flight_duration), 2),
             'turnaround_time': careful_round(ms_to_min(aircraft.turnaround_time), 2),
             'priority': aircraft.priority,
             'parking_space_id': aircraft.parking_space_id,

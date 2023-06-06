@@ -740,7 +740,7 @@ class VertiportManager:
         """
         while True:
             # Check the waiting rooms every max_waiting_time/2.
-            yield self.env.timeout(round(sec_to_ms(self.max_flight_waiting_time) / 2))
+            yield self.env.timeout(sec_to_ms(self.max_flight_waiting_time) / 2)
 
             if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold(
                     sec_to_ms(self.max_flight_waiting_time)):
@@ -857,7 +857,6 @@ class VertiportManager:
             yield self.env.process(self.parking_pad_request(aircraft=aircraft))
             # Landing process
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))
-            self.logger.info(f'Landed: Aircraft {aircraft.tail_number} landed at {aircraft.destination_vertiport_id} with SOC: {ms_to_min(aircraft.soc)}, flight duration: {ms_to_min(aircraft.flight_duration)}, holding time: {aircraft.holding_time}')
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
             if not self.fixed_charge_schedule:
@@ -877,9 +876,6 @@ class VertiportManager:
 
             # Landing process
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))   
-
-            self.logger.info(f'Landed: Aircraft {aircraft.tail_number} landed at {aircraft.destination_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
-
             if not self.fixed_charge_schedule:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
@@ -1119,8 +1115,6 @@ class VertiportManager:
         self.release_taxi_usage_request(vertiport_id=aircraft.origin_vertiport_id,
                                         taxi_usage_request=taxi_usage_request)    
         
-        self.logger.info(f'TakeOff: Aircraft {aircraft.tail_number} took off from vertiport {aircraft.origin_vertiport_id} to {aircraft.destination_vertiport_id} at SOC: {aircraft.soc}')
-
         # Take-off process
         yield self.env.process(
             aircraft.aircraft_take_off_process(

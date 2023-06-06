@@ -387,6 +387,27 @@ def check_magnitude_order(value1, value2):
             f'The magnitude of value1 ({value1}) is greater than the magnitude of value2 ({value2}).'
         )
     
+def miliseconds_to_hms(milliseconds):
+    seconds = milliseconds // 1000
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    return "%02d:%02d:%02d" % (hours, minutes, seconds)
+
+import time
+import string
+def get_random_id():
+    # Set simulation id
+    random.seed(round(time.time()))
+    return ''.join(random.choices(string.ascii_uppercase, k=8))
+
+import uuid
+def get_random_process_id():
+    return str(uuid.uuid4())[:5]
+
+
+
 
 
 # def nested_dict_filter_values(d, depth, value):

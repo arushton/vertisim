@@ -18,7 +18,6 @@ from utils.generate_artificial_supply_demand import generate_aircraft_network_sc
 # from utils.defaults import DEFAULT_AIRCRAFT_ARRIVAL_PROCESS
 from typing import Dict, List, Union, Tuple
 from utils.read_files import read_input_file
-# from utils.create_arrival_process import create_aircraft_arrival_process
 
 
 class AircraftArrivalSetup:
@@ -33,7 +32,9 @@ class AircraftArrivalSetup:
                  vertiport_manager: int,
                  scheduler: object,
                  structural_entity_groups: Dict,                
-                 event_saver: object):
+                 event_saver: object,
+                 logger: object,
+                 aircraft_logger: object):
         self.env = env
         self.network_simulation = network_simulation
         self.vertiport_layouts = vertiport_layouts
@@ -46,6 +47,10 @@ class AircraftArrivalSetup:
         self.structural_entity_groups = structural_entity_groups
         self.event_saver = event_saver
         self.num_aircraft = None
+        # logfile = set_logfile_path(log_file_name='main', output_folder_path=output_folder_path)
+        # self.logger = setup_logger(name='main', log_file=logfile, env=self.env)
+        self.logger = logger
+        self.aircraft_logger=aircraft_logger
             
     @staticmethod
     def validate_columns(dataframe: pd.DataFrame, required_columns: list, optional_columns: dict, check_none_columns: list) -> None:
@@ -288,13 +293,19 @@ class AircraftArrivalSetup:
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
         aircraft_schedule = self.setup_aircraft_schedule()
+        self.logger.info("Success: Aircraft arrival schedule loaded from file.")
+
         charge_schedule = self.setup_charge_schedule()
+        self.logger.info("Success: Aircraft charging schedule loaded from file.")
 
         if charge_schedule is None:
+            self.logger.info("No charging schedule is provided. The arrival schedule will read tail numbers from the file.")
             self.env.process(self._initial_aircraft_arrival_process_with_tail_number(aircraft_schedule))
             if self.flight_schedule_file_name is not None:
+                self.logger.info("Aircraft flight schedule is provided. The scheduler will initiate the schedule.")
                 self.env.process(self.scheduler.initiate_fixed_schedule_from_file())             
         else:
+            self.logger.info("Flight schedule and a charging schedule is provided without tail numbers. The simulator will assign aircraft to the flights.")
             process_list = [
                 self.env.process(self._initial_aircraft_arrival_process_without_tail_number(charge_schedule)),
                 self.env.process(self.scheduler.initiate_fixed_schedule_from_file()),
@@ -339,7 +350,11 @@ class AircraftArrivalSetup:
     def _initial_aircraft_arrival_process_without_tail_number(self, charge_schedule: pd.DataFrame):
         for idx, row in charge_schedule.iterrows():
             yield self.env.timeout(row['charge_interarrival_time'])
-            # print(f"Assigned {row['process']} aircraft {idx} at {row['vertiport_id']} at time {ms_to_sec(self.env.now)} from soc {row['init_soc']} to {row['target_soc']}")
+
+            self.logger.info(f"Aircraft {idx} is arrived at the vertiport {row['vertiport_id']}." 
+                             f" init_soc: {row['init_soc']}, target_soc: {row['target_soc']},"
+                             f" process: {row['process']}")   
+
             self.env.process(
                 # Simulate the aircraft.
                 self.initiate_aircraft_arrival(departure_time=None,
@@ -353,7 +368,9 @@ class AircraftArrivalSetup:
                                                location=row['location'],
                                                serviced_time_at_the_location=0,
                                                priority=1,
-                                               initial_process=row['process'])
+                                               initial_process=row['process'],
+                                               logger=self.logger,
+                                               aircraft_logger=self.aircraft_logger)
             )
 
     def initiate_aircraft_arrival(self,
@@ -368,7 +385,9 @@ class AircraftArrivalSetup:
                                   location: str = None,
                                   serviced_time_at_the_location: int = 0,
                                   priority: int = 1,
-                                  initial_process: str = 'PARKING'):
+                                  initial_process: str = 'PARKING',
+                                  logger=None,
+                                  aircraft_logger=None):
         
         if passengers_onboard is None:
             passengers_onboard = []
@@ -389,8 +408,9 @@ class AircraftArrivalSetup:
                             initial_process=initial_process,
                             aircraft_params=self.aircraft_params,
                             vertiport_manager=self.vertiport_manager,
-                            event_saver=self.event_saver
-                            )
+                            event_saver=self.event_saver,
+                            logger=logger,
+                            aircraft_logger=aircraft_logger)
         
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.

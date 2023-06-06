@@ -33,7 +33,7 @@ class EventSaver:
         self.fato_usage_tracker = defaultdict(dict)
         self.flight_and_time_tracker = defaultdict(dict)
         self.flight_count_tracker = defaultdict(int)
-        self.flight_time_tracker = defaultdict(dict)
+        self.flight_duration_tracker = defaultdict(dict)
         self.load_factor_tracker = defaultdict(list)
         self.passenger_count_tracker = defaultdict(int)
         self.passenger_time_tracker = defaultdict(dict)
@@ -52,10 +52,10 @@ class EventSaver:
                                      sim_time=self.env.now)
         self.aircraft_energy_consumption_tracker[flight_direction][time] = energy_consumption
     
-    def update_flight_time_tracker(self, flight_direction, flight_time):
+    def update_flight_duration_tracker(self, flight_direction, flight_duration):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
-        self.flight_time_tracker[flight_direction][time] = flight_time
+        self.flight_duration_tracker[flight_direction][time] = flight_duration
 
     def update_flight_tracker(self, vertiport_id):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,

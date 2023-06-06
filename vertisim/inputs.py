@@ -1,6 +1,5 @@
 import time
 from sim_setup import SimSetup
-import os
 from pathlib import Path
 
 cwd = Path.cwd()
