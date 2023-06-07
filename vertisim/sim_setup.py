@@ -222,8 +222,8 @@ class SimSetup:
                             vertiports=self.vertiports,
                             vertiport_manager=None,
                             aircraft_capacity=self.aircraft_params['pax'],
-                            is_fixed_schedule=self.fixed_schedule
-                            )
+                            is_fixed_schedule=self.fixed_schedule,
+                            logger=self.logger)
 
     def create_airspace(self):
         # Create airspace
@@ -277,6 +277,7 @@ class SimSetup:
             fixed_schedule=check_not_none(self.network_and_demand['flight_schedule_file_name']),
             flight_rebalancing=self.sim_params['flight_rebalancing'],
             node_locations=self.node_locations,
+            flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
             logger=self.logger
         )
 

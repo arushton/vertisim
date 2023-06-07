@@ -16,6 +16,7 @@ sim_params = {
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds
+    'flight_duration_constant': 600,  # seconds
     'charge_interruption': False,
     'step_by_step_sim': False,
     'flight_rebalancing': False,
@@ -43,8 +44,8 @@ network_and_demand = {
     # If charge_schedule_file_name is None, then the flight_schedule should provide the tail_number and departure times.
     # Charging times will be computed internally. If charge_schedule_file_name is not None, then the charging times will be read from the file.
     # and aircraft assignment will be done based on the optimization output.
-    'charge_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/charge_schedule.csv',
-    'flight_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/flight_schedule.csv',
+    'charge_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/charge_schedule_5.csv',
+    'flight_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/flight_schedule_5.csv',
     'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
@@ -110,10 +111,10 @@ network_and_demand = {
             }
         },
         'DTLA': {
-            'layout': 'clover_1_fato_10_park_dtla',
+            'layout': 'clover_1_fato_12_park_dtla',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 10,
-            'num_chargers': 10,
+            'num_chargers': 12,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,

@@ -395,6 +395,13 @@ def miliseconds_to_hms(milliseconds):
     seconds %= 60
     return "%02d:%02d:%02d" % (hours, minutes, seconds)
 
+def seconds_to_hms(seconds):
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    return "%02d:%02d:%02d" % (hours, minutes, seconds)
+
 import time
 import string
 def get_random_id():
@@ -406,6 +413,12 @@ import uuid
 def get_random_process_id():
     return str(uuid.uuid4())[:5]
 
+
+def duplicate_str(string, n=5):
+    """
+    Duplicate a string n times.
+    """
+    return str(string) * n
 
 
 

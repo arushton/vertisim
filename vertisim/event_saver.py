@@ -50,6 +50,7 @@ class EventSaver:
     def update_aircraft_energy_consumption_tracker(self, flight_direction, energy_consumption):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.aircraft_energy_consumption_tracker[flight_direction])
         self.aircraft_energy_consumption_tracker[flight_direction][time] = energy_consumption
     
     def update_flight_duration_tracker(self, flight_direction, flight_duration):
@@ -218,7 +219,7 @@ class EventSaver:
         self.flight_schedule[time]['event'] = event_type
         self.flight_schedule[time]['aircraft_model'] = aircraft_model
 
-    def is_time_overlapping(self, time: int, agent_type: str) -> int:
+    def is_time_overlapping(self, time: int, agent_type: str, tracker: Dict = None) -> int:
         """
         eventSaver saves each event based on the time. Events might happening in parallel. So, the eventSaver might be
         overwriting events on top of each other. To prevent this, is_time_overlapping adds 1 milisecond to the
@@ -239,5 +240,12 @@ class EventSaver:
                 return time
             time += 1
             return self.is_time_overlapping(time=time, agent_type=agent_type)
+        elif agent_type == 'tracker':
+            if len(tracker) == 0:
+                return time
+            if time not in list(tracker.keys()):
+                return time
+            time += 1
+            return self.is_time_overlapping(time=time, agent_type=agent_type, tracker=tracker)
         else:
-            raise ValueError('agent_type must be either aircraft or passenger')
+            raise ValueError('agent_type must be either aircraft, passenger or tracker')

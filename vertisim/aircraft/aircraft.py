@@ -260,7 +260,7 @@ class Aircraft:
             f"  - Origin: {self.origin_vertiport_id}\n" \
             f"  - Destination: {self.destination_vertiport_id}\n" \
             f"  - Passengers: {self.passengers_onboard}\n" \
-            f"  - SOC: {self.soc}%\n" \
+            f"  - SOC: {round(self.soc, 2)}%\n" \
             f"  - Arrival Time: {self.arrival_time}\n" \
             f"  - Departure Time: {self.departure_time}\n" \
             f"  - Location: {self.location}\n" \
@@ -417,7 +417,7 @@ class Aircraft:
         self.flight_phase = 'descend'
 
         self.aircraft_logger.info(f'Descend Setup: Aircraft {self.tail_number} will descend from {self.location} to {final_approach_fix}'
-                                  f' with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {self.soc}.'
+                                  f' with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}.'
                                   f' Horizontal distance: {horizontal_distance}, vertical distance: {vertical_distance}')
 
     def descend_to_final_approach_fix(self, final_approach_fix):      
@@ -433,7 +433,7 @@ class Aircraft:
         self.update_aircraft_state(final_approach_fix, descend_energy_consumption, 'final_approach_fix_arrival')
         yield self.env.process(self.vertiport_manager.fato_pad_request(aircraft=self, operation_type='arrival'))
 
-        self.aircraft_logger.info(f'Descend: Aircraft {self.tail_number} has arrived at {final_approach_fix} with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {self.soc}.'
+        self.aircraft_logger.info(f'Descend: Aircraft {self.tail_number} has arrived at {final_approach_fix} with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}.'
                                   f' Descend time: {descend_time}, descend energy consumption: {descend_energy_consumption}.')
 
     def descend_transition(self):
@@ -457,7 +457,7 @@ class Aircraft:
         self.total_energy_consumption += descend_transition_energy_consumption
         yield self.env.timeout(sec_to_ms(descend_transition_time))
 
-        self.aircraft_logger.info(f'Descend Transition: Aircraft {self.tail_number} has arrived at {hover_fix_id} with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {self.soc}.'
+        self.aircraft_logger.info(f'Descend Transition: Aircraft {self.tail_number} has arrived at {hover_fix_id} with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}.'
                                     f' Descend transition time: {descend_transition_time}, descend transition energy consumption: {descend_transition_energy_consumption}.')
 
         self.speed = 0
@@ -478,14 +478,14 @@ class Aircraft:
                                                                                             operation='landing'), 2)
         self.total_energy_consumption += hover_descend_energy_consumption
 
-        self.aircraft_logger.info(f'Hover Descend: Aircraft {self.tail_number} has arrived at {self.assigned_fato_id} with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {self.soc}.'
+        self.aircraft_logger.info(f'Hover Descend: Aircraft {self.tail_number} has arrived at {self.assigned_fato_id} with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}.'
                                     f' Hover descend time: {hover_descend_time}, hover descend energy consumption: {hover_descend_energy_consumption}.')
 
         self.vertical_velocity = 0
         self.update_aircraft_state(self.assigned_fato_id, hover_descend_energy_consumption, 'landed')
         self.event_saver.update_aircraft_energy_consumption_tracker(flight_direction=self.flight_direction, energy_consumption=self.total_energy_consumption)
-        self.logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {self.soc}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
-        self.aircraft_logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {self.soc}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
+        self.logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {round(self.total_energy_consumption, 2)}')
+        self.aircraft_logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
         self.total_energy_consumption = 0
 
     def post_landing_procedures(self):
@@ -494,8 +494,7 @@ class Aircraft:
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='ready_for_taxi_in')
         self.arrival_time = self.env.now
         self.save_flight_duration()
-        self.aircraft_logger.info(f'Post Landing Procedures: Aircraft {self.tail_number} has completed post landing procedures at {self.destination_vertiport_id} with SOC: {self.soc}.')
-
+        self.aircraft_logger.info(f'Post Landing Procedures: Aircraft {self.tail_number} has completed post landing procedures at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}.')
 
     def update_aircraft_state(self, location, energy_consumption, event):
         self.soc_discharge_update(energy_consumption)
@@ -702,8 +701,8 @@ class Aircraft:
         yield self.env.timeout(round(self.time_tug_disconnection))
         yield self.env.timeout(round(self.time_pre_take_off_check_list))
         self.turnaround_time = self.env.now - self.arrival_time
-        self.logger.info(f'TakeOff: Aircraft {self.tail_number} took off from vertiport {self.origin_vertiport_id} to {self.destination_vertiport_id} at SOC: {self.soc}')
-        self.aircraft_logger.info(f'TakeOff: Aircraft {self.tail_number} ready for takeoff from vertiport {self.origin_vertiport_id} to {self.destination_vertiport_id} at SOC: {self.soc}')
+        self.logger.info(f'TakeOff: Aircraft {self.tail_number} took off from vertiport {self.origin_vertiport_id} to {self.destination_vertiport_id} at SOC: {round(self.soc, 2)} with {len(self.passengers_onboard)} passengers onboard')
+        self.aircraft_logger.info(f'TakeOff: Aircraft {self.tail_number} ready for takeoff from vertiport {self.origin_vertiport_id} to {self.destination_vertiport_id} at SOC: {round(self.soc, 2)} with {len(self.passengers_onboard)} passengers onboard')
 
     def hover_climb(self):
         """Hover climb phase of the takeoff."""
@@ -723,7 +722,7 @@ class Aircraft:
         yield self.env.timeout(sec_to_ms(hover_climb_time))
 
         self.aircraft_logger.info(f'Hover Climb: Aircraft {self.tail_number} has arrived at {hover_fix_id} with forward velocity {self.speed} and'
-                                  f' vertical velocity {self.vertical_velocity}, SOC: {self.soc}. Hover climb time: {hover_climb_time},'
+                                  f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Hover climb time: {hover_climb_time},'
                                     f' hover climb energy consumption: {hover_climb_energy_consumption}.')
 
         self.update_aircraft_state(hover_fix_id, hover_climb_energy_consumption, 'hover_climb_end')
@@ -752,7 +751,7 @@ class Aircraft:
         yield self.env.timeout(sec_to_ms(climb_transition_time))
 
         self.aircraft_logger.info(f'Climb Transition: Aircraft {self.tail_number} has arrived at {departure_fix_id} with forward velocity {self.speed} and'
-                                    f' vertical velocity {self.vertical_velocity}, SOC: {self.soc}. Climb transition time: {climb_transition_time},'
+                                    f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Climb transition time: {climb_transition_time},'
                                         f' climb transition energy consumption: {climb_transition_energy_consumption}.')
         
         self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
@@ -790,7 +789,7 @@ class Aircraft:
         self.total_energy_consumption += climb_energy_consumption
 
         self.aircraft_logger.info(f'Climb: Aircraft {self.tail_number} has arrived at {first_waypoint} with forward velocity {self.speed} and'
-                                    f' vertical velocity {self.vertical_velocity}, SOC: {self.soc}. Climb time: {climb_time},'
+                                    f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Climb time: {climb_time},'
                                         f' climb energy consumption: {climb_energy_consumption}.')
 
         self.update_aircraft_state(first_waypoint, climb_energy_consumption, 'climb_end')
@@ -844,7 +843,7 @@ class Aircraft:
                     self.total_energy_consumption += energy_consumption  
 
                     self.aircraft_logger.info(f'Continue Climb: Aircraft {self.tail_number} has arrived at {waypoint_id} with forward velocity {self.speed} and'
-                                                f' vertical velocity {self.vertical_velocity}, SOC: {self.soc}. Climb time: {climb_time},'
+                                                f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Climb time: {climb_time},'
                                                     f' climb energy consumption: {energy_consumption}.')
                 # If the vertical distance is not zero and the previous flight phase is cruise or descend, then the aircraft is descending.
                 elif vertical_distance != 0 and self.flight_phase in ['descend', 'cruise']:
@@ -865,7 +864,7 @@ class Aircraft:
                     self.total_energy_consumption += energy_consumption 
 
                     self.aircraft_logger.info(f'Start Descend: Aircraft {self.tail_number} has arrived at {waypoint_id} with forward velocity {self.speed} and'
-                                                  f' vertical velocity {self.vertical_velocity}, SOC: {self.soc}. Descend time: {descend_time},'
+                                                  f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Descend time: {descend_time},'
                                                         f' descend energy consumption: {energy_consumption}.')               
                 else:
                     # If the vertical distance is zero, then the aircraft is in cruise
@@ -883,7 +882,7 @@ class Aircraft:
                     self.total_energy_consumption += energy_consumption
             
                     self.aircraft_logger.info(f"Aircraft {self.tail_number} V_h: {self.speed}, V_v velocity: {self.vertical_velocity}, time: {link_traversal_time},"
-                                            f" energy consumption: {energy_consumption} during {self.flight_phase} from {self.location} to {waypoint_id}. SOC: {self.soc}")
+                                            f" energy consumption: {energy_consumption} during {self.flight_phase} from {self.location} to {waypoint_id}. SOC: {round(self.soc, 2)}")
                     
             self.update_aircraft_state(waypoint_id, energy_consumption, 'cruise')         
 
@@ -908,7 +907,7 @@ class Aircraft:
             return max(self.time_passenger_embark_disembark, self.time_charging)
         elif self.target_soc:
             charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
-            self.logger.info(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {self.soc}, target_soc: {self.target_soc}")
+            self.logger.info(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
         else:
             charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
             charge_time = max(self.time_passenger_embark_disembark, charge_time)
@@ -939,12 +938,13 @@ class Aircraft:
 
         self.start_charging_process()
         yield self.env.timeout(round(self.get_charging_time()))
-        self.logger.info(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. SoC: {self.soc}")
         self.end_charging_process()
+        old_soc = self.soc
         self.soc_charge_update()
         # Reset the target_soc to None for the next flight
         self.set_target_soc_none()
         self.release_charger_resource(used_charger_resource, selected_charging_request)
+        self.logger.info(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {round(self.soc, 2)}")
 
     def set_charging_time_trackers(self):
         self.charging_start_time = self.env.now
@@ -1013,7 +1013,7 @@ class Aircraft:
             The soc level of the aircraft after the charging time.
         """
         # Get the time at initial soc level
-        initial_soc_time = df[df.soc == initial_soc]['time_sec'].values[0]
+        initial_soc_time = df[df.soc == round(initial_soc)]['time_sec'].values[0]
         # Get the time at final soc level
         final_soc_time = initial_soc_time + ms_to_sec(charge_time)
         # Get the soc at final soc level
@@ -1038,7 +1038,7 @@ class Aircraft:
         """
         check_magnitude_order(init_soc, target_soc)
         df = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
-        init_soc_time = df[df.soc == init_soc]['time_sec'].values[0]
+        init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
         target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
         return sec_to_ms(target_soc_time - init_soc_time)
 
@@ -1055,19 +1055,22 @@ class Aircraft:
         """
         Converts kwh to aircraft's soc level.
         """
-        return kwh / self.battery_capacity * 100
+        return round(kwh / self.battery_capacity * 100, 2)
     
     def soc_discharge_update(self, kwh: float) -> None:
         """
         Updates the charge level of the aircraft using current charge time.
         """
-        if self.soc-np.floor(self.convert_kwh_soc(kwh)) < 0:
+        self.aircraft_logger.info(f"Discharging {kwh} kwh from aircraft {self.tail_number} at {self.location}"
+                                  f" during {self.flight_phase}, SOC: {round(self.soc, 2)}")
+        if self.soc-self.convert_kwh_soc(kwh) < 0:
             soc_update = self.soc
-            if self.tail_number == 0:
-                print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {self.soc}, at time: {self.env.now} during {self.flight_phase} at {self.location}")
+            print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.flight_phase} at {self.location}")
         else:
-            soc_update = np.floor(self.convert_kwh_soc(kwh))
+            soc_update = self.convert_kwh_soc(kwh)
         self.update_soc(-soc_update) # TODO: Create a soc vs time table with 0.5 increment
+        self.aircraft_logger.info(f"Discharged {kwh} kwh from aircraft {self.tail_number} at {self.location}"
+                                    f" during {self.flight_phase}, new SOC: {round(self.soc, 2)}")
         self.check_reserve_energy()
 
     def unload_passengers(self, passenger_disembark_time):

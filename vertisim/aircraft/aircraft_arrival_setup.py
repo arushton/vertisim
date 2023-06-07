@@ -309,9 +309,10 @@ class AircraftArrivalSetup:
             process_list = [
                 self.env.process(self._initial_aircraft_arrival_process_without_tail_number(charge_schedule)),
                 self.env.process(self.scheduler.initiate_fixed_schedule_from_file()),
-                self.env.process(self.scheduler.initiate_charge_schedule_from_file())
+                # self.env.process(self.scheduler.initiate_charge_schedule_from_file())
             ]
             self.env.all_of(process_list)
+            self.scheduler.initiate_charge_schedule_from_file()
 
 
 
@@ -410,7 +411,8 @@ class AircraftArrivalSetup:
                             vertiport_manager=self.vertiport_manager,
                             event_saver=self.event_saver,
                             logger=logger,
-                            aircraft_logger=aircraft_logger)
+                            aircraft_logger=aircraft_logger
+                            )
         
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.

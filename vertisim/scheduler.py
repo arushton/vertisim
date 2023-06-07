@@ -1,5 +1,6 @@
 from typing import Dict, Union, Callable, Optional, Dict, List
 from utils.units import sec_to_ms, ms_to_sec
+from utils.helpers import miliseconds_to_hms, seconds_to_hms, get_random_process_id
 from collections import defaultdict
 
 
@@ -8,12 +9,14 @@ class Scheduler:
                  vertiports: object,
                  vertiport_manager: object,
                  aircraft_capacity: int = None,
-                 is_fixed_schedule: bool = False):
+                 is_fixed_schedule: bool = False,
+                 logger: object = None):
         self.env = env
         self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
         self.vertiport_manager = vertiport_manager
         self.is_fixed_schedule = is_fixed_schedule
+        self.logger = logger
         self.flight_schedule = None
         self.charge_schedule = None
 
@@ -25,7 +28,8 @@ class Scheduler:
             destination_vertiport_id = row['destination_vertiport_id']
             yield self.env.timeout(pushback_interarrival_time)
 
-            # print(f'Flight {row["tail_number"]} is departing from {origin_vertiport_id} at {ms_to_sec(self.env.now)}.')
+            self.logger.info(f"Pushback time: {seconds_to_hms(row['aircraft_pushback_time'])} Flight scheduled from {origin_vertiport_id}"
+                             f" to {destination_vertiport_id} for SOC: {row['soc']}.")
 
             # Get the waiting room for the destination
             waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
@@ -39,16 +43,33 @@ class Scheduler:
                                                                      tail_number=row['tail_number'],
                                                                      soc=row['soc']))
         
+    # def initiate_charge_schedule_from_file(self):
+    #     for _, row in self.charge_schedule.iterrows():
+    #         yield self.env.timeout(row['charge_interarrival_time'])
+    #         self.logger.info(f"Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
+    #         # Get the aircraft that has the closes SOC to the init_soc
+    #         aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
+    #                                                                  init_soc=row['init_soc'])
+    #         self.logger.info(f"Scheduler got aircraft {aircraft.tail_number} with init soc {aircraft.soc} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
+    #         aircraft.target_soc = row['target_soc']
+    #         self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
+
     def initiate_charge_schedule_from_file(self):
+        interarrival_time_sum = 0
         for _, row in self.charge_schedule.iterrows():
-            yield self.env.timeout(row['charge_interarrival_time'])
-            # print(f"Charging initiated at vertiport {row['vertiport_id']} at {ms_to_sec(self.env.now)} from {row['init_soc']} to {row['target_soc']}.")
-            # Get the aircraft that has the closes SOC to the init_soc
-            aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
-                                                                     init_soc=row['init_soc'])
-            # print(f"Got aircraft {aircraft.tail_number} with soc {aircraft.soc} at vertiport {row['vertiport_id']} at {ms_to_sec(self.env.now)} for charging.")
-            aircraft.target_soc = row['target_soc']
-            self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
+            interarrival_time_sum += row['charge_interarrival_time']
+            self.env.process(self.initiate_charge_for_aircraft(row, interarrival_time_sum))
+
+    def initiate_charge_for_aircraft(self, row, interarrival_time):
+        yield self.env.timeout(interarrival_time)
+        random_id = get_random_process_id()
+        self.logger.info(f"|{random_id}| Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
+        aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
+                                                                init_soc=row['init_soc'],
+                                                                target_soc=row['target_soc'])
+        self.logger.info(f"|{random_id}| Scheduler got aircraft {aircraft.tail_number} for charging with init soc {round(aircraft.soc, 2)} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
+        aircraft.target_soc = row['target_soc']
+        self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
 
     def check_max_waiting_time_threshold(self, max_flight_waiting_time):
         """
@@ -111,12 +132,13 @@ class Scheduler:
             waiting_room.get()
         return departing_passengers
 
-    def get_aircraft_with_closest_init_soc(self, vertiport_id, init_soc):
+    def get_aircraft_with_closest_init_soc(self, vertiport_id, init_soc, target_soc):
         """
         Returns the aircraft that has the closes SOC to the init_soc
         """
         return self.vertiports[vertiport_id].available_aircraft_store.get(
-            lambda aircraft: abs(aircraft.soc - init_soc) <= 9)
+            lambda aircraft: abs(aircraft.soc - init_soc) <= 9 and aircraft.soc < target_soc)
+
 
 def noninteruptive_aircraft_assignment_strategy(current_waiting_room,
                                                 mission_length,

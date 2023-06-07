@@ -75,6 +75,7 @@ def create_vertiport_manager(env,
                              fixed_schedule,
                              flight_rebalancing,
                              node_locations,
+                             flight_duration_constant,
                              logger):
     return VertiportManager(env=env,
                             vertiports=vertiports,
@@ -97,4 +98,5 @@ def create_vertiport_manager(env,
                             fixed_schedule=fixed_schedule,
                             flight_rebalancing=flight_rebalancing,
                             node_locations=node_locations,
+                            flight_duration_constant=flight_duration_constant,
                             logger=logger)

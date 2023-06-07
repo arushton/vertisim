@@ -4,7 +4,7 @@ from typing import Any, Dict
 from utils.units import sec_to_ms, ms_to_sec, ms_to_min
 from utils.distribution_generator import DistributionGenerator
 from utils.weighted_random_chooser import random_choose_exclude_element
-from utils.helpers import get_passenger_ids_from_passenger_list, get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists
+from utils.helpers import get_passenger_ids_from_passenger_list, duplicate_str, get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists
 from aircraft.battery_model import BatteryModel
 import pandas as pd
 from collections import defaultdict
@@ -35,6 +35,7 @@ class VertiportManager:
                  fixed_schedule: bool,
                  flight_rebalancing: bool,
                  node_locations: Dict,
+                 flight_duration_constant: float,
                  logger: object):
         self.env = env
         self.vertiports = vertiports
@@ -72,6 +73,7 @@ class VertiportManager:
             self.env.process(self.check_passenger_max_waiting_time_threshold())
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
+        self.flight_duration_constant = flight_duration_constant
         self.logger = logger
 
     # AIRCRAFT RELATED METHODS
@@ -552,7 +554,7 @@ class VertiportManager:
         # Retrieve aircraft from the store
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc)   
         # Log the aircraft allocation process
-        self.logger.info(f'|{random_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {aircraft.soc}')
+        self.logger.info(f'|{random_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {round(aircraft.soc, 2)}')
         # Measure and save the aircraft allocation time
         self.save_aircraft_allocation_time(origin_vertiport_id, aircraft, aircraft_allocation_start_time)
 
@@ -863,6 +865,10 @@ class VertiportManager:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
             else:
+                if aircraft.flight_duration < self.flight_duration_constant:
+                    self.logger.info(f'|{duplicate_str(aircraft.tail_number)}| Flight duration is less than 10 minutes. Aircraft {aircraft.tail_number} will be hold for {ms_to_min(self.flight_duration_constant - aircraft.flight_duration)} mins at {aircraft.location}')
+                    yield self.env.timeout(self.flight_duration_constant - aircraft.flight_duration)
+                    self.logger.info(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
                 # Put aircraft into available aircraft store
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)           
