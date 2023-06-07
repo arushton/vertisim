@@ -553,13 +553,13 @@ class VertiportManager:
         self.logger.info(f'|{random_id}| Started: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {tail_number}, required SOC: {soc}')
         # Retrieve aircraft from the store
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc)   
-        # Log the aircraft allocation process
-        self.logger.info(f'|{random_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {round(aircraft.soc, 2)}')
         # Measure and save the aircraft allocation time
         self.save_aircraft_allocation_time(origin_vertiport_id, aircraft, aircraft_allocation_start_time)
 
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.add_additional_passengers_if_needed(origin_vertiport_id, destination_vertiport_id, departing_passengers)
+
+        self.logger.info(f'|{random_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
         # Save aircraft allocation and idle times
         self.save_aircraft_times(origin_vertiport_id, aircraft)
@@ -811,8 +811,11 @@ class VertiportManager:
 
     def check_holding_aircraft(self, flight_direction: str, vertiport_id: Any):
         arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction)
-        if len(arrival_fix_resource.queue) > 1:
-            num_queued = min(len(arrival_fix_resource.queue), self.check_num_available_aircraft(vertiport_id))
+        if len(arrival_fix_resource.queue) > 0:
+            num_scheduled = min(len(arrival_fix_resource.queue)+2, self.check_num_available_aircraft(vertiport_id))
+            num_queued = len(arrival_fix_resource.queue)
+            num_available_aircraft = self.check_num_available_aircraft(vertiport_id)
+            self.logger.info(f'Number of holding aircraft queued at {vertiport_id}: {num_queued}. Number of available aircraft at {vertiport_id}: {num_available_aircraft}')
             for _ in range(num_queued):
                 self.env.process(self.assign_empty_flight(vertiport_id=vertiport_id))
 
@@ -821,6 +824,11 @@ class VertiportManager:
         destination_id = random_choose_exclude_element(elements_list=self.vertiport_ids, 
                                                        exclude_element=vertiport_id, 
                                                        num_selection=1)[0]
+        num_available_aircraft_at_origin = self.check_num_available_aircraft(vertiport_id)
+        num_available_aircraft_at_destination = self.check_num_available_aircraft(destination_id)
+
+        self.logger.info(f'Assigning empty flight from {vertiport_id} to {destination_id}.'
+                         f' Number of available aircraft at {vertiport_id}: {num_available_aircraft_at_origin}. Number of available aircraft at {destination_id}: {num_available_aircraft_at_destination}.')
         yield self.env.process(self.reserve_aircraft(origin_vertiport_id=vertiport_id,
                                                 destination_vertiport_id=destination_id,
                                                 departing_passengers=[]))
@@ -834,9 +842,13 @@ class VertiportManager:
         
         # Request arrival fix resource
         arrival_fix_usage_request, arrival_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction, operation_type='arrival')
+        self.logger.info(f'Aircraft {aircraft.tail_number} requesting arrival fix resource at {aircraft.destination_vertiport_id}.'
+                         f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
+                         f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
         if self.flight_rebalancing and not self.fixed_schedule:
             self.check_holding_aircraft(flight_direction=aircraft.flight_direction, vertiport_id=aircraft.destination_vertiport_id)
         yield arrival_fix_usage_request
+        self.logger.info(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')
 
         holding_end = self.env.now
         aircraft.holding_time = holding_end - holding_start
@@ -865,7 +877,7 @@ class VertiportManager:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
             else:
-                if aircraft.flight_duration < self.flight_duration_constant:
+                if aircraft.flight_duration and aircraft.flight_duration < self.flight_duration_constant:
                     self.logger.info(f'|{duplicate_str(aircraft.tail_number)}| Flight duration is less than 10 minutes. Aircraft {aircraft.tail_number} will be hold for {ms_to_min(self.flight_duration_constant - aircraft.flight_duration)} mins at {aircraft.location}')
                     yield self.env.timeout(self.flight_duration_constant - aircraft.flight_duration)
                     self.logger.info(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
