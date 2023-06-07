@@ -129,7 +129,8 @@ class Aircraft:
         self.time_hover_climb = sec_to_ms(aircraft_params['time_hover_climb'])
         self.time_climb_transition = sec_to_ms(aircraft_params['time_climb_transition'])
         self.time_climb = sec_to_ms(aircraft_params['time_climb'])
-        self.soc_required_to_complete_mission = 50 # TODO: Complete calc_soc_required_for_flight function
+        self.soc_required_to_complete_mission = 30 # TODO: Complete calc_soc_required_for_flight function
+        self.target_soc_constant = self.aircraft_params['target_soc_constant']
         self.velocity_optimizer = VelocityOptimizer(aircraft_params=self.aircraft_params)
         # logfile = set_logfile_path(log_file_name='main', output_folder_path=output_folder_path)
         # self.logger = setup_logger(name='main', log_file=logfile, env=self.env)
@@ -484,7 +485,7 @@ class Aircraft:
         self.vertical_velocity = 0
         self.update_aircraft_state(self.assigned_fato_id, hover_descend_energy_consumption, 'landed')
         self.event_saver.update_aircraft_energy_consumption_tracker(flight_direction=self.flight_direction, energy_consumption=self.total_energy_consumption)
-        self.logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {round(self.total_energy_consumption, 2)}')
+        self.logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {ms_to_min(self.holding_time)} mins, total energy consumption: {round(self.total_energy_consumption, 2)}')
         self.aircraft_logger.info(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
         self.total_energy_consumption = 0
 
@@ -907,13 +908,17 @@ class Aircraft:
             return max(self.time_passenger_embark_disembark, self.time_charging)
         elif self.target_soc:
             charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
-            self.logger.info(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
+        elif self.target_soc_constant:
+            charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc_constant)
         else:
             charge_time = sec_to_ms(self.vertiport_manager.charging_time_distribution.pick_number_from_distribution())
             charge_time = max(self.time_passenger_embark_disembark, charge_time)
+
         self.event_saver.save_aircraft_charging_time(vertiport_id=self.destination_vertiport_id,
                                                      aircraft_id=self.tail_number, 
                                                      charging_time=charge_time)
+        self.logger.info(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
+        
         return charge_time
 
     def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:

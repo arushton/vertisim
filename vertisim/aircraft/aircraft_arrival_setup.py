@@ -345,7 +345,9 @@ class AircraftArrivalSetup:
                                             serviced_time_at_the_location=aircraft_data['serviced_time_at_the_location'],
                                             departure_time=aircraft_data['aircraft_pushback_time'],
                                             priority=aircraft_data['priority'],
-                                            initial_process=aircraft_data['process'])
+                                            initial_process=aircraft_data['process'],
+                                            logger=self.logger,
+                                            aircraft_logger=self.aircraft_logger)
             )       
 
     def _initial_aircraft_arrival_process_without_tail_number(self, charge_schedule: pd.DataFrame):

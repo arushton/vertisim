@@ -15,8 +15,8 @@ sim_params = {
     'simultaneous_taxi_and_take_off': True,
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
-    'max_passenger_waiting_time': 600,  # seconds
-    'flight_duration_constant': 600,  # seconds
+    'max_passenger_waiting_time': 600,  # seconds or None
+    'flight_duration_constant': 600,  # seconds or None
     'charge_interruption': False,
     'step_by_step_sim': False,
     'flight_rebalancing': False,
@@ -89,7 +89,7 @@ network_and_demand = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_in_vertiport': 6,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -132,7 +132,7 @@ network_and_demand = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,
+                'num_initial_aircraft_in_vertiport': 8,
                 'initial_arrival_queue_state': 0
             }
         }     
@@ -254,6 +254,7 @@ aircraft_params = {
     # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
     'time_charging': None,  # constant sec. If None charging_time_dist will be used.
+    'target_soc_constant': 50,  # Target SOC of the aircraft for each charging event
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
