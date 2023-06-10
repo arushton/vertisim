@@ -113,6 +113,8 @@ class PerformanceMetrics:
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['min'] = -1
 
     def calculate_passenger_waiting_time_stats(self):
+        df = pd.DataFrame(self.passenger_waiting_time)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/passenger_waiting_time.csv')
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
         for vertiport_id, data in self.passenger_waiting_time.items():
             waiting_times = np.array(list(data.values()))
@@ -206,6 +208,8 @@ class PerformanceMetrics:
             self.performance_metrics[flight_direction]['energy_consumption']['min'] = np.min(energy_consumptions)
 
     def calculate_aircraft_holding_times_stats(self):
+        df = pd.DataFrame(self.aircraft_holding_time)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_holding_time.csv')
         for vertiport_id, data in self.aircraft_holding_time.items():
             waiting_times = np.array(list(data.values()))
             self.performance_metrics[vertiport_id]['aircraft_holding_times']['mean'] = ms_to_min(np.mean(waiting_times))
@@ -221,6 +225,8 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['load_factor']['mean'] = np.mean(load_factors)
 
     def compute_aircraft_idle_time_stats(self):
+        df = pd.DataFrame(self.aircraft_idle_time_tracker)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_idle_time_tracker.csv')    
         for vertiport_id, data in self.aircraft_idle_time_tracker.items():
             idle_times = list(data.values())
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['max'] = ms_to_min(np.max(idle_times))
@@ -334,6 +340,8 @@ class PerformanceMetrics:
             return 6, 15
 
     def compute_average_and_total_aircraft_throughput(self):
+        df = pd.DataFrame(self.flight_and_time_tracker)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/flight_and_time_tracker.csv')
         # Computes the passenger throughput
         total_sim_time = self.calculate_total_simulated_time()
         first, second = self.get_time_interval(total_sim_time)

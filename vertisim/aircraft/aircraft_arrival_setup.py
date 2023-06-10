@@ -293,19 +293,19 @@ class AircraftArrivalSetup:
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
         aircraft_schedule = self.setup_aircraft_schedule()
-        self.logger.info("Success: Aircraft arrival schedule loaded from file.")
+        self.logger.debug("Success: Aircraft arrival schedule loaded from file.")
 
         charge_schedule = self.setup_charge_schedule()
-        self.logger.info("Success: Aircraft charging schedule loaded from file.")
+        self.logger.debug("Success: Aircraft charging schedule loaded from file.")
 
         if charge_schedule is None:
-            self.logger.info("No charging schedule is provided. The arrival schedule will read tail numbers from the file.")
+            self.logger.debug("No charging schedule is provided. The arrival schedule will read tail numbers from the file.")
             self.env.process(self._initial_aircraft_arrival_process_with_tail_number(aircraft_schedule))
             if self.flight_schedule_file_name is not None:
-                self.logger.info("Aircraft flight schedule is provided. The scheduler will initiate the schedule.")
+                self.logger.debug("Aircraft flight schedule is provided. The scheduler will initiate the schedule.")
                 self.env.process(self.scheduler.initiate_fixed_schedule_from_file())             
         else:
-            self.logger.info("Flight schedule and a charging schedule is provided without tail numbers. The simulator will assign aircraft to the flights.")
+            self.logger.debug("Flight schedule and a charging schedule is provided without tail numbers. The simulator will assign aircraft to the flights.")
             process_list = [
                 self.env.process(self._initial_aircraft_arrival_process_without_tail_number(charge_schedule)),
                 self.env.process(self.scheduler.initiate_fixed_schedule_from_file()),
@@ -354,7 +354,7 @@ class AircraftArrivalSetup:
         for idx, row in charge_schedule.iterrows():
             yield self.env.timeout(row['charge_interarrival_time'])
 
-            self.logger.info(f"Aircraft {idx} is arrived at the vertiport {row['vertiport_id']}." 
+            self.logger.debug(f"Aircraft {idx} is arrived at the vertiport {row['vertiport_id']}." 
                              f" init_soc: {row['init_soc']}, target_soc: {row['target_soc']},"
                              f" process: {row['process']}")   
 

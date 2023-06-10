@@ -1,5 +1,5 @@
 from typing import Dict, Union, Callable, Optional, Dict, List
-from utils.units import sec_to_ms, ms_to_sec
+from utils.units import sec_to_ms, ms_to_sec, ms_to_min
 from utils.helpers import miliseconds_to_hms, seconds_to_hms, get_random_process_id
 from collections import defaultdict
 
@@ -10,13 +10,17 @@ class Scheduler:
                  vertiport_manager: object,
                  aircraft_capacity: int = None,
                  is_fixed_schedule: bool = False,
-                 logger: object = None):
+                 logger: object = None,
+                 aircraft_logger: object = None,
+                 passenger_logger: object = None,):
         self.env = env
         self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
         self.vertiport_manager = vertiport_manager
         self.is_fixed_schedule = is_fixed_schedule
         self.logger = logger
+        self.aircraft_logger = aircraft_logger
+        self.passenger_logger = passenger_logger
         self.flight_schedule = None
         self.charge_schedule = None
 
@@ -28,13 +32,13 @@ class Scheduler:
             destination_vertiport_id = row['destination_vertiport_id']
             yield self.env.timeout(pushback_interarrival_time)
 
-            self.logger.info(f"Pushback time: {seconds_to_hms(row['aircraft_pushback_time'])} Flight scheduled from {origin_vertiport_id}"
+            self.logger.debug(f"Pushback time: {seconds_to_hms(row['aircraft_pushback_time'])} Flight scheduled from {origin_vertiport_id}"
                              f" to {destination_vertiport_id} for SOC: {row['soc']}.")
 
             # Get the waiting room for the destination
             waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
             # Get the departing passengers from the waiting room
-            departing_passengers = self.collect_any_departing_passengers(waiting_room)
+            departing_passengers = self.collect_any_departing_passengers(origin_vertiport_id, waiting_room)
             # print(f"Aircraft {row['tail_number']}, with soc {row['soc']} is departing with {len(departing_passengers)} passengers from {origin_vertiport_id} at {ms_to_sec(self.env.now)}.")
             # print(f"Avaible aircraft ids: {[aircraft.tail_number for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}")
             self.env.process(self.vertiport_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
@@ -46,11 +50,11 @@ class Scheduler:
     # def initiate_charge_schedule_from_file(self):
     #     for _, row in self.charge_schedule.iterrows():
     #         yield self.env.timeout(row['charge_interarrival_time'])
-    #         self.logger.info(f"Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
+    #         self.logger.debug(f"Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
     #         # Get the aircraft that has the closes SOC to the init_soc
     #         aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
     #                                                                  init_soc=row['init_soc'])
-    #         self.logger.info(f"Scheduler got aircraft {aircraft.tail_number} with init soc {aircraft.soc} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
+    #         self.logger.debug(f"Scheduler got aircraft {aircraft.tail_number} with init soc {aircraft.soc} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
     #         aircraft.target_soc = row['target_soc']
     #         self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
 
@@ -63,11 +67,11 @@ class Scheduler:
     def initiate_charge_for_aircraft(self, row, interarrival_time):
         yield self.env.timeout(interarrival_time)
         random_id = get_random_process_id()
-        self.logger.info(f"|{random_id}| Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
+        self.logger.debug(f"|{random_id}| Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
         aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
                                                                 init_soc=row['init_soc'],
                                                                 target_soc=row['target_soc'])
-        self.logger.info(f"|{random_id}| Scheduler got aircraft {aircraft.tail_number} for charging with init soc {round(aircraft.soc, 2)} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
+        self.logger.debug(f"|{random_id}| Scheduler got aircraft {aircraft.tail_number} for charging with init soc {round(aircraft.soc, 2)} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
         aircraft.target_soc = row['target_soc']
         self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
 
@@ -80,24 +84,27 @@ class Scheduler:
         for origin, vertiport in self.vertiports.items():
             for destination, wr_store in vertiport.waiting_room_stores.items():
                 num_agents_in_the_wr = len(wr_store.items)
+                self.passenger_logger.debug(f"Checking max waiting time threshold for {origin} to {destination}. Passengers in the waiting room: {[p.passenger_id for p in wr_store.items]}."
+                                           f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in wr_store.items]}")
                 if num_agents_in_the_wr > 0:
                     for waiting_passenger in wr_store.items:
                         if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_flight_waiting_time:
                             # Collect the passengers in the waiting rooms that are waited max_flight_waiting_time or more
                             num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
-                            departing_passengers = Scheduler.collect_departing_passengers(wr_store, num_departing_passengers)
+                            departing_passengers = self.collect_departing_passengers(wr_store, num_departing_passengers)
                             departing_passenger_groups[origin][destination].extend(departing_passengers)
-
+                            self.passenger_logger.debug(f"Found {len(departing_passengers)}: {[p.passenger_id for p in departing_passengers]} passengers who are waited more than {max_flight_waiting_time} ms. ")
         return departing_passenger_groups
-
 
     def check_waiting_room(self, current_waiting_room):
         """
         Checks the departing_passenger's waiting room if that reached the
         aircraft_capacity. If yes then trigger reserve_aircraft
         """
+        self.passenger_logger.debug(f"Checking waiting room. Waiting room items: {current_waiting_room.items}.")
         if len(current_waiting_room.items) >= self.aircraft_capacity:
-            return Scheduler.collect_departing_passengers(current_waiting_room, self.aircraft_capacity)
+            return self.collect_departing_passengers(current_waiting_room=current_waiting_room, 
+                                                          num_departing_passengers=self.aircraft_capacity)
         else:
             return None
 
@@ -106,21 +113,24 @@ class Scheduler:
         """
          After allocating an aircraft, checks the waiting room again. If there are newcomers add them to the flight list
         """
-        return Scheduler.collect_departing_passengers(current_waiting_room, 
+        return self.collect_departing_passengers(current_waiting_room, 
                                                       self.aircraft_capacity - num_departing_passengers
                                                       )
 
-    @staticmethod
-    def collect_departing_passengers(current_waiting_room, num_departing_passengers) -> Union[None, List]:
+    def collect_departing_passengers(self, current_waiting_room, num_departing_passengers) -> Union[None, List]:
         departing_passengers = []
         for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
             # Collect agents from the waiting room as FIFO
             departing_passengers.append(current_waiting_room.items[0])
             # Remove the agent from the current_waiting_room
             current_waiting_room.get()
+        self.passenger_logger.debug(f"Departing passengers are collected by the Scheduler: {[p.passenger_id for p in departing_passengers]}."
+                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in departing_passengers]}."
+                                    f" Remaining passengers in the waiting room: {[p.passenger_id for p in current_waiting_room.items]}."
+                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in current_waiting_room.items]}.")
         return departing_passengers
     
-    def collect_any_departing_passengers(self, waiting_room):
+    def collect_any_departing_passengers(self, origin_vertiport_id, waiting_room):
         """
         Collects any departing passengers from the waiting room
         """
@@ -130,6 +140,10 @@ class Scheduler:
             departing_passengers.append(waiting_room.items[0])
             # Remove the agent from the current_waiting_room
             waiting_room.get()
+        self.passenger_logger.debug(f"Departing passengers are collected by the Scheduler (fixed schedule) at {origin_vertiport_id}: {[p.passenger_id for p in departing_passengers]}."
+                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in departing_passengers]}."
+                                    f" Remaining passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}."
+                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}.")            
         return departing_passengers
 
     def get_aircraft_with_closest_init_soc(self, vertiport_id, init_soc, target_soc):

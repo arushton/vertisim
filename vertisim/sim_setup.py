@@ -7,7 +7,8 @@ import pandas as pd
 from collections import defaultdict
 from aircraft.aircraft_arrival_setup import AircraftArrivalSetup
 from event_saver import EventSaver
-from module_setup import vertiport_config, create_vertiport_manager, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
+from vertiport_manager import VertiportManager
+from module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
 from passenger_arrival_setup import PassengerArrivalSetup
 from performance_metrics import PerformanceMetrics
 from save_output import save_output
@@ -45,7 +46,7 @@ class SimSetup:
         set_seed(sim_params['random_seed'])
         self.env = self.create_environment()
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
-        self.logger, self.aircraft_logger = self.create_loggers()
+        self.logger, self.aircraft_logger, self.passenger_logger = self.create_loggers()
         self.vertiport_layouts = self.create_vertiport_layout()
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
@@ -88,9 +89,14 @@ class SimSetup:
         """
         logger = Logger(output_folder_path=self.output_folder_path)
         logger.create_logger(name='main', env=self.env)
+
         aircraft_logger = Logger(output_folder_path=self.output_folder_path)
         aircraft_logger.create_logger(name='aircraft', env=self.env)
-        return logger, aircraft_logger
+
+        passenger_logger = Logger(output_folder_path=self.output_folder_path)
+        passenger_logger.create_logger(name='passenger', env=self.env)
+
+        return logger, aircraft_logger, passenger_logger
 
     def create_vertiport_layout(self):
         """
@@ -223,7 +229,9 @@ class SimSetup:
                             vertiport_manager=None,
                             aircraft_capacity=self.aircraft_params['pax'],
                             is_fixed_schedule=self.fixed_schedule,
-                            logger=self.logger)
+                            logger=self.logger,
+                            aircraft_logger=self.aircraft_logger,
+                            passenger_logger=self.passenger_logger)
 
     def create_airspace(self):
         # Create airspace
@@ -255,7 +263,7 @@ class SimSetup:
     
     def create_vertiport_manager(self):
         # Create vertiport manager
-        return create_vertiport_manager(
+        return VertiportManager(
             env=self.env,
             vertiports=self.vertiports,
             vertiport_ids=self.vertiport_ids,
@@ -278,7 +286,9 @@ class SimSetup:
             flight_rebalancing=self.sim_params['flight_rebalancing'],
             node_locations=self.node_locations,
             flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
-            logger=self.logger
+            logger=self.logger,
+            aircraft_logger=self.aircraft_logger,
+            passenger_logger=self.passenger_logger
         )
 
     def create_aircraft_arrival_process(self):
@@ -337,7 +347,8 @@ class SimSetup:
                     vertiport_ids=self.vertiport_ids,
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=None,
-                    network_simulation=self.sim_params['network_simulation']
+                    network_simulation=self.sim_params['network_simulation'],
+                    passenger_logger=self.passenger_logger
                 )
             else:
                 # Create passenger arrival process
@@ -350,7 +361,8 @@ class SimSetup:
                     vertiport_ids=self.vertiport_ids,
                     vertiport_manager=self.vertiport_manager,
                     aircraft_params=self.aircraft_params,
-                    network_simulation=self.sim_params['network_simulation']
+                    network_simulation=self.sim_params['network_simulation'],
+                    passenger_logger=self.passenger_logger
                 )
             self.env.process(
                 passenger_arrival_process.create_passenger_arrival()

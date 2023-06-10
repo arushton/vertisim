@@ -46,7 +46,7 @@ network_and_demand = {
     # and aircraft assignment will be done based on the optimization output.
     'charge_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/charge_schedule_5.csv',
     'flight_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/flight_schedule_5.csv',
-    'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process_test.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
@@ -54,10 +54,10 @@ network_and_demand = {
     'vertiports': {
     # Input specifications for each vertiport.
         'LAX': {
-            'layout': 'clover_1_fato_10_park_lax',
+            'layout': 'clover_1_fato_8_park_lax',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
-            'num_chargers': 10,
+            'num_chargers': 8,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
@@ -89,7 +89,7 @@ network_and_demand = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 6,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -132,7 +132,7 @@ network_and_demand = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 8,
+                'num_initial_aircraft_in_vertiport': 4,
                 'initial_arrival_queue_state': 0
             }
         }     
@@ -254,7 +254,7 @@ aircraft_params = {
     # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
     'time_charging': None,  # constant sec. If None charging_time_dist will be used.
-    'target_soc_constant': 50,  # Target SOC of the aircraft for each charging event
+    'target_soc_constant': None,  # Target SOC of the aircraft for each charging event
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
