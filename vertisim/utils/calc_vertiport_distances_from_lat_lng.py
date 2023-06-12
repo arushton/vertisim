@@ -53,8 +53,10 @@ def calc_vertiport_distances(vertiport_network_file_path: str,
         # Set input location
         input_location = os.path.join(cwd, 'input/network')
 
-        vertiport_network = create_vertiport_network_file(fato_coords_list, vertiport_ids, 
-                                                          input_location, network_simulation)
+        vertiport_network = create_vertiport_network_file(fato_coords_list=fato_coords_list, 
+                                                          vertiport_ids=vertiport_ids, 
+                                                          original_path=input_location, 
+                                                          network_simulation=network_simulation)
         
         print('Success: Vertiport network file created.')
         
