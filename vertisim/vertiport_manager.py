@@ -563,6 +563,7 @@ class VertiportManager:
         # Get the intended pushback time of the aircraft
         pushback_time = self.env.now        
         # Retrieve aircraft from the store
+        yield self.env.timeout(1)
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc) 
         # Set the intended pushback time of the aircraft 
         aircraft.pushback_time = pushback_time
@@ -621,9 +622,9 @@ class VertiportManager:
         # Handle the case where only soc is specified
         if tail_number is None and soc is not None:
             self.validate_soc(soc)
-            # print(f"Retrieving aircraft with SOC {soc}. Available aircraft ids: {[aircraft.tail_number for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}, their soc: {[aircraft.soc for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}")
-            # TODO: 10 is a magic number, should be a parameter
-            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: abs(soc - aircraft.soc) <= self.charge_assignment_sensitivity)
+
+            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(
+                lambda aircraft: abs(soc - aircraft.soc) <= self.charge_assignment_sensitivity)
             # return (yield from self.retrieve_aircraft_by_soc(origin_vertiport_id, soc, wait_time))
 
         # Handle the case where both tail_number and soc are specified

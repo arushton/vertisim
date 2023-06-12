@@ -55,6 +55,7 @@ class Aircraft:
         self._departure_time = departure_time
         self._priority = priority
         self.initial_process = initial_process
+        self.preflight_soc = self._soc
 
         self.aircraft_params = aircraft_params
         self.max_vertical_velocity = self.aircraft_params['max_vertical_velocity'] 
@@ -489,6 +490,13 @@ class Aircraft:
         self.logger.debug(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {ms_to_min(self.holding_time)} mins, total energy consumption: {round(self.total_energy_consumption, 2)}')
         self.aircraft_logger.debug(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
         self.total_energy_consumption = 0
+         # TODO: Remove below. HARDCODED for optimization integration
+        if self.flight_direction == 'LAX_DTLA':
+            self.soc = self.preflight_soc - 10
+        elif self.flight_direction == 'DTLA_LAX':
+            self.soc = self.preflight_soc - 7.5
+        else:
+            raise ValueError(f'Invalid flight direction: {self.flight_direction}')
 
     def post_landing_procedures(self):
         yield self.env.timeout(round(self.time_post_landing_safety_checks))
@@ -688,6 +696,7 @@ class Aircraft:
 
     def aircraft_take_off_process(self, take_off_fato_id):
         """Defines the take-off process of an aircraft."""
+        self.preflight_soc = self.soc
         yield self.env.process(self.initial_takeoff_procedure(take_off_fato_id))
         yield self.env.process(self.hover_climb())
         yield self.env.process(self.climb_transition())

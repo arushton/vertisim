@@ -85,6 +85,9 @@ class PerformanceMetrics:
         # else:
         #     self.print_performance_metrics()
 
+        df = pd.DataFrame(self.flight_and_time_tracker)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/flight_and_time_tracker.csv')                
+
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
             if consolidation_times := [
@@ -131,6 +134,8 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['passenger_transfer_time']['min'] = ms_to_min(np.min(transfer_times))
 
     def calculate_passenger_trip_time_stats(self):
+        df = pd.DataFrame(self.passenger_trip_times)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/passenger_trip_times.csv')           
         # Creates a dataframe for passenger trip time statistics including mean, median, standard deviation,
         for flight_direction, data in self.passenger_trip_times.items():
             trip_times = np.array(list(data.values()))
@@ -207,6 +212,8 @@ class PerformanceMetrics:
             self.performance_metrics[flight_direction]['energy_consumption']['min'] = np.min(energy_consumptions)
 
     def calculate_aircraft_holding_times_stats(self):
+        df = pd.DataFrame(self.aircraft_holding_time)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_holding_time.csv')
         for vertiport_id, data in self.aircraft_holding_time.items():
             waiting_times = np.array(list(data.values()))
             self.performance_metrics[vertiport_id]['aircraft_holding_times']['mean'] = ms_to_min(np.mean(waiting_times))
@@ -222,6 +229,8 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['load_factor']['mean'] = np.mean(load_factors)
 
     def compute_aircraft_idle_time_stats(self):
+        df = pd.DataFrame(self.aircraft_idle_time_tracker)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_idle_time_tracker.csv')        
         for vertiport_id, data in self.aircraft_idle_time_tracker.items():
             idle_times = list(data.values())
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['max'] = ms_to_min(np.max(idle_times))

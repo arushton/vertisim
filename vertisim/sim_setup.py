@@ -414,7 +414,7 @@ class SimSetup:
                                   verbose=self.sim_params['verbose']).performance_metrics
 
     def save_results(self):
-        print("\n Saving results...")
+        print("\nSaving results...")
         # Save the results
         save_output(
             trackers={
