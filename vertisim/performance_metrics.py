@@ -401,19 +401,24 @@ class PerformanceMetrics:
         total_sim_time = self.calculate_total_simulated_time()
         for vertiport_id, data in self.fato_usage_tracker.items():
             time_fato_empty = 0
+            occupancy_index = 0
             if self.is_network_simulation:
                 keys = list(data.keys())
                 values = list(data.values())
-                for i in range(len(keys) - 1):
-                    if values[i] == 0 and values[i + 1] == 1:
-                        time_fato_empty += keys[i + 1] - keys[i]
+                for i in range(len(keys)):
+                    # if values[i] == 0 and values[i + 1] == 1:
+                    #     time_fato_empty += keys[i + 1] - keys[i]
+                    if values[i] == 1:
+                        time_fato_empty += keys[i] - keys[occupancy_index]
+                        occupancy_index = i+1
             else:
                 keys = list(data.keys())
                 values = list(data.values())
-                for i in range(len(keys) - 1):
+                for i in range(len(keys)):
                     if keys[i] >= self.sim_start_timestamp + self.hour:
-                        if values[i] == 0 and values[i + 1] == 1:
-                            time_fato_empty += keys[i + 1] - keys[i]
+                        if values[i] == 1:
+                            time_fato_empty += keys[i] - keys[occupancy_index]
+                            occupancy_index = i+1
 
             fato_utilization = round((hr_to_ms(total_sim_time) - time_fato_empty) / hr_to_ms(total_sim_time) * 100, 2)
             self.performance_metrics[vertiport_id]['fato_utilization'] = fato_utilization
