@@ -17,7 +17,7 @@ def collect_flow_entity_state_variables(aircraft_agents: Dict, passenger_agents:
     aircraft_states = defaultdict(dict)
     for tail_number, aircraft in aircraft_agents.items():
         aircraft_states[tail_number] = {
-            'flight_phase': aircraft.flight_phase,
+            'state': aircraft.state,
             'location': aircraft.location,
             'serviced_time_at_the_location': aircraft.serviced_time_at_the_location,
             'horizontal_speed': aircraft.speed,

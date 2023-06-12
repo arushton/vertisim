@@ -38,6 +38,9 @@ class EventSaver:
         self.passenger_count_tracker = defaultdict(int)
         self.passenger_time_tracker = defaultdict(dict)
         self.aircraft_energy_consumption_tracker = defaultdict(dict)
+        self.ground_aircraft_counter = defaultdict(dict)
+        self.flying_aircraft_counter = defaultdict(dict)
+        self.passenger_trip_time_tracker = defaultdict(dict)
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.passenger_departure_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -46,6 +49,50 @@ class EventSaver:
             self.flight_count_tracker[vertiport_id] = 0
             self.passenger_count_tracker[vertiport_id] = 0
             self.passenger_time_tracker[vertiport_id][self.sim_start_timestamp] = 0
+        self.flying_aircraft_counter[self.sim_start_timestamp] = 0
+    
+    def performance_metrics(self):
+        return {
+            'aircraft_agent_trajectory': self.aircraft_agent_trajectory,
+            'passenger_agent_trajectory': self.passenger_agent_trajectory,
+            'flight_schedule': self.flight_schedule,
+            'passenger_consolidation_time': self.passenger_consolidation_time,
+            'aircraft_allocation_time': self.aircraft_allocation_time,
+            'aircraft_arrival_queue_count': self.aircraft_arrival_queue_count,
+            'passenger_departure_queue_count': self.passenger_departure_queue_count,
+            'aircraft_departure_queue_count': self.aircraft_departure_queue_count,
+            'passenger_waiting_time': self.passenger_waiting_time,
+            'passenger_transfer_time': self.passenger_transfer_time,
+            'passenger_departure_queue_waiting_time': self.passenger_departure_queue_waiting_time,
+            'aircraft_holding_time': self.aircraft_holding_time,
+            'aircraft_idle_time_tracker': self.aircraft_idle_time_tracker,
+            'aircraft_charging_times': self.aircraft_charging_times,
+            'aircraft_taxi_times': self.aircraft_taxi_times,
+            'fato_usage_tracker': self.fato_usage_tracker,
+            'flight_and_time_tracker': self.flight_and_time_tracker,
+            'flight_count_tracker': self.flight_count_tracker,
+            'flight_duration_tracker': self.flight_duration_tracker,
+            'load_factor_tracker': self.load_factor_tracker,
+            'passenger_count_tracker': self.passenger_count_tracker,
+            'passenger_time_tracker': self.passenger_time_tracker,
+            'aircraft_energy_consumption_tracker': self.aircraft_energy_consumption_tracker,
+            'ground_aircraft_counter': self.ground_aircraft_counter,
+            'flying_aircraft_counter': self.flying_aircraft_counter,
+            'passenger_trip_time_tracker': self.passenger_trip_time_tracker
+        }
+
+    def update_flying_aircraft_counter(self, flight_update: int):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.flying_aircraft_counter)
+        last_value = list(self.flying_aircraft_counter.values())[-1]
+        self.flying_aircraft_counter[time] = last_value + flight_update 
+
+    def update_ground_aircraft_counter(self, aircraft_count: Dict):
+        time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
+                                     sim_time=self.env.now)
+        time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.ground_aircraft_counter)
+        self.ground_aircraft_counter[time] = aircraft_count
 
     def update_aircraft_energy_consumption_tracker(self, flight_direction, energy_consumption):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
@@ -69,9 +116,10 @@ class EventSaver:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.load_factor_tracker[vertiport_id].append(load_factor)
-        self.passenger_count_tracker[vertiport_id] += load_factor
         self.passenger_time_tracker[vertiport_id][time] = load_factor
+        if load_factor > 0:
+            self.load_factor_tracker[vertiport_id].append(load_factor)
+            self.passenger_count_tracker[vertiport_id] += load_factor
     
     def update_fato_usage_tracker(self, vertiport_id, fato_usage):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
@@ -156,6 +204,8 @@ class EventSaver:
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
         self.aircraft_idle_time_tracker[vertiport_id][time] = time - charging_end_time
 
+    def save_passenger_trip_time(self, agent_id, flight_direction, trip_time):
+        self.passenger_trip_time_tracker[flight_direction][agent_id] = trip_time
 
     def save_agent_state(self,
                          agent: object,

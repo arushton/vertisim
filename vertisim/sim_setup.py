@@ -46,7 +46,7 @@ class SimSetup:
         set_seed(sim_params['random_seed'])
         self.env = self.create_environment()
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
-        self.logger, self.aircraft_logger, self.passenger_logger = self.create_loggers()
+        self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
         self.vertiport_layouts = self.create_vertiport_layout()
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
@@ -96,7 +96,10 @@ class SimSetup:
         passenger_logger = Logger(output_folder_path=self.output_folder_path)
         passenger_logger.create_logger(name='passenger', env=self.env)
 
-        return logger, aircraft_logger, passenger_logger
+        vertiport_logger = Logger(output_folder_path=self.output_folder_path)
+        vertiport_logger.create_logger(name='vertiport', env=self.env)
+
+        return logger, aircraft_logger, passenger_logger, vertiport_logger
 
     def create_vertiport_layout(self):
         """
@@ -229,9 +232,11 @@ class SimSetup:
                             vertiport_manager=None,
                             aircraft_capacity=self.aircraft_params['pax'],
                             is_fixed_schedule=self.fixed_schedule,
+                            charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
                             logger=self.logger,
                             aircraft_logger=self.aircraft_logger,
-                            passenger_logger=self.passenger_logger)
+                            passenger_logger=self.passenger_logger,
+                            vertiport_logger=self.vertiport_logger)
 
     def create_airspace(self):
         # Create airspace
@@ -286,6 +291,7 @@ class SimSetup:
             flight_rebalancing=self.sim_params['flight_rebalancing'],
             node_locations=self.node_locations,
             flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
+            charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
             logger=self.logger,
             aircraft_logger=self.aircraft_logger,
             passenger_logger=self.passenger_logger
@@ -308,7 +314,8 @@ class SimSetup:
                 structural_entity_groups=self.structural_entity_groups,
                 event_saver=self.event_saver,
                 logger=self.logger,
-                aircraft_logger=self.aircraft_logger
+                aircraft_logger=self.aircraft_logger,
+                vertiport_logger=self.vertiport_logger
             )
         else:
             # Create aircraft arrival process
@@ -325,7 +332,8 @@ class SimSetup:
                 structural_entity_groups=self.structural_entity_groups,                
                 event_saver=self.event_saver,
                 logger=self.logger,
-                aircraft_logger=self.aircraft_logger
+                aircraft_logger=self.aircraft_logger,
+                vertiport_logger=self.vertiport_logger
             )
         aircraft_arrival_process.create_aircraft_arrival()
 
@@ -380,50 +388,45 @@ class SimSetup:
                                         vertiport_manager=self.vertiport_manager,
                                         max_sim_time=max_sim_time)
         else:
-            self.env.run(until=max_sim_time)
+            if self.network_and_demand['flight_schedule_file_name'] is not None:
+                self.env.run()
+            else:
+                self.env.run(until=max_sim_time)
         self.print_total_time_to_run()  
 
     def print_total_time_to_run(self):
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        print(f'Total time to run: {round(time_taken, 2)} seconds')                      
+        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')                      
 
     def calculate_performance_metrics(self):
         # Print and save performance metrics
+        print("Calculating performance metrics... \n")
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
                                   aircraft_params=self.aircraft_params,
                                   only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
-                                  passenger_consolidation_time=self.event_saver.passenger_consolidation_time,
-                                  passenger_departure_queue_count=self.event_saver.passenger_departure_queue_count,
-                                  aircraft_arrival_queue_count=self.event_saver.aircraft_arrival_queue_count,
-                                  aircraft_departure_queue_count=self.event_saver.aircraft_departure_queue_count,
-                                  passenger_waiting_time=self.event_saver.passenger_waiting_time,
-                                  passenger_transfer_time=self.event_saver.passenger_transfer_time,
-                                  passenger_departure_queue_waiting_time=self.event_saver.passenger_departure_queue_waiting_time,
-                                  aircraft_holding_time=self.event_saver.aircraft_holding_time,
-                                  aircraft_charging_times=self.event_saver.aircraft_charging_times,
-                                  aircraft_taxi_times=self.event_saver.aircraft_taxi_times,
-                                  flight_schedule=self.event_saver.flight_schedule,
-                                  fato_usage_tracker=self.event_saver.fato_usage_tracker,
-                                  aircraft_idle_time_tracker=self.event_saver.aircraft_idle_time_tracker,
-                                  flight_and_time_tracker=self.event_saver.flight_and_time_tracker,
-                                  flight_count_tracker=self.event_saver.flight_count_tracker,
-                                  flight_duration_tracker=self.event_saver.flight_duration_tracker,
-                                  load_factor_tracker=self.event_saver.load_factor_tracker,
-                                  passenger_count_tracker=self.event_saver.passenger_count_tracker,
-                                  passenger_time_tracker=self.event_saver.passenger_time_tracker,
-                                  aircraft_energy_consumption_tracker=self.event_saver.aircraft_energy_consumption_tracker,
+                                  is_network_simulation=self.sim_params['network_simulation'],
+                                  performance_metric_trackers=self.event_saver.performance_metrics(),
                                   vertiport_ids=self.vertiport_ids,
+                                  flight_directions=self.airspace.flight_directions,
                                   sim_id=self.sim_id,
+                                  sim_end_timestamp=self.env.now,
                                   verbose=self.sim_params['verbose']).performance_metrics
 
     def save_results(self):
+        print("\n Saving results...")
         # Save the results
         save_output(
             trackers={
                 'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
                 'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory,
                 'flight_schedule': self.event_saver.flight_schedule,
+                'aircraft_idle_time_tracker': self.event_saver.aircraft_idle_time_tracker,
+                'flight_and_time_tracker': self.event_saver.flight_and_time_tracker,
+                'aircraft_holding_time': self.event_saver.aircraft_holding_time,
+                'ground_aircraft_counter': self.event_saver.ground_aircraft_counter,
+                'flying_aircraft_counter': self.event_saver.flying_aircraft_counter,
+                'passenger_trip_time_tracker': self.event_saver.passenger_trip_time_tracker
             },
             simulation_params={
                 'sim_params': self.sim_params,

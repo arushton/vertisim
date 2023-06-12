@@ -31,4 +31,4 @@ class ChargerModel:
         return piecewise_soc
 
     def calc_charge_rate(self, piecewise_soc, soc):
-        return piecewise_soc.subs(x, soc)    
+        return float(piecewise_soc.subs(x, soc))

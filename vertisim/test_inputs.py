@@ -16,8 +16,9 @@ sim_params = {
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds or None
-    'flight_duration_constant': 600,  # seconds or None
+    'flight_duration_constant': 600,  # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False,
+    'charge_assignment_sensitivity': 3,
     'step_by_step_sim': False,
     'flight_rebalancing': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
@@ -44,9 +45,9 @@ network_and_demand = {
     # If charge_schedule_file_name is None, then the flight_schedule should provide the tail_number and departure times.
     # Charging times will be computed internally. If charge_schedule_file_name is not None, then the charging times will be read from the file.
     # and aircraft assignment will be done based on the optimization output.
-    'charge_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/charge_schedule_5.csv',
-    'flight_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/flight_schedule_5.csv',
-    'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process_test.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'charge_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/charge_schedule.csv',
+    'flight_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/aircraft/flight_schedule.csv',
+    'passenger_schedule_file_name': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
@@ -54,10 +55,10 @@ network_and_demand = {
     'vertiports': {
     # Input specifications for each vertiport.
         'LAX': {
-            'layout': 'clover_1_fato_8_park_lax',
+            'layout': 'clover_1_fato_10_park_lax',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
-            'num_chargers': 8,
+            'num_chargers': 10,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
@@ -111,10 +112,10 @@ network_and_demand = {
             }
         },
         'DTLA': {
-            'layout': 'clover_1_fato_12_park_dtla',
+            'layout': 'clover_1_fato_13_park_dtla',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 10,
-            'num_chargers': 12,
+            'num_chargers': 13,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,

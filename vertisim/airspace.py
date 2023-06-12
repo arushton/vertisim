@@ -10,7 +10,8 @@ class Airspace:
                  airlink_capacity: int = 1,
                  airlink_segment_length_miles: float = 0.25,
                  waypoint_ids: Dict = None,
-                 waypoint_locations: Dict = None):
+                 waypoint_locations: Dict = None,
+                 flight_directions: List = None):
         self.env = env
         self.holding_unit_capacity = holding_unit_capacity
         self.airlink_capacity = airlink_capacity
@@ -18,6 +19,7 @@ class Airspace:
         self.waypoint_ids = waypoint_ids
         self.flight_directions = list(waypoint_ids.keys())
         self.waypoint_locations = waypoint_locations
+        self.flight_directions = flight_directions
         self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_locations)
         self.airlink_resources = self.create_airlink_resources()
         self.airspace_resource_states = self.get_airspace_states()

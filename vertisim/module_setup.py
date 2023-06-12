@@ -33,7 +33,8 @@ def create_airspace_layout(env: object,
                     airlink_capacity=airspace_params['airlink_capacity'],
                     airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                     waypoint_ids=airspace_creator.waypoint_ids,
-                    waypoint_locations=airspace_creator.waypoint_locations)
+                    waypoint_locations=airspace_creator.waypoint_locations,
+                    flight_directions=airspace_creator.flight_directions)
 
 
 def vertiport_config(env: object,

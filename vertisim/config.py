@@ -33,6 +33,7 @@ class VertiportConfig:
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
         self.vertiport_resource_states = self.get_resource_states()
+        self.num_aircraft = 0
 
     def get_resource_states(self):
         entity_resources = defaultdict(lambda: defaultdict(dict))

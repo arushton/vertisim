@@ -14,11 +14,11 @@ class AirspaceCreator:
         if airspace_params['airspace_layout_file_path'] is None:
             self.num_waypoints_per_airlink = self.determine_num_waypoints()
             self.airlinks_start_end_points = self.get_airlinks_start_end_points()
-            self.waypoint_ids = self.create_waypoint_ids()
+            self.waypoint_ids, self.flight_directions = self.create_waypoint_ids()
             self.waypoints = self.create_waypoints()
             self.waypoint_locations = self.match_waypoint_names_locations()
         else:
-            self.waypoint_ids, self.waypoint_locations = self.read_waypoint_locations_from_file()
+            self.waypoint_ids, self.waypoint_locations, self.flight_directions = self.read_waypoint_locations_from_file()
 
 
     def read_waypoint_locations_from_file(self):
@@ -26,10 +26,12 @@ class AirspaceCreator:
                                     sheet_name=self.airspace_params['airspace_layout_sheet_name'])
         waypoint_ids = defaultdict(list)
         waypoint_locations = defaultdict(dict)
+        flight_directions = set()
         for _, row in waypoints.iterrows():
             waypoint_ids[row['flight_direction']].append(row['waypoint_id'])       
             waypoint_locations[row['waypoint_id']] = [row['latitude'], row['longitude'], row['altitude']]
-        return waypoint_ids, waypoint_locations
+            flight_directions.add(row['flight_direction'])
+        return waypoint_ids, waypoint_locations, flight_directions
 
     
     @staticmethod
@@ -103,7 +105,9 @@ class AirspaceCreator:
 
     def create_waypoint_ids(self):
         waypoint_ids = defaultdict(list)
+        flight_directions = set()
         for flight_direction, num_waypoints in self.num_waypoints_per_airlink.items():
+            flight_directions.add(flight_direction)
             origin = flight_direction.split('_')[0]
             destination = flight_direction.split('_')[1]
             num_waypoints = num_waypoints + 4
@@ -120,7 +124,7 @@ class AirspaceCreator:
                     waypoint_ids[flight_direction].append(f'{origin}_departure_fix')
                 else:
                     waypoint_ids[flight_direction].append(f'{flight_direction}_waypoint_{str(i-1)}')
-        return waypoint_ids
+        return waypoint_ids, flight_directions
 
 
     def create_waypoints(self):

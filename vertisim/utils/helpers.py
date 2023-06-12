@@ -1,4 +1,5 @@
 import random
+import math
 import numpy as np
 from utils.units import sec_to_ms
 from typing import List, Union, Dict, Any
@@ -419,6 +420,16 @@ def duplicate_str(string, n=5):
     Duplicate a string n times.
     """
     return str(string) * n
+
+def roundup(value, base=5):
+    """
+    Round up a value to the nearest base.
+    """
+    return math.ceil(value / base) * base
+
+def roundup_to_five_minutes(ms):
+    # 300,000 milliseconds is 5 minutes
+    return ((ms + 299999) // 300000) * 300000
 
 
 

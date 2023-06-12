@@ -34,7 +34,8 @@ class AircraftArrivalSetup:
                  structural_entity_groups: Dict,                
                  event_saver: object,
                  logger: object,
-                 aircraft_logger: object):
+                 aircraft_logger: object,
+                 vertiport_logger: object):
         self.env = env
         self.network_simulation = network_simulation
         self.vertiport_layouts = vertiport_layouts
@@ -50,7 +51,8 @@ class AircraftArrivalSetup:
         # logfile = set_logfile_path(log_file_name='main', output_folder_path=output_folder_path)
         # self.logger = setup_logger(name='main', log_file=logfile, env=self.env)
         self.logger = logger
-        self.aircraft_logger=aircraft_logger
+        self.aircraft_logger = aircraft_logger
+        self.vertiport_logger = vertiport_logger
             
     @staticmethod
     def validate_columns(dataframe: pd.DataFrame, required_columns: list, optional_columns: dict, check_none_columns: list) -> None:
@@ -419,6 +421,8 @@ class AircraftArrivalSetup:
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.
         self.vertiport_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
+
+        self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.state}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
 
         yield self.env.process(self.initiate_aircraft(aircraft=aircraft))
         

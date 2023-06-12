@@ -10,17 +10,21 @@ class Scheduler:
                  vertiport_manager: object,
                  aircraft_capacity: int = None,
                  is_fixed_schedule: bool = False,
+                 charge_assignment_sensitivity: float = 3,
                  logger: object = None,
                  aircraft_logger: object = None,
-                 passenger_logger: object = None,):
+                 passenger_logger: object = None,
+                 vertiport_logger: object = None):
         self.env = env
         self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
         self.vertiport_manager = vertiport_manager
         self.is_fixed_schedule = is_fixed_schedule
+        self.charge_assignment_sensitivity = charge_assignment_sensitivity
         self.logger = logger
         self.aircraft_logger = aircraft_logger
         self.passenger_logger = passenger_logger
+        self.vertiport_logger = vertiport_logger
         self.flight_schedule = None
         self.charge_schedule = None
 
@@ -34,29 +38,21 @@ class Scheduler:
 
             self.logger.debug(f"Pushback time: {seconds_to_hms(row['aircraft_pushback_time'])} Flight scheduled from {origin_vertiport_id}"
                              f" to {destination_vertiport_id} for SOC: {row['soc']}.")
+            
+            if pushback_interarrival_time != 0:
+                for _, aircraft in self.vertiport_manager.aircraft_agents.items():
+                    self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.state}, SOC: {aircraft.soc}, location: {aircraft.location}.")
 
             # Get the waiting room for the destination
             waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
             # Get the departing passengers from the waiting room
             departing_passengers = self.collect_any_departing_passengers(origin_vertiport_id, waiting_room)
-            # print(f"Aircraft {row['tail_number']}, with soc {row['soc']} is departing with {len(departing_passengers)} passengers from {origin_vertiport_id} at {ms_to_sec(self.env.now)}.")
-            # print(f"Avaible aircraft ids: {[aircraft.tail_number for aircraft in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}")
+            # Reserve an aircraft for the flight
             self.env.process(self.vertiport_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
                                                                      destination_vertiport_id=destination_vertiport_id,
                                                                      departing_passengers=departing_passengers,
                                                                      tail_number=row['tail_number'],
                                                                      soc=row['soc']))
-        
-    # def initiate_charge_schedule_from_file(self):
-    #     for _, row in self.charge_schedule.iterrows():
-    #         yield self.env.timeout(row['charge_interarrival_time'])
-    #         self.logger.debug(f"Charge Initiation by Scheduler at {seconds_to_hms(row['charging_start_time'])}: At vertiport {row['vertiport_id']} from {row['init_soc']} to {row['target_soc']}.")
-    #         # Get the aircraft that has the closes SOC to the init_soc
-    #         aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
-    #                                                                  init_soc=row['init_soc'])
-    #         self.logger.debug(f"Scheduler got aircraft {aircraft.tail_number} with init soc {aircraft.soc} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
-    #         aircraft.target_soc = row['target_soc']
-    #         self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
 
     def initiate_charge_schedule_from_file(self):
         interarrival_time_sum = 0
@@ -71,7 +67,7 @@ class Scheduler:
         aircraft = yield self.get_aircraft_with_closest_init_soc(vertiport_id=row['vertiport_id'], 
                                                                 init_soc=row['init_soc'],
                                                                 target_soc=row['target_soc'])
-        self.logger.debug(f"|{random_id}| Scheduler got aircraft {aircraft.tail_number} for charging with init soc {round(aircraft.soc, 2)} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
+        self.logger.debug(f"|{random_id}| Scheduler got aircraft {aircraft.tail_number} for charging with aircraft's init soc {round(aircraft.soc, 2)} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
         aircraft.target_soc = row['target_soc']
         self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
 
@@ -150,8 +146,10 @@ class Scheduler:
         """
         Returns the aircraft that has the closes SOC to the init_soc
         """
+        self.logger.debug(f"Available aircraft ids: {[aircraft.tail_number for aircraft in self.vertiports[vertiport_id].available_aircraft_store.items]}"
+                          f" Their SoC: {[aircraft.soc for aircraft in self.vertiports[vertiport_id].available_aircraft_store.items]}")
         return self.vertiports[vertiport_id].available_aircraft_store.get(
-            lambda aircraft: abs(aircraft.soc - init_soc) <= 9 and aircraft.soc < target_soc)
+            lambda aircraft: abs(aircraft.soc - init_soc) <= self.charge_assignment_sensitivity and aircraft.soc < target_soc)
 
 
 def noninteruptive_aircraft_assignment_strategy(current_waiting_room,

@@ -55,7 +55,8 @@ def save_output(trackers,
             trajectory_output_file_name = os.path.join(output_dir, key)
             df.to_csv(trajectory_output_file_name + '.csv')
 
-            if key != 'flight_schedule' and simulation_params['sim_params']['save_trajectories']:
+            if key in ['aircraft_agent_trajectory', 'passenger_agent_trajectory'] \
+                and simulation_params['sim_params']['save_trajectories']:
                 # Convert trajectory df to geoJSON and save
                 agent_type = get_str_before_first_occurrence_of_char(key, '_')
                 if json_trajectory := create_trajectory_json(

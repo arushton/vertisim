@@ -31,7 +31,7 @@ https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-
 # Installation
 1. Download all of the files.
 2. Open your terminal and cd to vertisim folder
-3. Create a virtual environment: If you are using conda write `conda create -n vertisim python=3.8`
+3. Create a virtual environment: If you are using conda write `conda create -n vertisim python=3.11`
 4. After you create your environment activate your environment by writing `conda activate vertisim` to your terminal.
 5. Install the requirements with `pip install -r requirements.txt`
 6. Done!

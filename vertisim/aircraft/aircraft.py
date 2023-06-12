@@ -1,4 +1,4 @@
-from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order
+from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes
 from utils.distance import haversine_dist
 from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
@@ -60,7 +60,7 @@ class Aircraft:
         self.max_vertical_velocity = self.aircraft_params['max_vertical_velocity'] 
         self.max_horizontal_velocity = self.aircraft_params['max_horizontal_velocity']   
 
-        self.flight_phase = 'ground' # ['ground', 'cruise', 'descend', 'descend_transition', 'hover_descend', 'hover_climb', 'climb_transition', 'climb', 'holding']
+        self.state = self.initial_process # ['ground', 'cruise', 'descend', 'descend_transition', 'hover_descend', 'hover_climb', 'climb_transition', 'climb', 'holding', 'charging', 'parking', 'pushback', 'takeoff', 'landing']
         self.charging_start_time = None
         self.charging_end_time = None
         self.parking_space = None
@@ -71,6 +71,7 @@ class Aircraft:
         self.flight_direction = None
         self.flight_duration = None
         self.turnaround_time = None
+        self.pushback_time = None
         self.total_energy_consumption = 0
         self.target_soc = target_soc
 
@@ -151,7 +152,7 @@ class Aircraft:
             self._soc = value
 
     def update_soc(self, value):
-        self._soc += value
+        self._soc += round(value, 2)
 
     @property
     def speed(self):
@@ -415,7 +416,7 @@ class Aircraft:
                                                 vertical_distance=vertical_distance,
                                                 cost_type='descend'
                                                 )
-        self.flight_phase = 'descend'
+        self.state = 'descend'
 
         self.aircraft_logger.debug(f'Descend Setup: Aircraft {self.tail_number} will descend from {self.location} to {final_approach_fix}'
                                   f' with forward velocity {self.speed} and vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}.'
@@ -438,7 +439,7 @@ class Aircraft:
                                   f' Descend time: {descend_time}, descend energy consumption: {descend_energy_consumption}.')
 
     def descend_transition(self):
-        self.flight_phase = 'descend_transition'
+        self.state = 'descend_transition'
         hover_fix_id = self.vertiport_manager.get_last_airlink_node_id(flight_direction=self.flight_direction)
         horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, hover_fix_id)
         initial_velocity_guess = self.guess_initial_velocity()
@@ -466,7 +467,7 @@ class Aircraft:
         self.vertiport_manager.release_fix_resource(aircraft=self, operation='arrival')
 
     def hover_descend(self):
-        self.flight_phase = 'hover_descend'
+        self.state = 'hover_descend'
         self.vertical_velocity = self.aircraft_params['vertical_landing_velocity']
         hover_descend_time = self.compute_travel_time_from_vertical_velocity(origin=self.location,
                                                         destination=self.assigned_fato_id,
@@ -551,6 +552,7 @@ class Aircraft:
                 self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked_on_fato_pad')
             return                          
 
+        self.state = 'taxiing'
         # Get the first node and the last node on the taxi route. They are
         # parking space nodes or FATO pad nodes. Since they are already assigned
         # no need to reserve them.
@@ -681,6 +683,8 @@ class Aircraft:
             self.vertiport_manager.vertiports[vertiport_id].taxiway_node_store.put(previous_node)
             self.vertiport_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))
 
+        self.state = 'parked'
+
 
     def aircraft_take_off_process(self, take_off_fato_id):
         """Defines the take-off process of an aircraft."""
@@ -707,7 +711,7 @@ class Aircraft:
 
     def hover_climb(self):
         """Hover climb phase of the takeoff."""
-        self.flight_phase = 'hover_climb'
+        self.state = 'hover_climb'
         self.speed = 0 # horizontal speed
         self.vertical_velocity = self.aircraft_params['vertical_takeoff_velocity']
         hover_fix_id = self.vertiport_manager.get_first_airlink_node_id(flight_direction=self.flight_direction)
@@ -730,7 +734,7 @@ class Aircraft:
 
     def climb_transition(self):
         """Climb transition phase of the takeoff."""
-        self.flight_phase = 'climb_transition'
+        self.state = 'climb_transition'
         departure_fix_id = self.vertiport_manager.get_second_airlink_node_id(flight_direction=self.flight_direction)
         horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, departure_fix_id)
         initial_velocity_guess = self.guess_initial_velocity()
@@ -768,7 +772,7 @@ class Aircraft:
 
     def climb_to_cruise_altitude(self):
         """Climbing to cruise altitude phase."""
-        self.flight_phase = 'climb'
+        self.state = 'climb'
         first_waypoint = self.vertiport_manager.get_third_airlink_node_id(flight_direction=self.flight_direction)
         first_waypoint_resource = self.vertiport_manager.get_third_airlink_resource(flight_direction=self.flight_direction)
         horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, first_waypoint)
@@ -827,7 +831,7 @@ class Aircraft:
                 horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, waypoint_id)
                 # If the vertical distance is not zero, then the aircraft is climbing or descending. If the previous flight phase
                 # is not cruise, then the aircraft is climbing. Otherwise, the aircraft is descending.
-                if vertical_distance != 0 and self.flight_phase == 'climb':
+                if vertical_distance != 0 and self.state == 'climb':
                     initial_velocity_guess = self.guess_initial_velocity()
                     self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
                                                             V=initial_velocity_guess,
@@ -847,8 +851,8 @@ class Aircraft:
                                                 f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Climb time: {climb_time},'
                                                     f' climb energy consumption: {energy_consumption}.')
                 # If the vertical distance is not zero and the previous flight phase is cruise or descend, then the aircraft is descending.
-                elif vertical_distance != 0 and self.flight_phase in ['descend', 'cruise']:
-                    self.flight_phase = 'descend'
+                elif vertical_distance != 0 and self.state in ['descend', 'cruise']:
+                    self.state = 'descend'
                     initial_velocity_guess = self.guess_initial_velocity()
                     self.speed, self.vertical_velocity = self.velocity_optimizer.optimize(
                                                             V=initial_velocity_guess,
@@ -869,7 +873,7 @@ class Aircraft:
                                                         f' descend energy consumption: {energy_consumption}.')               
                 else:
                     # If the vertical distance is zero, then the aircraft is in cruise
-                    self.flight_phase = 'cruise'
+                    self.state = 'cruise'
                     if self.aircraft_params['cruise_velocity']:
                         self.speed = self.aircraft_params['cruise_velocity'] 
                     else:                   
@@ -883,7 +887,7 @@ class Aircraft:
                     self.total_energy_consumption += energy_consumption
             
                     self.aircraft_logger.debug(f"Aircraft {self.tail_number} V_h: {self.speed}, V_v velocity: {self.vertical_velocity}, time: {link_traversal_time},"
-                                            f" energy consumption: {energy_consumption} during {self.flight_phase} from {self.location} to {waypoint_id}. SOC: {round(self.soc, 2)}")
+                                            f" energy consumption: {energy_consumption} during {self.state} from {self.location} to {waypoint_id}. SOC: {round(self.soc, 2)}")
                     
             self.update_aircraft_state(waypoint_id, energy_consumption, 'cruise')         
 
@@ -908,6 +912,7 @@ class Aircraft:
             return max(self.time_passenger_embark_disembark, self.time_charging)
         elif self.target_soc:
             charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
+            charge_time = roundup_to_five_minutes(charge_time)
         elif self.target_soc_constant:
             charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc_constant)
         else:
@@ -942,7 +947,9 @@ class Aircraft:
             yield selected_charging_request
 
         self.start_charging_process()
+        self.state = 'charging'
         yield self.env.timeout(round(self.get_charging_time()))
+        self.state = 'idle'
         self.end_charging_process()
         old_soc = self.soc
         self.soc_charge_update()
@@ -1054,7 +1061,8 @@ class Aircraft:
         charge_time = self.env.now - self.charging_start_time
         charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
         final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.soc, df=charge_lookup_table)
-        self._soc = min(100, final_soc)
+        self._soc = self.target_soc
+        # self._soc = min(100, final_soc)
 
     def convert_kwh_soc(self, kwh: float) -> int:
         """
@@ -1067,15 +1075,15 @@ class Aircraft:
         Updates the charge level of the aircraft using current charge time.
         """
         self.aircraft_logger.debug(f"Discharging {kwh} kwh from aircraft {self.tail_number} at {self.location}"
-                                  f" during {self.flight_phase}, SOC: {round(self.soc, 2)}")
+                                  f" during {self.state}, SOC: {round(self.soc, 2)}")
         if self.soc-self.convert_kwh_soc(kwh) < 0:
             soc_update = self.soc
-            print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.flight_phase} at {self.location}")
+            print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.state} at {self.location}")
         else:
             soc_update = self.convert_kwh_soc(kwh)
-        self.update_soc(-soc_update) # TODO: Create a soc vs time table with 0.5 increment
+        self.update_soc(-soc_update)
         self.aircraft_logger.debug(f"Discharged {kwh} kwh from aircraft {self.tail_number} at {self.location}"
-                                    f" during {self.flight_phase}, new SOC: {round(self.soc, 2)}")
+                                    f" during {self.state}, new SOC: {round(self.soc, 2)}")
         self.check_reserve_energy()
 
     def unload_passengers(self, passenger_disembark_time):
@@ -1183,9 +1191,9 @@ class Aircraft:
         self.soc_discharge_update(holding_energy)
     
     def check_reserve_energy(self) -> float:
-        if self.soc <= 2 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
-            print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.flight_phase} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
-        if self.soc <= 20 and self.flight_phase in ['landing', 'cruise', 'takeoff']:
+        if self.soc <= 2 and self.state in ['landing', 'cruise', 'takeoff']:
+            print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.state} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
+        if self.soc <= 20 and self.state in ['landing', 'cruise', 'takeoff']:
             self.priority = 0
 
     def update_altitude(self, vertical_velocity, time):
