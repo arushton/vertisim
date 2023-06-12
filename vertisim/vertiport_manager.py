@@ -721,11 +721,13 @@ class VertiportManager:
     def save_aircraft_times(self, origin_vertiport_id, aircraft):
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='aircraft_allocation')
         if aircraft.charging_end_time is None:
+            idle_time = self.env.now - aircraft.arrival_time
             self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
-                                                charging_end_time=aircraft.arrival_time)
+                                                     idle_time=idle_time)
         else:
+            aircraft.idle_time += self.env.now - aircraft.charging_end_time
             self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
-                                                    charging_end_time=aircraft.charging_end_time)
+                                                     idle_time=aircraft.idle_time)
 
     def save_passenger_times(self, origin_vertiport_id, passengers):
         for passenger in passengers:
@@ -905,11 +907,13 @@ class VertiportManager:
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
             else:
                 if aircraft.flight_duration and self.env.now - aircraft.pushback_time < self.flight_duration_constant:
-                    holding_time = self.flight_duration_constant - (self.env.now - aircraft.pushback_time) - 1
+                    ground_holding_time = self.flight_duration_constant - (self.env.now - aircraft.pushback_time) - 1
                     self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Flight duration is less than {ms_to_min(self.flight_duration_constant)} minutes.'
                                       f' Pushback time was {miliseconds_to_hms(aircraft.pushback_time)}. Aircraft {aircraft.tail_number}'
-                                      f' will hold for {ms_to_min(holding_time)} ({miliseconds_to_hms(holding_time)}) mins at {aircraft.location}')
-                    yield self.env.timeout(holding_time)
+                                      f' will hold for {ms_to_min(ground_holding_time)} ({miliseconds_to_hms(ground_holding_time)}) mins at {aircraft.location}')
+                    yield self.env.timeout(ground_holding_time)
+                    aircraft.ground_holding_end_time = self.env.now
+                    aircraft.idle_time += ground_holding_time
                     self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
                     aircraft.state = 'idle'
                 # Put aircraft into available aircraft store

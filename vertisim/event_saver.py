@@ -189,20 +189,18 @@ class EventSaver:
                                      sim_time=self.env.now)        
         self.aircraft_taxi_times[vertiport_id][time] = taxi_time
     
-    def save_aircraft_idle_time(self, vertiport_id: Any, charging_end_time: int) -> None:
+    def save_aircraft_idle_time(self, vertiport_id: Any, idle_time: int) -> None:
         """
         Saves the aircraft idle time
         :param origin_vertiport_id: Origin vertiport id
         :param aircraft_id: Aircraft tail number
-        :param charging_end_time: Time when the aircraft is done charging
+        :param idle_time: Idle time
         :return:
         """
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                     sim_time=self.env.now)
-        charging_end_time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
-                                                sim_time=charging_end_time)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.aircraft_idle_time_tracker[vertiport_id][time] = time - charging_end_time
+        self.aircraft_idle_time_tracker[vertiport_id][time] = idle_time
 
     def save_passenger_trip_time(self, agent_id, flight_direction, trip_time):
         self.passenger_trip_time_tracker[flight_direction][agent_id] = trip_time

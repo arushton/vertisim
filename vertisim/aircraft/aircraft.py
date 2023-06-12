@@ -69,6 +69,8 @@ class Aircraft:
         self.assigned_fato_id = None
         self.assigned_fato_resource = None
         self.holding_time = None
+        self.idle_time = 0
+        self.ground_holding_end_time = 0
         self.flight_direction = None
         self.flight_duration = None
         self.turnaround_time = None
@@ -490,6 +492,7 @@ class Aircraft:
         self.logger.debug(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {ms_to_min(self.holding_time)} mins, total energy consumption: {round(self.total_energy_consumption, 2)}')
         self.aircraft_logger.debug(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
         self.total_energy_consumption = 0
+        self.idle_time = 0
          # TODO: Remove below. HARDCODED for optimization integration
         if self.flight_direction == 'LAX_DTLA':
             self.soc = self.preflight_soc - 10
@@ -956,6 +959,7 @@ class Aircraft:
             yield selected_charging_request
 
         self.start_charging_process()
+        self.idle_time += self.env.now - self.ground_holding_end_time 
         self.state = 'charging'
         yield self.env.timeout(round(self.get_charging_time()))
         self.state = 'idle'
