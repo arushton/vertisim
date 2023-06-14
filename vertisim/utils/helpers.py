@@ -2,7 +2,7 @@ import random
 import math
 import numpy as np
 from utils.units import sec_to_ms
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict, Any, Optional
 import re
 import pandas as pd # For type hinting
 
@@ -429,6 +429,18 @@ def roundup_to_five_minutes(ms):
     return ((ms + 299999) // 300000) * 300000
 
 
+def lower_str(string: str) -> Optional[str]:
+    """
+    Convert a string to lowercase.
+    """
+    if string is None:
+        return None
+    elif isinstance(string, str):
+        return string.lower()
+    else:
+        raise TypeError(
+            f'Object is not a string. The object is of type: {type(string)}. It is not supported.'
+        )
 
 
 # def nested_dict_filter_values(d, depth, value):

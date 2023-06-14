@@ -25,7 +25,6 @@ sim_params = {
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
-    'battery_model_sim': False  # If True, then the simulation will use the battery model.
     # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
     #                                      # Assign the least capacity aircraft that can complete the mission)
     # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (
@@ -174,7 +173,7 @@ passenger_params = {
     #     },
     #     'max_val_in_dist': 60
     # },
-    'waiting_room_to_boarding_gate_walking_time_constant': 0, #30,  # secs
+    'waiting_room_to_boarding_gate_walking_time_constant': 30, #30,  # secs
     'waiting_room_to_boarding_gate_walking_time_dist': None,
     'boarding_gate_to_aircraft_time_constant': 0, #19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
@@ -221,7 +220,7 @@ aircraft_params = {
     'time_hover_descend': 15,  # sec - NOT USED
     'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
-    'ground_taxi_speed': 1000, # 3.67 # ft/s
+    'ground_taxi_speed': 3.67, # 3.67 # ft/s
     'time_passenger_embark_disembark': 0, #60 * 2,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec

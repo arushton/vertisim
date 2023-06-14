@@ -38,9 +38,11 @@ class EventSaver:
         self.passenger_count_tracker = defaultdict(int)
         self.passenger_time_tracker = defaultdict(dict)
         self.aircraft_energy_consumption_tracker = defaultdict(dict)
+        self.flight_phase_energy_consumption_tracker = defaultdict(lambda: defaultdict(dict))
         self.ground_aircraft_counter = defaultdict(dict)
         self.flying_aircraft_counter = defaultdict(dict)
         self.passenger_trip_time_tracker = defaultdict(dict)
+        self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.passenger_departure_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -78,7 +80,9 @@ class EventSaver:
             'aircraft_energy_consumption_tracker': self.aircraft_energy_consumption_tracker,
             'ground_aircraft_counter': self.ground_aircraft_counter,
             'flying_aircraft_counter': self.flying_aircraft_counter,
-            'passenger_trip_time_tracker': self.passenger_trip_time_tracker
+            'passenger_trip_time_tracker': self.passenger_trip_time_tracker,
+            'aircraft_process_time_tracker': self.aircraft_process_time_tracker,
+            'flight_phase_energy_consumption_tracker': self.flight_phase_energy_consumption_tracker
         }
 
     def update_flying_aircraft_counter(self, flight_update: int):
@@ -99,6 +103,13 @@ class EventSaver:
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.aircraft_energy_consumption_tracker[flight_direction])
         self.aircraft_energy_consumption_tracker[flight_direction][time] = energy_consumption
+
+    def save_flight_phase_energy(self, flight_direction, flight_id, flight_phase, energy):
+        # If the value exists, add the new value to the existing value
+        if flight_phase in self.flight_phase_energy_consumption_tracker[flight_direction][flight_id]:
+            self.flight_phase_energy_consumption_tracker[flight_direction][flight_id][flight_phase] += energy
+        else:
+            self.flight_phase_energy_consumption_tracker[flight_direction][flight_id][flight_phase] = energy
     
     def update_flight_duration_tracker(self, flight_direction, flight_duration):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
@@ -147,6 +158,9 @@ class EventSaver:
     def save_passenger_transfer_time(self, vertiport_id, passenger_id, transfer_time):
         self.passenger_transfer_time[vertiport_id][passenger_id] = transfer_time
 
+    def save_passenger_trip_time(self, agent_id, flight_direction, trip_time):
+        self.passenger_trip_time_tracker[flight_direction][agent_id] = trip_time        
+
     def save_passenger_departure_queue_waiting_time(self, vertiport_id, passenger_id, boarding_time):
         self.passenger_departure_queue_waiting_time[vertiport_id][passenger_id] = self.env.now - boarding_time
 
@@ -166,7 +180,9 @@ class EventSaver:
         last_value = list(self.aircraft_arrival_queue_count[vertiport_id].values())[-1]
         self.aircraft_arrival_queue_count[vertiport_id][time] = last_value + queue_update
 
-    def update_aircraft_departure_queue_counter(self, vertiport_id, queue_update: int) -> None:
+    def update_aircraft_departure_queue_counter(self, 
+                                                vertiport_id: str, 
+                                                queue_update: int) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
@@ -174,36 +190,46 @@ class EventSaver:
         last_value = list(self.aircraft_departure_queue_count[vertiport_id].values())[-1]
         self.aircraft_departure_queue_count[vertiport_id][time] = last_value + queue_update
 
-    def save_aircraft_holding_time(self, vertiport_id, agent_id, waiting_time):
+    def save_aircraft_holding_time(self, 
+                                   vertiport_id: str, 
+                                   waiting_time: float) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         self.aircraft_holding_time[vertiport_id][time] =  waiting_time
 
-    def save_aircraft_charging_time(self, vertiport_id, aircraft_id, charging_time):
+    def save_aircraft_charging_time(self,
+                                    vertiport_id: str,
+                                    charging_time: float) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)        
         self.aircraft_charging_times[vertiport_id][time] = charging_time
 
-    def save_aircraft_taxi_time(self, vertiport_id, aircraft_id, taxi_time):
+    def save_aircraft_taxi_time(self, 
+                                vertiport_id: str, 
+                                taxi_time: float) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)        
         self.aircraft_taxi_times[vertiport_id][time] = taxi_time
     
-    def save_aircraft_idle_time(self, vertiport_id: Any, idle_time: int) -> None:
-        """
-        Saves the aircraft idle time
-        :param origin_vertiport_id: Origin vertiport id
-        :param aircraft_id: Aircraft tail number
-        :param idle_time: Idle time
-        :return:
-        """
+    def save_aircraft_idle_time(self, 
+                                vertiport_id: Any, 
+                                idle_time: int) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                     sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
         self.aircraft_idle_time_tracker[vertiport_id][time] = idle_time
-
-    def save_passenger_trip_time(self, agent_id, flight_direction, trip_time):
-        self.passenger_trip_time_tracker[flight_direction][agent_id] = trip_time
+    
+    def save_aircraft_process_times(self, 
+                                    agent_id: str, 
+                                    flight_direction: str, 
+                                    flight_id: str, 
+                                    event: str, 
+                                    process_time: float) -> None:
+        # If there is a value for the event, then add the process time to it
+        if event in self.aircraft_process_time_tracker[agent_id][flight_direction][flight_id]:
+            self.aircraft_process_time_tracker[agent_id][flight_direction][flight_id][event] += process_time
+        else:
+            self.aircraft_process_time_tracker[agent_id][flight_direction][flight_id][event] = process_time
 
     def save_agent_state(self,
                          agent: object,
@@ -244,6 +270,7 @@ class EventSaver:
                          origin_vertiport_id: Any, 
                          destination_vertiport_id: Any,
                          tail_number: int, 
+                         flight_id: str,
                          aircraft_pushback_time: float,
                          passengers: list, 
                          aircraft_model: str, 
@@ -260,6 +287,7 @@ class EventSaver:
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
         self.flight_schedule[time]['tail_number'] = f'aircraft{tail_number}'
+        self.flight_schedule[time]['flight_id'] = flight_id
         self.flight_schedule[time]['origin_vertiport_id'] = origin_vertiport_id
         self.flight_schedule[time]['destination_vertiport_id'] = destination_vertiport_id
         self.flight_schedule[time]['aircraft_pushback_time'] = ms_to_sec(aircraft_pushback_time)

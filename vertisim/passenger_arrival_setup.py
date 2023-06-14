@@ -130,13 +130,7 @@ class PassengerArrivalSetup:
             location=location,
             origin_vertiport_id=origin_vertiport_id,
             destination_vertiport_id=destination_vertiport_id,
-            car_to_entrance_walking_time_constant=sec_to_ms(self.passenger_params['car_to_entrance_walking_time_constant']),
-            security_check_time_constant=sec_to_ms(self.passenger_params['security_check_time_constant']),
-            waiting_room_to_boarding_gate_walking_time_constant=sec_to_ms(self.passenger_params['waiting_room_to_boarding_gate_walking_time_constant']),
-            boarding_gate_to_aircraft_time_constant=sec_to_ms(self.passenger_params['boarding_gate_to_aircraft_time_constant']),
-            embark_disembark_time_constant=sec_to_ms(self.passenger_params['embark_disembark_time_constant']),
-            deboard_aircraft_and_walk_to_exit_constant=sec_to_ms(self.passenger_params['deboard_aircraft_and_walk_to_exit_constant']),
-            randomize_constants=self.passenger_params['randomize_constants'],
+            passenger_params=self.passenger_params,
             vertiport_manager=self.vertiport_manager
         )
 

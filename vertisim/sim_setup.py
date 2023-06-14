@@ -18,7 +18,7 @@ from run_step_by_step_simulation import run_step_by_step_simulation
 from utils.create_output_folders import create_output_folders
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
-from utils.helpers import set_seed, get_random_id, get_all_aircraft_models, create_dict_for_fixes, check_not_none
+from utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_not_none
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
 from utils.units import sec_to_ms
@@ -58,7 +58,7 @@ class SimSetup:
         self.structural_entity_groups = self.merge_structural_entity_groups()
         self.event_saver = self.create_event_saver()
         self.taxi_config = self.set_taxi_operations_config()
-        self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
+        # self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
 
         if self.network_and_demand['flight_schedule_file_name'] is not None:
@@ -280,7 +280,6 @@ class SimSetup:
             only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
             aircraft_params=self.aircraft_params,
             vertiport_distances=self.vertiport_distances,
-            aircraft_energy_consumption_data=self.aircraft_energy_consumption_data,
             passenger_distributions=self.passenger_distributions,
             max_flight_waiting_time=self.sim_params['max_passenger_waiting_time'],
             charging_interuption=self.sim_params['charge_interruption'],
@@ -414,19 +413,24 @@ class SimSetup:
                                   verbose=self.sim_params['verbose']).performance_metrics
 
     def save_results(self):
-        print("\nSaving results...")
         # Save the results
         save_output(
-            trackers={
+            trajectories={
                 'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
-                'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory,
+                'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory
+            },
+            time_tables={
                 'flight_schedule': self.event_saver.flight_schedule,
+                'ground_aircraft_counter': self.event_saver.ground_aircraft_counter,
+                'flying_aircraft_counter': self.event_saver.flying_aircraft_counter
+            },
+            trackers={
                 'aircraft_idle_time_tracker': self.event_saver.aircraft_idle_time_tracker,
                 'flight_and_time_tracker': self.event_saver.flight_and_time_tracker,
                 'aircraft_holding_time': self.event_saver.aircraft_holding_time,
-                'ground_aircraft_counter': self.event_saver.ground_aircraft_counter,
-                'flying_aircraft_counter': self.event_saver.flying_aircraft_counter,
-                'passenger_trip_time_tracker': self.event_saver.passenger_trip_time_tracker
+                'passenger_trip_time_tracker': self.event_saver.passenger_trip_time_tracker,
+                'aircraft_process_time_tracker': self.event_saver.aircraft_process_time_tracker,
+                'flight_phase_energy_consumption_tracker': self.event_saver.flight_phase_energy_consumption_tracker,
             },
             simulation_params={
                 'sim_params': self.sim_params,
@@ -444,3 +448,4 @@ class SimSetup:
             performance_metrics=self.performance_metrics,
             sim_id=self.sim_id
         )
+        print(f"Success: Results are saved {self.output_folder_path}.")

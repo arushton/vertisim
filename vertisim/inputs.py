@@ -17,15 +17,14 @@ sim_params = {
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds or None
     'flight_duration_constant': 600,  # seconds or None - Applies ground holding if the flight duration is less than this value.
-    'charge_interruption': False,
-    'charge_assignment_sensitivity': 2.4,
+    'charge_interruption': False, #TODO: Not supported yet.
+    'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
     'step_by_step_sim': False,
     'flight_rebalancing': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
     'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
-    'battery_model_sim': False  # If True, then the simulation will use the battery model.
     # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
     #                                      # Assign the least capacity aircraft that can complete the mission)
     # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (

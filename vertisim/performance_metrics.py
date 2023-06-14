@@ -54,8 +54,6 @@ class PerformanceMetrics:
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(lambda: defaultdict(dict))
 
-        # self.aircraft_arrival_queue_count = remove_larger_keys(self.aircraft_arrival_queue_count, self.flight_schedule)
-
         if not self.only_aircraft_simulation:
             self.calculate_passenger_consolidation_time_stats()
             self.calculate_passenger_waiting_time_stats()
@@ -75,7 +73,7 @@ class PerformanceMetrics:
         self.calculate_aircraft_holding_times_stats()
         self.compute_flight_duration_stats()
         self.compute_energy_consumption_stats()
-        self.compute_average_charge_time()
+        self.compute_charge_time_stats()
         self.compute_average_taxi_time()
         self.compute_turnaround_duration()
         self.compute_tlof_reservation_duration()
@@ -85,6 +83,7 @@ class PerformanceMetrics:
         # else:
         #     self.print_performance_metrics()
 
+        # TODO: Remove all save to csv methods from this file. save_output should be the only method that saves to csv
         df = pd.DataFrame(self.flight_and_time_tracker)
         df.to_csv('../../output/test_only_aircraft/performance_metrics/flight_and_time_tracker.csv')                
 
@@ -107,6 +106,8 @@ class PerformanceMetrics:
 
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
+        df = pd.DataFrame(self.passenger_waiting_time)
+        df.to_csv('../../output/test_only_aircraft/performance_metrics/passenger_waiting_time.csv')                
         for vertiport_id, data in self.passenger_waiting_time.items():
             waiting_times = np.array(list(data.values()))
             if waiting_times.size > 0:
@@ -239,18 +240,21 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['median'] = ms_to_min(np.median(idle_times))
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['std'] = ms_to_min(np.std(idle_times))
 
-
-    def compute_average_charge_time(self):
+    def compute_charge_time_stats(self):
         # Computes the average charge time
         if self.aircraft_charging_times:
             for vertiport_id in self.vertiport_ids:
                 if charge_times := list(self.aircraft_charging_times['vertiport_id'].values()):
-                    self.performance_metrics[vertiport_id]['average_charge_time'] = ms_to_min(np.mean(charge_times))
+                    self.performance_metrics[vertiport_id]['charge_time']['mean'] = ms_to_min(np.mean(charge_times))
+                    self.performance_metrics[vertiport_id]['charge_time']['median'] = ms_to_min(np.median(charge_times))
+                    self.performance_metrics[vertiport_id]['charge_time']['std'] = ms_to_min(np.std(charge_times))
+                    self.performance_metrics[vertiport_id]['charge_time']['max'] = ms_to_min(np.max(charge_times))
+                    self.performance_metrics[vertiport_id]['charge_time']['min'] = ms_to_min(np.min(charge_times))
                 else:
-                    self.performance_metrics[vertiport_id]['average_charge_time'] = 0
+                    self.performance_metrics[vertiport_id]['charge_time']['mean'] = 0
         else:
             for vertiport_id in self.vertiport_ids:
-                self.performance_metrics[vertiport_id]['average_charge_time'] = 0
+                self.performance_metrics[vertiport_id]['charge_time']['mean'] = 0
 
     def compute_average_taxi_time(self):
         # Computes the average taxi time
@@ -263,7 +267,7 @@ class PerformanceMetrics:
         for vertiport_id in self.vertiport_ids:
             self.performance_metrics[vertiport_id]['average_aircraft_turnaround_time'] = round(
                 2*self.performance_metrics[vertiport_id]['average_taxi_time'] + \
-                self.performance_metrics[vertiport_id]['average_charge_time'] + \
+                self.performance_metrics[vertiport_id]['charge_time']['mean'] + \
                 sec_to_min(self.aircraft_params['time_pre_charging_processes']) + \
                 sec_to_min(self.aircraft_params['time_post_charging_processes']) + \
                 sec_to_min(self.aircraft_params['time_charging_plug_disconnection']), 2)
@@ -657,7 +661,7 @@ class PerformanceMetrics:
 
     def print_average_charge_time(self):
         for vertiport_id in self.vertiport_ids:
-            print(f"Average charge time at {vertiport_id}: {self.performance_metrics[vertiport_id]['average_charge_time']}")
+            print(f"Average charge time at {vertiport_id}: {self.performance_metrics[vertiport_id]['charge_time']['mean']}")
 
     def print_fato_utilization(self):
         print(" ")

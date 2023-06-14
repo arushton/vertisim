@@ -1,5 +1,6 @@
 import random
 from utils.distribution_generator import DistributionGenerator
+from utils.units import sec_to_ms
 from typing import Dict, Union, Any
 
 
@@ -14,26 +15,21 @@ class Passenger:
                  origin_vertiport_id: Any,
                  destination_vertiport_id: Any,
                  location: str,
-                 car_to_entrance_walking_time_constant: Union[float, None],
-                 security_check_time_constant: Union[float, None],
-                 waiting_room_to_boarding_gate_walking_time_constant: Union[float, None],
-                 boarding_gate_to_aircraft_time_constant: Union[float, None],
-                 embark_disembark_time_constant: Union[float, None],
-                 deboard_aircraft_and_walk_to_exit_constant: Union[float, None],
-                 randomize_constants: bool,
+                 passenger_params: Dict,
                  vertiport_manager: object):
         self.env = env
         self.passenger_id = passenger_id
         self.origin_vertiport_id = origin_vertiport_id
         self.destination_vertiport_id = destination_vertiport_id
         self.location = location
-        self.car_to_entrance_walking_time_constant = car_to_entrance_walking_time_constant
-        self.security_check_time_constant = security_check_time_constant
-        self.waiting_room_to_boarding_gate_walking_time_constant = waiting_room_to_boarding_gate_walking_time_constant
-        self.boarding_gate_to_aircraft_time_constant = boarding_gate_to_aircraft_time_constant
-        self.embark_disembark_time_constant = embark_disembark_time_constant
-        self.deboard_aircraft_and_walk_to_exit_constant = deboard_aircraft_and_walk_to_exit_constant
-        self.randomize_constants = randomize_constants
+        self.passenger_params = passenger_params
+        self.car_to_entrance_walking_time_constant = sec_to_ms(self.passenger_params['car_to_entrance_walking_time_constant'])
+        self.security_check_time_constant = sec_to_ms(self.passenger_params['security_check_time_constant'])
+        self.waiting_room_to_boarding_gate_walking_time_constant = sec_to_ms(self.passenger_params['waiting_room_to_boarding_gate_walking_time_constant'])
+        self.boarding_gate_to_aircraft_time_constant = sec_to_ms(self.passenger_params['boarding_gate_to_aircraft_time_constant'])
+        self.embark_disembark_time_constant = sec_to_ms(self.passenger_params['embark_disembark_time_constant'])
+        self.deboard_aircraft_and_walk_to_exit_constant = sec_to_ms(self.passenger_params['deboard_aircraft_and_walk_to_exit_constant'])
+        self.randomize_constants = self.passenger_params['randomize_constants']
         self.vertiport_manager = vertiport_manager
         self.vertiport_arrival_time = None
         self.waiting_room_arrival_time = None

@@ -7,7 +7,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 
-def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) -> None:
+def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) -> Dict:
     layout_file_path = network_and_demand['vertiport_layout_file_path']
     vertiport_layouts = defaultdict(dict)
     for vertiport_id, vertiport_data in network_and_demand['vertiports'].items():
@@ -22,7 +22,7 @@ def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) 
 def create_airspace_layout(env: object, 
                             vertiports: Dict, 
                             vertiport_distances, 
-                            airspace_params):
+                            airspace_params) -> AirspaceCreator:
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
                                        airspace_params=airspace_params,

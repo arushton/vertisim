@@ -13,7 +13,8 @@ import pandas as pd
 from aircraft.aircraft import Aircraft
 import pandas as pd
 from utils.units import sec_to_ms, ms_to_sec
-from utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, careful_conversion
+from utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, \
+    careful_conversion, lower_str
 from utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
 # from utils.defaults import DEFAULT_AIRCRAFT_ARRIVAL_PROCESS
 from typing import Dict, List, Union, Tuple
@@ -347,7 +348,7 @@ class AircraftArrivalSetup:
                                             serviced_time_at_the_location=aircraft_data['serviced_time_at_the_location'],
                                             departure_time=aircraft_data['aircraft_pushback_time'],
                                             priority=aircraft_data['priority'],
-                                            initial_process=aircraft_data['process'],
+                                            initial_process=lower_str(aircraft_data['process']),
                                             logger=self.logger,
                                             aircraft_logger=self.aircraft_logger)
             )       
@@ -373,7 +374,7 @@ class AircraftArrivalSetup:
                                                location=row['location'],
                                                serviced_time_at_the_location=0,
                                                priority=1,
-                                               initial_process=row['process'],
+                                               initial_process=lower_str(row['process']),
                                                logger=self.logger,
                                                aircraft_logger=self.aircraft_logger)
             )
@@ -390,7 +391,7 @@ class AircraftArrivalSetup:
                                   location: str = None,
                                   serviced_time_at_the_location: int = 0,
                                   priority: int = 1,
-                                  initial_process: str = 'PARKING',
+                                  initial_process: str = 'parking',
                                   logger=None,
                                   aircraft_logger=None):
         
