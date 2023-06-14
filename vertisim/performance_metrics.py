@@ -204,7 +204,6 @@ class PerformanceMetrics:
             self.performance_metrics[flight_direction]['flight_duration']['min'] = ms_to_min(np.min(flight_durations))
 
     def compute_energy_consumption_stats(self):
-        self.performance_metrics[flight_direction]['energy_consumption']['total'] = 0
         for flight_direction, data in self.aircraft_energy_consumption_tracker.items():
             energy_consumptions = np.array(list(data.values()))
             self.performance_metrics[flight_direction]['energy_consumption']['mean'] = np.mean(energy_consumptions)
@@ -212,7 +211,7 @@ class PerformanceMetrics:
             self.performance_metrics[flight_direction]['energy_consumption']['std'] = np.std(energy_consumptions)
             self.performance_metrics[flight_direction]['energy_consumption']['max'] = np.max(energy_consumptions)
             self.performance_metrics[flight_direction]['energy_consumption']['min'] = np.min(energy_consumptions)
-            self.performance_metrics[flight_direction]['energy_consumption']['total'] += np.sum(energy_consumptions)
+            self.performance_metrics[flight_direction]['energy_consumption']['total'] = np.sum(energy_consumptions)
 
 
 
