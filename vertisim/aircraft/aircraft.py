@@ -1251,6 +1251,7 @@ class Aircraft:
         holding_power = watt_to_kw(holding_power)
         holding_energy = ms_to_hr(holding_power * time_holding)
         self.soc_discharge_update(holding_energy)
+        self.save_flight_phase_energy(flight_phase='holding', energy=holding_energy)
     
     def check_reserve_energy(self) -> float:
         if self.soc <= 2 and self.state in ['landing', 'cruise', 'takeoff']:

@@ -430,7 +430,7 @@ class SimSetup:
                 'aircraft_holding_time': self.event_saver.aircraft_holding_time,
                 'passenger_trip_time_tracker': self.event_saver.passenger_trip_time_tracker,
                 'aircraft_process_time_tracker': self.event_saver.aircraft_process_time_tracker,
-                'flight_phase_energy_consumption_tracker': self.event_saver.flight_phase_energy_consumption_tracker,
+                'flight_phase_energy_consumption_tracker': self.event_saver.flight_phase_energy_consumption_tracker
             },
             simulation_params={
                 'sim_params': self.sim_params,
@@ -448,4 +448,4 @@ class SimSetup:
             performance_metrics=self.performance_metrics,
             sim_id=self.sim_id
         )
-        print(f"Success: Results are saved {self.output_folder_path}.")
+        print(f"Success: Results are saved in {self.output_folder_path}.")
