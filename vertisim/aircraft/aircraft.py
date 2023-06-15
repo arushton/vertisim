@@ -819,7 +819,7 @@ class Aircraft:
                                                 horizontal_distance=horizontal_distance,
                                                 vertical_distance=vertical_distance,
                                                 cost_type='climb')
-        climb_time = round(horizontal_distance / self.speed)
+        climb_time = round(vertical_distance / self.vertical_velocity)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
