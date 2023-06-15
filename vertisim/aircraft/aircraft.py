@@ -77,6 +77,7 @@ class Aircraft:
         self.flight_duration = None
         self.turnaround_time = None
         self.pushback_time = None
+        self.charged_during_turnaround = False
         self.total_energy_consumption = 0
         self.target_soc = target_soc
 
@@ -401,6 +402,7 @@ class Aircraft:
                                                                                         
     def aircraft_landing_process(self):
         final_approach_fix = self.vertiport_manager.get_second_to_last_airlink_node_id(flight_direction=self.flight_direction)
+        self.charged_during_turnaround = False
         self.setup_for_descend(final_approach_fix)
         yield self.env.process(self.descend_to_final_approach_fix(final_approach_fix))
         yield self.env.process(self.descend_transition())
@@ -991,7 +993,11 @@ class Aircraft:
             yield selected_charging_request
 
         self.start_charging_process()
-        self.idle_time += self.env.now - self.ground_holding_end_time 
+        if not self.charged_during_turnaround:
+            self.idle_time += self.env.now - self.ground_holding_end_time 
+        else:
+            self.idle_time += self.env.now - self.charging_end_time
+        self.save_process_time(event='idle', process_time=self.env.now - self.ground_holding_end_time)
         self.state = 'charging'
         charge_time = self.get_charging_time()
         yield self.env.timeout(round(charge_time))
@@ -1005,6 +1011,7 @@ class Aircraft:
         # Reset the target_soc to None for the next flight
         self.set_target_soc_none()
         self.release_charger_resource(used_charger_resource, selected_charging_request)
+        self.charged_during_turnaround = True
         self.logger.debug(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {round(self.soc, 2)}")
 
     def hold_for_charging_schedule_compatibility(self, charge_time):

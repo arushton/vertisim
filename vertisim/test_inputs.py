@@ -177,8 +177,6 @@ passenger_params = {
     'waiting_room_to_boarding_gate_walking_time_dist': None,
     'boarding_gate_to_aircraft_time_constant': 0, #19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
-    'embark_disembark_time_constant': 0, #70,  # secs
-    'embark_disembark_time_dist': None,
     'deboard_aircraft_and_walk_to_exit_constant': 0, #120,  # secs
     'deboard_aircraft_and_walk_to_exit_dist': None,
 }

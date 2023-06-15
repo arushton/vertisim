@@ -42,7 +42,7 @@ class SimSetup:
         self.output_params = output_params
         self.sim_start_time = sim_start_time
 
-        self.sim_start_timestamp = sec_to_ms(1625065200)  # Wednesday, June 30, 2021 8:00:00 AM PT
+        self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
         self.env = self.create_environment()
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
@@ -194,7 +194,7 @@ class SimSetup:
         if self.aircraft_params['aircraft_energy_consumption_data_folder_path'] is not None:
             aircraft_energy_consumption_data = import_aircraft_energy_consumption_data(
                 folder_path=self.aircraft_params['aircraft_energy_consumption_data_folder_path'],
-                aircraft_models=get_all_aircraft_models(self.network_and_demand),
+                aircraft_models=list(self.aircraft_params['aircraft_model']),
                 ranges=list(self.vertiport_distances['distance']))
             if self.sim_params['verbose']:
                 print("Success: Aircraft energy consumption data imported.")
@@ -211,7 +211,6 @@ class SimSetup:
             self.passenger_params['security_check_time_dist'],
             self.passenger_params['waiting_room_to_boarding_gate_walking_time_dist'],
             self.passenger_params['boarding_gate_to_aircraft_time_dist'],
-            self.passenger_params['embark_disembark_time_dist'],
             self.passenger_params['deboard_aircraft_and_walk_to_exit_dist'],
         )
 

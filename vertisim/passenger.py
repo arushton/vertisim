@@ -27,7 +27,6 @@ class Passenger:
         self.security_check_time_constant = sec_to_ms(self.passenger_params['security_check_time_constant'])
         self.waiting_room_to_boarding_gate_walking_time_constant = sec_to_ms(self.passenger_params['waiting_room_to_boarding_gate_walking_time_constant'])
         self.boarding_gate_to_aircraft_time_constant = sec_to_ms(self.passenger_params['boarding_gate_to_aircraft_time_constant'])
-        self.embark_disembark_time_constant = sec_to_ms(self.passenger_params['embark_disembark_time_constant'])
         self.deboard_aircraft_and_walk_to_exit_constant = sec_to_ms(self.passenger_params['deboard_aircraft_and_walk_to_exit_constant'])
         self.randomize_constants = self.passenger_params['randomize_constants']
         self.vertiport_manager = vertiport_manager

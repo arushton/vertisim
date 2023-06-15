@@ -570,6 +570,8 @@ class VertiportManager:
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc) 
         # Set the intended pushback time of the aircraft 
         aircraft.pushback_time = pushback_time
+        # Set the flight direction of the aircraft
+        aircraft.flight_direction = f'{origin_vertiport_id}_{destination_vertiport_id}'
         # Set the flight ID of the aircraft
         aircraft.flight_id = flight_id
         # Measure and save the aircraft allocation time
@@ -926,6 +928,7 @@ class VertiportManager:
                     yield self.env.timeout(ground_holding_time)
                     aircraft.ground_holding_end_time = self.env.now
                     aircraft.idle_time += ground_holding_time
+                    aircraft.save_process_time(event='idle', process_time=ground_holding_time)
                     self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
                     aircraft.state = 'idle'
                 # Put aircraft into available aircraft store
@@ -1133,7 +1136,6 @@ class VertiportManager:
     def simulate_aircraft_departure_process(self, aircraft, origin_vertiport_id, destination_vertiport_id):
         aircraft.origin_vertiport_id = origin_vertiport_id
         aircraft.destination_vertiport_id = destination_vertiport_id
-        aircraft.flight_direction = f'{origin_vertiport_id}_{destination_vertiport_id}'
 
         # Save passenger boarding time
         for passenger in aircraft.passengers_onboard:

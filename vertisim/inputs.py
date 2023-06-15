@@ -16,7 +16,7 @@ sim_params = {
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds or None
-    'flight_duration_constant': 600,  # seconds or None - Applies ground holding if the flight duration is less than this value.
+    'flight_duration_constant': 60*10,  # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False, #TODO: Not supported yet.
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
     'step_by_step_sim': False,
@@ -142,7 +142,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/finalized_route_0602.csv',
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/finalized_route_0614.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
@@ -177,8 +177,6 @@ passenger_params = {
     'waiting_room_to_boarding_gate_walking_time_dist': None,
     'boarding_gate_to_aircraft_time_constant': 0, #19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
-    'embark_disembark_time_constant': 0, #70,  # secs
-    'embark_disembark_time_dist': None,
     'deboard_aircraft_and_walk_to_exit_constant': 0, #120,  # secs
     'deboard_aircraft_and_walk_to_exit_dist': None,
 }
@@ -213,7 +211,7 @@ aircraft_params = {
     'time_pre_take_off_check_list': 0,  # sec
     'time_rotor_spin_up': 5,  # sec - will be included in the hover time
     'time_hover_climb': 15,  # sec - NOT USED
-    'time_climb_transition': 30,  # sec - NOT USED  
+    'time_climb_transition': 30,  # sec - NOT USED
     'time_climb': 65,  # sec - NOT USED  
     'time_descend': 65,  # sec - NOT USED
     'time_descend_transition': 30,  # sec - NOT USED
