@@ -1,4 +1,4 @@
-from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes
+from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms
 from utils.distance import haversine_dist
 from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
@@ -72,7 +72,7 @@ class Aircraft:
         self.assigned_fato_resource = None
         self.holding_time = None
         self.idle_time = 0
-        self.ground_holding_end_time = 0
+        self.ground_holding_end_time = arrival_time
         self.flight_direction = None
         self.flight_duration = None
         self.turnaround_time = None
@@ -994,18 +994,24 @@ class Aircraft:
 
         self.start_charging_process()
         if not self.charged_during_turnaround:
-            self.idle_time += self.env.now - self.ground_holding_end_time 
+            idle_time = self.env.now - self.ground_holding_end_time
+            self.idle_time += idle_time
         else:
-            self.idle_time += self.env.now - self.charging_end_time
-        self.save_process_time(event='idle', process_time=self.env.now - self.ground_holding_end_time)
+            idle_time = self.env.now - self.charging_end_time
+            self.idle_time += idle_time
+        self.save_process_time(event='idle', process_time=idle_time)
+        self.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {self.tail_number} at {self.location}.')
+
         self.state = 'charging'
         charge_time = self.get_charging_time()
         yield self.env.timeout(round(charge_time))
         self.save_process_time(event='charge', process_time=charge_time)
         self.state = 'idle'
         self.save_process_time(event='idle', process_time=self.compute_holding_after_charge(charge_time))
-        self.hold_for_charging_schedule_compatibility(charge_time)
+        yield self.env.process(self.hold_for_charging_schedule_compatibility(charge_time))
         self.end_charging_process()
+        self.logger.info(f'Saved idle time of {miliseconds_to_hms(self.compute_holding_after_charge(charge_time))} for after charge holding for aircraft {self.tail_number} at {self.location}.')
+
         old_soc = self.soc
         self.soc_charge_update()
         # Reset the target_soc to None for the next flight

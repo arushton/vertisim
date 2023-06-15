@@ -732,18 +732,22 @@ class VertiportManager:
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='aircraft_allocation')
         if aircraft.charging_end_time is None:
             # At the beginning of the simulation, charging_end_time is None
-            if aircraft.state != 'charging':
-                idle_time = self.env.now - aircraft.arrival_time
+            if not aircraft.charged_during_turnaround:
+                idle_time = self.env.now - aircraft.ground_holding_end_time
                 self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                         idle_time=idle_time)
                 aircraft.save_process_time(event='idle', process_time=idle_time)
-                self.logger.debug(f'Saved idle time between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
+                self.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
         else:
-            aircraft.idle_time += self.env.now - aircraft.charging_end_time
+            if not aircraft.charged_during_turnaround:
+                idle_time = aircraft.env.now - aircraft.ground_holding_end_time
+            else:
+                idle_time = aircraft.env.now - aircraft.charging_end_time
+            aircraft.idle_time += idle_time
             self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                      idle_time=aircraft.idle_time)
-            aircraft.save_process_time(event='idle', process_time=aircraft.idle_time)
-            self.logger.debug(f'Saved idle time between charging and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
+            aircraft.save_process_time(event='idle', process_time=idle_time)
+            self.logger.info(f'Saved idle time {miliseconds_to_hms(idle_time)} between charging end or arrival and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
 
     def save_passenger_times(self, origin_vertiport_id, passengers):
         for passenger in passengers:
@@ -926,11 +930,14 @@ class VertiportManager:
                                       f' Pushback time was {miliseconds_to_hms(aircraft.pushback_time)}. Aircraft {aircraft.tail_number}'
                                       f' will hold for {ms_to_min(ground_holding_time)} ({miliseconds_to_hms(ground_holding_time)}) mins at {aircraft.location}')
                     yield self.env.timeout(ground_holding_time)
-                    aircraft.ground_holding_end_time = self.env.now
-                    aircraft.idle_time += ground_holding_time
-                    aircraft.save_process_time(event='idle', process_time=ground_holding_time)
-                    self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
-                    aircraft.state = 'idle'
+                else:
+                    ground_holding_time = 0
+                aircraft.ground_holding_end_time = self.env.now
+                aircraft.idle_time += ground_holding_time
+                aircraft.save_process_time(event='idle', process_time=ground_holding_time)
+                self.logger.info(f'Saved idle time of {miliseconds_to_hms(ground_holding_time)} for ground holding for aircraft {aircraft.tail_number} at {aircraft.location}.')
+                self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
+                aircraft.state = 'idle'
                 # Put aircraft into available aircraft store
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)           
