@@ -6,6 +6,7 @@ from utils.helpers import nested_dict_all_values, remove_larger_keys, get_values
     get_length_of_longest_list, get_length_of_shortest_list
 import matplotlib.pyplot as plt
 from typing import List
+import os
 
 
 class PerformanceMetrics:
@@ -53,6 +54,10 @@ class PerformanceMetrics:
         self.sim_end_timestamp = sim_end_timestamp
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(lambda: defaultdict(dict))
+        # TODO: Remove this. Temporary fix
+        path = '../../output/test_only_aircraft/performance_metrics'
+        if not os.path.exists(path):
+            os.makedirs(path)
 
         if not self.only_aircraft_simulation:
             self.calculate_passenger_consolidation_time_stats()
@@ -644,7 +649,7 @@ class PerformanceMetrics:
 
     def print_avg_load_factor(self):
         for vertiport_id in self.vertiport_ids:
-            print(f"Average load factor at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['load_factor']['mean'], 2)}")
+            print(f"Average load factor for non-empty flights at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['load_factor']['mean'], 2)}")
 
     def print_total_aircraft_throughput(self):
         for vertiport_id in self.vertiport_ids:
