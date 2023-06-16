@@ -403,6 +403,7 @@ class Aircraft:
     def aircraft_landing_process(self):
         final_approach_fix = self.vertiport_manager.get_second_to_last_airlink_node_id(flight_direction=self.flight_direction)
         self.charged_during_turnaround = False
+        self.save_process_time(event='charge', process_time=0)
         self.setup_for_descend(final_approach_fix)
         yield self.env.process(self.descend_to_final_approach_fix(final_approach_fix))
         yield self.env.process(self.descend_transition())
@@ -735,6 +736,7 @@ class Aircraft:
         yield self.env.timeout(round(self.time_pre_take_off_check_list))
         self.save_process_time(event='pre_take_off_check', process_time=self.time_tug_disconnection)
         self.turnaround_time = self.env.now - self.arrival_time
+        self.save_process_time(event='num_passengers', process_time=len(self.passengers_onboard))
         self.logger.debug(f'TakeOff: Aircraft {self.tail_number} took off from vertiport {self.origin_vertiport_id} to {self.destination_vertiport_id} at SOC: {round(self.soc, 2)} with {len(self.passengers_onboard)} passengers onboard')
         self.aircraft_logger.debug(f'TakeOff: Aircraft {self.tail_number} ready for takeoff from vertiport {self.origin_vertiport_id} to {self.destination_vertiport_id} at SOC: {round(self.soc, 2)} with {len(self.passengers_onboard)} passengers onboard')
 
