@@ -1,4 +1,4 @@
-from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms
+from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
 from utils.distance import haversine_dist
 from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
 from typing import Union, Dict, List, Optional
@@ -781,7 +781,7 @@ class Aircraft:
                                                 cost_type='climb_transition')
 
         # The speed is averaged because aircraft don't have forward velocity at the beginning of the climb transition phase
-        climb_transition_time = round(horizontal_distance / self.speed) * 2
+        climb_transition_time = round(vertical_distance / self.vertical_velocity)
         climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=round(self.speed/2, 2),
                                                                                     climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
                                                                                     climb_transition_time=climb_transition_time), 2)
@@ -821,7 +821,7 @@ class Aircraft:
                                                 horizontal_distance=horizontal_distance,
                                                 vertical_distance=vertical_distance,
                                                 cost_type='climb')
-        climb_time = round(vertical_distance / self.vertical_velocity)
+        climb_time = round(horizontal_distance / self.speed)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
@@ -1020,7 +1020,7 @@ class Aircraft:
         self.set_target_soc_none()
         self.release_charger_resource(used_charger_resource, selected_charging_request)
         self.charged_during_turnaround = True
-        self.logger.debug(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {round(self.soc, 2)}")
+        self.logger.debug(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(self.soc, 2)}")
 
     def hold_for_charging_schedule_compatibility(self, charge_time):
         holding_time = self.compute_holding_after_charge(charge_time)

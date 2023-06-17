@@ -5,7 +5,7 @@ from utils.units import sec_to_ms, ms_to_sec, ms_to_min
 from utils.distribution_generator import DistributionGenerator
 from utils.weighted_random_chooser import random_choose_exclude_element
 from utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
-    get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists
+    get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
 from aircraft.battery_model import BatteryModel
 from aircraft.aircraft import Aircraft
 import pandas as pd
@@ -580,7 +580,7 @@ class VertiportManager:
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.add_additional_passengers_if_needed(origin_vertiport_id, destination_vertiport_id, departing_passengers)
 
-        self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
+        self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
         # Save aircraft allocation and idle times
         self.save_aircraft_times(origin_vertiport_id, aircraft)

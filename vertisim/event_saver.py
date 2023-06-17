@@ -250,7 +250,7 @@ class EventSaver:
                 self.aircraft_agent_trajectory[time]['location'] = agent.location
                 self.aircraft_agent_trajectory[time]['speed'] = agent.speed
                 self.aircraft_agent_trajectory[time]['soc'] = agent.soc
-                self.aircraft_agent_trajectory[time]['priority'] = agent.priority
+                self.aircraft_agent_trajectory[time]['flight_direction'] = agent.flight_direction
                 self.aircraft_agent_trajectory[time]['event'] = event
                 self.aircraft_agent_trajectory[time]['latitude'] = self.node_locations[agent.location][0]
                 self.aircraft_agent_trajectory[time]['longitude'] = self.node_locations[agent.location][1]  
@@ -261,6 +261,7 @@ class EventSaver:
                 self.passenger_agent_trajectory[time]['longitude'] = self.node_locations[agent.location][1]
                 self.passenger_agent_trajectory[time]['altitude'] = self.node_locations[agent.location][2]
                 self.passenger_agent_trajectory[time]['location'] = agent.location
+                self.aircraft_agent_trajectory[time]['flight_direction'] = f'{agent.origin_vertiport_id}_{agent.destination_vertiport_id}'
                 self.passenger_agent_trajectory[time]['event'] = event
             else:
                 raise ValueError(f'Agent type {agent_type} is not supported')

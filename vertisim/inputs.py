@@ -54,10 +54,10 @@ network_and_demand = {
     'vertiports': {
     # Input specifications for each vertiport.
         'LAX': {
-            'layout': 'clover_1_fato_10_park_lax',
+            'layout': 'clover_1_fato_7_park_lax',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
-            'num_chargers': 10,
+            'num_chargers': 7,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
@@ -142,7 +142,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/finalized_route_0614.csv',
+    'airspace_layout_file_path': '/Users/eminburakonat/Google Drive/Research/UAM/8. Vertiport Simulation/vertiSim_dev/vertisim/input/airspace/finalized_route_0615.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
@@ -218,7 +218,7 @@ aircraft_params = {
     'time_hover_descend': 15,  # sec - NOT USED
     'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
-    'ground_taxi_speed': 1000, # 3.67 # ft/s
+    'ground_taxi_speed': 3.67, # 3.67 # ft/s
     'time_passenger_embark_disembark': 0, #60 * 2,  # secs
     'time_pre_charging_processes': 0,  # sec
     'time_charging_plug_disconnection': 0,  # sec

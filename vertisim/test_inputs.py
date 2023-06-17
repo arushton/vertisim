@@ -54,7 +54,7 @@ network_and_demand = {
     'vertiports': {
     # Input specifications for each vertiport.
         'LAX': {
-            'layout': 'clover_1_fato_10_park_lax',
+            'layout': 'clover_1_fato_7_park_lax',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
             'num_chargers': 10,
