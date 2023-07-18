@@ -11,6 +11,7 @@ from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lif
 from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
+from wind.wind import Wind
 
 class Aircraft:
     """
@@ -925,12 +926,23 @@ class Aircraft:
                         self.speed = self.aircraft_params['cruise_velocity'] 
                     else:                   
                         self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                        
+                    # Accounting for Wind
+                    latitude_o, longitude_o, altitude_o = self.vertiport_manager.airspace.waypoint_locations[self.location]
+                    latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
+                    heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
+                    
+                    # the aircraft still flies at self.speed, but consumes more or less power to do so depending on the wind
+                    # see adjusted speed on line 945 but NOT line 940 ^^^
+                    required_velocity = Wind.windCorrectedVelocity(self.speed, heading, latitude_o, longitude_o, altitude_o)
+                    required_speed = np.sqrt(required_velocity.dot(required_velocity))
+                        
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 
                                                                                         horizontal_speed=self.speed)
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
                     # Compute energy consumption
-                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time), 2)
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=required_speed, time_cruise=link_traversal_time), 2)
                     self.total_energy_consumption += energy_consumption
 
                     self.save_process_time(event='cruise', process_time=link_traversal_time)
