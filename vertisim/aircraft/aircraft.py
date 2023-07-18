@@ -1263,9 +1263,9 @@ class Aircraft:
         return sec_to_hr(descend_power * descend_time)
     
     def cruise_energy_consumption(self, velocity, time_cruise) -> float:
-        cruise_velocity = min(self.input_cruise_speed, velocity)
-        cruise_velocity = max(cruise_velocity, self.stall_speed)
-        cruise_power = cruise_phase_power(cruise_velocity=cruise_velocity,
+        # cruise_velocity = min(self.input_cruise_speed, velocity)
+        # cruise_velocity = max(cruise_velocity, self.stall_speed)
+        cruise_power = cruise_phase_power(cruise_velocity=velocity,
                                           aircraft_params=self.aircraft_params,
                                           tom=self.tom)
         cruise_power = watt_to_kw(cruise_power)

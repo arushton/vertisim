@@ -1,10 +1,10 @@
 import numpy
-from math import sin, cos, atan2
+from math import sin, cos, atan2, pi
 
 class Wind:
     
     """Notes:
-    Relevant changes in lines 928-935.
+    Relevant changes in lines 928-935 of aircraft.py
     """
 
     radius_earth = 6371 # km
@@ -20,7 +20,7 @@ class Wind:
         
         v_wind = Wind.windVector("head", desired_heading)
         
-        return v_desired - v_wind
+        return numpy.subtract(v_desired, v_wind)
     
     def windVelocity(latitude: float, longitude: float, altitude: float) -> numpy.array:
         """Get the approximate wind speed at the given point (latitude, longitude, altitude above sea level)."""
@@ -33,9 +33,9 @@ class Wind:
         wind_magnitude = 8.0 # m/s
         match type:
             case 'head':
-                wind_heading = aircraft_heading + 180
+                wind_heading = aircraft_heading + pi
             case 'cross':
-                wind_heading = aircraft_heading + 90
+                wind_heading = aircraft_heading + pi / 2
             case 'tail':
                 wind_heading = aircraft_heading
             case _ :
