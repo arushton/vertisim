@@ -34,7 +34,7 @@ class VertiportManager:
                  network_simulation: bool,
                  fixed_charge_schedule: bool,
                  fixed_schedule: bool,
-                 flight_rebalancing: bool,
+                 fleet_rebalancing: bool,
                  node_locations: Dict,
                  flight_duration_constant: float,
                  charge_assignment_sensitivity: float,
@@ -60,7 +60,7 @@ class VertiportManager:
         self.fixed_charge_schedule = fixed_charge_schedule
         self.node_locations = node_locations
         self.fixed_schedule = fixed_schedule
-        self.flight_rebalancing = flight_rebalancing
+        self.fleet_rebalancing = fleet_rebalancing
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.flight_durations = defaultdict(list)
@@ -853,11 +853,11 @@ class VertiportManager:
     def check_holding_aircraft(self, flight_direction: str, vertiport_id: Any):
         arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction)
         if len(arrival_fix_resource.queue) > 0:
-            num_scheduled = min(len(arrival_fix_resource.queue)+2, self.check_num_available_aircraft(vertiport_id))
             num_queued = len(arrival_fix_resource.queue)
             num_available_aircraft = self.check_num_available_aircraft(vertiport_id)
+            num_scheduled_for_repositioning = min(num_queued, num_available_aircraft)
             self.logger.debug(f'Number of holding aircraft queued at {vertiport_id}: {num_queued}. Number of available aircraft at {vertiport_id}: {num_available_aircraft}')
-            for _ in range(num_queued):
+            for _ in range(num_scheduled_for_repositioning):
                 self.env.process(self.assign_empty_flight(vertiport_id=vertiport_id))
 
     def assign_empty_flight(self, vertiport_id: Any):
@@ -886,7 +886,7 @@ class VertiportManager:
         self.logger.debug(f'Aircraft {aircraft.tail_number} requesting arrival fix resource at {aircraft.destination_vertiport_id}.'
                          f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
                          f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
-        if self.flight_rebalancing and not self.fixed_schedule:
+        if self.fleet_rebalancing and not self.fixed_schedule:
             self.check_holding_aircraft(flight_direction=aircraft.flight_direction, vertiport_id=aircraft.destination_vertiport_id)
         yield arrival_fix_usage_request
         self.logger.debug(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')

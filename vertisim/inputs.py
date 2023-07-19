@@ -16,11 +16,11 @@ sim_params = {
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds or None
-    'flight_duration_constant': 60*10,  # seconds or None - Applies ground holding if the flight duration is less than this value.
+    'flight_duration_constant': None,  # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False, #TODO: Not supported yet.
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
     'step_by_step_sim': False,
-    'flight_rebalancing': False,
+    'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
@@ -34,7 +34,7 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': None, #f'{str(cwd)}/input/network/network_of_2_vertiports.csv',
+    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_OAK.csv',
     'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
 
     # DEMAND FILES.
@@ -44,17 +44,17 @@ network_and_demand = {
     # If charge_schedule_file_name is None, then the flight_schedule should provide the tail_number and departure times.
     # Charging times will be computed internally. If charge_schedule_file_name is not None, then the charging times will be read from the file.
     # and aircraft assignment will be done based on the optimization output.
-    'charge_schedule_file_name': f'{str(cwd)}/input/aircraft/charge_schedule.csv',
-    'flight_schedule_file_name': f'{str(cwd)}/input/aircraft/flight_schedule.csv',
-    'passenger_schedule_file_name': f'{str(cwd)}/input/passenger/passenger_arrival_process.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'charge_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
+    'flight_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
+    'passenger_schedule_file_name': f'{str(cwd)}/input/passenger/demand_SFO_OAK.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
 
     'vertiports': {
     # Input specifications for each vertiport.
-        'LAX': {
-            'layout': 'clover_1_fato_7_park_lax',
+        'SFO': {
+            'layout': 'clover_1_fato_5_park_sfo',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
             'num_chargers': 7,
@@ -89,7 +89,7 @@ network_and_demand = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_in_vertiport': 5,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -110,8 +110,8 @@ network_and_demand = {
                 # }
             }
         },
-        'DTLA': {
-            'layout': 'clover_1_fato_13_park_dtla',
+        'OAK': {
+            'layout': 'clover_1_fato_5_park_oak',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 10,
             'num_chargers': 13,
@@ -132,7 +132,7 @@ network_and_demand = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,
+                'num_initial_aircraft_in_vertiport': 5,
                 'initial_arrival_queue_state': 0
             }
         }     
@@ -142,7 +142,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': f'{str(cwd)}/input/airspace/finalized_route_0615.csv',
+    'airspace_layout_file_path': None, #f'{str(cwd)}/input/airspace/finalized_route_0615.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
@@ -206,7 +206,7 @@ aircraft_params = {
     'cruise_altitude': 450,  # m
 
     # Process time
-    'time_tug_connection': 0,  # sec
+    'time_tug_connection': 30,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
     'time_rotor_spin_up': 5,  # sec - will be included in the hover time
@@ -252,7 +252,7 @@ aircraft_params = {
     # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
     'time_charging': None,  # constant sec. If None charging_time_dist will be used.
-    'target_soc_constant': None,  # Target SOC of the aircraft for each charging event
+    'target_soc_constant': 46,  # Target SOC of the aircraft for each charging event
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
@@ -269,7 +269,7 @@ aircraft_params = {
     'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/input/aircraft/energy_consumption',
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
     'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
-    'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
+    'min_reserve_soc': 27  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
 }
 
 output_params = {

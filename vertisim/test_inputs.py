@@ -20,7 +20,7 @@ sim_params = {
     'charge_interruption': False,
     'charge_assignment_sensitivity': 2.4,
     'step_by_step_sim': False,
-    'flight_rebalancing': False,
+    'fleet_rebalancing': False,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
