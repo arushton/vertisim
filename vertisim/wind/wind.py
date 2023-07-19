@@ -9,6 +9,17 @@ class Wind:
 
     radius_earth = 6371 # km
     
+    def groundVelocity(speed: float, heading: float, latitude: float, longitude: float, altitude: float) -> numpy.array:
+        """Calculate the ground velocity.
+        """
+        
+        true_air_velocity = Wind.headingToVector(heading, magnitude=speed)
+        
+        # TODO: replace "head" wind with Rapid Refresh / other API call
+        v_wind = Wind.windVector("head", heading)
+
+        return numpy.add(true_air_velocity, v_wind)
+    
     def windCorrectedVelocity(desired_speed: float, desired_heading: float, latitude: float, longitude: float, altitude: float) -> numpy.array:
         """Calculate the velocity requried to move the aircraft in the desired heading at the desired speed in the presence of wind.        
         
@@ -18,6 +29,7 @@ class Wind:
         
         v_desired = Wind.headingToVector(desired_heading, magnitude=desired_speed)
         
+        # TODO: replace "head" wind with Rapid Refresh / other API call
         v_wind = Wind.windVector("head", desired_heading)
         
         return numpy.subtract(v_desired, v_wind)
