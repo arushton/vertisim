@@ -16,7 +16,7 @@ class Wind:
         true_air_velocity = Wind.headingToVector(heading, magnitude=speed)
         
         # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("tail", heading)
+        v_wind = Wind.windVector("", heading)
 
         return numpy.add(true_air_velocity, v_wind)
     
@@ -30,7 +30,7 @@ class Wind:
         v_desired = Wind.headingToVector(desired_heading, magnitude=desired_speed)
         
         # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("tail", desired_heading)
+        v_wind = Wind.windVector("", desired_heading)
         
         return numpy.subtract(v_desired, v_wind)
     
@@ -46,12 +46,15 @@ class Wind:
             case 'tail':
                 wind_heading = aircraft_heading
             case _ :
-                wind_heading = 0
+                wind_heading = None
         return Wind.headingToVector(wind_heading, magnitude=wind_magnitude)
         
     def headingToVector(heading: float, magnitude: float = 1.0) -> numpy.array:
         """Converts a heading to a unit vector. Optional argument of vector magnitude.
         Heading is N=0, (+) direction = clockwise [i.e. aircraft_heading = 10° means 80° in polar where pos X = 0 and (+) direction = counterclockwise]."""
+
+        if not heading:
+            return numpy.array([0, 0])
 
         # note that the vertical (northern, Y axis) component corresponds to cos(heading)
         return numpy.array([magnitude * sin(heading),

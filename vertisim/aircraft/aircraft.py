@@ -923,44 +923,45 @@ class Aircraft:
                     # If the vertical distance is zero, then the aircraft is in cruise
                     self.state = 'cruise'
                     if self.aircraft_params['cruise_velocity']:
-                        self.speed = self.aircraft_params['cruise_velocity'] 
+                        cruise_speed = self.aircraft_params['cruise_velocity'] 
                     else:                   
-                        self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                        cruise_speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
                         
                     # Accounting for Wind
                     latitude_o, longitude_o, altitude_o = self.vertiport_manager.airspace.waypoint_locations[self.location]
                     latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
                     heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
-                    # True air velocity required in the presence of wind such that |Vgs| = self.speed
-                    required_velocity = Wind.windRequiredVelocity(self.speed, heading, latitude_o, longitude_o, altitude_o)
+                    # True air velocity required in the presence of wind such that |Vgs| = cruise_speed
+                    required_velocity = Wind.windRequiredVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
                     required_speed = np.sqrt(required_velocity.dot(required_velocity))
                         
-                    # Assuming true air velocity = self.speed (no adjustment)
-                    ground_velocity = Wind.groundVelocity(self.speed, heading, latitude_o, longitude_o, altitude_o)
+                    # Assuming true air velocity = cruise_speed (no adjustment)
+                    ground_velocity = Wind.groundVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
                     ground_speed = np.sqrt(ground_velocity.dot(ground_velocity))
-                          
-                    if required_speed > self.speed and ground_speed > 0:
-                        power_optimal_speed = self.speed
-                        link_traversal_speed = ground_speed
-                    else:
-                        power_optimal_speed = required_speed
-                        link_traversal_speed = self.speed
-                        
-                    """TODO: IT so happens that while power_optimal_speed is the speed the aircraft needs to attempt to fly at in order
-                    to have ground speed = link_traversal_speed, the effective drag will still be based on link_traversal_speed as that
-                    is the actual speed with respect to the ground at which the aircraft moves through the air. What needs to happen
-                    is a decoupling of the power required to generate enough thrust to fly at the true_airspeed and the power induced by
-                    drag flying at a given ground speed.
+                    
+                    """Explanation: if the required_speed < cruise_speed, the aircraft is in positive wind conditions (ie cruise_speed = 40m/s, tailwind = 
+                    10m/s, required_speed = 30m/s) and it is efficient to fly at cruise_speed. However, if required_speed > cruise_speed, then the aircraft 
+                    will have to "fly" faster than cruise_speed in order to maintain cruise_speed in the given wind conditions; therefore ground_speed
+                    (ground_speed < cruise_speed) is efficient (unless ground_speed <= 0).
+                    
+                    Breakdown: 
+                    head_wind --> we fly @ ground_speed unless ground_speed <= 0
+                    tail_wind --> we fly at cruise_speed
+                    cross_wind --> depends on strength & direction of wind
                     """
+                    if required_speed < cruise_speed or ground_speed <= 0:
+                        ground_speed = cruise_speed
+                        
+                    self.speed = ground_speed
                         
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 
-                                                                                        horizontal_speed=link_traversal_speed)
+                                                                                        horizontal_speed=ground_speed)
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
                     
                     # Compute energy consumption
-                    energy_consumption = round(self.cruise_energy_consumption(velocity=power_optimal_speed, 
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=ground_speed, 
                                                                               time_cruise=link_traversal_time), 2)
                     self.total_energy_consumption += energy_consumption
 
