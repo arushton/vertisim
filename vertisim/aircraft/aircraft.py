@@ -932,31 +932,39 @@ class Aircraft:
                     latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
                     heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
-                    """
-                    
-                    For cruise specifically, the following commented code is only useful if an RTA constraint is imposed and a 
-                    certain Vgs must be maintained in order to reach the destination on time.
-                    
-                    # true air velocity required in the presence of wind such that |Vgs| = self.speed
-                    required_velocity = Wind.windCorrectedVelocity(self.speed, heading, latitude_o, longitude_o, altitude_o)
+                    # True air velocity required in the presence of wind such that |Vgs| = self.speed
+                    required_velocity = Wind.windRequiredVelocity(self.speed, heading, latitude_o, longitude_o, altitude_o)
                     required_speed = np.sqrt(required_velocity.dot(required_velocity))
-                    
-                    """
                         
-                    # assuming true air velocity = self.speed (no adjustment)
+                    # Assuming true air velocity = self.speed (no adjustment)
                     ground_velocity = Wind.groundVelocity(self.speed, heading, latitude_o, longitude_o, altitude_o)
                     ground_speed = np.sqrt(ground_velocity.dot(ground_velocity))
+                          
+                    if required_speed > self.speed and ground_speed > 0:
+                        power_optimal_speed = self.speed
+                        link_traversal_speed = ground_speed
+                    else:
+                        power_optimal_speed = required_speed
+                        link_traversal_speed = self.speed
+                        
+                    """TODO: IT so happens that while power_optimal_speed is the speed the aircraft needs to attempt to fly at in order
+                    to have ground speed = link_traversal_speed, the effective drag will still be based on link_traversal_speed as that
+                    is the actual speed with respect to the ground at which the aircraft moves through the air. What needs to happen
+                    is a decoupling of the power required to generate enough thrust to fly at the true_airspeed and the power induced by
+                    drag flying at a given ground speed.
+                    """
                         
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 
-                                                                                        horizontal_speed=ground_speed)
+                                                                                        horizontal_speed=link_traversal_speed)
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
                     
                     # Compute energy consumption
-                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, 
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=power_optimal_speed, 
                                                                               time_cruise=link_traversal_time), 2)
                     self.total_energy_consumption += energy_consumption
 
+                    # Logging
                     self.save_process_time(event='cruise', process_time=link_traversal_time)
                     self.save_flight_phase_energy(flight_phase='cruise', energy=energy_consumption)
             
@@ -1275,8 +1283,8 @@ class Aircraft:
         return sec_to_hr(descend_power * descend_time)
     
     def cruise_energy_consumption(self, velocity, time_cruise) -> float:
-        cruise_velocity = min(self.input_cruise_speed, velocity)
-        cruise_velocity = max(cruise_velocity, self.stall_speed)
+        # cruise_velocity = min(self.input_cruise_speed, velocity) TODO: determine original intent of this as generally self.input_cruise_speed = 0
+        cruise_velocity = max(velocity, self.stall_speed)
         cruise_power = cruise_phase_power(cruise_velocity=cruise_velocity,
                                           aircraft_params=self.aircraft_params,
                                           tom=self.tom)

@@ -4,7 +4,7 @@ from math import sin, cos, atan2, pi
 class Wind:
     
     """Notes:
-    Relevant changes in lines 928-935 of aircraft.py
+    Relevant implementation in lines 930-955 of aircraft.py!
     """
 
     radius_earth = 6371 # km
@@ -16,11 +16,11 @@ class Wind:
         true_air_velocity = Wind.headingToVector(heading, magnitude=speed)
         
         # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("head", heading)
+        v_wind = Wind.windVector("tail", heading)
 
         return numpy.add(true_air_velocity, v_wind)
     
-    def windCorrectedVelocity(desired_speed: float, desired_heading: float, latitude: float, longitude: float, altitude: float) -> numpy.array:
+    def windRequiredVelocity(desired_speed: float, desired_heading: float, latitude: float, longitude: float, altitude: float) -> numpy.array:
         """Calculate the velocity requried to move the aircraft in the desired heading at the desired speed in the presence of wind.        
         
         Returns:
@@ -30,14 +30,9 @@ class Wind:
         v_desired = Wind.headingToVector(desired_heading, magnitude=desired_speed)
         
         # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("head", desired_heading)
+        v_wind = Wind.windVector("tail", desired_heading)
         
         return numpy.subtract(v_desired, v_wind)
-    
-    def windVelocity(latitude: float, longitude: float, altitude: float) -> numpy.array:
-        """Get the approximate wind speed at the given point (latitude, longitude, altitude above sea level)."""
-        # TODO: implement, Rapid Refresh API
-        pass
     
     def windVector(type: str, aircraft_heading: float) -> numpy.array:
         """Generate a wind vector relative to an aircraft (tailwind, crosswind, headwind).
@@ -72,6 +67,12 @@ class Wind:
         
         longitude_difference = longitude_2 - longitude_1
         return atan2(sin(longitude_difference) * cos(latitude_2), cos(latitude_1) * sin(latitude_2) - sin(latitude_1) * cos(latitude_2) * cos(longitude_difference))
+    
+    def windVelocity(latitude: float, longitude: float, altitude: float) -> numpy.array:
+        """Get the approximate wind speed at the given point (latitude, longitude, altitude above sea level)."""
+        # TODO: implement, Rapid Refresh API
+        # https://open-meteo.com/en/docs/gfs-api
+        pass
     
     # --- UNUSED FUNCTIONS BELOW ---
         

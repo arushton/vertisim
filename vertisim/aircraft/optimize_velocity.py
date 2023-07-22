@@ -111,9 +111,12 @@ class VelocityOptimizer:
         term1 = 2*weight(tom) / (density * self.aircraft_params['wing_area'])
         term2 = np.sqrt(lift_induced_drag_coef(cd_0=self.aircraft_params['cd_0'], ld_max=self.aircraft_params['ld_max']) / self.aircraft_params['cd_0'])    
         return round(np.sqrt(term1 * term2))     
-        
-    # Define constraint function (V/Vv - D/H = 0)
+
     def set_constraints(self, V, vertical_dist, horizontal_dist):
+        """ Define constraint function such that the aircraft reaches its vertical and horizontal destination at the same time.
+        Ratio of Vh / Vv == D / H.
+        TODO: update to use Wind class to calculate Vh_required
+        """
         Vh, Vv = V
         return Vh/Vv - horizontal_dist/vertical_dist
 
@@ -133,6 +136,7 @@ class VelocityOptimizer:
         
         # Define constraints dictionary
         constraints = {'type': 'eq', 'fun': self.set_constraints, 'args': (vertical_distance, horizontal_distance)}
+        
         # Define bounds for V and Vv
         min_power_velocity = self.min_power_velocity_for_climb_descend(altitude=altitude, tom=tom)
         if cost_type in ['climb_transition', 'descend_transition']:
@@ -141,8 +145,10 @@ class VelocityOptimizer:
         else:
             bounds = [(round(min_power_velocity/2), self.aircraft_params['max_horizontal_velocity']), 
                     (1, self.aircraft_params['max_vertical_velocity'])]
+            
         # Initial guess for V and Vv
         x0 = [V[0], V[1]]
+        
         # Perform optimization
         result = minimize(cost_function, x0, args=(tom, altitude, vertical_distance), method='SLSQP', bounds=bounds, constraints=constraints)
         
