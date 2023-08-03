@@ -48,6 +48,8 @@ class PerformanceMetrics:
         self.passenger_time_tracker = performance_metric_trackers['passenger_time_tracker']
         self.aircraft_energy_consumption_tracker = performance_metric_trackers['aircraft_energy_consumption_tracker']
         self.passenger_trip_times = performance_metric_trackers['passenger_trip_time_tracker']
+        self.repositioning_counter = performance_metric_trackers['repositioning_counter']
+        self.total_charge_time_counter = performance_metric_trackers['total_charge_time_counter']
         self.vertiport_ids = vertiport_ids
         self.flight_directions = flight_directions
         self.sim_id = sim_id
@@ -671,6 +673,7 @@ class PerformanceMetrics:
     def print_average_charge_time(self):
         for vertiport_id in self.vertiport_ids:
             print(f"Average charge time at {vertiport_id}: {self.performance_metrics[vertiport_id]['charge_time']['mean']}")
+        print("Total charge time (min): ", round(self.total_charge_time_counter/1000/60, 2))
 
     def print_fato_utilization(self):
         print(" ")
@@ -681,6 +684,9 @@ class PerformanceMetrics:
         print(" ")
         for vertiport_id in self.vertiport_ids:
             print(f"Total empty flights from {vertiport_id}: {self.performance_metrics[vertiport_id]['empty_flights']}")
+        
+        for vertiport_id in self.vertiport_ids:
+            print(f"Total repositioning flights from {vertiport_id}: {self.repositioning_counter[vertiport_id]}")
 
     def print_verbose_performance_metrics(self):
         if not self.only_aircraft_simulation:

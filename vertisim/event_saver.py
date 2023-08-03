@@ -29,6 +29,7 @@ class EventSaver:
         self.aircraft_holding_time = defaultdict(dict)
         self.aircraft_idle_time_tracker = defaultdict(dict)
         self.aircraft_charging_times = defaultdict(dict)
+        self.total_charge_time_counter = 0
         self.aircraft_taxi_times = defaultdict(dict)
         self.fato_usage_tracker = defaultdict(dict)
         self.flight_and_time_tracker = defaultdict(dict)
@@ -37,6 +38,7 @@ class EventSaver:
         self.load_factor_tracker = defaultdict(list)
         self.passenger_count_tracker = defaultdict(int)
         self.passenger_time_tracker = defaultdict(dict)
+        self.repositioning_counter = defaultdict(dict)
         self.aircraft_energy_consumption_tracker = defaultdict(dict)
         self.flight_phase_energy_consumption_tracker = defaultdict(lambda: defaultdict(dict))
         self.ground_aircraft_counter = defaultdict(dict)
@@ -51,6 +53,7 @@ class EventSaver:
             self.flight_count_tracker[vertiport_id] = 0
             self.passenger_count_tracker[vertiport_id] = 0
             self.passenger_time_tracker[vertiport_id][self.sim_start_timestamp] = 0
+            self.repositioning_counter[vertiport_id] = 0
         self.flying_aircraft_counter[self.sim_start_timestamp] = 0
     
     def performance_metrics(self):
@@ -79,7 +82,9 @@ class EventSaver:
             'passenger_time_tracker': self.passenger_time_tracker,
             'aircraft_energy_consumption_tracker': self.aircraft_energy_consumption_tracker,
             'ground_aircraft_counter': self.ground_aircraft_counter,
+            'repositioning_counter': self.repositioning_counter,
             'flying_aircraft_counter': self.flying_aircraft_counter,
+            'total_charge_time_counter': self.total_charge_time_counter,
             'passenger_trip_time_tracker': self.passenger_trip_time_tracker,
             'aircraft_process_time_tracker': self.aircraft_process_time_tracker,
             'flight_phase_energy_consumption_tracker': self.flight_phase_energy_consumption_tracker
@@ -97,6 +102,9 @@ class EventSaver:
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.ground_aircraft_counter)
         self.ground_aircraft_counter[time] = aircraft_count
+
+    def update_repositioning_counter(self, vertiport_id, repositioning_count: int):
+        self.repositioning_counter[vertiport_id] += repositioning_count
 
     def update_aircraft_energy_consumption_tracker(self, flight_direction, energy_consumption):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
@@ -203,6 +211,7 @@ class EventSaver:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)        
         self.aircraft_charging_times[vertiport_id][time] = charging_time
+        self.total_charge_time_counter += charging_time
 
     def save_aircraft_taxi_time(self, 
                                 vertiport_id: str, 

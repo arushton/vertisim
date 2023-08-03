@@ -389,7 +389,7 @@ class SimSetup:
             if self.network_and_demand['flight_schedule_file_name'] is not None:
                 self.env.run()
             else:
-                self.env.run()
+                self.env.run(until=max_sim_time)
         self.print_total_time_to_run()  
 
     def print_total_time_to_run(self):
