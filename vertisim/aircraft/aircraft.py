@@ -508,12 +508,13 @@ class Aircraft:
         self.total_energy_consumption = 0
         self.idle_time = 0
          # TODO: Remove below. HARDCODED for optimization integration
-        if self.flight_direction == 'LAX_DTLA':
-            self.soc = self.preflight_soc - 10
-        elif self.flight_direction == 'DTLA_LAX':
-            self.soc = self.preflight_soc - 7.5
-        else:
-            raise ValueError(f'Invalid flight direction: {self.flight_direction}')
+        if self.vertiport_manager.fixed_schedule:
+            if self.flight_direction == 'LAX_DTLA':
+                self.soc = self.preflight_soc - 10
+            elif self.flight_direction == 'DTLA_LAX':
+                self.soc = self.preflight_soc - 7.5
+            else:
+                raise ValueError(f'Invalid flight direction: {self.flight_direction}')
 
     def post_landing_procedures(self):
         yield self.env.timeout(round(self.time_post_landing_safety_checks))
@@ -781,7 +782,7 @@ class Aircraft:
                                                 cost_type='climb_transition')
 
         # The speed is averaged because aircraft don't have forward velocity at the beginning of the climb transition phase
-        climb_transition_time = round(vertical_distance / self.vertical_velocity)
+        climb_transition_time = round(horizontal_distance / self.speed) * 2
         climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=round(self.speed/2, 2),
                                                                                     climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
                                                                                     climb_transition_time=climb_transition_time), 2)
@@ -821,7 +822,7 @@ class Aircraft:
                                                 horizontal_distance=horizontal_distance,
                                                 vertical_distance=vertical_distance,
                                                 cost_type='climb')
-        climb_time = round(horizontal_distance / self.speed)
+        climb_time = round(vertical_distance / self.vertical_velocity)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
@@ -980,11 +981,17 @@ class Aircraft:
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
-        if not self.target_soc and self.soc >= self.soc_required_to_complete_mission:
+        if not self.target_soc and self.soc >= self.aircraft_params['min_reserve_soc']:
             self.set_charging_time_trackers()
             self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')
             # After deboarding the passengers aircraft will be ready for the next flight.
-            yield self.env.timeout(round(self.time_passenger_embark_disembark))
+            if len(self.passengers_onboard) > 0:
+                self.state = 'embark_disembark'
+                yield self.env.timeout(round(self.time_passenger_embark_disembark))
+            else:
+                yield self.env.timeout(0)
+            self.save_process_time(event='embark_disembark', process_time=self.time_passenger_embark_disembark)
+            self.state = 'idle'
             return
         
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
@@ -1015,7 +1022,7 @@ class Aircraft:
         self.logger.info(f'Saved idle time of {miliseconds_to_hms(self.compute_holding_after_charge(charge_time))} for after charge holding for aircraft {self.tail_number} at {self.location}.')
 
         old_soc = self.soc
-        self.soc_charge_update()
+        self.soc_charge_update(charge_time)
         # Reset the target_soc to None for the next flight
         self.set_target_soc_none()
         self.release_charger_resource(used_charger_resource, selected_charging_request)
@@ -1129,14 +1136,13 @@ class Aircraft:
         target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
         return sec_to_ms(target_soc_time - init_soc_time)
 
-    def soc_charge_update(self) -> None:
+    def soc_charge_update(self, charge_time) -> None:
         """
         Updates the charge level of the aircraft using current charge time.
         """
-        charge_time = self.env.now - self.charging_start_time
         charge_lookup_table = self.vertiport_manager.aircraft_battery_models[self.destination_vertiport_id]
         final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.soc, df=charge_lookup_table)
-        self._soc = self.target_soc
+        self._soc = final_soc
         # self._soc = min(100, final_soc)
 
     def convert_kwh_soc(self, kwh: float) -> int:

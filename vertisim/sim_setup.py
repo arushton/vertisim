@@ -286,7 +286,7 @@ class SimSetup:
             network_simulation=self.sim_params['network_simulation'],
             fixed_charge_schedule=check_not_none(self.network_and_demand['charge_schedule_file_name']),
             fixed_schedule=check_not_none(self.network_and_demand['flight_schedule_file_name']),
-            flight_rebalancing=self.sim_params['flight_rebalancing'],
+            fleet_rebalancing=self.sim_params['fleet_rebalancing'],
             node_locations=self.node_locations,
             flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
             charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
