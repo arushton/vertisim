@@ -6,13 +6,12 @@ We adopted the building blocks approach to model the vertiport simulator. This a
 
 VertiSim employs a graph-theoretic methodology to build structural entities based on the input vertiport layout. The simulation environment is conceptualized as a network of nodes and links, $G(V, E)$ in which $V = \{v_i\}$ is its vertex set and $E = \{(v_i, v_j)\}$ its edge set. Node positions are sourced from the input data. In VertiSim, every node and link is treated as a resource with a user-specified capacity. The software architecture of VertiSim comprises nine main modules: Passenger, Aircraft, Airspace, Vertiport Manager, Scheduler, Vertiport Layout Creator, Configurator, Generator and Battery. In below Fig. we illustrate the VertiSim architecture. The modular design of VertiSim allows the effortless substitution of various models, including those for batteries, aircraft, and passengers.
 
-![vertisim_arch](https://user-images.githubusercontent.com/55157858/209736749-40c8de9b-f0ab-402b-a11e-1f20c247fb7f.png)
- Vertisim Architecture
- 
+![vertisim_software_arch](https://github.com/eminb61/VertiSim/assets/55157858/4df419cd-027e-4aaa-8cff-1d2f5d8c90d6)
+
 ![aircraft_state](https://user-images.githubusercontent.com/55157858/209735096-e9860468-2bd7-4e27-92bb-d098fe1cb362.png)
 Aircraft State Machine
 
-![passenger_state](https://user-images.githubusercontent.com/55157858/209735125-18b65e96-a061-4004-a979-1de6bcafa02b.png)
+<img width="50%" alt="passenger_state" src="https://user-images.githubusercontent.com/55157858/209735125-18b65e96-a061-4004-a979-1de6bcafa02b.png">
 Passenger State Machine
 
 The units of the timed inputs are seconds. These seconds are converted into miliseconds internally. This is the design choice.
@@ -20,7 +19,9 @@ The units of the timed inputs are seconds. These seconds are converted into mili
 # Demo
 Small circular shapes are parking pads and large circular shapes are FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden.
 
-https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
+<img width="50%" alt="vertisim_demo" src="https://github.com/eminb61/VertiSim/assets/55157858/82563aff-eef3-4e0b-b4cb-973e4ba48c60">
+
+[VertiSim Video Demo](https://www.youtube.com/watch?v=i4Cj6fiZJQk)
 
 # VertiSim v2.0
 ## Key Features:
