@@ -1,16 +1,10 @@
 # VertiSim
-Despite operational similarities to commencial airlines, Urban Air Mobility (UAM) operations has unique characteristics. UAM differs from commercial airlines in terms of scheduling, planning, and ground handling. It also varies from urban mobility services due to its relatively complex and longer turnaround process. To address these new problems, VertiSim, a multi-agent discrete-event vertiport simulator, has developed to model passenger arrival/departure processes, eVTOL arrival and departure processes, vertiport surface operations including landing, taxi, passenger boarding/deboarding, charging, take-off and all the interactions between these processes. VertiSim simulates UAM operations and computes performance measures such as aircraft turnaround time, vertiport throughput, surface and terminal area congestion, vertiport resource utilization, passenger transfer time statistics, average aircraft load factor and more. 
+VertiSim distinguishes itself from legacy aviation simulators by simultaneously modeling three critical flows: passenger, aircraft, and energy. This integrated approach reflects the unique operational characteristics of e-VTOL networks where flight durations, passenger waiting times, and aircraft charging times at vertiports are closely interrelated, necessitating a comprehensive understanding and detailed study of each flow for a holistic evaluation of system performance. VertiSim processes these interdependent flow into key metrics instrumental for effective network operation, such as aircraft utilization, average load factor, vertiport throughput, terminal area congestion, utilization of resources, energy consumption for each flight phase, repositioning flights, and passenger waiting times.
 
 ## VertiSim Architecture
-We adopted the building blocks approach to model the vertiport simulator. This approach allowed us to build comprehensive and flexible vertiport models that can be customized to meet different design and operational requirements. Our main building blocks are structural entities, flow entities, generator entities, and control entities. The structural entities in VertiSim encompass queues and servers that capture the static layout of the simulation environment. The queues comprise terminal airspace, aircraft departure queues, passenger departure queues, taxiway nodes, charger queues and passenger waiting rooms. The servers include TLOFs, taxiway links, parking pads, chargers, and batteries. Servers in VertiSim can have multiple queues, such as the TLOF server which features an aircraft arrival queue at the terminal airspace side and an aircraft departure queue at the vertiport surface side. The server-queue pair is defined as Resource in SimPy. Structural entities are connected to each other, and together they form a graph of the vertiport complex.
+We adopted the building blocks approach to model the vertiport simulator. This approach allowed us to build comprehensive and flexible vertiport models that can be customized to meet different design and operational requirements. Our main building blocks are structural entities, flow entities, generator entities, and control entities. Structural entities form the static layout of the simulation environment with elements like queues and servers. Flow entities such as aircraft, passengers, passenger groups, and energy interact with and move within these structural entities. Generator entities produce flow entities based on their schedule, while control entities handle tasks such as assigning TLOF (Touch-down and Lift-Off area) for arrival and departure, allocating parking pads, determining service priorities, dispatching flights, initiating charging and routing.
 
-The flow entities in VertiSim are aircraft, passengers, passenger groups, and energy. These entities move within the vertiport complex, from one structural entity to another, and interact with the queues and servers. The flow entities ask for permission to use the structural entities, and their requests are granted or delayed based on the availability and used capacity of the structural entities. After the completion of the service, flow entities are required to request permission to use the subsequent structural entity. If the next structural entity is already occupied, the flow entity will wait in the respective queue. The shortest path algorithm, which can be selected by the user, determines the sequence of structural entities that must be traversed from the entry node of the simulation to the exit point of the simulation.
-
-Lastly, the generator entities produce flow entities according to their scheduled arrivals, while the control entities handle tasks such as assigning TLOF for arrival and departure, allocating parking pads, determining arrival/departure priorities, flight creation, and routing.
-
-In process-based simulations, every activity is modeled by a process that involves time. In VertiSim, the activities of flow entities are connected with structural entities via processes. To provide further clarity on the terminology used, it can be stated that the charging activity of an aircraft agent is associated with a charger structural entity through the charging process. The processing time of structural entities, such as the service time at a server, can be specified by the user through deterministic values or probability distributions, or it can emerge through the interaction of the processes.
-
-VertiSim has 8 main modules to simulate processes at a vertiport: Passenger, Aircraft, Vertiport Manager, Scheduler, Vertiport Layout Creator, Configurator, Generator and Battery. In below Fig. we illustrate the VertiSim architecture. The modular design of VertiSim allows the effortless substitution of various models, including those for batteries, aircraft, and passengers.
+VertiSim employs a graph-theoretic methodology to build structural entities based on the input vertiport layout. The simulation environment is conceptualized as a network of nodes and links, $G(V, E)$ in which $V = \{v_i\}$ is its vertex set and $E = \{(v_i, v_j)\}$ its edge set. Node positions are sourced from the input data. In VertiSim, every node and link is treated as a resource with a user-specified capacity. The software architecture of VertiSim comprises nine main modules: Passenger, Aircraft, Airspace, Vertiport Manager, Scheduler, Vertiport Layout Creator, Configurator, Generator and Battery. In below Fig. we illustrate the VertiSim architecture. The modular design of VertiSim allows the effortless substitution of various models, including those for batteries, aircraft, and passengers.
 
 ![vertisim_arch](https://user-images.githubusercontent.com/55157858/209736749-40c8de9b-f0ab-402b-a11e-1f20c247fb7f.png)
  Vertisim Architecture
@@ -24,9 +18,32 @@ Passenger State Machine
 The units of the timed inputs are seconds. These seconds are converted into miliseconds internally. This is the design choice.
 
 # Demo
-Below we used 1 FATO (Final Approach and Take-off Area) and 4 parking pad vertiport configuration. FATO utilization is ~100%. Small circular shapes are parking pads and large circular shape is the FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden. Aircraft are approaching from right to left and departing from FATO to left.
+Small circular shapes are parking pads and large circular shapes are FATO. The light red lines represent aircraft trajectories. Passenger trajectories are hidden.
 
 https://user-images.githubusercontent.com/55157858/205735871-aa410dec-6046-4c5e-9ab4-dc4c79fc3691.mov
+
+# VertiSim v2.0
+## Key Features:
+1. Triad Flow Modeling: A unique capability to simultaneously model passenger, aircraft, and energy flows, which is pivotal for understanding e-VTOL operations.
+
+2. Holistic Infrastructure Modeling: Comprehensive infrastructure representation, encompassing vertiports, air routes, and flight profiles.
+
+3. Advanced Charging & Discharging: Capture the nuances of energy dynamics through non-linear charging models, moving beyond the constraints of traditional linear models.
+
+4. Dynamic Optimization Engine: An offline optimization model that harmonizes flight and charging schedules, adapting to variable demand scenarios.
+
+5. Multi-Vertiport System: Specialized numerical analysis focusing on a two-vertiport system to optimize fleet utilization, resource management, and passenger experience.
+
+## Metrics Offered:
+- Aircraft Utilization
+- Average Load Factor
+- Vertiport Throughput
+- Terminal Area Congestion
+- Vertiport Resource Utilization
+- Aircraft Energy Consumption
+- Repositioning Flights
+- Passenger Trip Times
+- and more...
 
 # Installation
 1. Download all of the files.
