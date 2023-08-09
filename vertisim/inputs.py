@@ -273,19 +273,8 @@ aircraft_params = {
     'min_reserve_soc': 40  # This is the minimum acceptable SoC that the aircraft should have to complete the mission.
 }
 
-vertis = network_and_demand['vertiport_network_file_path']
-vertis = re.search(r"network_(\w+)_(\w+).csv", vertis)
-
-sfo_layout = network_and_demand['vertiports'][vertis[1]]['layout']
-second_layout = network_and_demand['vertiports'][vertis[2]]['layout']
-sfo_aircraft = network_and_demand['vertiports'][vertis[1]]['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
-second_aircraft = network_and_demand['vertiports'][vertis[2]]['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
-
-sfo_parks = re.search(r"(\d+)_park", sfo_layout)[1]
-second_parks  = re.search(r"(\d+)_park", second_layout)[1]
-
 output_params = {
-    'output_folder_path': f'{str(cwd.parent.parent)}/output/{vertis[1]}_{sfo_parks}_park_{sfo_aircraft}_aircraft_{vertis[2]}_{second_parks}_park_{second_aircraft}_aircraft',
+    'output_folder_path': f'{str(cwd.parent.parent)}/output/results',
     'config_output_file_name': 'config',
     'performance_metrics_output_file_name': 'performance_metrics',
 }
