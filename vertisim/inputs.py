@@ -35,7 +35,7 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_STOCKTON.csv',
+    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_OAK.csv',
     'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
 
     # DEMAND FILES.
@@ -47,7 +47,7 @@ network_and_demand = {
     # and aircraft assignment will be done based on the optimization output.
     'charge_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
     'flight_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
-    'passenger_schedule_file_name': f'{str(cwd)}/input/passenger/demand_SFO_STOCKTON.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'passenger_schedule_file_name': f'{str(cwd)}/input/passenger/demand_SFO_OAK_290I.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
@@ -55,10 +55,10 @@ network_and_demand = {
     'vertiports': {
     # Input specifications for each vertiport.
         'SFO': {
-            'layout': 'clover_1_fato_12_park_sfo',
+            'layout': 'clover_1_fato_8_park_sfo',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
-            'num_chargers': 12,
+            'num_chargers': 8,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
@@ -90,7 +90,7 @@ network_and_demand = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport':8,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_in_vertiport':5,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -111,11 +111,11 @@ network_and_demand = {
                 # }
             }
         },
-        'STOCKTON': {
-            'layout': 'clover_1_fato_12_park_stockton',
+        'OAK': {
+            'layout': 'clover_1_fato_8_park_oak',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 10,
-            'num_chargers': 13,
+            'num_chargers': 8,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
