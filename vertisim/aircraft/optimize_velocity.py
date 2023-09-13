@@ -113,9 +113,12 @@ class VelocityOptimizer:
         term1 = 2*weight(tom) / (density * self.aircraft_params['wing_area'])
         term2 = np.sqrt(lift_induced_drag_coef(cd_0=self.aircraft_params['cd_0'], ld_max=self.aircraft_params['ld_max']) / self.aircraft_params['cd_0'])    
         return round(np.sqrt(term1 * term2))     
-        
-    # Define constraint function (V/Vv - D/H = 0)
+
     def set_constraints(self, V, vertical_dist, horizontal_dist):
+        """ Define constraint function such that the aircraft reaches its vertical and horizontal destination at the same time.
+        Ratio of Vh / Vv == D / H.
+        TODO: update to use Wind class to calculate Vh_required
+        """
         Vh, Vv = V
         return Vh/Vv - horizontal_dist/vertical_dist
 

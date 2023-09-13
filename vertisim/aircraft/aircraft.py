@@ -11,6 +11,7 @@ from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lif
 from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
+from wind.wind import Wind
 
 class Aircraft:
     """
@@ -923,17 +924,41 @@ class Aircraft:
                     # If the vertical distance is zero, then the aircraft is in cruise
                     self.state = 'cruise'
                     if self.aircraft_params['cruise_velocity']:
-                        self.speed = self.aircraft_params['cruise_velocity'] 
+                        cruise_speed = self.aircraft_params['cruise_velocity'] 
                     else:                   
-                        self.speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                        cruise_speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                        
+                    # Accounting for Wind
+                    latitude_o, longitude_o, altitude_o = self.vertiport_manager.airspace.waypoint_locations[self.location]
+                    latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
+                    heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
+                    
+                    # True air velocity required in the presence of wind such that |Vgs| = cruise_speed
+                    # not used because there is no RTA & true_air_speed = cruise_speed is optimal
+                    required_velocity = Wind.windRequiredVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
+                    required_speed = np.sqrt(required_velocity.dot(required_velocity))
+                        
+                    # Assuming true air velocity = cruise_speed (no adjustment)
+                    ground_velocity = Wind.groundVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
+                    ground_speed = np.sqrt(ground_velocity.dot(ground_velocity))
+                    
+                    """
+                    Most efficient:
+                        true_air_speed = cruise_speed
+                        ground_speed = true_air_speed + wind
+                    """
+                        
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 
-                                                                                        horizontal_speed=self.speed)
+                                                                                        horizontal_speed=ground_speed)
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
+                    
                     # Compute energy consumption
-                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, time_cruise=link_traversal_time), 2)
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, 
+                                                                              time_cruise=link_traversal_time), 2)
                     self.total_energy_consumption += energy_consumption
 
+                    # Logging
                     self.save_process_time(event='cruise', process_time=link_traversal_time)
                     self.save_flight_phase_energy(flight_phase='cruise', energy=energy_consumption)
             
@@ -1257,8 +1282,8 @@ class Aircraft:
         return sec_to_hr(descend_power * descend_time)
     
     def cruise_energy_consumption(self, velocity, time_cruise) -> float:
-        cruise_velocity = min(self.input_cruise_speed, velocity)
-        cruise_velocity = max(cruise_velocity, self.stall_speed)
+        # cruise_velocity = min(self.input_cruise_speed, velocity) TODO: determine original intent of this as generally self.input_cruise_speed = 0
+        cruise_velocity = max(velocity, self.stall_speed)
         cruise_power = cruise_phase_power(cruise_velocity=cruise_velocity,
                                           aircraft_params=self.aircraft_params,
                                           tom=self.tom)

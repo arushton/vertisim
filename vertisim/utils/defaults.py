@@ -24,8 +24,8 @@ DEFAULT_SIM_PARAMS = {
 # Network and Trips
 # -----------------
 DEFAULT_NETWORK_AND_DEMAND = {
-    'vertiport_network_file_path': f'{cwd}/input/network_of_2_vertiports.csv',
-    'vertiport_layout_file_path': f'{cwd}/input/skyport_layouts/skyport_layout.xls',
+    'vertiport_network_file_path': f'{cwd}/vertisim/input/network_of_2_vertiports.csv',
+    'vertiport_layout_file_path': f'{cwd}/vertisim/input/skyport_layouts/skyport_layout.xls',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
