@@ -933,6 +933,7 @@ class Aircraft:
                     heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
                     # True air velocity required in the presence of wind such that |Vgs| = cruise_speed
+                    # not used because there is no RTA & true_air_speed = cruise_speed is optimal
                     required_velocity = Wind.windRequiredVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
                     required_speed = np.sqrt(required_velocity.dot(required_velocity))
                         
@@ -940,20 +941,11 @@ class Aircraft:
                     ground_velocity = Wind.groundVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
                     ground_speed = np.sqrt(ground_velocity.dot(ground_velocity))
                     
-                    """Explanation: if the required_speed < cruise_speed, the aircraft is in positive wind conditions (ie cruise_speed = 40m/s, tailwind = 
-                    10m/s, required_speed = 30m/s) and it is efficient to fly at cruise_speed. However, if required_speed > cruise_speed, then the aircraft 
-                    will have to "fly" faster than cruise_speed in order to maintain cruise_speed in the given wind conditions; therefore ground_speed
-                    (ground_speed < cruise_speed) is efficient (unless ground_speed <= 0).
-                    
-                    Breakdown: 
-                    head_wind --> we fly @ ground_speed unless ground_speed <= 0
-                    tail_wind --> we fly at cruise_speed
-                    cross_wind --> depends on strength & direction of wind
                     """
-                    if required_speed < cruise_speed or ground_speed <= 0:
-                        ground_speed = cruise_speed
-                        
-                    self.speed = ground_speed
+                    Most efficient:
+                        true_air_speed = cruise_speed
+                        ground_speed = true_air_speed + wind
+                    """
                         
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 
@@ -961,7 +953,7 @@ class Aircraft:
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
                     
                     # Compute energy consumption
-                    energy_consumption = round(self.cruise_energy_consumption(velocity=ground_speed, 
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, 
                                                                               time_cruise=link_traversal_time), 2)
                     self.total_energy_consumption += energy_consumption
 

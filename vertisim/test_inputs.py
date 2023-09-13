@@ -16,7 +16,7 @@ sim_params = {
     'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
     'random_seed': 42,
     'max_passenger_waiting_time': 600,  # seconds or None
-    'flight_duration_constant': 600,  # seconds or None - Applies ground holding if the flight duration is less than this value.
+    'flight_duration_constant': None,  # 600 # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False,
     'charge_assignment_sensitivity': 2.4,
     'step_by_step_sim': False,
@@ -142,7 +142,7 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': f'{str(cwd)}/vertisim/input/airspace/finalized_route_0602.csv',
+    'airspace_layout_file_path': None, #f'{str(cwd)}/vertisim/input/airspace/finalized_route_0602.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.

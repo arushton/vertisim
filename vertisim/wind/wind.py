@@ -4,7 +4,7 @@ from math import sin, cos, atan2, pi
 class Wind:
     
     """Notes:
-    Relevant implementation in lines 930-955 of aircraft.py!
+    Relevant implementation in lines 930-948 of aircraft.py!
     """
 
     radius_earth = 6371 # km
@@ -16,7 +16,7 @@ class Wind:
         true_air_velocity = Wind.headingToVector(heading, magnitude=speed)
         
         # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("", heading)
+        v_wind = Wind.windVector("head", heading)
 
         return numpy.add(true_air_velocity, v_wind)
     
@@ -73,8 +73,7 @@ class Wind:
     
     def windVelocity(latitude: float, longitude: float, altitude: float) -> numpy.array:
         """Get the approximate wind speed at the given point (latitude, longitude, altitude above sea level)."""
-        # TODO: implement, Rapid Refresh API
-        # https://open-meteo.com/en/docs/gfs-api
+        # TODO: implement, High Resolution Rapid Refresh API
         pass
     
     # --- UNUSED FUNCTIONS BELOW ---
