@@ -123,46 +123,43 @@ class VelocityOptimizer:
         return Vh/Vv - horizontal_dist/vertical_dist
 
     def optimize(self, V, tom, altitude, horizontal_distance, vertical_distance, cost_type):
-        
-        params = PhaseParameters(tom, altitude, horizontal_distance, vertical_distance, cost_type)
-        
+        params = PhaseParameters(tom=tom, altitude=altitude, horizontal_distance=horizontal_distance, vertical_distance=vertical_distance, cost_type=cost_type)
         if params in self.cache:
             return self.cache[params]
+    
+        # Map cost_type string to corresponding cost function
+        cost_map = {
+            'climb': self.climb_cost,
+            'descend': self.descend_cost,
+            'climb_transition': self.climb_transition_cost,
+            'descend_transition': self.descend_transition_cost,
+        }
+        if vertical_distance <= 1:
+            return self.max_range_speed(altitude=altitude, tom=tom), 0
+
+        # Retrieve the appropriate cost function
+        cost_function = cost_map.get(cost_type)
+
+        # Define constraints dictionary
+        constraints = {'type': 'eq', 'fun': self.set_constraints, 'args': (vertical_distance, horizontal_distance)}
+
+        # Define bounds for V and Vv
+        min_power_velocity = self.min_power_velocity_for_climb_descend(altitude=altitude, tom=tom)
+        if cost_type in ['climb_transition', 'descend_transition']:
+            bounds = [(round(min_power_velocity/2, 2), min_power_velocity), 
+                    (1, self.aircraft_params['max_vertical_velocity'])]
         else:
-            
-            # Map cost_type string to corresponding cost function
-            cost_map = {
-                'climb': self.climb_cost,
-                'descend': self.descend_cost,
-                'climb_transition': self.climb_transition_cost,
-                'descend_transition': self.descend_transition_cost,
-            }
-            if vertical_distance <= 1:
-                return self.max_range_speed(altitude=altitude, tom=tom), 0
-            
-            # Retrieve the appropriate cost function
-            cost_function = cost_map.get(cost_type)
-            
-            # Define constraints dictionary
-            constraints = {'type': 'eq', 'fun': self.set_constraints, 'args': (vertical_distance, horizontal_distance)}
-            
-            # Define bounds for V and Vv
-            min_power_velocity = self.min_power_velocity_for_climb_descend(altitude=altitude, tom=tom)
-            if cost_type in ['climb_transition', 'descend_transition']:
-                bounds = [(round(min_power_velocity/2, 2), min_power_velocity), 
-                        (1, self.aircraft_params['max_vertical_velocity'])]
-            else:
-                bounds = [(round(min_power_velocity/2), self.aircraft_params['max_horizontal_velocity']), 
-                        (1, self.aircraft_params['max_vertical_velocity'])]
-                
-            # Initial guess for V and Vv
-            x0 = [V[0], V[1]]
-            
-            # Perform optimization
-            result = minimize(cost_function, x0, args=(tom, altitude, vertical_distance), method='SLSQP', bounds=bounds, constraints=constraints)
-            
-            vHO, vVO = round(result.x[0], 2), round(result.x[1], 2)
-            self.cache[params] = (vHO, vVO)
-            
-            return vHO, vVO
+            bounds = [(round(min_power_velocity/2), self.aircraft_params['max_horizontal_velocity']), 
+                    (1, self.aircraft_params['max_vertical_velocity'])]
+
+        # Initial guess for V and Vv
+        x0 = [V[0], V[1]]
+
+        # Perform optimization
+        result = minimize(cost_function, x0, args=(tom, altitude, vertical_distance), method='SLSQP', bounds=bounds, constraints=constraints)
+
+        vHO, vVO = round(result.x[0], 2), round(result.x[1], 2)
+        self.cache[params] = (vHO, vVO)
+
+        return vHO, vVO            
 

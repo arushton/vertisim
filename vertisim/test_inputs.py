@@ -2,6 +2,7 @@ import time
 from sim_setup import SimSetup
 import os
 from pathlib import Path
+import re
 
 cwd = Path.cwd()
 
@@ -9,7 +10,7 @@ cwd = Path.cwd()
 # Simulation parameters
 # --------------------
 sim_params = {
-    'sim_time': 60 * 60 * 100,  # seconds
+    'sim_time': 60 * 60 * 60,  # seconds
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
@@ -20,11 +21,11 @@ sim_params = {
     'charge_interruption': False,
     'charge_assignment_sensitivity': 2.4,
     'step_by_step_sim': False,
-    'flight_rebalancing': False,
+    'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
     'network_simulation': True,  # If True, then the simulation will simulate the network.
-    'verbose': True,  # If True, then the simulation will print the simulation output and performance metrics.
+    'verbose': True  # If True, then the simulation will print the simulation output and performance metrics.
     # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
     #                                      # Assign the least capacity aircraft that can complete the mission)
     # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (
@@ -53,11 +54,11 @@ network_and_demand = {
 
     'vertiports': {
     # Input specifications for each vertiport.
-        'LAX': {
-            'layout': 'clover_1_fato_7_park_lax',
+        'SFO': {
+            'layout': 'clover_1_fato_10_park_sfo',
             'holding_unit_capacity': 20,            
             'num_security_check_servers' : 10,
-            'num_chargers': 10,
+            'num_chargers': 12,
             'charger_max_charge_rate': 350,  # kW
             'charger_efficiency': 0.90,
             'shared_charger_sets': None,
@@ -89,7 +90,7 @@ network_and_demand = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_in_vertiport':8,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -110,8 +111,8 @@ network_and_demand = {
                 # }
             }
         },
-        'DTLA': {
-            'layout': 'clover_1_fato_13_park_dtla',
+        'OAK': {
+            'layout': 'clover_1_fato_10_park_stockton',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 10,
             'num_chargers': 13,
@@ -132,7 +133,7 @@ network_and_demand = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 4,
+                'num_initial_aircraft_in_vertiport': 8,
                 'initial_arrival_queue_state': 0
             }
         }     
@@ -173,7 +174,7 @@ passenger_params = {
     #     },
     #     'max_val_in_dist': 60
     # },
-    'waiting_room_to_boarding_gate_walking_time_constant': 30, #30,  # secs
+    'waiting_room_to_boarding_gate_walking_time_constant': 0, #30,  # secs
     'waiting_room_to_boarding_gate_walking_time_dist': None,
     'boarding_gate_to_aircraft_time_constant': 0, #19.7,  # secs
     'boarding_gate_to_aircraft_time_dist': None,
@@ -211,7 +212,7 @@ aircraft_params = {
     'time_pre_take_off_check_list': 0,  # sec
     'time_rotor_spin_up': 5,  # sec - will be included in the hover time
     'time_hover_climb': 15,  # sec - NOT USED
-    'time_climb_transition': 30,  # sec - NOT USED  
+    'time_climb_transition': 30,  # sec - NOT USED
     'time_climb': 65,  # sec - NOT USED  
     'time_descend': 65,  # sec - NOT USED
     'time_descend_transition': 30,  # sec - NOT USED
@@ -219,10 +220,10 @@ aircraft_params = {
     'time_rotor_spin_down': 5,  # sec - will be included in the hover time
     'time_post_landing_safety_checks': 0,  # sec    
     'ground_taxi_speed': 3.67, # 3.67 # ft/s
-    'time_passenger_embark_disembark': 0, #60 * 2,  # secs
-    'time_pre_charging_processes': 0,  # sec
+    'time_passenger_embark_disembark': 60 * 2, #60 * 2,  # secs
+    'time_pre_charging_processes': 60 * 3,  # sec
     'time_charging_plug_disconnection': 0,  # sec
-    'time_post_charging_processes': 0,  # sec'
+    'time_post_charging_processes': 60 * 3,  # sec'
 
 
     # AERODYNAMICS PARAMETERS
@@ -252,7 +253,7 @@ aircraft_params = {
     # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
     'time_charging': None,  # constant sec. If None charging_time_dist will be used.
-    'target_soc_constant': None,  # Target SOC of the aircraft for each charging event
+    'target_soc_constant': 40,  # Target SOC of the aircraft for each charging event
     # Prob. dist. name and the parameter variable names should be consistent with the reference:
     # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
     # depending on the distribution you use.
@@ -269,7 +270,7 @@ aircraft_params = {
     'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/vertism/input/aircraft/energy_consumption',
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
     'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
-    'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.
+    'min_reserve_soc': 40  # This is the minimum acceptable SoC that the aircraft should have to complete the mission.
 }
 
 output_params = {

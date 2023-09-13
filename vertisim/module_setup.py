@@ -74,7 +74,7 @@ def set_taxi_operations_config(is_simultaneous_taxi_and_take_off_allowed) -> Tax
 #                              network_simulation,
 #                              fixed_charge_schedule,
 #                              fixed_schedule,
-#                              flight_rebalancing,
+#                              fleet_rebalancing,
 #                              node_locations,
 #                              flight_duration_constant,
 #                              logger):
@@ -97,7 +97,7 @@ def set_taxi_operations_config(is_simultaneous_taxi_and_take_off_allowed) -> Tax
 #                             network_simulation=network_simulation,
 #                             fixed_charge_schedule=fixed_charge_schedule,
 #                             fixed_schedule=fixed_schedule,
-#                             flight_rebalancing=flight_rebalancing,
+#                             fleet_rebalancing=fleet_rebalancing,
 #                             node_locations=node_locations,
 #                             flight_duration_constant=flight_duration_constant,
 #                             logger=logger)
