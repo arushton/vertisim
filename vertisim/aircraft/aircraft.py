@@ -931,15 +931,15 @@ class Aircraft:
                     # Accounting for Wind
                     latitude_o, longitude_o, altitude_o = self.vertiport_manager.airspace.waypoint_locations[self.location]
                     latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
-                    heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
+                    heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
                     # True air velocity required in the presence of wind such that |Vgs| = cruise_speed
                     # not used because there is no RTA & true_air_speed = cruise_speed is optimal
-                    required_velocity = Wind.windRequiredVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
+                    required_velocity = Wind.rta_velocity_wind_adjusted(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
                     required_speed = np.sqrt(required_velocity.dot(required_velocity))
                         
                     # Assuming true air velocity = cruise_speed (no adjustment)
-                    ground_velocity = Wind.groundVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
+                    ground_velocity = Wind.ground_velocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
                     ground_speed = np.sqrt(ground_velocity.dot(ground_velocity))
                     
                     """

@@ -1,66 +1,72 @@
-import numpy
+import numpy as np
 from math import sin, cos, atan2, pi
 
 class Wind:
     
-    """Notes:
-    Relevant implementation in lines 930-948 of aircraft.py!
+    """Relevant usage in:
+        lines 930-948 of aircraft.py
     """
 
-    radius_earth = 6371 # km
+    RADIUS_EARTH = 6371 # km
     
-    def groundVelocity(speed: float, heading: float, latitude: float, longitude: float, altitude: float) -> numpy.array:
+    def ground_velocity(speed: float, heading: float, v_wind: np.ndarray) -> np.ndarray:
         """Calculate the ground velocity.
         """
         
-        true_air_velocity = Wind.headingToVector(heading, magnitude=speed)
-        
-        # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("head", heading)
+        true_air_velocity = Wind.heading_to_vector(heading, magnitude=speed)
 
-        return numpy.add(true_air_velocity, v_wind)
+        return np.add(true_air_velocity, v_wind)
     
-    def windRequiredVelocity(desired_speed: float, desired_heading: float, latitude: float, longitude: float, altitude: float) -> numpy.array:
-        """Calculate the velocity requried to move the aircraft in the desired heading at the desired speed in the presence of wind.        
+    def velocity_wind_adjusted(true_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float) -> np.ndarray:
+        """Calculate the true velocity required to move the aircraft in the desired heading, in the presence of wind.
+        Heading of the aircraft may change. True airspeed not adjusted unless < threshold. """
+        
+        cross_wind_component = v_wind * sin(desired_heading - Wind.vector_heading(v_wind))
+        
+        # TODO: finsh implementing
+        
+        pass
+    
+    def rta_velocity_wind_adjusted(desired_speed: float, desired_heading: float, v_wind: np.ndarray) -> np.ndarray:
+        """Calculate the true velocity requried to move the aircraft in the desired heading at the desired speed, in the presence of wind. 
+        True airspeed and initial heading of the aircraft may change.       
         
         Returns:
-            numpy.array: Velocity vector required to move with the desired heading at the desired speed.
+         np.array: Velocity vector required to move with the desired heading at the desired speed.
         """
         
-        v_desired = Wind.headingToVector(desired_heading, magnitude=desired_speed)
+        v_desired = Wind.heading_to_vector(desired_heading, magnitude=desired_speed)
         
-        # TODO: replace "head" wind with Rapid Refresh / other API call
-        v_wind = Wind.windVector("", desired_heading)
-        
-        return numpy.subtract(v_desired, v_wind)
+        return np.subtract(v_desired, v_wind)
     
-    def windVector(type: str, aircraft_heading: float) -> numpy.array:
-        """Generate a wind vector relative to an aircraft (tailwind, crosswind, headwind).
+    def make_wind_vector(aircraft_heading: float, desired_wind_angle: float, wind_magnitude: float = 8.0) -> np.ndarray:
+        """Generate a wind vector with a desired angle (radians) relative to the aircraft's heading 
+         (0 = tailwind, 0.5pi = starboard crosswind, pi = headwind, 1.5pi = port crosswind).
         """
-        wind_magnitude = 8.0 # m/s
-        match type:
-            case 'head':
-                wind_heading = aircraft_heading + pi
-            case 'cross':
-                wind_heading = aircraft_heading + pi / 2
-            case 'tail':
-                wind_heading = aircraft_heading
-            case _ :
-                wind_heading = None
-        return Wind.headingToVector(wind_heading, magnitude=wind_magnitude)
         
-    def headingToVector(heading: float, magnitude: float = 1.0) -> numpy.array:
+        assert(desired_wind_angle in range(0, 2 * pi)), "Angle must be in radians, and between 0 and 2pi."
+    
+        wind_heading = desired_wind_angle + aircraft_heading
+                
+        return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)
+        
+    def heading_to_vector(heading: float, magnitude: float = 1.0) -> np.ndarray:
         """Converts a heading to a unit vector. Optional argument of vector magnitude.
         Heading is N=0, (+) direction = clockwise [i.e. aircraft_heading = 10° means 80° in polar where pos X = 0 and (+) direction = counterclockwise]."""
 
         if not heading:
-            return numpy.array([0, 0])
+            return np.array([0, 0])
 
-        # note that the vertical (northern, Y axis) component corresponds to cos(heading)
-        return numpy.array([magnitude * sin(heading),
+        # note that the vertical (y axis) component corresponds to cos(heading)
+        return np.array([magnitude * sin(heading),
                             magnitude * cos(heading)])
         
-    def latLongToHeading(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> float:
+    def vector_heading(vector: np.ndarray) -> float:
+        """Calculate the angle (radians) from North (positive Y axis) of any XY vector."""
+        x, y = vector[0], vector[1]
+        return atan2(x, y)
+        
+    def lat_long_to_heading(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> float:
         """Find the heading of an aircraft moving from point A (latitude_1, longitude_1) to point B (latitude_2, longitude_2).
         Assumes the Earth is a spheroid - reasonable.
         
@@ -71,14 +77,16 @@ class Wind:
         longitude_difference = longitude_2 - longitude_1
         return atan2(sin(longitude_difference) * cos(latitude_2), cos(latitude_1) * sin(latitude_2) - sin(latitude_1) * cos(latitude_2) * cos(longitude_difference))
     
-    def windVelocity(latitude: float, longitude: float, altitude: float) -> numpy.array:
+    # --- NOT IMPLEMENTED (YET)
+    
+    def api_wind_velocity(latitude: float, longitude: float, altitude: float) -> np.ndarray:
         """Get the approximate wind speed at the given point (latitude, longitude, altitude above sea level)."""
         # TODO: implement, High Resolution Rapid Refresh API
         pass
     
     # --- UNUSED FUNCTIONS BELOW ---
         
-    def xyVector(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> numpy.array:
+    def xyVector(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> np.ndarray:
         """Calculates the vector in the XY plane between point A (latitude_1, longitude_1) and B (latitude_2, longitude_2) where +X = East and +Y = North.
         """
         origin_point = Wind.latLongToXY(latitude_1, longitude_1)
@@ -86,12 +94,12 @@ class Wind:
         
         return destination_point - origin_point
         
-    def latLongToXY(latitude: float, longitude: float) -> numpy.array:
+    def latLongToXY(latitude: float, longitude: float) -> np.ndarray:
         """Converts (latitude, longitude) to (x, y) where +X = East and +Y = North.
         Assumes the Earth is a spheroid - reasonable for short distances.
         """
-        x = Wind.radius_earth * cos(latitude) * cos(longitude)
-        y = Wind.radius_earth * cos(latitude) * sin(longitude)
-        return numpy.array([x, 
+        x = Wind.RADIUS_EARTH * cos(latitude) * cos(longitude)
+        y = Wind.RADIUS_EARTH * cos(latitude) * sin(longitude)
+        return np.array([x, 
                             y])
     
