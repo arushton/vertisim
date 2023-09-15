@@ -1,31 +1,38 @@
 import numpy as np
-from math import sin, cos, atan2, pi
+from math import sin, cos, tan, asin, atan2, pi
 
 class Wind:
     
     """Relevant usage in:
-        lines 930-948 of aircraft.py
+        lines 932-947 of aircraft.py
     """
 
     RADIUS_EARTH = 6371 # km
     
-    def ground_velocity(speed: float, heading: float, v_wind: np.ndarray) -> np.ndarray:
-        """Calculate the ground velocity.
-        """
-        
-        true_air_velocity = Wind.heading_to_vector(heading, magnitude=speed)
-
+    def ground_velocity(true_air_velocity: np.ndarray, v_wind: np.ndarray) -> np.ndarray:
+        """Calculate the ground velocity."""
         return np.add(true_air_velocity, v_wind)
     
-    def velocity_wind_adjusted(true_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float) -> np.ndarray:
+    def velocity_wind_adjusted(true_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float = None) -> np.ndarray:
         """Calculate the true velocity required to move the aircraft in the desired heading, in the presence of wind.
         Heading of the aircraft may change. True airspeed not adjusted unless < threshold. """
         
-        cross_wind_component = v_wind * sin(desired_heading - Wind.vector_heading(v_wind))
+        wind_mag = Wind.magnitude(v_wind)
+        wind_dir = Wind.vector_heading(v_wind)
         
-        # TODO: finsh implementing
+        constant_term = (wind_mag * cos(wind_dir) - tan(desired_heading) * wind_mag * sin(wind_dir)) / true_airspeed
         
-        pass
+        required_heading = cos(-constant_term) - desired_heading
+        
+        true_vector = Wind.heading_to_vector(required_heading, true_airspeed)
+
+        assert(Wind.vector_heading(true_vector) == Wind.vector_heading(desired_heading)), "Error. Formulism failed."
+        
+        if ground_speed_threshold and Wind.magnitude(Wind.ground_velocity(true_vector, v_wind)) < ground_speed_threshold:
+            # TODO: calculate alternate vector
+            print("ground speed less than threshold!")
+
+        return true_vector
     
     def rta_velocity_wind_adjusted(desired_speed: float, desired_heading: float, v_wind: np.ndarray) -> np.ndarray:
         """Calculate the true velocity requried to move the aircraft in the desired heading at the desired speed, in the presence of wind. 
@@ -61,11 +68,6 @@ class Wind:
         return np.array([magnitude * sin(heading),
                             magnitude * cos(heading)])
         
-    def vector_heading(vector: np.ndarray) -> float:
-        """Calculate the angle (radians) from North (positive Y axis) of any XY vector."""
-        x, y = vector[0], vector[1]
-        return atan2(x, y)
-        
     def lat_long_to_heading(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> float:
         """Find the heading of an aircraft moving from point A (latitude_1, longitude_1) to point B (latitude_2, longitude_2).
         Assumes the Earth is a spheroid - reasonable.
@@ -76,6 +78,15 @@ class Wind:
         
         longitude_difference = longitude_2 - longitude_1
         return atan2(sin(longitude_difference) * cos(latitude_2), cos(latitude_1) * sin(latitude_2) - sin(latitude_1) * cos(latitude_2) * cos(longitude_difference))
+    
+    def vector_heading(vector: np.ndarray) -> float:
+        """Calculate the angle (radians) from North (positive Y axis) of any XY vector."""
+        x, y = vector[0], vector[1]
+        return atan2(x, y)
+    
+    def magnitude(vector: np.ndarray):
+        """Calculate magnitude of numpy vector."""
+        return np.sqrt(np.dot(vector, vector))
     
     # --- NOT IMPLEMENTED (YET)
     
