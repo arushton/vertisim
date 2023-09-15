@@ -10,20 +10,17 @@ from passenger import Passenger
 class PassengerArrivalSetup:
     def __init__(self,
                  env: object,
-                 vertiport_configs: Dict,
-                 passenger_arrival_schedule_file_path: Union[str, None],
+                 network_and_demand: Dict,
                  passenger_params: Dict,
-                 demand_probabilities: Union[List, None],
                  vertiport_ids: List,
                  vertiport_manager: int,
                  aircraft_params: Dict = None,
                  network_simulation: bool = False,
                  passenger_logger: object = None):
         self.env = env
-        self.passenger_arrival_schedule_file_path = passenger_arrival_schedule_file_path
-        self.vertiport_configs = vertiport_configs
+        self.network_and_demand = network_and_demand
+        self.vertiport_configs = network_and_demand['vertiports']
         self.passenger_params = passenger_params
-        self.demand_probabilities = demand_probabilities
         self.vertiport_ids = vertiport_ids
         self.vertiport_manager = vertiport_manager
         self.aircraft_params = aircraft_params
@@ -49,21 +46,24 @@ class PassengerArrivalSetup:
             passenger_arrival_schedule['interarrival_time'] = compute_interarrival_times_from_schedule(passenger_arrival_schedule['passenger_arrival_time'])
 
     def setup_passenger_arrival(self):
-        if self.passenger_arrival_schedule_file_path is not None:
+        if self.network_and_demand['passenger_schedule_file_path'] is not None:
             # Load passenger arrival schedule from the path provided on self.passenger_arrival_schedule.
-            passenger_arrival_schedule = read_input_file(self.passenger_arrival_schedule_file_path)
+            passenger_arrival_schedule = read_input_file(self.network_and_demand['passenger_schedule_file_path'])
             # Sort the passenger arrival schedule by passenger_arrival_time
             passenger_arrival_schedule.sort_values(by='passenger_arrival_time', inplace=True)
             passenger_arrival_schedule.reset_index(drop=True, inplace=True)
             # Check if the columns of the input file are correct.
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
             print("Success: Passenger arrival schedule loaded from file.")
+
         else:
+            passenger_arrival_rates = read_input_file(self.network_and_demand['passenger_arrival_rates_path'])
             # Generate artificial passenger arrival schedule.
             passenger_arrival_schedule = generate_passenger_network_demand(
                 vertiport_configs=self.vertiport_configs,
                 vertiport_ids=self.vertiport_ids,
-                demand_probabilities=self.demand_probabilities,
+                demand_probabilities=self.network_and_demand['demand_probabilities'],
+                passenger_arrival_rates=passenger_arrival_rates,
                 network_simulation=self.network_simulation
             )
             # print("Success: Passenger arrival schedule is generated from the given distribution.")

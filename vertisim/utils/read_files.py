@@ -11,6 +11,8 @@ def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> pd.DataFrame:
     :return: pd.DataFrame
     """
     file_type = detect_file_type(file_path)
+    if file_type is None:
+        return None
     if file_type == 'csv':
         df = pd.read_csv(file_path)
         df = df.replace(np.nan, None)
@@ -35,6 +37,4 @@ def detect_file_type(file_path: str) -> str:
     :param file_path:
     :return: str
     """
-    if file_path is None:
-        raise ValueError('File path is None.')
-    return file_path.split('.')[-1]
+    return None if file_path is None else file_path.split('.')[-1]

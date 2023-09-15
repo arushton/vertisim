@@ -342,34 +342,15 @@ class SimSetup:
     def create_passenger_arrival_process(self):
         if self.sim_params['only_aircraft_simulation'] is False:
             # Load or generate passenger arrival schedule and start the passenger arrival process
-            if self.network_and_demand['passenger_schedule_file_path'] is not None:
-                passenger_arrival_process = PassengerArrivalSetup(
-                    env=self.env,
-                    vertiport_configs=self.network_and_demand['vertiports'],
-                    passenger_arrival_schedule_file_path=self.network_and_demand[
-                        'passenger_schedule_file_path'],
-                    passenger_params=self.passenger_params,
-                    demand_probabilities=self.network_and_demand['demand_probabilities'],
-                    vertiport_ids=self.vertiport_ids,
-                    vertiport_manager=self.vertiport_manager,
-                    aircraft_params=None,
-                    network_simulation=self.sim_params['network_simulation'],
-                    passenger_logger=self.passenger_logger
-                )
-            else:
-                # Create passenger arrival process
-                passenger_arrival_process = PassengerArrivalSetup(
-                    env=self.env,
-                    vertiport_configs=self.network_and_demand['vertiports'],
-                    passenger_arrival_schedule_file_path=None,
-                    passenger_params=self.passenger_params,
-
-                    demand_probabilities=self.network_and_demand['demand_probabilities'],
-                    vertiport_ids=self.vertiport_ids,
-                    vertiport_manager=self.vertiport_manager,
-                    aircraft_params=self.aircraft_params,
-                    network_simulation=self.sim_params['network_simulation'],
-                    passenger_logger=self.passenger_logger
+            passenger_arrival_process = PassengerArrivalSetup(
+                env=self.env,
+                network_and_demand=self.network_and_demand,
+                passenger_params=self.passenger_params,
+                vertiport_ids=self.vertiport_ids,
+                vertiport_manager=self.vertiport_manager,
+                aircraft_params=None,
+                network_simulation=self.sim_params['network_simulation'],
+                passenger_logger=self.passenger_logger
                 )
             self.env.process(
                 passenger_arrival_process.create_passenger_arrival()

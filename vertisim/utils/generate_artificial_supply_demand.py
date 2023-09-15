@@ -2,10 +2,12 @@ from typing import List
 import numpy as np
 import random
 import pandas as pd
+import time
 from utils.distribution_generator import DistributionGenerator
 from utils.units import sec_to_ms
-from utils.helpers import cumulative_sum_array, nested_dict_filter_keys
+from utils.helpers import cumulative_sum_array, nested_dict_filter_keys, compute_interarrival_times_from_schedule, set_seed
 from utils.weighted_random_chooser import weighted_random_choose_exclude_element, random_choose_exclude_element
+from utils.time_varying_arrival_generator import generate_arrival_times
 from typing import Dict
 
 def generate_aircraft_network_schedule(vertiport_configs: Dict, 
@@ -105,17 +107,29 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
 def generate_passenger_network_demand(vertiport_configs: Dict, 
                                       vertiport_ids: List,
                                       demand_probabilities: List,
+                                      passenger_arrival_rates: pd.DataFrame,
                                       network_simulation: bool):
     """
     Generate artificial passenger demand for each vertiport in the network.
     """
+    if demand_probabilities is None and passenger_arrival_rates is None:
+        raise ValueError('Either demand_probabilities or passenger_arrival_rates must be defined.')
+    
+    if demand_probabilities is not None and passenger_arrival_rates is not None: 
+        raise ValueError('Either demand_probabilities or passenger_arrival_rates must be None.')
+    
     network_demand = pd.DataFrame()
+
+    # Set the seed for the random number generator
+    set_seed(seed=int(time.time() % 1 *1000000))
+
     for vertiport_id, vertiport_config in vertiport_configs.items():
         vertiport_demand = generate_artificial_passenger_demand(
             passenger_arrival_process=vertiport_config['passenger_arrival_process'],
             vertiport_ids=vertiport_ids,
             origin_vertiport_id=vertiport_id,
             demand_probabilities=demand_probabilities,
+            passenger_arrival_rates=passenger_arrival_rates,
             network_simulation=network_simulation
         )
 
@@ -124,6 +138,9 @@ def generate_passenger_network_demand(vertiport_configs: Dict,
     # Sort the network_demand by passenger_arrival_time
     network_demand.sort_values(by='passenger_arrival_time', inplace=True)
     network_demand.reset_index(drop=True, inplace=True)
+
+    # Create interarrival times from passenger_arrival_times
+    network_demand['interarrival_time'] = compute_interarrival_times_from_schedule(network_demand['passenger_arrival_time'])
 
     # Assign unique passenger_ids to all passengers in the network
     network_demand['passenger_id'] = list(range(len(network_demand)))
@@ -134,12 +151,16 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
                                          vertiport_ids: List,
                                          origin_vertiport_id: str,
                                          demand_probabilities: List,
+                                         passenger_arrival_rates: pd.DataFrame,
                                          network_simulation: bool):
     num_passengers = passenger_arrival_process['num_passengers']
     if network_simulation and demand_probabilities and len(vertiport_ids) != len(demand_probabilities):
-        raise ValueError('Number of vertiports and the length of demand_probabilities must be the same.')
+        raise ValueError('Number of vertiports and the length of demand_probabilities must be the same.')  
     
-    if network_simulation:
+    if passenger_arrival_process['passenger_arrival_distribution'] is None and passenger_arrival_process['passenger_interarrival_constant'] is None:
+        raise ValueError('Either passenger_arrival_distribution or passenger_interarrival_constant must be defined.')          
+    
+    if network_simulation and demand_probabilities:
         destination_vertiport_ids = weighted_random_choose_exclude_element(elements_list=vertiport_ids, 
                                                                     exclude_element=origin_vertiport_id,
                                                                     probabilities=demand_probabilities, 
@@ -149,16 +170,16 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
                                                            exclude_element=origin_vertiport_id,
                                                            num_selection=num_passengers)
 
-    if passenger_arrival_process['passenger_arrival_distribution'] is None and passenger_arrival_process['passenger_interarrival_constant'] is None:
-        raise ValueError('Either passenger_arrival_distribution or passenger_interarrival_constant must be defined.')
     if passenger_arrival_process['passenger_interarrival_constant'] is not None:
         interarrival_times = [passenger_arrival_process['passenger_interarrival_constant']] * num_passengers
     else:
+        if passenger_arrival_rates is not None:
+            return generate_arrival_times(passenger_arrival_rates, origin_vertiport_id, num_passengers)
+        
         distribution = DistributionGenerator(distribution_params=passenger_arrival_process['passenger_arrival_distribution'])
         interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_passengers)]
     passenger_arrival_times = cumulative_sum_array(interarrival_times)
 
     return pd.DataFrame({'passenger_arrival_time': passenger_arrival_times,
-                         'interarrival_time': interarrival_times,
                          'origin_vertiport_id': origin_vertiport_id,
                          'destination_vertiport_id': destination_vertiport_ids})
