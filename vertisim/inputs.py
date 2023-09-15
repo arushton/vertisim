@@ -35,22 +35,23 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_OAK.csv',
+    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_MV.csv',
     'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated. Priority is given to the demand files.
-    # If charge_schedule_file_name is None, then the flight_schedule should provide the tail_number and departure times.
-    # Charging times will be computed internally. If charge_schedule_file_name is not None, then the charging times will be read from the file.
+    # If charge_schedule_file_path is None, then the flight_schedule should provide the tail_number and departure times.
+    # Charging times will be computed internally. If charge_schedule_file_path is not None, then the charging times will be read from the file.
     # and aircraft assignment will be done based on the optimization output.
-    'charge_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
-    'flight_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
-    'passenger_schedule_file_name': f'{str(cwd)}/input/passenger/demand_SFO_OAK_290I.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'charge_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
+    'flight_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
+    'passenger_schedule_file_path': None, #f'{str(cwd)}/input/passenger/demand_SFO_MV.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'passenger_arrival_rates_path': f'{str(cwd)}/input/passenger/passenger_arrival_rates_sfo_mv.csv',  # Use a full path. 
 
     # If the demand files are None, then the artificial demand is generated.
-    'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.
+    'demand_probabilities': None, #[0.5, 0.5], # The probability of the demand to be generated for each vertiport.
 
     'vertiports': {
     # Input specifications for each vertiport.
@@ -80,7 +81,7 @@ network_and_demand = {
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/60  # seconds
+                        'scale': None  # seconds
                         # 'param3': None,
                         # 'param4': None
                     },
@@ -111,8 +112,8 @@ network_and_demand = {
                 # }
             }
         },
-        'OAK': {
-            'layout': 'clover_1_fato_8_park_oak',
+        'MV': {
+            'layout': 'clover_1_fato_8_park_mv',
             'holding_unit_capacity': 20,
             'num_security_check_servers' : 10,
             'num_chargers': 8,
@@ -126,7 +127,7 @@ network_and_demand = {
                 'passenger_arrival_distribution': {
                     'distribution_name': 'expon',
                     'parameters': {
-                        'scale': 3600/60  # seconds
+                        'scale': None  # seconds
                     },
                     'max_val_in_dist': None,  # seconds
                 },

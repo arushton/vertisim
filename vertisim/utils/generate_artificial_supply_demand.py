@@ -136,7 +136,7 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
                                          demand_probabilities: List,
                                          network_simulation: bool):
     num_passengers = passenger_arrival_process['num_passengers']
-    if network_simulation and len(vertiport_ids) != len(demand_probabilities):
+    if network_simulation and demand_probabilities and len(vertiport_ids) != len(demand_probabilities):
         raise ValueError('Number of vertiports and the length of demand_probabilities must be the same.')
     
     if network_simulation:

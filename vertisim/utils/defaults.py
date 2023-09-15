@@ -32,8 +32,8 @@ DEFAULT_NETWORK_AND_DEMAND = {
     # If these are not None, then the demand is read from these files.
     # If these are None, then the artificial demand is generated.
     # Priority is given to the demand files.
-    'flight_schedule_file_name': None,  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
-    'passenger_schedule_file_name': None,  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'flight_schedule_file_path': None,  # Use a full path. Fixed schedule simulation. If None, aircraft_arrival_generator will be used.
+    'passenger_schedule_file_path': None,  # Use a full path. If None, passenger_arrival_generator will be used. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.

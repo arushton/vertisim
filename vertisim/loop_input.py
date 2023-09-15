@@ -47,12 +47,12 @@ def loop_input(vertiport1,
         # ---------------------------------------------------------------
         # If these are not None, then the demand is read from these files.
         # If these are None, then the artificial demand is generated. Priority is given to the demand files.
-        # If charge_schedule_file_name is None, then the flight_schedule should provide the tail_number and departure times.
-        # Charging times will be computed internally. If charge_schedule_file_name is not None, then the charging times will be read from the file.
+        # If charge_schedule_file_path is None, then the flight_schedule should provide the tail_number and departure times.
+        # Charging times will be computed internally. If charge_schedule_file_path is not None, then the charging times will be read from the file.
         # and aircraft assignment will be done based on the optimization output.
-        'charge_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
-        'flight_schedule_file_name': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
-        'passenger_schedule_file_name': f'{str(cwd)}/input/passenger/demand_{network_id}.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+        'charge_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
+        'flight_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
+        'passenger_schedule_file_path': f'{str(cwd)}/input/passenger/demand_{network_id}.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
 
         # If the demand files are None, then the artificial demand is generated.
         'demand_probabilities': [0.5, 0.5], # The probability of the demand to be generated for each vertiport.

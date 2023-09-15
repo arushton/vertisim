@@ -27,8 +27,8 @@ class AircraftArrivalSetup:
                  network_simulation: bool,
                  vertiport_layouts: Dict,
                  vertiport_configs: Union[Dict, None],
-                 flight_schedule_file_name: Union[str, None],
-                 charge_schedule_file_name: Union[str, None],
+                 flight_schedule_file_path: Union[str, None],
+                 charge_schedule_file_path: Union[str, None],
                  aircraft_params: Dict,
                  vertiport_manager: int,
                  scheduler: object,
@@ -40,8 +40,8 @@ class AircraftArrivalSetup:
         self.env = env
         self.network_simulation = network_simulation
         self.vertiport_layouts = vertiport_layouts
-        self.flight_schedule_file_name = flight_schedule_file_name
-        self.charge_schedule_file_name = charge_schedule_file_name
+        self.flight_schedule_file_path = flight_schedule_file_path
+        self.charge_schedule_file_path = charge_schedule_file_path
         self.vertiport_configs = vertiport_configs
         self.aircraft_params = aircraft_params
         self.vertiport_manager = vertiport_manager
@@ -93,7 +93,7 @@ class AircraftArrivalSetup:
         :param aircraft_schedule:
         :return:
         """
-        if not self.charge_schedule_file_name:
+        if not self.charge_schedule_file_path:
             required_columns = [
                 'aircraft_arrival_time',
                 'aircraft_pushback_time',
@@ -143,14 +143,14 @@ class AircraftArrivalSetup:
 
         
     def setup_aircraft_schedule(self) -> pd.DataFrame:
-        if self.flight_schedule_file_name is not None:
+        if self.flight_schedule_file_path is not None:
             return self._load_schedule_from_file()
         else:
             return self._generate_artificial_schedule()
 
     def _load_schedule_from_file(self):
         # Load and process aircraft arrival schedule
-        schedule, initial_states = self._read_and_process_schedule(self.flight_schedule_file_name)
+        schedule, initial_states = self._read_and_process_schedule(self.flight_schedule_file_path)
 
         # Set up scheduler with the processed schedule
         self._setup_scheduler_with_schedule(schedule)
@@ -181,7 +181,7 @@ class AircraftArrivalSetup:
         schedule = AircraftArrivalSetup.convert_schedule_columns_to_ms(schedule, 'flight_schedule')
 
         # Get the initial state of the system from the input file
-        if self.charge_schedule_file_name:
+        if self.charge_schedule_file_path:
             initial_states, initial_states_indices = AircraftArrivalSetup._get_initial_system_state_from_optimization(
                 schedule=schedule,
                 operation='flight_schedule')
@@ -235,14 +235,14 @@ class AircraftArrivalSetup:
     # ---------------------------- Setup aircraft charging schedule ---------------------------- #
 
     def setup_charge_schedule(self) -> Union[pd.DataFrame, None]:
-        if self.charge_schedule_file_name is not None:
+        if self.charge_schedule_file_path is not None:
             return self._load_charging_schedule_from_file()
         else:
             return None
         
     def _load_charging_schedule_from_file(self) -> pd.DataFrame:
         # Load and process aircraft arrival schedule
-        schedule, initial_states = self._read_and_process_charging_schedule(self.charge_schedule_file_name)
+        schedule, initial_states = self._read_and_process_charging_schedule(self.charge_schedule_file_path)
         print("Success: Aircraft charging schedule loaded from file.")
         self._setup_scheduler_with_charge_schedule(schedule)
         return initial_states
@@ -304,7 +304,7 @@ class AircraftArrivalSetup:
         if charge_schedule is None:
             self.logger.debug("No charging schedule is provided. The arrival schedule will read tail numbers from the file.")
             self.env.process(self._initial_aircraft_arrival_process_with_tail_number(aircraft_schedule))
-            if self.flight_schedule_file_name is not None:
+            if self.flight_schedule_file_path is not None:
                 self.logger.debug("Aircraft flight schedule is provided. The scheduler will initiate the schedule.")
                 self.env.process(self.scheduler.initiate_fixed_schedule_from_file())             
         else:

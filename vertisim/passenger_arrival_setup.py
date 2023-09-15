@@ -13,7 +13,7 @@ class PassengerArrivalSetup:
                  vertiport_configs: Dict,
                  passenger_arrival_schedule_file_path: Union[str, None],
                  passenger_params: Dict,
-                 demand_probabilities: List,
+                 demand_probabilities: Union[List, None],
                  vertiport_ids: List,
                  vertiport_manager: int,
                  aircraft_params: Dict = None,
