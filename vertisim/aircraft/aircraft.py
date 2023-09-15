@@ -12,6 +12,7 @@ from utils.compute_location_from_distance_and_bearing import compute_location_fr
 from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
 from wind.wind import Wind
+from math import pi
 
 class Aircraft:
     """
@@ -928,29 +929,26 @@ class Aircraft:
                     else:                   
                         cruise_speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
                         
-                    # Accounting for Wind
+                    """
+                    WIND IMPLEMENTATION
+                    
+                    Airspeed affects power. Ground speed affects travel time, which then affects total energy consumption.
+                    Therefore the effects of wind on power are decoupled from those on travel time.
+                    """   
+                                            
                     latitude_o, longitude_o, altitude_o = self.vertiport_manager.airspace.waypoint_locations[self.location]
                     latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
-                    heading = Wind.latLongToHeading(latitude_o, longitude_o, latitude_f, longitude_f)
+                    heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
-                    # True air velocity required in the presence of wind such that |Vgs| = cruise_speed
-                    # not used because there is no RTA & true_air_speed = cruise_speed is optimal
-                    required_velocity = Wind.windRequiredVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
-                    required_speed = np.sqrt(required_velocity.dot(required_velocity))
-                        
-                    # Assuming true air velocity = cruise_speed (no adjustment)
-                    ground_velocity = Wind.groundVelocity(cruise_speed, heading, latitude_o, longitude_o, altitude_o)
-                    ground_speed = np.sqrt(ground_velocity.dot(ground_velocity))
+                    v_wind = Wind.make_wind_vector(heading, 0.2 * pi)
                     
-                    """
-                    Most efficient:
-                        true_air_speed = cruise_speed
-                        ground_speed = true_air_speed + wind
-                    """
+                    true_vector = Wind.velocity_wind_adjusted(self.speed, heading, v_wind)
+                    
+                    ground_vector = Wind.ground_velocity(true_vector, v_wind)
                         
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 
-                                                                                        horizontal_speed=ground_speed)
+                                                                                        horizontal_speed=Wind.magnitude(ground_vector))
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
                     
                     # Compute energy consumption
