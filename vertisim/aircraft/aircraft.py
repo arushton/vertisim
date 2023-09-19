@@ -7,6 +7,7 @@ import numpy as np
 from collections import defaultdict
 from aircraft.optimize_velocity import VelocityOptimizer
 from utils.distance import distance_3d
+from utils.helpers import set_seed
 from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
 from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
@@ -940,6 +941,7 @@ class Aircraft:
                     latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
                     heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
+                    set_seed(how='instant')
                     v_wind = Wind.make_wind_vector(heading, 0.2 * pi)
                     
                     true_vector = Wind.velocity_wind_adjusted(self.speed, heading, v_wind)

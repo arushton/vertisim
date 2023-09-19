@@ -7,13 +7,17 @@ import re
 import pandas as pd # For type hinting
 
 
-def set_seed(seed=None):
+def set_seed(seed=None, how='instant'):
     """
     Sets the seed for random number generation.
     :param seed: an optional seed value (int)
     :return: None
     """
     if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+    elif how == 'instant':
+        seed= int(time.time() % 1 *1000000)
         random.seed(seed)
         np.random.seed(seed)
     else:

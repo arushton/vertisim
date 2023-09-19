@@ -121,7 +121,7 @@ def generate_passenger_network_demand(vertiport_configs: Dict,
     network_demand = pd.DataFrame()
 
     # Set the seed for the random number generator
-    set_seed(seed=int(time.time() % 1 *1000000))
+    set_seed(how='instant')
 
     for vertiport_id, vertiport_config in vertiport_configs.items():
         vertiport_demand = generate_artificial_passenger_demand(
