@@ -1,4 +1,4 @@
-from loop_input import *
+from loop_config import *
 import itertools
 from tqdm.contrib.itertools import product
 import numpy as np
