@@ -1,5 +1,5 @@
 from vertiport_layout_creator import VertiportLayout
-from config import VertiportConfig, TaxiOperationsConfig
+from configurator import VertiportConfig, TaxiOperationsConfig
 from vertiport_manager import VertiportManager
 from airspace_creator import AirspaceCreator
 from airspace import Airspace

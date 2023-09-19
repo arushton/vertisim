@@ -1,235 +1,293 @@
-import simpy
-import random
-from typing import Dict, Any, Union
-from collections import defaultdict
-from utils.helpers import flatten
-from charger_model import ChargerModel
+import time
+from sim_setup import SimSetup
+import os
+from pathlib import Path
+import re
 
+cwd = Path.cwd()
 
-class VertiportConfig:
+# ------------------------ Inputs ------------------------
+# Simulation parameters
+# --------------------
+sim_params = {
+    'sim_time': 60 * 60 * 60,  # seconds
+    'arrival_priority': 1,  # Lower the value higher the priority
+    'departure_priority': 1,  # Lower the value higher the priority
+    'simultaneous_taxi_and_take_off': True,
+    'num_initial_passengers': 0,   # TODO: # of passengers at the vertiport at the beginning of the simulation.
+    'random_seed': 42,
+    'max_passenger_waiting_time': 600,  # seconds or None
+    'flight_duration_constant': None,  # seconds or None - Applies ground holding if the flight duration is less than this value.
+    'charge_interruption': False, #TODO: Not supported yet.
+    'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
+    'step_by_step_sim': False,
+    'fleet_rebalancing': True,
+    'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
+    'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
+    'network_simulation': True,  # If True, then the simulation will simulate the network.
+    'verbose': True  # If True, then the simulation will print the simulation output and performance metrics.
+    # 'aircraft_assignment_rule_1': True,  # If True, then the simulator will use rule 1 for aircraft assignment. (
+    #                                      # Assign the least capacity aircraft that can complete the mission)
+    # 'aircraft_assignment_rule_2': False  # If True, then the simulator will use rule 2 for aircraft assignment. (
+    #                                      # Fill the aircraft that can complete the mission and arrived first)
+}
 
-    def __init__(self,
-                 env: simpy.Environment,
-                 vertiport_id: Any,
-                 vertiport_data: dict,
-                 vertiport_layout: dict,
-                 vertiport_ids: list):
-        self.env = env
-        self.vertiport_id = vertiport_id
-        self.vertiport_data = vertiport_data
-        self.vertiport_layout = vertiport_layout
-        self.vertiport_ids = vertiport_ids
+# Network and Trips
+# -----------------
+network_and_demand = {
+    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_MV.csv',
+    'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
 
-        self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
-        self.charger_model = self.set_charger_model()
-        self.fato_store = self.add_fato_ids_to_store()
-        self.parking_space_store = self.check_charger_resource_type()
-        self.taxiway_node_store = self.add_taxiway_nodes_to_store()
-        self.edge_store = self.add_edges_to_store()
-        self.charger_resource = simpy.Resource(self.env, capacity=self.vertiport_data['num_chargers'])
-        self.waiting_room_stores = self.create_waiting_room_stores()
-        self.available_aircraft_store = simpy.FilterStore(self.env)
-        self.taxi_resource = simpy.Resource(self.env, capacity=1)
-        self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
-        self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
-        self.vertiport_resource_states = self.get_resource_states()
-        self.num_aircraft = 0
+    # DEMAND FILES.
+    # ---------------------------------------------------------------
+    # If these are not None, then the demand is read from these files.
+    # If these are None, then the artificial demand is generated. Priority is given to the demand files.
+    # If charge_schedule_file_path is None, then the flight_schedule should provide the tail_number and departure times.
+    # Charging times will be computed internally. If charge_schedule_file_path is not None, then the charging times will be read from the file.
+    # and aircraft assignment will be done based on the optimization output.
+    'charge_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
+    'flight_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
+    'passenger_schedule_file_path': None, #f'{str(cwd)}/input/passenger/demand_SFO_MV.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
+    'passenger_arrival_rates_path': f'{str(cwd)}/input/passenger/passenger_arrival_rates_sfo_mv.csv',  # Use a full path. 
 
-    def get_resource_states(self):
-        entity_resources = defaultdict(lambda: defaultdict(dict))
-        for fato in self.fato_store.items:
-            # entity_resources[self.vertiport_id][fato.resource_id]['fato_resource'] = fato.fato_resource
-            entity_resources[self.vertiport_id][fato.resource_id]['num_jobs_in_service'] = fato.fato_resource.count
-            entity_resources[self.vertiport_id][fato.resource_id]['num_jobs_in_queue'] = len(fato.fato_resource.queue)
+    # If the demand files are None, then the artificial demand is generated.
+    'demand_probabilities': None, #[0.5, 0.5], # The probability of the demand to be generated for each vertiport.
 
-        if self.parking_space_store is not None:
-            # entity_resources[self.vertiport_id]['PARK']['parking_space_store'] = self.parking_space_store
-            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_service'] = len(self.parking_space_store.items)
-            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_queue'] = len(self.parking_space_store.get_queue)
+    'vertiports': {
+    # Input specifications for each vertiport.
+        'SFO': {
+            'layout': 'clover_1_fato_8_park_sfo',
+            'holding_unit_capacity': 20,            
+            'num_security_check_servers' : 10,
+            'num_chargers': 8,
+            'charger_max_charge_rate': 350,  # kW
+            'charger_efficiency': 0.90,
+            'shared_charger_sets': None,
+            # # Note: PARK IDs should match with the excel/csv file PARK IDs.
+            # 'shared_charger_sets' : {
+            #     1: ['LAX_PARK11', 'LAX_PARK12'],
+            #     2: ['LAX_PARK12', 'LAX_PARK13'],
+            #     3: ['LAX_PARK13', 'LAX_PARK14']
+            # },
 
-        if self.taxiway_node_store is not None:
-            # entity_resources[self.vertiport_id]['TAXI']['taxiway_node_store'] = self.taxiway_node_store
-            entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
-            entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
-
-        for destination, waiting_room_store in self.waiting_room_stores.items():
-            entity_resources[self.vertiport_id]['WAITING_ROOM'][destination] = {
-                # 'waiting_room_store': waiting_room_store,
-                'num_passengers': len(waiting_room_store.items),
+            # ARTIFICIAL PASSENGER DEMAND GENERATION
+            # --------------------------------------
+            # Prob. dist. name and the parameter variable names should be consistent with the reference:
+            # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
+            # depending on the distribution you use.
+            'passenger_arrival_process': {
+                'passenger_interarrival_constant': None,  # If not None, then the passenger arrival process will be created by the constant.
+                'num_passengers': 1000,  # Number of passengers to be generated
+                'passenger_arrival_distribution': {
+                    'distribution_name': 'expon',
+                    'parameters': {
+                        'scale': None  # seconds
+                        # 'param3': None,
+                        # 'param4': None
+                    },
+                    'max_val_in_dist': None,  # seconds
+                },
+            },
+            # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
+            # -------------------------------------
+            'aircraft_arrival_process': {
+                'num_initial_aircraft_in_vertiport':5,  # Number of aircraft in the simulation/vertiport. 
+                'initial_arrival_queue_state': 0,
+                # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
+                # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
+                # For network simulatio, if num_aircraft is None, then the  num_aircraft will be half of the parking pads.
+                
+                # THERE REST OF THE PARAMETERS ARE FOR SINGLE VERTIPORT SIMULATION.
+                # 'aircraft_interarrival_constant': None,  # If not None, then the aircraft arrival process will be created by the constant.
+                # 'num_aircraft': 200,  # Number of aircraft to be generated
+                # 'num_passengers': None,  # If num_aircraft is defined, this can be None because num_aircraft will overwrite. 
+                # 'aircraft_arrival_distribution': {
+                #     'distribution_name': 'expon',
+                #     'parameters': {
+                #         'scale': 3600/14  # seconds
+                #         # 'param3': None,
+                #         # 'param4': None
+                #     },
+                #     'max_val_in_dist': None,  # seconds
+                # }
             }
-        # entity_resources[self.vertiport_id]['ARRIVAL_FIX']['arrival_fix_resource'] = self.arrival_fix_resource
-        entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_service'] = self.arrival_fix_resource.count
-        entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
+        },
+        'MV': {
+            'layout': 'clover_1_fato_8_park_mv',
+            'holding_unit_capacity': 20,
+            'num_security_check_servers' : 10,
+            'num_chargers': 8,
+            'charger_max_charge_rate': 350,  # kW
+            'charger_efficiency': 0.90,
+            'shared_charger_sets': None,
+            # Passenger Arrival Process
+            'passenger_arrival_process': {
+                'passenger_interarrival_constant': None,
+                'num_passengers': 1000,  
+                'passenger_arrival_distribution': {
+                    'distribution_name': 'expon',
+                    'parameters': {
+                        'scale': None  # seconds
+                    },
+                    'max_val_in_dist': None,  # seconds
+                },
+            },
+            # Aircraft Arrival Process
+            'aircraft_arrival_process': {
+                'num_initial_aircraft_in_vertiport': 8,
+                'initial_arrival_queue_state': 0
+            }
+        }     
+    }
+}
 
-        # entity_resources[self.vertiport_id]['DEPARTURE_FIX']['departure_fix_resource'] = self.departure_fix_resource
-        entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_service'] = self.departure_fix_resource.count
-        entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
-
-        return entity_resources
-        
-
-
-
-    def check_charger_resource_type(self):
-        # Based on the charger resource specification, this method changes the structure of the parking pads.
-        if self.vertiport_data['shared_charger_sets'] and self.vertiport_data['num_chargers'] is None:
-            raise ValueError("Both shared_charger_sets and num_chargers variables are None. Please input one.")
-        elif self.vertiport_data['shared_charger_sets'] is not None:
-            # If the user specified a shared chargers create a ParkingPadAndChargerResource object for each parking pad
-            return self.add_parking_spaces_and_chargers_to_store(self.vertiport_data['shared_charger_sets'])
-        elif self.vertiport_data['num_chargers'] is not None:
-            # If the user didn't specify a shared charger resources then all of the chargers can be used by any of the
-            # parking pads
-            return self.add_parking_spaces_to_store()
-
-    def create_charger_resources(self, chargers_set: Union[Dict, int]) -> Dict:
-        charger_resources = defaultdict(dict)
-        if isinstance(chargers_set, dict):
-            for shared_charger_list in chargers_set.values():
-                charger_resources[simpy.Resource(self.env, capacity=1)] = shared_charger_list
-            return charger_resources
-
-        # elif isinstance(chargers_set, int):
-        #     for charger in range(chargers_set):
-        #         charger_resources[simpy.Resource(self.env, capacity=1)] = charger
-        #     return charger_resources
-        else:
-            raise TypeError("Charger set input type is not correct")
-        
-    def set_charger_model(self):
-        # This method sets the charger model for the chargers in the vertiport.
-        return ChargerModel(charger_max_charge_rate=self.vertiport_data['charger_max_charge_rate'],
-                            charger_efficiency=self.vertiport_data['charger_efficiency'])
-
-    def add_parking_spaces_and_chargers_to_store(self):
-        # Add parking space IDs to parking_space_store
-        if self.vertiport_layout.num_parking_pad == 0:
-            #TODO: Currently, the simulator requires parking pad to store aircraft.
-            # It should be able to store (park) the aircraft on the FATO if there are no parking spaces defined.
-            print("Currently, skyport simulator is not able to run without a parking pad.")
-            return
-        # Create a store for parking spaces
-        parking_space_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_parking_pad)
-        # Create a dictionary for the shared charger combination.
-        shared_charger_resources = self.create_charger_resources(self.self.vertiport_data['shared_charger_sets'])
-
-        # If no parking pad is defined then use FATO as parking pad
-        if self.vertiport_layout.num_parking_pad == 0:
-            for fato in self.vertiport_layout.fato_ids:
-                parking_pad = ParkingPadAndChargerResource(parking_space_id=fato)
-                for charger_resource, parking_pad_id_list in shared_charger_resources.items():
-                    if fato in parking_pad_id_list:
-                        parking_pad.charger_resources.append(charger_resource)
-                parking_space_store.put(parking_pad)
-            return parking_space_store
-
-        for parking_pad_id in self.vertiport_layout.parking_pad_ids:
-            parking_pad = ParkingPadAndChargerResource(parking_space_id=parking_pad_id)
-
-            for charger_resource, parking_pad_id_list in shared_charger_resources.items():
-                if parking_pad_id in parking_pad_id_list:
-                    parking_pad.charger_resources.append(charger_resource)
-            parking_space_store.put(parking_pad)
-        return parking_space_store
-
-    def add_parking_spaces_to_store(self):
-        """
-        Creates parking_space_store. If there is no parking space is defined then uses FATO as parking space
-        """
-        if self.vertiport_layout.num_fato == 0 and self.vertiport_layout.num_parking_pad == 0:
-            raise ValueError("There is no FATO and parking pad in the skyport layout.")
-
-        # If there is no parking space is defined then use FATO as parking space
-        if self.vertiport_layout.num_parking_pad == 0:
-            parking_space_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_fato)
-            for fato in self.vertiport_layout.fato_ids:
-                parking_pad = ParkingPadAndChargerResource(parking_space_id=fato)
-                parking_space_store.put(parking_pad)
-            return parking_space_store
-        # Add parking space IDs to parking_space_store
-        # Create a store for parking spaces
-        parking_space_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_parking_pad)
-        for parking_pad_id in self.vertiport_layout.parking_pad_ids:
-            parking_pad = ParkingPadAndChargerResource(parking_space_id=parking_pad_id)
-            parking_space_store.put(parking_pad)
-        return parking_space_store
-
-    def add_fato_ids_to_store(self):
-        if self.vertiport_layout.num_fato == 0:
-            raise ValueError("There is no FATO in the skyport layout.")
-        # Create a store for FATO pads
-        fato_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_fato)
-        # Add fato ids to fato_store
-        for fato_id in self.vertiport_layout.fato_ids:
-            # FATOs are PriorityResource to prioritize arrival or departure. Normally, the queueing rule in
-            # this simulator is FIFO.
-            fato_resourse = simpy.PriorityResource(self.env, 1)
-            # Put the FATO resources to the fato store.
-            fato_store.put(FatoResource(fato_id, fato_resourse))
-        return fato_store
-
-    def add_taxiway_nodes_to_store(self):
-        # If the skyport layout has taxiway nodes create a store for them.
-        if self.vertiport_layout.num_taxiway_nodes != 0:
-            taxiway_node_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_taxiway_nodes)
-            # Add node IDs to taxiwayRampNodeStore
-            for node_id in self.vertiport_layout.taxiway_node_ids:
-                taxiway_node_store.put(node_id)
-            return taxiway_node_store
-
-    def add_edges_to_store(self):
-        # If the vertiport layout has edges create a store for them.
-        if self.vertiport_layout.num_edges != 0:
-            edge_store = simpy.FilterStore(self.env, capacity=self.vertiport_layout.num_edges)
-            # Add edge IDs to edge store
-            for edge_id in self.vertiport_layout.edge_ids:
-                edge_store.put(set(edge_id))
-            return edge_store
-
-    def create_waiting_room_stores(self):
-        waiting_room_stores = defaultdict(dict)
-        # Create a store for waiting rooms
-        exclude_origin = [dest for dest in self.vertiport_ids if dest != self.vertiport_id]
-        for dest in exclude_origin:
-            waiting_room_stores[dest] = simpy.Store(self.env)
-        return waiting_room_stores
+# Airspace parameters
+# -------------------
+airspace_params = {
+    'airspace_layout_file_path': None, #f'{str(cwd)}/input/airspace/finalized_route_0615.csv',
+    'airspace_layout_sheet_name': None,
+    'airlink_capacity': 1,
+    # If the airlink file is not None, then the below parameters are not used.
+    'airlink_segment_length': 0.25,  # miles
+    'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
+    'cruise_altitude': 450,  # m
+}
 
 
-class TaxiOperationsConfig:
-    # This configuration prevents the usage of taxi area while an aircraft takes off.
-    is_simultaneous_taxi_and_take_off_allowed = True
-    # is_simultaneous_taxi_and_landing_allowed = True
+
+# Passenger parameters
+# --------------------
+# Time parameters should be a constant or a distribution. One should be None, the other should be provided.
+passenger_params = {
+    'randomize_constants': False,  # If true, the constants will be randomized. If false, the constants will be used as
+    # it is.
+    'car_to_entrance_walking_time_constant': 0, #30,  # secs
+    'car_to_entrance_walking_time_dist': None,
+    'security_check_time_constant': 0, #30,  # secs
+    'security_check_time_dist': None,
+    # 'security_check_time_dist': {
+    #     'distribution_name': 'expon',
+    #     'parameters': {
+    #         'loc': 0,
+    #         'scale': 1
+    #         # 'param3': None,
+    #         # 'param4': None
+    #     },
+    #     'max_val_in_dist': 60
+    # },
+    'waiting_room_to_boarding_gate_walking_time_constant': 0, #30,  # secs
+    'waiting_room_to_boarding_gate_walking_time_dist': None,
+    'boarding_gate_to_aircraft_time_constant': 0, #19.7,  # secs
+    'boarding_gate_to_aircraft_time_dist': None,
+    'deboard_aircraft_and_walk_to_exit_constant': 0, #120,  # secs
+    'deboard_aircraft_and_walk_to_exit_dist': None,
+}
+
+# Aircraft parameters
+# -------------------
+aircraft_params = {
+    'aircraft_model': 'jobyS4',  # This is the default aircraft type, if aircraft type is given with the schedule,
+    # then that will be used as the aircraft type.
+    'pax': 4,  # Default passenger capacity, if passenger capacity is given with the schedule,
+    # then that will be used as the passenger capacity.
+    'range': 150,  # miles
+    'soc': 100,  # Default initial SOC of aircraft at the arrival to the vertiport
+    'battery_capacity': 160,  # kWh
+    'pax_mass': 100,  # kg
+    
+    # MISSION PARAMETERS
+    # -----------------
+    'vertical_takeoff_velocity': 5.5,  # m/s
+    'vertical_landing_velocity': 5.5,  # m/s
+    'max_vertical_velocity': 6,  # m/s
+    'max_horizontal_velocity': 89,  # m/s - 173 knots | 200 mph
+    'cruise_velocity': None, #30, # or None
+    # # Altitude
+    'ground_altitude': 0,  # m
+    'hover_altitude': 15,  # m
+    'cruise_altitude': 450,  # m
+
+    # Process time
+    'time_tug_connection': 0,  # sec
+    'time_tug_disconnection': 0,  # sec
+    'time_pre_take_off_check_list': 0,  # sec
+    'time_rotor_spin_up': 5,  # sec - will be included in the hover time
+    'time_hover_climb': 15,  # sec - NOT USED
+    'time_climb_transition': 30,  # sec - NOT USED
+    'time_climb': 65,  # sec - NOT USED  
+    'time_descend': 65,  # sec - NOT USED
+    'time_descend_transition': 30,  # sec - NOT USED
+    'time_hover_descend': 15,  # sec - NOT USED
+    'time_rotor_spin_down': 5,  # sec - will be included in the hover time
+    'time_post_landing_safety_checks': 0,  # sec    
+    'ground_taxi_speed': 3.67, # 3.67 # ft/s
+    'time_passenger_embark_disembark': 60 * 2, #60 * 2,  # secs
+    'time_pre_charging_processes': 60 * 3,  # sec
+    'time_charging_plug_disconnection': 0,  # sec
+    'time_post_charging_processes': 60 * 3,  # sec'
 
 
-class FatoResource:
-    """
-    Creates an object to store a resourse with its ID. Simpy Resources doesn't
-    have any identifying names/IDs. So, we need to create a new class to define IDs to resources.
+    # AERODYNAMICS PARAMETERS
+    # -----------------------
+    'mtom': 2182,  # kg
+    'wing_area': 13,  # m^2
+    'disk_load': 45.9,  # kg/m^2
+    'f': 1.03, # Correction factor for interference from the fuselage
+    'FoM': 0.8,  # Figure of merit
+    'cd_0': 0.015,  # Zero lift drag coefficient
+    'cl_max': 1.5,  # Maximum lift coefficient
+    'ld_max': 18,  # Maximum lift to drag ratio
+    'eta_hover': 0.85,  # Hover efficiency
+    'eta_climb': 0.85,  # Climb efficiency
+    'eta_descend': 0.85,  # Descend efficiency
+    'eta_cruise': 0.90,  # Cruise efficiency
+    'atmosphere_condition': 'good', # good, bad
 
-    Attributes
-    ----------
-    fato_id : str
-        ID of a FATO pad
-    fato_resource : simpy Resource
-        simpy resource for FATO pads
-    """
 
-    def __init__(self, fato_id, fato_resource):
-        self.resource_id = fato_id
-        self.fato_resource = fato_resource
+    # AIRCRAFT CHARGING TIME PARAMETERS
+    # ----------------------------
+    # There are 3 options to simulate the charging time of an aircraft:
+    # 1. Constant charging time defined by 'time_charging' parameter.
+    # 2. Charging time distribution defined by 'time_charging_dist' parameter.
+    # 3. Based on energy requirement to complete the mission. Each aircraft type has a different energy requirement to
+    # complete the mission. To use this feature, battery model parameters and aircraft energy consumption data need to
+    # be given. The energy requirement is computed with the model that Sridhar et. al. developed. TODO: Add link
 
+    'time_charging': None,  # constant sec. If None charging_time_dist will be used.
+    'target_soc_constant': 60,  # Target SOC of the aircraft for each charging event
+    # Prob. dist. name and the parameter variable names should be consistent with the reference:
+    # https://docs.scipy.org/doc/scipy/reference/stats.html. You may need to add/remove some parameters
+    # depending on the distribution you use.
+    'charging_time_dist': {
+        'distribution_name': 'expon',
+        'parameters': {
+            'scale': 60 * 10
+            # 'param3': None,
+            # 'param4': None
+        },
+        'max_val_in_dist': None,  # sec. This parameter is used as the max charge time for the charging
+        # time distribution generation.
+    },
+    'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/input/aircraft/energy_consumption',
+    'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
+    'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
+    'min_reserve_soc': 40  # This is the minimum acceptable SoC that the aircraft should have to complete the mission.
+}
 
-class ParkingPadAndChargerResource:
-    """
-    Creates an object to store a parking pad with its ID and shared charger resource. Simpy Resources doesn't
-    have any identifying names/IDs. So, we need to create a new class to define IDs to resources.
+output_params = {
+    'output_folder_path': f'{str(cwd.parent.parent)}/output/results',
+    'config_output_file_name': 'config',
+    'performance_metrics_output_file_name': 'performance_metrics',
+}
 
-    Attributes
-    ----------
-    parking_space_id : str
-        ID of a parking pad
-    """
+# ----------------------------------------------------------
+start_time = time.time()
 
-    def __init__(self, parking_space_id: str) -> str:
-        self.resource_id = parking_space_id
-        self.charger_resources = []
+SimSetup(sim_params=sim_params,
+         network_and_demand=network_and_demand,
+         airspace_params=airspace_params,
+         passenger_params=passenger_params,
+         aircraft_params=aircraft_params,
+         output_params=output_params,
+         sim_start_time=start_time
+         )
