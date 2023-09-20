@@ -942,9 +942,9 @@ class Aircraft:
                     heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
                     set_seed(how='instant')
-                    v_wind = Wind.make_wind_vector(heading, 0.2 * pi)
+                    v_wind = Wind.make_wind_vector_relative_to_the_aircraft(heading, 0.2 * pi)
                     
-                    true_vector = Wind.velocity_wind_adjusted(self.speed, heading, v_wind)
+                    true_vector = Wind.wind_adjusted_true_velocity(self.speed, heading, v_wind)
                     
                     ground_vector = Wind.ground_velocity(true_vector, v_wind)
                         
