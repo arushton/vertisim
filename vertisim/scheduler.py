@@ -41,7 +41,7 @@ class Scheduler:
             
             if pushback_interarrival_time != 0:
                 for _, aircraft in self.vertiport_manager.aircraft_agents.items():
-                    self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.state}, SOC: {aircraft.soc}, location: {aircraft.location}.")
+                    self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, location: {aircraft.location}.")
 
             # Get the waiting room for the destination
             waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]

@@ -7,8 +7,9 @@ from utils.weighted_random_chooser import random_choose_exclude_element
 from utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
 from aircraft.battery_model import BatteryModel
-from aircraft.aircraft import Aircraft
+from aircraft.aircraft import Aircraft, AircraftStatus
 import pandas as pd
+from enum import Enum
 from collections import defaultdict
 from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
 from typing import List, Union
@@ -274,10 +275,10 @@ class VertiportManager:
         Requests the fix resource from vertiport manager
         """
         if operation_type == 'arrival':
-            arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction)
+            arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction).airnode_resource
             return arrival_fix_resource.request(), arrival_fix_resource            
         elif operation_type == 'departure':
-            departure_fix_resource = self.get_second_airlink_resource(flight_direction=flight_direction)
+            departure_fix_resource = self.get_second_airlink_resource(flight_direction=flight_direction).airnode_resource
             return departure_fix_resource.request(), departure_fix_resource 
         
     def release_fix_resource(self, aircraft: Aircraft, operation: str) -> None:
@@ -582,15 +583,21 @@ class VertiportManager:
                          soc: int = None):
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
+        # Update the vertiport flight request state
+        self.vertiports[origin_vertiport_id].num_flight_requests += 1           
         # Log the aircraft allocation process
         flight_id = get_random_process_id()
         self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {tail_number}, required SOC: {soc}')
         # Get the intended pushback time of the aircraft
-        pushback_time = self.env.now        
+        pushback_time = self.env.now             
         # Retrieve aircraft from the store
         # yield self.env.timeout(1)
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc) 
-        # Set the intended pushback time of the aircraft 
+        # Set the status of the aircraft
+        aircraft.status = AircraftStatus.FLY
+        # Update the vertiport flight request state
+        self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
+        # Set the real pushback time of the aircraft 
         aircraft.pushback_time = pushback_time
         # Set the flight direction of the aircraft
         aircraft.flight_direction = f'{origin_vertiport_id}_{destination_vertiport_id}'
@@ -873,7 +880,7 @@ class VertiportManager:
     # -------------------------
 
     def check_holding_aircraft(self, flight_direction: str, origin_vertiport_id: Any, destination_vertiport_id: Any):
-        arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction)
+        arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction).airnode_resource
         if len(arrival_fix_resource.queue) > 0:
             num_queued = len(arrival_fix_resource.queue)
             num_available_aircraft_at_dest = self.check_num_available_aircraft(destination_vertiport_id)
@@ -970,7 +977,7 @@ class VertiportManager:
                 aircraft.save_process_time(event='idle', process_time=ground_holding_time)
                 self.logger.info(f'Saved idle time of {miliseconds_to_hms(ground_holding_time)} for ground holding for aircraft {aircraft.tail_number} at {aircraft.location}.')
                 self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
-                aircraft.state = 'idle'
+                aircraft.detailed_status = 'idle'
                 # Put aircraft into available aircraft store
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)           
@@ -1050,11 +1057,11 @@ class VertiportManager:
 
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
-            if aircraft.initial_process in ['charging', None]:
+            if aircraft.initial_process in [AircraftStatus.CHARGE, None]:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
                 aircraft.initial_process = None
-            elif aircraft.initial_process == 'parking':
+            elif aircraft.initial_process == AircraftStatus.IDLE:
                 # Put aircraft into available aircraft store
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)
@@ -1091,7 +1098,8 @@ class VertiportManager:
         if operation_type == 'departure':
             # Increase the aircraft departure queue counter
             self.event_saver.update_aircraft_departure_queue_counter(vertiport_id=vertiport_id,
-                                                                    queue_update=1)            
+                                                                    queue_update=1)   
+            self.vertiports[vertiport_id].aircraft_departure_queue_count += 1
 
         # Request for FATO pad usage
         aircraft_fato_usage_request = self.request_fato(
@@ -1103,7 +1111,8 @@ class VertiportManager:
         if operation_type == 'departure':
             # Increase the aircraft departure queue counter
             self.event_saver.update_aircraft_departure_queue_counter(vertiport_id=vertiport_id,
-                                                                    queue_update=-1)     
+                                                                    queue_update=-1)    
+            self.vertiports[vertiport_id].aircraft_departure_queue_count -= 1 
 
         if operation_type == 'arrival' and \
             self.vertiports[aircraft.destination_vertiport_id].vertiport_layout.num_parking_pad == 0:
@@ -1122,7 +1131,7 @@ class VertiportManager:
         yield self.env.process(aircraft.aircraft_landing_process())
 
         # Release approach fix
-        approach_fix = self.get_last_airlink_resource(flight_direction=aircraft.flight_direction)
+        approach_fix = self.get_last_airlink_resource(flight_direction=aircraft.flight_direction).airnode_resource
         approach_fix.release(aircraft.arrival_fix_usage_request)
 
     def simulate_taxi_process(self, aircraft: object, operation_type: str):

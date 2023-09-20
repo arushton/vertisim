@@ -1,9 +1,9 @@
-from utils.get_state_variables import get_state_variables
+from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables
 
 def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, vertiport_manager, max_sim_time):
     while env.peek() < max_sim_time:
         env.step()
-        get_simulation_state_variables(vertiports=vertiports, airspace=airspace, vertiport_manager=vertiport_manager)
+        get_human_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, vertiport_manager=vertiport_manager)
         modify = get_user_input()
         if modify.isdigit():
             fast_forward_simulation(env=env, steps=int(modify))
@@ -11,12 +11,16 @@ def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_gro
             modify_aircraft_state(env=env, structural_entity_groups=structural_entity_groups, airspace=airspace, vertiport_manager=vertiport_manager)
 
 
-def get_simulation_state_variables(vertiports, airspace, vertiport_manager):
-    get_state_variables(vertiports=vertiports, 
-                        airspace_states=airspace.airspace_resource_states,
+def get_human_readable_simulation_state_variables(vertiports, airspace, vertiport_manager):
+    get_human_readable_state_variables(vertiports=vertiports, 
+                        airspace_states=airspace.get_airspace_states_dict(),
                         aircraft_agents=vertiport_manager.aircraft_agents,
                         passenger_agents=vertiport_manager.passenger_agents)
     
+def get_machine_readable_simulation_state_variables(vertiports, airspace, vertiport_manager):
+    get_machine_readable_state_variables(vertiports=vertiports, 
+                        airspace_states=airspace.get_airspace_states_array(),
+                        aircraft_agents=vertiport_manager.aircraft_agents)    
 
 def get_user_input():
     return input("Do you want to modify any aircraft's state? (y/n) or fast-forward simulation steps (# simulation steps to fast-forward): ")

@@ -3,12 +3,14 @@ import numpy as np
 import random
 import pandas as pd
 import time
+from enum import Enum
 from utils.distribution_generator import DistributionGenerator
 from utils.units import sec_to_ms
 from utils.helpers import cumulative_sum_array, nested_dict_filter_keys, compute_interarrival_times_from_schedule, set_seed
 from utils.weighted_random_chooser import weighted_random_choose_exclude_element, random_choose_exclude_element
 from utils.time_varying_arrival_generator import generate_arrival_times
 from typing import Dict
+from aircraft.aircraft import AircraftStatus
 
 def generate_aircraft_network_schedule(vertiport_configs: Dict, 
                                        vertiport_layouts: Dict,
@@ -100,7 +102,7 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
                          'location': location,
                          'serviced_time_at_the_location': serviced_time_at_the_location,
                          'priority': priority,
-                         'process': ['PARKING' for _ in range(num_aircraft)]
+                         'process': [AircraftStatus.IDLE for _ in range(num_aircraft)]
                          })
 
 

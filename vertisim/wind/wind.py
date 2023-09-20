@@ -15,7 +15,7 @@ class Wind:
         return np.add(true_air_velocity, v_wind)
     
     # @staticmethod
-    # def velocity_wind_adjusted(true_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float = None) -> np.ndarray:
+    # def wind_adjusted_true_velocity(true_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float = None) -> np.ndarray:
     #     """Calculate the true velocity required to move the aircraft in the desired heading, in the presence of wind.
     #     Heading of the aircraft may change. True airspeed not adjusted unless < threshold. """
         
@@ -28,10 +28,14 @@ class Wind:
         
     #     true_vector = Wind.heading_to_vector(required_heading, true_airspeed)
 
-    #     print("desired_heading: ", desired_heading)
-    #     print("True heading:", Wind.vector_to_heading(true_vector))
 
-    #     assert(Wind.vector_to_heading(true_vector) == desired_heading), "Error. Formulism failed."
+    #     # Compute ground velocity heading 
+    #     ground_velocity = Wind.ground_velocity(true_vector, v_wind)
+
+    #     print("desired_heading: ", desired_heading)
+    #     print(Wind.vector_to_heading(ground_velocity))
+
+    #     assert(Wind.vector_to_heading(ground_velocity) == desired_heading), "Error. Formulism failed."
         
     #     if ground_speed_threshold and Wind.magnitude(Wind.ground_velocity(true_vector, v_wind)) < ground_speed_threshold:
     #         # TODO: calculate alternate vector

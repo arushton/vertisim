@@ -10,7 +10,7 @@ There are three ways to set up aircraft arrival (initiation) process for network
 
 import pandas as pd
 
-from aircraft.aircraft import Aircraft
+from aircraft.aircraft import Aircraft, AircraftStatus
 import pandas as pd
 from utils.units import sec_to_ms, ms_to_sec
 from utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, \
@@ -348,7 +348,7 @@ class AircraftArrivalSetup:
                                             serviced_time_at_the_location=aircraft_data['serviced_time_at_the_location'],
                                             departure_time=aircraft_data['aircraft_pushback_time'],
                                             priority=aircraft_data['priority'],
-                                            initial_process=lower_str(aircraft_data['process']),
+                                            initial_process=aircraft_data['process'],
                                             logger=self.logger,
                                             aircraft_logger=self.aircraft_logger)
             )       
@@ -391,7 +391,7 @@ class AircraftArrivalSetup:
                                   location: str = None,
                                   serviced_time_at_the_location: int = 0,
                                   priority: int = 1,
-                                  initial_process: str = 'parking',
+                                  initial_process: str = AircraftStatus.IDLE,
                                   logger=None,
                                   aircraft_logger=None):
         
@@ -423,7 +423,7 @@ class AircraftArrivalSetup:
         # Save aircraft in aircraft_agent dictionary.
         self.vertiport_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
 
-        self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.state}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
+        self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
 
         yield self.env.process(self.initiate_aircraft(aircraft=aircraft))
         

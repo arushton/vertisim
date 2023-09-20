@@ -3,6 +3,7 @@ import simpy
 from utils.distance import haversine_dist
 from collections import defaultdict
 import pandas as pd
+import numpy as np
 
 class Airspace:
     def __init__(self, env: simpy.Environment(), 
@@ -22,7 +23,6 @@ class Airspace:
         self.flight_directions = flight_directions
         self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_locations)
         self.airlink_resources = self.create_airlink_resources()
-        self.airspace_resource_states = self.get_airspace_states()
 
     def create_airlink_resources(self):
         airlink_resources = defaultdict(dict)
@@ -30,37 +30,54 @@ class Airspace:
             # origin = flight_direction.split('_')[0]
             # destination = flight_direction.split('_')[1]
             for waypoint_id in waypoint_id_list:
-                # The second to last one (holding unit -approach departure fixes) will have capacity of holding_unit_capacity
-                # Departure fix
+                # Hover fix, Departure fix, Hover fix, FAF
                 if waypoint_id in [waypoint_id_list[0], waypoint_id_list[1], waypoint_id_list[-1], waypoint_id_list[-2]]:
-                    airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=1) # Overtake is not allowed
+                    airlink_resources[flight_direction][waypoint_id] = Airnode(self.env, 
+                                                                               airnode_id=waypoint_id,
+                                                                               airnode_capacity=1) # Overtake is not allowed
+                # Holding unit
                 elif waypoint_id == waypoint_id_list[-3]:
-                    airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.holding_unit_capacity)
+                    airlink_resources[flight_direction][waypoint_id] = Airnode(self.env,
+                                                                               airnode_id=waypoint_id,
+                                                                               airnode_capacity=self.holding_unit_capacity)
+                # Cruise segment
                 else:
-                    airlink_resources[flight_direction][waypoint_id] = simpy.Resource(self.env, capacity=self.airlink_capacity)
+                    airlink_resources[flight_direction][waypoint_id] = Airnode(self.env,
+                                                                               airnode_id=waypoint_id,
+                                                                               airnode_capacity=self.airlink_capacity)
         return airlink_resources
     
-    def get_airspace_states(self):
+    def get_airspace_states_dict(self):
         return {
             flight_direction: {
-                waypoint_id: {
-                    # 'waypoint_resource': airlink_resource,
-                    'num_jobs_in_service': airlink_resource.count,
-                    'num_jobs_in_queue': len(airlink_resource.queue)
-                }
-                for waypoint_id, airlink_resource in airlink_resources.items()
+                waypoint_id: airnode.get_airnode_states()
+                for waypoint_id, airnode in airnodes.items()
             }
-            for flight_direction, airlink_resources in self.airlink_resources.items()
+            for flight_direction, airnodes in self.airlink_resources.items()
         }
     
+    
+    def get_airspace_states_array(self) -> np.array:
+        """
+        Flattens the airspace states into a 1D array.
+        """
+        all_states = []
+        for flight_direction in self.flight_directions:
+            all_states.extend(
+                self.airlink_resources[flight_direction][airnode_id].get_airnode_states_array()
+                for airnode_id in self.waypoint_ids[flight_direction]
+            )
+        return np.concatenate(all_states)
+    
+    
     @staticmethod
-    def calculate_distance(row1, row2, unit='meter'):
+    def calculate_distance(row1, row2, unit='meter') -> float:
         return haversine_dist(row1['latitude'], row1['longitude'], 
                             row2['latitude'], row2['longitude'], 
                             unit=unit)
 
     @staticmethod
-    def calculate_and_store_distances(df):
+    def calculate_and_store_distances(df) -> Dict:
         distances = defaultdict(dict)
         for (_, row1), (_, row2) in zip(df.iterrows(), df.iloc[1:].iterrows()):
             distance = Airspace.calculate_distance(row1, row2)
@@ -70,7 +87,7 @@ class Airspace:
 
 
     @staticmethod
-    def calculate_first_last_distance(df, distances):
+    def calculate_first_last_distance(df, distances) -> Dict:
         first_row = df.iloc[0]
         last_row = df.iloc[-1]
         distance = Airspace.calculate_distance(first_row, last_row)
@@ -80,7 +97,7 @@ class Airspace:
 
 
     @staticmethod
-    def compute_distances_bw_waypoints(df):
+    def compute_distances_bw_waypoints(df) -> Dict:
         # Check if input is a dictionary and convert to DataFrame if necessary
         if isinstance(df, dict):
             df = pd.DataFrame.from_dict(df, orient='index', columns=['latitude', 'longitude', 'altitude'])
@@ -89,3 +106,40 @@ class Airspace:
         distances = Airspace.calculate_and_store_distances(df)
         distances = Airspace.calculate_first_last_distance(df, distances)
         return distances
+    
+
+class Airnode:
+    def __init__(self, env: simpy.Environment(), 
+                 airnode_id: str,
+                 airnode_capacity: int = 1,
+                 airnode_resource: simpy.Resource = None, 
+                 wind_speed: float = 0.0,
+                 wind_direction: float = 0.0) -> None:
+        self.env = env
+        self.airnode_id = airnode_id
+        self.airnode_capacity = airnode_capacity
+        self.airnode_resource = airnode_resource or simpy.Resource(self.env, capacity=self.airnode_capacity)
+        self.wind_speed = wind_speed
+        self.wind_direction = wind_direction
+        self.airnode_resource_states = self.get_airnode_states_dict()
+    
+    def get_airnode_states_dict(self) -> Dict:
+        return {
+            self.airnode_id: {
+                'num_jobs_in_service': self.airnode_resource.count,
+                'num_jobs_in_queue': len(self.airnode_resource.queue),
+                'wind_speed': self.wind_speed,
+                'wind_direction': self.wind_direction
+            }
+        }
+    
+    def get_airnode_states_array(self) -> np.array:
+        return np.array([
+            self.airnode_resource.count,
+            len(self.airnode_resource.queue),
+            self.wind_speed,
+            self.wind_direction
+        ])    
+    
+    def __repr__(self) -> str:
+        return f"Airnode: {self.airnode_id}"

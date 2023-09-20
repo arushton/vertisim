@@ -4,6 +4,9 @@ from typing import Dict, Any, Union
 from collections import defaultdict
 from utils.helpers import flatten
 from charger_model import ChargerModel
+import numpy as np
+from enum import Enum
+from utils.units import ms_to_min
 
 
 class VertiportConfig:
@@ -32,10 +35,53 @@ class VertiportConfig:
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
-        self.vertiport_resource_states = self.get_resource_states()
         self.num_aircraft = 0
+        self.aircraft_departure_queue_count = 0
+        self.num_flight_requests = 0
+        self.num_waiting_passengers = 0
 
-    def get_resource_states(self):
+    
+    def get_parking_pad_availability(self):
+        """
+        Returns the number of available parking pads.
+        """
+        return len(self.parking_space_store.items)
+    
+    def get_parking_pad_queue_length(self):
+        """
+        Returns the number of aircraft in the parking queue.
+        """
+        return len(self.parking_space_store.get_queue)
+    
+    def get_num_fato(self):
+        return len(self.fato_store.items)
+    
+    def get_fato_occupancy(self):
+        return sum(fato.fato_resource.count for fato in self.fato_store.items)
+    
+    def get_fato_queue_length(self):
+        return sum(len(fato.fato_resource.queue) for fato in self.fato_store.items)
+    
+    def get_total_passenger_waiting_time(self):
+        total_waiting_time_min = 0
+        for waiting_room_store in self.waiting_room_stores.values():
+            for passenger in waiting_room_store.items:
+                total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+        return total_waiting_time_min
+
+    
+    def get_vertiport_states_array(self):
+        return np.array([self.num_waiting_passengers,
+                         self.get_total_passenger_waiting_time(),
+                         self.num_flight_requests,
+                         self.get_num_fato() - self.get_fato_occupancy(),
+                         self.get_parking_pad_availability()
+                         ])
+
+    def get_vertiport_states_dict(self):
+        """
+        Will be deprecated in the future.
+        """
         entity_resources = defaultdict(lambda: defaultdict(dict))
         for fato in self.fato_store.items:
             # entity_resources[self.vertiport_id][fato.resource_id]['fato_resource'] = fato.fato_resource
@@ -44,8 +90,8 @@ class VertiportConfig:
 
         if self.parking_space_store is not None:
             # entity_resources[self.vertiport_id]['PARK']['parking_space_store'] = self.parking_space_store
-            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_service'] = len(self.parking_space_store.items)
-            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_queue'] = len(self.parking_space_store.get_queue)
+            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_service'] = self.get_parking_pad_availability()
+            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_queue'] = self.get_parking_pad_queue_length()
 
         if self.taxiway_node_store is not None:
             # entity_resources[self.vertiport_id]['TAXI']['taxiway_node_store'] = self.taxiway_node_store
@@ -66,8 +112,6 @@ class VertiportConfig:
         entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
 
         return entity_resources
-        
-
 
 
     def check_charger_resource_type(self):

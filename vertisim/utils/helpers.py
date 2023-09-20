@@ -1,6 +1,7 @@
 import random
 import math
 import numpy as np
+from enum import Enum
 from utils.units import sec_to_ms
 from typing import List, Union, Dict, Any, Optional
 import re
@@ -445,6 +446,12 @@ def lower_str(string: str) -> Optional[str]:
         raise TypeError(
             f'Object is not a string. The object is of type: {type(string)}. It is not supported.'
         )
+    
+def get_list_elements_from_enum(enum_object: Enum):
+    """
+    Get a list of elements from an Enum.
+    """
+    return [object.name for object in enum_object]
 
 
 # def nested_dict_filter_values(d, depth, value):
