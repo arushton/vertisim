@@ -97,13 +97,15 @@ def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.a
     # Merge the arrays
     states = np.concatenate((structural_entity_states, flow_entity_states))
 
-    # # Convert the state variables to JSON and write to a file
-    with open('../../output/state.json', 'w') as f:
-        json.dump(states, f, default=str, indent=4)    
+    if len(states) == 0:
+        print('No states to save')
 
-    # # Open the JSON file in an editor
-    subprocess.run(['open', '../../output/state.json']) 
+    # Save numpy array to a file
+    np.save('../../output/state.npy', states)
 
+    # # Save numpy array to a csv file
+    # states_ = np.asarray(states)
+    # np.savetxt('../../output/state.csv', states_, delimiter=',', fmt='%s')
 
 def collect_structural_entity_state_variables_machine_readable(vertiports: Dict, airspace_states: np.array):
     states = np.array([])

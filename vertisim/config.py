@@ -20,7 +20,7 @@ sim_params = {
     'flight_duration_constant': None,  # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False, #TODO: Not supported yet.
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
-    'step_by_step_sim': False,
+    'step_by_step_sim': True,
     'step_by_step_sim_state_type': 'array', # 'array' or 'dict' array can be used by the external optimization tools. dict is for human readability.
     'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
