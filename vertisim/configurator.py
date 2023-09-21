@@ -35,7 +35,7 @@ class VertiportConfig:
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
-        self.num_aircraft = 0
+        self.num_aircraft = self.vertiport_data['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
         self.aircraft_departure_queue_count = 0
         self.num_flight_requests = 0
         self.num_waiting_passengers = 0

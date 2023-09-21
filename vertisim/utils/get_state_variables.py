@@ -79,20 +79,29 @@ def collect_flow_entity_state_variables_human_readable(aircraft_agents: Dict, pa
     return aircraft_states
 
 
-def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.array, aircraft_agents: Dict):
+def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.array, aircraft_agents: Dict, num_aircraft: int):
+
+    # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
+    # We want all the states after all the aircraft have been initialized.
+    if len(aircraft_agents) < num_aircraft:
+        return
+    
     structural_entity_states = collect_structural_entity_state_variables_machine_readable(vertiports, airspace_states)
 
-    flow_entity_states = collect_flow_entity_state_variables_human_readable(aircraft_agents=aircraft_agents)
-    if len(flow_entity_states) == 0:
-        flow_entity_states = {'Flow Entities': None}
-    # Merge the two dictionaries
-    flow_entity_states |= structural_entity_states
+    flow_entity_states = collect_flow_entity_state_variables_machine_readable(aircraft_agents=aircraft_agents)
+
+    # TODO: Temporary solution. DO NOT HARDCODE THE NUMBER OF AIRCRAFT STATES
+    if len(flow_entity_states) < num_aircraft*5:
+        # Return if all aircraft have not been initialized
+        return
+    # Merge the arrays
+    states = np.concatenate((structural_entity_states, flow_entity_states))
 
     # # Convert the state variables to JSON and write to a file
     with open('../../output/state.json', 'w') as f:
-        json.dump(flow_entity_states, f, default=str, indent=4)    
+        json.dump(states, f, default=str, indent=4)    
 
-    # Open the JSON file in an editor
+    # # Open the JSON file in an editor
     subprocess.run(['open', '../../output/state.json']) 
 
 
@@ -106,35 +115,27 @@ def collect_structural_entity_state_variables_machine_readable(vertiports: Dict,
 
 def collect_flow_entity_state_variables_machine_readable(aircraft_agents: Dict):
     aircraft_states = np.array([])
-    node_locations_list = get_location_list(aircraft_agents)
+    node_locations_list = get_node_location_list(aircraft_agents)
+    vertiport_list = get_vertiport_list(aircraft_agents)
 
     for tail_number, aircraft in aircraft_agents.items():
         states = np.array([
             node_locations_list.index(aircraft.location),
-            
+            vertiport_list.index(aircraft.destination_vertiport_id),
+            round(aircraft.soc),
+            len(aircraft.passengers_onboard),
+            # TODO: Add Estimated Remaining Trip Time
+            aircraft.status.value
         ])
-        aircraft_states[tail_number] = {
-            'state': aircraft.detailed_status,
-            'location': aircraft.location,
-            'serviced_time_at_the_location': aircraft.serviced_time_at_the_location,
-            'horizontal_speed': aircraft.speed,
-            'vertical_velocity': aircraft.vertical_velocity,
-            'altitude': aircraft.altitude,            
-            'flight_direction': aircraft.flight_direction,
-            'soc': aircraft.soc,
-            'passengers_onboard': get_passenger_id_str_from_passenger_list(aircraft.passengers_onboard),
-            'vertiport_arrival_time': careful_round(ms_to_min(aircraft.arrival_time), 2),
-            'vertiport_departure_time': careful_round(ms_to_min(aircraft.departure_time), 2),
-            'holding_time': careful_round(ms_to_min(aircraft.holding_time), 2),
-            'flight_duration': careful_round(ms_to_min(aircraft.flight_duration), 2),
-            'turnaround_time': careful_round(ms_to_min(aircraft.turnaround_time), 2),
-            'priority': aircraft.priority,
-            'parking_space_id': aircraft.parking_space_id,
-            'fato_id': aircraft.assigned_fato_id
-            # 'process': aircraft.process
-        }
+        aircraft_states = np.concatenate((aircraft_states, states))
 
     return aircraft_states
 
-def get_location_list(aircraft_agents):
-    return list(list(aircraft_agents.values())[0].vertiport_manager.node_locations.keys())
+def get_aircraft(aircraft_agents):
+    return list(aircraft_agents.values())[0]
+
+def get_node_location_list(aircraft_agents):
+    return list(get_aircraft(aircraft_agents).vertiport_manager.node_locations.keys())
+
+def get_vertiport_list(aircraft_agents):
+    return get_aircraft(aircraft_agents).vertiport_manager.vertiport_ids

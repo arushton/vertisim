@@ -62,6 +62,7 @@ class VertiportManager:
         self.node_locations = node_locations
         self.fixed_schedule = fixed_schedule
         self.fleet_rebalancing = fleet_rebalancing
+        self.num_aircraft = self.get_aircraft_count()
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.flight_durations = defaultdict(list)
@@ -85,6 +86,12 @@ class VertiportManager:
 
     # AIRCRAFT RELATED METHODS
     # -------------------------
+    def get_aircraft_count(self) -> int:
+        return sum(
+            vertiport.num_aircraft
+            for _, vertiport in self.vertiports.items()
+        )
+
     def build_charging_time_distribution(self) -> Optional[DistributionGenerator]:
         """
         Builds the charging time distribution with the given parameters

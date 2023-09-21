@@ -366,7 +366,8 @@ class SimSetup:
                                         airspace=self.airspace,
                                         structural_entity_groups=self.structural_entity_groups,
                                         vertiport_manager=self.vertiport_manager,
-                                        max_sim_time=max_sim_time)
+                                        max_sim_time=max_sim_time,
+                                        state_type='array')
         else:
             if self.network_and_demand['flight_schedule_file_path'] is not None:
                 self.env.run()
