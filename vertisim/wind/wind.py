@@ -81,10 +81,28 @@ class Wind:
         
         assert(0 <= desired_wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
     
-        # CHECK: is this correct?
         wind_heading = desired_wind_angle + aircraft_heading
                 
         return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)
+
+    @staticmethod
+    def make_wind_vector_relative_to_north(aircraft_heading: float, wind_angle_from_north: float, wind_magnitude: float = 8.0) -> np.ndarray:
+        """Generate a wind vector with a wind angle (radians) relative to North
+        (0 = wind from North, 0.5pi = wind from East, pi = wind from South, 1.5pi = wind from West).
+        """
+        # TODO: For Raiyan, Please check
+        
+        # Ensure angles are in the correct range
+        assert(0 <= wind_angle_from_north <= 2 * np.pi), "Wind angle must be in radians, and between 0 and 2pi."
+        assert(0 <= aircraft_heading <= 2 * np.pi), "Aircraft heading must be in radians, and between 0 and 2pi."
+        
+        # Calculate the relative wind angle with respect to the aircraft's heading
+        relative_wind_angle = wind_angle_from_north - aircraft_heading
+        
+        # Calculate the wind heading
+        wind_heading = relative_wind_angle + aircraft_heading
+        
+        return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)        
 
     @staticmethod   
     def heading_to_vector(heading: float, magnitude: float = 1.0) -> np.ndarray:

@@ -1,5 +1,6 @@
 from typing import List, Dict
 import simpy
+from utils.read_files import read_input_file
 from utils.distance import haversine_dist
 from collections import defaultdict
 import pandas as pd
@@ -12,7 +13,8 @@ class Airspace:
                  airlink_segment_length_miles: float = 0.25,
                  waypoint_ids: Dict = None,
                  waypoint_locations: Dict = None,
-                 flight_directions: List = None):
+                 flight_directions: List = None,
+                 wind_data_file_path: str = None) -> None:
         self.env = env
         self.holding_unit_capacity = holding_unit_capacity
         self.airlink_capacity = airlink_capacity
@@ -23,6 +25,7 @@ class Airspace:
         self.flight_directions = flight_directions
         self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_locations)
         self.airlink_resources = self.create_airlink_resources()
+        self.wind_data = read_input_file(wind_data_file_path)
 
     def create_airlink_resources(self):
         airlink_resources = defaultdict(dict)
@@ -106,7 +109,13 @@ class Airspace:
         distances = Airspace.calculate_and_store_distances(df)
         distances = Airspace.calculate_first_last_distance(df, distances)
         return distances
-    
+
+    def get_wind_speed_and_direction(self):
+        # Randomly pick a row from the wind data
+        wind_data_row = self.wind_data.sample(n=1).iloc[0]
+        wind_speed = wind_data_row['windspeed']
+        wind_direction = wind_data_row['winddir']
+        return wind_speed, wind_direction
 
 class Airnode:
     def __init__(self, env: simpy.Environment(), 

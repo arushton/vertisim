@@ -242,7 +242,8 @@ class SimSetup:
         return create_airspace_layout(env=self.env,
                                     vertiports=self.vertiports,
                                     vertiport_distances=self.vertiport_distances,
-                                    airspace_params=self.airspace_params)
+                                    airspace_params=self.airspace_params,
+                                    wind_data_file_path=self.airspace_params['wind_data_file_path'])
     
     def build_node_locations_dict(self):
         # Build node locations dictionary

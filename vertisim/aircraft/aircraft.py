@@ -946,7 +946,8 @@ class Aircraft:
                     heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
                     set_seed(how='instant')
-                    v_wind = Wind.make_wind_vector_relative_to_the_aircraft(heading, 0.2 * pi)
+                    wind_speed, wind_direction = self.vertiport_manager.airspace.get_wind_speed_and_direction()
+                    v_wind = Wind.make_wind_vector_relative_to_north(aircraft_heading=heading, desired_wind_angle=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
                     
                     true_vector = Wind.wind_adjusted_true_velocity(self.speed, heading, v_wind)
                     

@@ -152,6 +152,7 @@ airspace_params = {
     'airlink_segment_length': 1,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
+    'wind_data_file_path': f'{str(cwd)}/input/airspace/wind_data.csv'
 }
 
 

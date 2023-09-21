@@ -22,7 +22,8 @@ def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) 
 def create_airspace_layout(env: object, 
                             vertiports: Dict, 
                             vertiport_distances, 
-                            airspace_params) -> AirspaceCreator:
+                            airspace_params,
+                            wind_data_file_path) -> AirspaceCreator:
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
                                        airspace_params=airspace_params,
@@ -34,7 +35,8 @@ def create_airspace_layout(env: object,
                     airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                     waypoint_ids=airspace_creator.waypoint_ids,
                     waypoint_locations=airspace_creator.waypoint_locations,
-                    flight_directions=airspace_creator.flight_directions)
+                    flight_directions=airspace_creator.flight_directions,
+                    wind_data_file_path=wind_data_file_path)
 
 
 def vertiport_config(env: object,
