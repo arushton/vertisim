@@ -63,23 +63,28 @@ class TestWind(unittest.TestCase):
 
         # desired_heading relative to N
         for desired_heading in np.arange(0, 2*pi, 0.1):
+            
             cruise_speed = 55 # m / s
             wind_mag = 10.0
-            wind_heading = pi / 4 # Coming from North + 45 degrees East
-            v_wind = Wind.make_wind_vector_relative_to_north(wind_heading, wind_magnitude=wind_mag) # SW wind, 10.0 m / s 
-            ground_speed_threshold = 30.0 # m / s
             
-            true_velocity = Wind.wind_adjusted_true_velocity(cruise_speed, desired_heading, v_wind, ground_speed_threshold=ground_speed_threshold)
-            true_airspeed = Wind.magnitude(true_velocity)
-            
-            ground_velocity = Wind.ground_velocity(true_velocity, v_wind)
-            ground_heading = Wind.vector_to_heading(ground_velocity)
-            ground_speed = Wind.magnitude(ground_velocity)
-            
-            self.assertAlmostEqual(ground_heading, desired_heading, places=2, msg=f'Aircraft\'s actual heading is not aligned with desired. Desired = {desired_heading}. Actual = {ground_heading}.')
-            self.assertGreaterEqual(ground_speed, ground_speed_threshold, msg=f'Aircraft\'s ground speed is below the threshold. ')
-            if ground_speed != ground_speed_threshold:
-                self.assertAlmostEqual(true_airspeed, cruise_speed, places=2, msg=f'Aircraft does not have true_airspeed = cruise_speed.')
+            # wind_heading relative to N
+            for wind_heading in np.arange(0, 2*pi, 0.1):
                 
+                wind_heading = pi / 4 # Coming from North + 45 degrees East
+                v_wind = Wind.make_wind_vector_relative_to_north(wind_heading, wind_magnitude=wind_mag) # SW wind, 10.0 m / s 
+                ground_speed_threshold = 30.0 # m / s
+                
+                true_velocity = Wind.wind_adjusted_true_velocity(cruise_speed, desired_heading, v_wind, ground_speed_threshold=ground_speed_threshold)
+                true_airspeed = Wind.magnitude(true_velocity)
+                
+                ground_velocity = Wind.ground_velocity(true_velocity, v_wind)
+                ground_heading = Wind.vector_to_heading(ground_velocity)
+                ground_speed = Wind.magnitude(ground_velocity)
+                
+                self.assertAlmostEqual(ground_heading, desired_heading, places=2, msg=f'Aircraft\'s actual heading is not aligned with desired. Desired = {desired_heading}. Actual = {ground_heading}.')
+                self.assertGreaterEqual(ground_speed, ground_speed_threshold, msg=f'Aircraft\'s ground speed is below the threshold. ')
+                if ground_speed != ground_speed_threshold:
+                    self.assertAlmostEqual(true_airspeed, cruise_speed, places=2, msg=f'Aircraft does not have true_airspeed = cruise_speed.')
+                    
 if __name__ == '__main__':
     unittest.main()
