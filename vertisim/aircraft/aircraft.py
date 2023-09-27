@@ -947,8 +947,9 @@ class Aircraft:
                     
                     set_seed(how='instant')
                     wind_speed, wind_direction = self.vertiport_manager.airspace.get_wind_speed_and_direction()
-                    v_wind = Wind.make_wind_vector_relative_to_north(aircraft_heading=heading, desired_wind_angle=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
+                    v_wind = Wind.make_wind_vector_relative_to_north(desired_wind_angle=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
                     
+                    # note: |true_vector| = self.speed UNLESS wind is too strong, and a greater true_airspeed is needed
                     true_vector = Wind.wind_adjusted_true_velocity(self.speed, heading, v_wind)
                     
                     ground_vector = Wind.ground_velocity(true_vector, v_wind)
@@ -959,7 +960,7 @@ class Aircraft:
                     yield self.env.timeout(sec_to_ms(link_traversal_time))
                     
                     # Compute energy consumption
-                    energy_consumption = round(self.cruise_energy_consumption(velocity=self.speed, 
+                    energy_consumption = round(self.cruise_energy_consumption(velocity=Wind.magnitude(true_vector), 
                                                                               time_cruise=link_traversal_time), 2)
                     self.total_energy_consumption += energy_consumption
 

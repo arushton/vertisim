@@ -155,8 +155,6 @@ airspace_params = {
     'wind_data_file_path': f'{str(cwd)}/input/airspace/wind_data.csv'
 }
 
-
-
 # Passenger parameters
 # --------------------
 # Time parameters should be a constant or a distribution. One should be None, the other should be provided.

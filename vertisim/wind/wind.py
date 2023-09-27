@@ -1,5 +1,5 @@
 import numpy as np
-from math import sin, cos, tan, asin, atan2, pi
+from math import sin, cos, acos, atan2, pi
 
 class Wind:
     
@@ -14,52 +14,39 @@ class Wind:
         """Calculate the ground velocity."""
         return np.add(true_air_velocity, v_wind)
     
-    # @staticmethod
-    # def wind_adjusted_true_velocity(true_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float = None) -> np.ndarray:
-    #     """Calculate the true velocity required to move the aircraft in the desired heading, in the presence of wind.
-    #     Heading of the aircraft may change. True airspeed not adjusted unless < threshold. """
-        
-    #     wind_mag = Wind.magnitude(v_wind)
-    #     wind_dir = Wind.vector_to_heading(v_wind)
-        
-    #     constant_term = (wind_mag * cos(wind_dir) - tan(desired_heading) * wind_mag * sin(wind_dir)) / true_airspeed
-        
-    #     required_heading = cos(-constant_term) - desired_heading
-        
-    #     true_vector = Wind.heading_to_vector(required_heading, true_airspeed)
-
-
-    #     # Compute ground velocity heading 
-    #     ground_velocity = Wind.ground_velocity(true_vector, v_wind)
-
-    #     print("desired_heading: ", desired_heading)
-    #     print(Wind.vector_to_heading(ground_velocity))
-
-    #     assert(Wind.vector_to_heading(ground_velocity) == desired_heading), "Error. Formulism failed."
-        
-    #     if ground_speed_threshold and Wind.magnitude(Wind.ground_velocity(true_vector, v_wind)) < ground_speed_threshold:
-    #         # TODO: calculate alternate vector
-    #         print("ground speed less than threshold!")
-
-    #     return true_vector
-
     @staticmethod
-    def wind_adjusted_true_velocity(desired_airspeed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float = None):
-        # Convert desired heading to a unit vector
-        desired_unit_vector = np.array([sin(desired_heading), cos(desired_heading)])
+    def wind_adjusted_true_velocity(cruise_speed: float, desired_heading: float, v_wind: np.ndarray, ground_speed_threshold: float = None) -> np.ndarray:
+        """Calculate the true velocity required to move the aircraft in the desired heading, in the presence of wind.
+        Heading of the aircraft may change. True airspeed not adjusted unless ground speed < threshold. 
         
-        # Scale the desired unit vector by the magnitude of the desired airspeed
-        desired_velocity_vector = desired_airspeed * desired_unit_vector
+        Central Equation: sin(a - c) = (|B| / |A|)sin(b - a), 
+        where a = desired_heading, c = true_heading, b = wind_heading all relative to the x-axis (using swap_angle_relative_x_axis_north),
+        and |B| = wind_mag and |A| = cruise_speed.
+        """
         
-        # Calculate the true airspeed vector
-        true_airspeed_vector = desired_velocity_vector - v_wind
+        wind_mag = Wind.magnitude(v_wind)
+        a = Wind.swap_angle_relative_x_axis_north(desired_heading)
+        b = Wind.swap_angle_relative_x_axis_north(Wind.vector_to_heading(v_wind))
+        B_over_A = wind_mag / cruise_speed
+        right_hand_side = B_over_A * sin(b - a)
+        c = a - right_hand_side
+        required_heading = Wind.swap_angle_relative_x_axis_north(c)
+        
+        # approximate modulo pi 
+        required_heading = round(required_heading, 3)
+        two_pi_rounded = round(2 * pi, 3)
+        required_heading = required_heading % two_pi_rounded
+        
+        # new velocities
+        true_velocity = Wind.heading_to_vector(required_heading, magnitude=cruise_speed)
+        ground_velocity = Wind.ground_velocity(true_velocity, v_wind)
+                
+        # if ground_speed @ given true_airspeed < threshold, return the minimum true velocity needed to fly in the desired heading @ threshold
+        if ground_speed_threshold and Wind.magnitude(ground_velocity) < ground_speed_threshold:
+            return Wind.rta_velocity_wind_adjusted(ground_speed_threshold, desired_heading, v_wind)
 
-        if ground_speed_threshold and Wind.magnitude(Wind.ground_velocity(true_airspeed_vector, v_wind)) < ground_speed_threshold:
-            # TODO: calculate alternate vector
-            print("ground speed less than threshold!")        
-        
-        return true_airspeed_vector
-    
+        return true_velocity
+
     @staticmethod
     def rta_velocity_wind_adjusted(desired_speed: float, desired_heading: float, v_wind: np.ndarray) -> np.ndarray:
         """Calculate the true velocity requried to move the aircraft in the desired heading at the desired speed, in the presence of wind. 
@@ -86,23 +73,15 @@ class Wind:
         return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)
 
     @staticmethod
-    def make_wind_vector_relative_to_north(aircraft_heading: float, wind_angle_from_north: float, wind_magnitude: float = 8.0) -> np.ndarray:
-        """Generate a wind vector with a wind angle (radians) relative to North
-        (0 = wind from North, 0.5pi = wind from East, pi = wind from South, 1.5pi = wind from West).
+    def make_wind_vector_relative_to_north(wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
+        """Generate a wind vector coming from wind_origin_heading.
+        (0 = South wind, 0.5pi = West wind, pi = North wind, 1.5pi = East wind).
         """
-        # TODO: For Raiyan, Please check
         
         # Ensure angles are in the correct range
-        assert(0 <= wind_angle_from_north <= 2 * np.pi), "Wind angle must be in radians, and between 0 and 2pi."
-        assert(0 <= aircraft_heading <= 2 * np.pi), "Aircraft heading must be in radians, and between 0 and 2pi."
+        assert(0 <= wind_origin_heading <= 2 * np.pi), "Wind angle must be in radians, and between 0 and 2pi."
         
-        # Calculate the relative wind angle with respect to the aircraft's heading
-        relative_wind_angle = wind_angle_from_north - aircraft_heading
-        
-        # Calculate the wind heading
-        wind_heading = relative_wind_angle + aircraft_heading
-        
-        return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)        
+        return Wind.heading_to_vector(wind_origin_heading + pi, magnitude=wind_magnitude)        
 
     @staticmethod   
     def heading_to_vector(heading: float, magnitude: float = 1.0) -> np.ndarray:
@@ -111,6 +90,8 @@ class Wind:
 
         if not heading:
             return np.array([0, 0])
+
+        heading = heading % (2 * pi) # bring heading into appropriate range [0, 2pi]
 
         # note that the vertical (y axis) component corresponds to cos(heading)
         return np.array([magnitude * sin(heading),
@@ -129,22 +110,20 @@ class Wind:
         return atan2(sin(longitude_difference) * cos(latitude_2), cos(latitude_1) * sin(latitude_2) - sin(latitude_1) * cos(latitude_2) * cos(longitude_difference))
     
     @staticmethod
+    def swap_angle_relative_x_axis_north(angle: float) -> float:
+        """Converts an angle (radians) relative to the x-axis (CCW = pos) to be relative to North (CW = pos), and vice versa."""
+        if angle <= pi / 2:
+            return (pi / 2) - angle
+        return (5 * pi / 2) - angle
+        
+    @staticmethod
     def vector_to_heading(vector: np.ndarray) -> float:
-        """
-        Vector is a numpy array of length 2.
-        Returns the angle of the vector relative to the positive Y-axis (North) in radians.
-        """
-        # Extract the X and Y components of the vector
-        x, y = vector[0], vector[1]
+        """Returns the angle of the vector relative to the positive Y-axis (North) in radians."""
         
-        # Calculate the angle using atan2
-        angle_from_north = atan2(y, x)
+        # angle relative to x axis
+        angle_from_x = atan2(vector[1], vector[0])
         
-        # Adjust the angle to measure from the positive Y-axis (North)
-        if angle_from_north < 0:
-            angle_from_north += 2 * np.pi  # Normalize angle to be between 0 and 2π
-        
-        return angle_from_north
+        return Wind.swap_angle_relative_x_axis_north(angle_from_x) 
     
     @staticmethod
     def magnitude(vector: np.ndarray):
