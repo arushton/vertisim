@@ -135,6 +135,21 @@ class Wind:
     
         return angle
     
+    # --- VERIFICATION -- 
+    @staticmethod
+    def verify_aircraft_heading(ground_v: np.ndarray, destination_heading: float) -> None:
+        aircraft_heading = Wind.convert_to_range_zero_to_two_pi(Wind.vector_to_heading(ground_v))
+        destination_heading = Wind.convert_to_range_zero_to_two_pi(destination_heading)
+        assert abs(aircraft_heading - destination_heading) < 1e-9, f'Wrong direction. Aircraft heading = {aircraft_heading}, Destination Heading = {destination_heading}.'
+    
+    @staticmethod
+    def verify_aircraft_speeds(ground_v: np.ndarray, ground_threshold: float, cruise_speed: float, true_airspeed_v: np.ndarray):
+        ground_speed = Wind.magnitude(ground_v)
+        assert ground_speed > ground_threshold or abs(ground_speed - ground_threshold) < 1e-9, f'Aircraft is not flying fast enough. Ground speed = {ground_speed}. Minimum = {ground_threshold}.'
+        if not (abs(ground_speed - ground_threshold) < 1e-9): # the aircraft was able to maintain its heading flying @ true_airspeed
+            true_airspeed = Wind.magnitude(true_airspeed_v)
+            assert abs(true_airspeed - cruise_speed) < 1e-9, f'Aircraft true airspeed is not equal to cruise speed. Cruise speed = {cruise_speed}, True airspeed = {true_airspeed}.'
+    
     # --- NOT IMPLEMENTED (YET)
     
     @staticmethod

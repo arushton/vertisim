@@ -943,20 +943,28 @@ class Aircraft:
                                             
                     latitude_o, longitude_o, altitude_o = self.vertiport_manager.airspace.waypoint_locations[self.location]
                     latitude_f, longitude_f, altitude_f = self.vertiport_manager.airspace.waypoint_locations[waypoint_id]
-                    heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
+                    destination_heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
                     
                     set_seed(how='instant')
                     # wind_speed, wind_direction = self.vertiport_manager.airspace.get_wind_speed_and_direction()
                     # v_wind = Wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
 
-                    wind_speed = 20 # m / s
-                    wind_direction = pi # starboard cross
-                    v_wind = Wind.make_wind_vector_relative_to_the_aircraft(heading, wind_direction, wind_speed)
+                    # minimum ground speed allowed
+                    ground_speed_threshold = 30
+
+                    # forcing static wind type
+                    wind_speed = 8 # m / s
+                    wind_direction = pi # headwind
+                    v_wind = Wind.make_wind_vector_relative_to_the_aircraft(destination_heading, wind_direction, wind_speed)
                     
                     # note: |true_vector| = self.speed UNLESS wind is too strong, and a greater true_airspeed is needed
-                    true_vector = Wind.wind_adjusted_true_velocity(self.speed, heading, v_wind)
+                    true_vector = Wind.wind_adjusted_true_velocity(self.speed, destination_heading, v_wind, ground_speed_threshold)
                     
                     ground_vector = Wind.ground_velocity(true_vector, v_wind)
+                    
+                    # Verify aircraft flight direction and speeds.
+                    Wind.verify_aircraft_heading(ground_vector, destination_heading)
+                    Wind.verify_aircraft_speeds(ground_vector, ground_speed_threshold, self.speed, true_vector)
                         
                     link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                         destination=waypoint_id, 

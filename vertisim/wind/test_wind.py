@@ -91,7 +91,6 @@ class TestWind(unittest.TestCase):
                             self.assertAlmostEqual(ground_speed, ground_speed_threshold, msg=f'\nAircraft\'s ground speed is below the threshold. ' + data)
                         if not abs(ground_speed - ground_speed_threshold) < 1e-9: 
                             self.assertAlmostEqual(true_airspeed, cruise_speed, msg=f'\nAircraft does not have true_airspeed = cruise_speed.' + data)
-                            print('c')
         
 if __name__ == '__main__':
     unittest.main()
