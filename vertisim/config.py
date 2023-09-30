@@ -20,7 +20,7 @@ sim_params = {
     'flight_duration_constant': None,  # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False, #TODO: Not supported yet.
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
-    'step_by_step_sim': True,
+    'step_by_step_sim': False,
     'step_by_step_sim_state_type': 'array', # 'array' or 'dict' array can be used by the external optimization tools. dict is for human readability.
     'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
@@ -36,8 +36,8 @@ sim_params = {
 # Network and Trips
 # -----------------
 network_and_demand = {
-    'vertiport_network_file_path': f'{str(cwd)}/input/network/network_SFO_MV.csv',
-    'vertiport_layout_file_path': f'{str(cwd)}/input/vertiport_layouts/vertiport_layout.xls',
+    'vertiport_network_file_path': f'{str(cwd)}/vertisim/input/network/network_SFO_MV.csv',
+    'vertiport_layout_file_path': f'{str(cwd)}/vertisim/input/vertiport_layouts/vertiport_layout.xls',
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -49,7 +49,7 @@ network_and_demand = {
     'charge_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/charge_schedule.csv',
     'flight_schedule_file_path': None, #f'{str(cwd)}/input/aircraft/flight_schedule.csv',
     'passenger_schedule_file_path': None, #f'{str(cwd)}/input/passenger/demand_SFO_MV.csv',  # Use a full path. If None, passenger_arrival_generator will be used. 
-    'passenger_arrival_rates_path': f'{str(cwd)}/input/passenger/passenger_arrival_rates_sfo_mv.csv',  # Use a full path. 
+    'passenger_arrival_rates_path': f'{str(cwd)}/vertisim/input/passenger/passenger_arrival_rates_sfo_mv.csv',  # Use a full path. 
 
     # If the demand files are None, then the artificial demand is generated.
     'demand_probabilities': None, #[0.5, 0.5], # The probability of the demand to be generated for each vertiport.
@@ -152,7 +152,7 @@ airspace_params = {
     'airlink_segment_length': 1,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
-    'wind_data_file_path': f'{str(cwd)}/input/airspace/wind_data.csv'
+    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/wind_data.csv'
 }
 
 # Passenger parameters
@@ -268,7 +268,7 @@ aircraft_params = {
         'max_val_in_dist': None,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
-    'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/input/aircraft/energy_consumption',
+    'aircraft_energy_consumption_data_folder_path': f'{str(cwd)}/vertisim/input/aircraft/energy_consumption',
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
     'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
     'min_reserve_soc': 40  # This is the minimum acceptable SoC that the aircraft should have to complete the mission.

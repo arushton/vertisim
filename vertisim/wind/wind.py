@@ -1,5 +1,5 @@
 import numpy as np
-from math import sin, cos, acos, atan2, pi
+from math import sin, cos, asin, atan2, pi
 
 class Wind:
     
@@ -8,7 +8,7 @@ class Wind:
     """
 
     RADIUS_EARTH = 6371 # km
-    
+            
     @staticmethod
     def ground_velocity(true_air_velocity: np.ndarray, v_wind: np.ndarray) -> np.ndarray:
         """Calculate the ground velocity."""
@@ -29,13 +29,8 @@ class Wind:
         b = Wind.swap_angle_relative_x_axis_north(Wind.vector_to_heading(v_wind))
         B_over_A = wind_mag / cruise_speed
         right_hand_side = B_over_A * sin(b - a)
-        c = a - right_hand_side
+        c = a - asin(right_hand_side) # technically, c = a - asin(rhs) - 2pi * k
         required_heading = Wind.swap_angle_relative_x_axis_north(c)
-        
-        # approximate modulo pi 
-        required_heading = round(required_heading, 3)
-        two_pi_rounded = round(2 * pi, 3)
-        required_heading = required_heading % two_pi_rounded
         
         # new velocities
         true_velocity = Wind.heading_to_vector(required_heading, magnitude=cruise_speed)
@@ -74,7 +69,7 @@ class Wind:
 
     @staticmethod
     def make_wind_vector_relative_to_north(wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
-        """Generate a wind vector coming from wind_origin_heading.
+        """Generate a wind vector coming from wind_origin_heading, where wind_origin_heading is relative to north.
         (0 = South wind, 0.5pi = West wind, pi = North wind, 1.5pi = East wind).
         """
         
@@ -87,11 +82,6 @@ class Wind:
     def heading_to_vector(heading: float, magnitude: float = 1.0) -> np.ndarray:
         """Converts a heading to a unit vector. Optional argument of vector magnitude.
         Heading is N=0, (+) direction = clockwise [i.e. aircraft_heading = 10° means 80° in polar where pos X = 0 and (+) direction = counterclockwise]."""
-
-        if not heading:
-            return np.array([0, 0])
-
-        heading = heading % (2 * pi) # bring heading into appropriate range [0, 2pi]
 
         # note that the vertical (y axis) component corresponds to cos(heading)
         return np.array([magnitude * sin(heading),
@@ -114,6 +104,7 @@ class Wind:
         """Converts an angle (radians) relative to the x-axis (CCW = pos) to be relative to North (CW = pos), and vice versa."""
         if angle <= pi / 2:
             return (pi / 2) - angle
+            
         return (5 * pi / 2) - angle
         
     @staticmethod
@@ -129,6 +120,20 @@ class Wind:
     def magnitude(vector: np.ndarray):
         """Calculate magnitude of numpy vector."""
         return np.sqrt(np.dot(vector, vector))
+    
+    @staticmethod
+    def convert_to_range_zero_to_two_pi(angle: float, epsilon=1e-9):
+        """Bring an angle (radians) into the range [0, 2pi)."""
+        
+        while angle > 2 * pi:
+            angle -= 2 * pi
+        while angle < 0:
+            angle += 2 * pi
+            
+        if abs(angle - 2 * pi) < epsilon:
+            return 0
+    
+        return angle
     
     # --- NOT IMPLEMENTED (YET)
     
