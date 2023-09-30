@@ -1,8 +1,10 @@
 import numpy as np
+import sys
 from scipy.optimize import minimize
 from aircraft.flight_helpers import rho, weight, lift_induced_drag_coef
 from aircraft.power_model import transition_power, climb_descend_power
-from aircraft.memoize import PhaseParameters
+sys.path.append("vertisim")
+from memoize import PhaseParameters
 
 class VelocityOptimizer:
     def __init__(self, aircraft_params):
@@ -123,7 +125,7 @@ class VelocityOptimizer:
         return Vh/Vv - horizontal_dist/vertical_dist
 
     def optimize(self, V, tom, altitude, horizontal_distance, vertical_distance, cost_type):
-        params = PhaseParameters(tom=tom, altitude=altitude, horizontal_distance=horizontal_distance, vertical_distance=vertical_distance, cost_type=cost_type)
+        params = PhaseParameters(tom, altitude, horizontal_distance, vertical_distance, cost_type)
         if params in self.cache:
             return self.cache[params]
     
