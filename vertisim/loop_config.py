@@ -205,7 +205,7 @@ def loop_input(vertiport1,
         'vertical_landing_velocity': 5.5,  # m/s
         'max_vertical_velocity': 6,  # m/s
         'max_horizontal_velocity': 89,  # m/s - 173 knots | 200 mph
-        'cruise_velocity': None, #30, # or None
+        'cruise_speed': None, #30, # or None
         # # Altitude
         'ground_altitude': 0,  # m
         'hover_altitude': 15,  # m

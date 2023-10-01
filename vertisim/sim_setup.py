@@ -7,12 +7,13 @@ import pandas as pd
 from collections import defaultdict
 from aircraft.aircraft_arrival_setup import AircraftArrivalSetup
 from event_saver import EventSaver
-from vertiport_manager import VertiportManager
+from system_manager import SystemManager
 from module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
 from passenger_arrival_setup import PassengerArrivalSetup
 from performance_metrics import PerformanceMetrics
 from save_output import save_output
 from scheduler import Scheduler
+from wind.wind import Wind
 from logger import Logger
 from run_step_by_step_simulation import run_step_by_step_simulation
 from utils.create_output_folders import create_output_folders
@@ -53,7 +54,8 @@ class SimSetup:
         self.check_inputs()
         self.num_destinations = self.get_num_destinations()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
-        self.airspace = self.create_airspace()      
+        self.airspace = self.create_airspace()  
+        self.wind = self.create_wind()    
         self.node_locations = self.build_node_locations_dict()
         self.structural_entity_groups = self.merge_structural_entity_groups()
         self.event_saver = self.create_event_saver()
@@ -67,7 +69,7 @@ class SimSetup:
             self.fixed_schedule = False
 
         self.scheduler = self.create_scheduler()
-        self.vertiport_manager = self.create_vertiport_manager()
+        self.system_manager = self.create_vertiport_manager()
 
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
@@ -117,6 +119,14 @@ class SimSetup:
         Returns the vertiport ids
         """
         return list(self.network_and_demand['vertiports'].keys())    
+    
+    def create_wind(self):
+        """
+        Creates the wind module
+        """
+        return Wind(wind_magnitude=self.airspace_params['wind_magnitude'],
+                    wind_angle=self.airspace_params['wind_angle'],
+                    wind_data_file_path=self.airspace_params['wind_data_file_path'])
     
     def compute_vertiport_distances(self) -> pd.DataFrame:
         """
@@ -228,7 +238,7 @@ class SimSetup:
         # Create scheduler
         return Scheduler(env=self.env,
                             vertiports=self.vertiports,
-                            vertiport_manager=None,
+                            system_manager=None,
                             aircraft_capacity=self.aircraft_params['pax'],
                             is_fixed_schedule=self.fixed_schedule,
                             charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
@@ -268,11 +278,12 @@ class SimSetup:
     
     def create_vertiport_manager(self):
         # Create vertiport manager
-        return VertiportManager(
+        return SystemManager(
             env=self.env,
             vertiports=self.vertiports,
             vertiport_ids=self.vertiport_ids,
             scheduler=self.scheduler,
+            wind=self.wind,
             arrival_priority=self.sim_params['arrival_priority'],
             departure_priority=self.sim_params['departure_priority'],
             airspace=self.airspace,
@@ -308,8 +319,9 @@ class SimSetup:
                 flight_schedule_file_path=self.network_and_demand['flight_schedule_file_path'],
                 charge_schedule_file_path=self.network_and_demand['charge_schedule_file_path'],
                 aircraft_params=self.aircraft_params,
-                vertiport_manager=self.vertiport_manager,
+                system_manager=self.system_manager,
                 scheduler=self.scheduler,
+                wind=self.wind,
                 structural_entity_groups=self.structural_entity_groups,
                 event_saver=self.event_saver,
                 logger=self.logger,
@@ -326,8 +338,9 @@ class SimSetup:
                 flight_schedule_file_path=None,
                 charge_schedule_file_path=None,
                 aircraft_params=self.aircraft_params,
-                vertiport_manager=self.vertiport_manager,
+                system_manager=self.system_manager,
                 scheduler=self.scheduler,
+                wind=self.wind,
                 structural_entity_groups=self.structural_entity_groups,                
                 event_saver=self.event_saver,
                 logger=self.logger,
@@ -348,7 +361,7 @@ class SimSetup:
                 network_and_demand=self.network_and_demand,
                 passenger_params=self.passenger_params,
                 vertiport_ids=self.vertiport_ids,
-                vertiport_manager=self.vertiport_manager,
+                system_manager=self.system_manager,
                 aircraft_params=None,
                 network_simulation=self.sim_params['network_simulation'],
                 passenger_logger=self.passenger_logger
@@ -366,7 +379,7 @@ class SimSetup:
                                         vertiports=self.vertiports, 
                                         airspace=self.airspace,
                                         structural_entity_groups=self.structural_entity_groups,
-                                        vertiport_manager=self.vertiport_manager,
+                                        system_manager=self.system_manager,
                                         max_sim_time=max_sim_time,
                                         state_type='array')
         else:

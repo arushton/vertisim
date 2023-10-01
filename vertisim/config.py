@@ -3,6 +3,7 @@ from sim_setup import SimSetup
 import os
 from pathlib import Path
 import re
+from math import pi
 
 cwd = Path.cwd()
 
@@ -152,6 +153,9 @@ airspace_params = {
     'airlink_segment_length': 1,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
+    'static_wind': True, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.
+    'wind_magnitude': 8,  # m/s
+    'wind_angle': pi,  # deg - Relative to the aircraft heading
     'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/wind_data.csv'
 }
 
@@ -197,11 +201,24 @@ aircraft_params = {
     
     # MISSION PARAMETERS
     # -----------------
-    'vertical_takeoff_velocity': 5.5,  # m/s
-    'vertical_landing_velocity': 5.5,  # m/s
-    'max_vertical_velocity': 6,  # m/s
+    'vertical_takeoff_velocity': 1.5,  # m/s
+    'vertical_landing_velocity': 1.5,  # m/s
+    'climb_transition_end_forward_velocity': 18,  # m/s
+    'climb_transition_vertical_velocity': 1.5,  # m/s
+    # 'initial_climb_phase_end_forward_velocity': 45,  # m/s
+    # 'initial_climb_phase_vertical_velocity': 3.125,  # m/s
+    'climb_phase_end_forward_velocity': 45,  # m/s
+    'climb_phase_vertical_velocity': 3.125,  # m/s
+    'cruise_speed': 67, #30, # or None
+    # 'initial_descend_phase_end_forward_velocity': 36,  # m/s
+    # 'initial_descend_phase_vertical_velocity': 3,  # m/s
+    'descend_phase_end_forward_velocity': 36,  # m/s
+    'descend_phase_vertical_velocity': 3.8,  # m/s
+    'descend_transition_end_forward_velocity': 0,  # m/s
+    'descend_transition_vertical_velocity': 3.8,  # m/s
+
+    'max_vertical_velocity': 5,  # m/s
     'max_horizontal_velocity': 89,  # m/s - 173 knots | 200 mph
-    'cruise_velocity': None, #30, # or None
     # # Altitude
     'ground_altitude': 0,  # m
     'hover_altitude': 15,  # m

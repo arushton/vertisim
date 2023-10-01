@@ -7,7 +7,7 @@ from collections import defaultdict
 class Scheduler:
     def __init__(self, env: object,
                  vertiports: object,
-                 vertiport_manager: object,
+                 system_manager: object,
                  aircraft_capacity: int = None,
                  is_fixed_schedule: bool = False,
                  charge_assignment_sensitivity: float = 3,
@@ -18,7 +18,7 @@ class Scheduler:
         self.env = env
         self.vertiports = vertiports
         self.aircraft_capacity = aircraft_capacity
-        self.vertiport_manager = vertiport_manager
+        self.system_manager = system_manager
         self.is_fixed_schedule = is_fixed_schedule
         self.charge_assignment_sensitivity = charge_assignment_sensitivity
         self.logger = logger
@@ -40,7 +40,7 @@ class Scheduler:
                              f" to {destination_vertiport_id} for SOC: {row['soc']}.")
             
             if pushback_interarrival_time != 0:
-                for _, aircraft in self.vertiport_manager.aircraft_agents.items():
+                for _, aircraft in self.system_manager.aircraft_agents.items():
                     self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, location: {aircraft.location}.")
 
             # Get the waiting room for the destination
@@ -48,7 +48,7 @@ class Scheduler:
             # Get the departing passengers from the waiting room
             departing_passengers = self.collect_any_departing_passengers(origin_vertiport_id, waiting_room)
             # Reserve an aircraft for the flight
-            self.env.process(self.vertiport_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
+            self.env.process(self.system_manager.reserve_aircraft(origin_vertiport_id=origin_vertiport_id,
                                                                      destination_vertiport_id=destination_vertiport_id,
                                                                      departing_passengers=departing_passengers,
                                                                      tail_number=row['tail_number'],
@@ -69,7 +69,7 @@ class Scheduler:
                                                                 target_soc=row['target_soc'])
         self.logger.debug(f"|{random_id}| Scheduler got aircraft {aircraft.tail_number} for charging with aircraft's init soc {round(aircraft.soc, 2)} and target soc: {row['target_soc']} at vertiport {row['vertiport_id']}.")
         aircraft.target_soc = row['target_soc']
-        self.env.process(self.vertiport_manager.aircraft_charging_process(aircraft=aircraft))
+        self.env.process(self.system_manager.aircraft_charging_process(aircraft=aircraft))
 
     def check_max_waiting_time_threshold(self, max_flight_waiting_time):
         """

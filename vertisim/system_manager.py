@@ -15,12 +15,13 @@ from utils.calc_required_charge_time_from_required_energy import calc_required_c
 from typing import List, Union
 
 
-class VertiportManager:
+class SystemManager:
     def __init__(self,
                  env: object,
                  vertiports: Dict,
                  vertiport_ids: List,
                  scheduler: object,
+                 wind: object,
                  arrival_priority: int,
                  departure_priority: int,
                  airspace: object,
@@ -46,6 +47,7 @@ class VertiportManager:
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
         self.scheduler = scheduler
+        self.wind = wind
         self.airspace = airspace
         self.arrival_priority = arrival_priority
         self.departure_priority = departure_priority

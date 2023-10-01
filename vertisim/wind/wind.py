@@ -1,11 +1,17 @@
 import numpy as np
 from math import sin, cos, asin, atan2, pi
+from utils.read_files import read_input_file
 
 class Wind:
     
     """Relevant usage in:
-        lines 932-947 of aircraft.py
+        lines 894-914 of aircraft.py
     """
+
+    def __init__(self, wind_magnitude, wind_angle, wind_data_file_path=None):
+        self.wind_magnitude = wind_magnitude
+        self.wind_angle = wind_angle
+        self.wind_data = read_input_file(wind_data_file_path)
 
     RADIUS_EARTH = 6371 # km
             
@@ -55,17 +61,16 @@ class Wind:
         
         return np.subtract(v_desired, v_wind)
     
-    @staticmethod
-    def make_wind_vector_relative_to_the_aircraft(aircraft_heading: float, desired_wind_angle: float, wind_magnitude: float = 8.0) -> np.ndarray:
+    def make_static_wind_vector_relative_to_the_aircraft(self, aircraft_heading: float) -> np.ndarray:
         """Generate a wind vector with a desired angle (radians) relative to the aircraft's heading 
          (0 = tailwind, 0.5pi = starboard crosswind, pi = headwind, 1.5pi = port crosswind).
         """
         
-        assert(0 <= desired_wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
+        assert(0 <= self.wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
     
-        wind_heading = desired_wind_angle + aircraft_heading
+        wind_heading = self.wind_angle + aircraft_heading
                 
-        return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)
+        return Wind.heading_to_vector(wind_heading, magnitude=self.wind_magnitude)
 
     @staticmethod
     def make_wind_vector_relative_to_north(wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:

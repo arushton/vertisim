@@ -48,7 +48,7 @@ def collect_flow_entity_state_variables_human_readable(aircraft_agents: Dict, pa
             'state': aircraft.detailed_status,
             'location': aircraft.location,
             'serviced_time_at_the_location': aircraft.serviced_time_at_the_location,
-            'horizontal_speed': aircraft.speed,
+            'horizontal_speed': aircraft.forward_velocity,
             'vertical_velocity': aircraft.vertical_velocity,
             'altitude': aircraft.altitude,            
             'flight_direction': aircraft.flight_direction,
@@ -137,7 +137,7 @@ def get_aircraft(aircraft_agents):
     return list(aircraft_agents.values())[0]
 
 def get_node_location_list(aircraft_agents):
-    return list(get_aircraft(aircraft_agents).vertiport_manager.node_locations.keys())
+    return list(get_aircraft(aircraft_agents).system_manager.node_locations.keys())
 
 def get_vertiport_list(aircraft_agents):
-    return get_aircraft(aircraft_agents).vertiport_manager.vertiport_ids
+    return get_aircraft(aircraft_agents).system_manager.vertiport_ids

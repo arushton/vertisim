@@ -56,8 +56,8 @@ def climb_phase_power(start_altitude, end_altitude, aircraft_params, tom, vertic
     climb_end_power = max(climb_end_power, 0)
     return (climb_start_power + climb_end_power)/2
     
-def cruise_phase_power(cruise_velocity, aircraft_params, tom):
-    return max((weight(tom) * cruise_velocity) / (0.85*aircraft_params['ld_max']) / aircraft_params['eta_cruise'], 0)
+def cruise_phase_power(cruise_speed, aircraft_params, tom):
+    return max((weight(tom) * cruise_speed) / (0.85*aircraft_params['ld_max']) / aircraft_params['eta_cruise'], 0)
 
 def descend_phase_power(start_altitude, end_altitude, aircraft_params, tom, vertical_velocity, velocity):
     k_multiplier = 4/3  # New K to account for L/D correction

@@ -30,8 +30,9 @@ class AircraftArrivalSetup:
                  flight_schedule_file_path: Union[str, None],
                  charge_schedule_file_path: Union[str, None],
                  aircraft_params: Dict,
-                 vertiport_manager: int,
+                 system_manager: int,
                  scheduler: object,
+                 wind: object,
                  structural_entity_groups: Dict,                
                  event_saver: object,
                  logger: object,
@@ -44,8 +45,9 @@ class AircraftArrivalSetup:
         self.charge_schedule_file_path = charge_schedule_file_path
         self.vertiport_configs = vertiport_configs
         self.aircraft_params = aircraft_params
-        self.vertiport_manager = vertiport_manager
+        self.system_manager = system_manager
         self.scheduler = scheduler
+        self.wind = wind
         self.structural_entity_groups = structural_entity_groups
         self.event_saver = event_saver
         self.num_aircraft = None
@@ -214,7 +216,7 @@ class AircraftArrivalSetup:
     def _setup_scheduler_with_schedule(self, schedule):
         # Save the aircraft arrival schedule for the scheduler
         self.scheduler.flight_schedule = schedule
-        self.scheduler.vertiport_manager = self.vertiport_manager
+        self.scheduler.system_manager = self.system_manager
 
     @staticmethod
     def convert_schedule_columns_to_ms(schedule: pd.DataFrame, operation: str) -> pd.DataFrame:
@@ -413,7 +415,8 @@ class AircraftArrivalSetup:
                             priority=priority,
                             initial_process=initial_process,
                             aircraft_params=self.aircraft_params,
-                            vertiport_manager=self.vertiport_manager,
+                            system_manager=self.system_manager,
+                            wind=self.wind,
                             event_saver=self.event_saver,
                             logger=logger,
                             aircraft_logger=aircraft_logger
@@ -421,7 +424,7 @@ class AircraftArrivalSetup:
         
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.
-        self.vertiport_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
+        self.system_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
 
         self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
 
@@ -431,15 +434,15 @@ class AircraftArrivalSetup:
         # Based on aircraft initial location, initiate the related process.    
         if aircraft.location in self.structural_entity_groups['fato']:
             aircraft.assigned_fato_id = aircraft.location
-            yield self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
+            yield self.env.process(self.system_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
         elif aircraft.location in self.structural_entity_groups['parking_pad']:
             aircraft.parking_space_id = aircraft.location
-            yield self.env.process(self.vertiport_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
+            yield self.env.process(self.system_manager.fato_and_parking_pad_usage_process(aircraft=aircraft))
         elif aircraft.location in self.structural_entity_groups['approach_fix_node']:
-            yield self.env.process(self.vertiport_manager.simulate_terminal_airspace_arrival_process(aircraft=aircraft,
+            yield self.env.process(self.system_manager.simulate_terminal_airspace_arrival_process(aircraft=aircraft,
                                                                                                      arriving_passengers=aircraft.passengers_onboard))
         elif aircraft.location in self.structural_entity_groups['departure_fix_node']:
             aircraft.flight_direction = f'{aircraft.origin_vertiport_id}_{aircraft.destination_vertiport_id}'
-            yield self.env.process(self.vertiport_manager.departure_fix_request_initial_state(aircraft=aircraft))
+            yield self.env.process(self.system_manager.departure_fix_request_initial_state(aircraft=aircraft))
         else:
             raise ValueError(f'Unknown aircraft location: {aircraft.location}')
