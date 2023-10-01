@@ -57,7 +57,7 @@ def set_taxi_operations_config(is_simultaneous_taxi_and_take_off_allowed) -> Tax
     return TaxiOperationsConfig
 
 
-# def create_vertiport_manager(env,
+# def create_system_manager(env,
 #                              vertiports,
 #                              vertiport_ids,
 #                              scheduler,

@@ -69,7 +69,7 @@ class SimSetup:
             self.fixed_schedule = False
 
         self.scheduler = self.create_scheduler()
-        self.system_manager = self.create_vertiport_manager()
+        self.system_manager = self.create_system_manager()
 
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
@@ -124,7 +124,8 @@ class SimSetup:
         """
         Creates the wind module
         """
-        return Wind(wind_magnitude=self.airspace_params['wind_magnitude'],
+        return Wind(static_wind=self.airspace_params['static_wind'],
+                    wind_magnitude=self.airspace_params['wind_magnitude'],
                     wind_angle=self.airspace_params['wind_angle'],
                     wind_data_file_path=self.airspace_params['wind_data_file_path'])
     
@@ -276,7 +277,7 @@ class SimSetup:
         merged_dict |= fix_nodes
         return dict(merged_dict)
     
-    def create_vertiport_manager(self):
+    def create_system_manager(self):
         # Create vertiport manager
         return SystemManager(
             env=self.env,

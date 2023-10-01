@@ -146,17 +146,17 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': None, #f'{str(cwd)}/input/airspace/finalized_route_0615.csv',
+    'airspace_layout_file_path': None, #f'{str(cwd)}/vertisim/input/airspace/finalized_route_0615.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 1,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
-    'static_wind': True, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.
+    'static_wind': False, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.
     'wind_magnitude': 8,  # m/s
     'wind_angle': pi,  # deg - Relative to the aircraft heading
-    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/wind_data.csv'
+    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/SFBayArea_wind_data.csv'
 }
 
 # Passenger parameters
@@ -228,14 +228,14 @@ aircraft_params = {
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
-    'time_rotor_spin_up': 5,  # sec - will be included in the hover time
+    'time_rotor_spin_up': 5,  # sec - included in the hover time. Doesn't consume energy
     'time_hover_climb': 15,  # sec - NOT USED
     'time_climb_transition': 30,  # sec - NOT USED
     'time_climb': 65,  # sec - NOT USED  
     'time_descend': 65,  # sec - NOT USED
     'time_descend_transition': 30,  # sec - NOT USED
     'time_hover_descend': 15,  # sec - NOT USED
-    'time_rotor_spin_down': 5,  # sec - will be included in the hover time
+    'time_rotor_spin_down': 5,  # sec - included in the hover time. Doesn't consume energy
     'time_post_landing_safety_checks': 0,  # sec    
     'ground_taxi_speed': 3.67, # 3.67 # ft/s
     'time_passenger_embark_disembark': 60 * 2, #60 * 2,  # secs
@@ -292,9 +292,9 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': f'{str(cwd.parent.parent)}/output/results',
+    'output_folder_path': f'{str(cwd.parent)}/output/results',
     'config_output_file_name': 'config',
-    'performance_metrics_output_file_name': 'performance_metrics',
+    'performance_metrics_output_file_name': 'performance_metrics'
 }
 
 # ----------------------------------------------------------

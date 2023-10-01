@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from math import pi
 
 
 def sec_to_ms(sec):
@@ -185,5 +186,17 @@ def kw_to_watt(kw):
         raise TypeError(f"Can't convert kw to watt. Power (kw) format is not correct. The type you inputted is {type(kw)}")
     else:
         return round(kw * 1000, 2)
-    
+
+
+def degrees_to_radians(degrees):
+    if degrees is None:
+        return None
+    if type(degrees) in [np.ndarray, pd.core.series.Series]:
+        return round(degrees * 0.0174533, 2)
+    elif type(degrees) == list:
+        return [round(i * 0.0174533, 2) for i in degrees]
+    elif type(degrees) not in [int, float, np.float64, np.float32, np.int_]:
+        raise TypeError(f"Can't convert degrees to radians. Angle (degrees) format is not correct. The type you inputted is {type(degrees)}")
+    return round(degrees * 0.0174533, 4)
+        
     

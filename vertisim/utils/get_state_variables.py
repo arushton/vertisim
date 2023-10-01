@@ -103,9 +103,6 @@ def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.a
     # Save numpy array to a file
     np.save('../../output/state.npy', states)
 
-    # # Save numpy array to a csv file
-    # states_ = np.asarray(states)
-    # np.savetxt('../../output/state.csv', states_, delimiter=',', fmt='%s')
 
 def collect_structural_entity_state_variables_machine_readable(vertiports: Dict, airspace_states: np.array):
     states = np.array([])

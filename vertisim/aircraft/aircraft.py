@@ -1,6 +1,6 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
 from utils.distance import haversine_dist
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m
+from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
@@ -895,12 +895,17 @@ class Aircraft:
                 latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
                 latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[waypoint_id]
                 destination_heading = self.wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
-                
-                set_seed(how='instant')
-                # wind_speed, wind_direction = self.system_manager.airspace.get_wind_speed_and_direction()
-                # v_wind = Wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
 
-                v_wind = self.wind.make_static_wind_vector_relative_to_the_aircraft(destination_heading)
+                if self.wind.static_wind:
+                    v_wind: np.ndarray = self.wind.make_static_wind_vector_relative_to_the_aircraft(destination_heading)
+                else:
+                    wind_impact_area: str = self.closest_vertiport_to_aircraft(location=self.location, 
+                                                                        origin_vertiport_id=self.origin_vertiport_id,
+                                                                        destination_vertiport_id=self.destination_vertiport_id)
+                    wind_states: Dict = self.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(self.env.now)),
+                                                                                             location=wind_impact_area)
+                    v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],
+                                                                                      wind_magnitude=wind_states['windspeed'])    
                 
                 # note: |true_vector| = self.forward_velocity UNLESS wind is too strong, and a greater true_airspeed is needed
                 true_vector = self.wind.wind_adjusted_true_velocity(self.forward_velocity, destination_heading, v_wind, self.stall_speed)
@@ -1339,6 +1344,25 @@ class Aircraft:
                                                   flight_id=self.flight_id,
                                                   flight_phase=flight_phase,
                                                   energy=energy)
+
+    def closest_vertiport_to_aircraft(self, location, origin_vertiport_id, destination_vertiport_id):
+        """
+        Gets the closest vertiport to the aircraft between the origin and destination vertiport.
+        This is used to determine which wind area to use.
+        """
+
+        def get_lat_lng(vertiport_id, field_lat, field_lng):
+            vertiport = self.system_manager.vertiports[vertiport_id].vertiport_layout.approach_fix_lat_lng
+            return vertiport[field_lat].iloc[0], vertiport[field_lng].iloc[0]
+
+        aircraft_lat, aircraft_long = self.get_node_latitude(location), self.get_node_longitude(location)
+        origin_lat, origin_long = get_lat_lng(origin_vertiport_id, 'approach_fix_lat', 'approach_fix_lon')
+        destination_lat, destination_long = get_lat_lng(destination_vertiport_id, 'approach_fix_lat', 'approach_fix_lon')
+
+        origin_distance = haversine_dist(aircraft_lat, aircraft_long, origin_lat, origin_long)
+        destination_distance = haversine_dist(aircraft_lat, aircraft_long, destination_lat, destination_long)
+
+        return origin_vertiport_id if origin_distance < destination_distance else destination_vertiport_id
 
 
     
