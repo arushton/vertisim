@@ -1,6 +1,7 @@
 from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
 from utils.distance import haversine_dist
 from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
+from utils.flight_time_estimator import time_to_arrival_estimator
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
@@ -870,6 +871,7 @@ class Aircraft:
         for waypoint_id, resource in list(airlink_resources.items())[starting_index:-2]:
             with resource.airnode_resource.request() as req:
                 yield req
+
                 # Compute the horizontal and vertical distance between the current location and the next waypoint
                 horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, waypoint_id)
 
@@ -1331,6 +1333,7 @@ class Aircraft:
     def save_flight_duration(self):
         self.flight_duration = self.arrival_time - self.departure_time
         self.event_saver.update_flight_duration_tracker(flight_direction=self.flight_direction, flight_duration=self.flight_duration)
+        self.system_manager.update_flight_duration(flight_direction=self.flight_direction, flight_duration=ms_to_sec(self.flight_duration))
 
     def save_process_time(self, event, process_time):
         self.event_saver.save_aircraft_process_times(agent_id=self.tail_number,
@@ -1363,6 +1366,18 @@ class Aircraft:
         destination_distance = haversine_dist(aircraft_lat, aircraft_long, destination_lat, destination_long)
 
         return origin_vertiport_id if origin_distance < destination_distance else destination_vertiport_id
+    
+
+    def estimate_time_to_arrival(self):
+        """
+        Returns the estimated time to arrival in minutes.
+        """
+        return round(time_to_arrival_estimator(cruise_speed=self.aircraft_params['cruise_speed'],
+                                               current_waypoint_id=self.location,
+                                               origin_vertiport_id=self.origin_vertiport_id,
+                                               destination_vertiport_id=self.destination_vertiport_id,
+                                               flight_direction=self.flight_direction,
+                                               system_manager=self.system_manager)/60, 2)        
 
 
     

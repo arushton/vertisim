@@ -23,6 +23,9 @@ sim_params = {
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
     'step_by_step_sim': False,
     'step_by_step_sim_state_type': 'array', # 'array' or 'dict' array can be used by the external optimization tools. dict is for human readability.
+    'simulation_states': ['num_aircraft', 'num_flight_requests', 'num_available_fato', 'num_available_parking_pad', 'num_waiting_passengers',
+                          'total_passenger_waiting_time', 'arrival_fix', 'origin_vertiport_id', 'destination_vertiport_id', 'soc',
+                          'time_to_arrival', 'status', 'wind_speed', 'wind_direction'], # For every vertiport, aircraft, and airspace node
     'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
