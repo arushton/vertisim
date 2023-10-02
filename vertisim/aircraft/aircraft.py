@@ -1367,7 +1367,6 @@ class Aircraft:
 
         return origin_vertiport_id if origin_distance < destination_distance else destination_vertiport_id
     
-
     def estimate_time_to_arrival(self):
         """
         Returns the estimated time to arrival in minutes.
@@ -1377,7 +1376,22 @@ class Aircraft:
                                                origin_vertiport_id=self.origin_vertiport_id,
                                                destination_vertiport_id=self.destination_vertiport_id,
                                                flight_direction=self.flight_direction,
-                                               system_manager=self.system_manager)/60, 2)        
+                                               system_manager=self.system_manager)/60, 2)     
+
+    def get_vertiport_list(self):
+        return self.system_manager.vertiport_ids
+
+    def get_aircraft_states(self) -> Dict:
+        """
+        Returns the aircraft states.
+        """
+        return {
+            'origin_vertiport_id': self.get_vertiport_list().index(self.origin_vertiport_id),
+            'destination_vertiport_id': self.get_vertiport_list().index(self.destination_vertiport_id),
+            'soc': round(self.soc, 2),
+            'time_to_arrival': self.estimate_time_to_arrival(),
+            'status': self.status
+        }
 
 
     

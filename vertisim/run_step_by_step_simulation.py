@@ -1,14 +1,14 @@
-from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables
+from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables, get_simulator_states
 import time
 
-def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, system_manager, max_sim_time, state_type='array'):
+def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, system_manager, max_sim_time, simulation_states, response_type='auto'):
     while env.peek() < max_sim_time:
         env.step()
-        if state_type == 'array':
-            get_machine_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, system_manager=system_manager)
+        if response_type == 'auto':
+            get_machine_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, system_manager=system_manager, simulation_states=simulation_states)
             # Sleep for 1 second
             # time.sleep(1)
-        elif state_type == 'dict':
+        elif response_type == 'hil':
             get_human_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, system_manager=system_manager)
             modify = get_user_input()
             if modify.isdigit():
@@ -16,7 +16,7 @@ def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_gro
             elif modify.lower() == "y":
                 modify_aircraft_state(env=env, structural_entity_groups=structural_entity_groups, airspace=airspace, system_manager=system_manager)            
         else:
-            raise ValueError(f"state_type must be either 'array' or 'dict'. Received {state_type} instead.")
+            raise ValueError(f"state_type must be either 'hil' or 'auto'. Received {response_type} instead.")
 
 
 
@@ -26,11 +26,11 @@ def get_human_readable_simulation_state_variables(vertiports, airspace, system_m
                         aircraft_agents=system_manager.aircraft_agents,
                         passenger_agents=system_manager.passenger_agents)
     
-def get_machine_readable_simulation_state_variables(vertiports, airspace, system_manager):
-    get_machine_readable_state_variables(vertiports=vertiports, 
-                        airspace_states=airspace.get_airspace_states_array(),
+def get_machine_readable_simulation_state_variables(vertiports, airspace, system_manager, simulation_states):
+    get_simulator_states(vertiports=vertiports, 
                         aircraft_agents=system_manager.aircraft_agents,
-                        num_aircraft=system_manager.num_aircraft)    
+                        num_aircraft=system_manager.num_aircraft,
+                        simulation_states=simulation_states)    
 
 def get_user_input():
     return input("Do you want to modify any aircraft's state? (y/n) or fast-forward simulation steps (# simulation steps to fast-forward): ")

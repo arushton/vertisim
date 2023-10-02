@@ -173,7 +173,7 @@ class Wind:
         return {'wind_magnitude': self.wind_magnitude, 'wind_angle': self.wind_angle}
 
     
-    def fetch_wind_states(self, locations: List[str]) -> Dict[str, Dict[str, Union[float, int]]]:
+    def get_wind_states(self, locations: List[str]) -> Dict[str, Dict[str, Union[float, int]]]:
         """
         Retrieves wind data for given locations. Returns static wind data if it's enabled.
         

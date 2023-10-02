@@ -382,7 +382,8 @@ class SimSetup:
                                         structural_entity_groups=self.structural_entity_groups,
                                         system_manager=self.system_manager,
                                         max_sim_time=max_sim_time,
-                                        state_type='array')
+                                        simulation_states=self.sim_params['simulation_states'],
+                                        response_type=self.sim_params['step_by_step_sim_response_type'])
         else:
             if self.network_and_demand['flight_schedule_file_path'] is not None:
                 self.env.run()

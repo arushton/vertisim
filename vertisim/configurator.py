@@ -85,47 +85,46 @@ class VertiportConfig:
         entity_resources = defaultdict(lambda: defaultdict(dict))
         for fato in self.fato_store.items:
             # entity_resources[self.vertiport_id][fato.resource_id]['fato_resource'] = fato.fato_resource
-            entity_resources[self.vertiport_id][fato.resource_id]['num_jobs_in_service'] = fato.fato_resource.count
-            entity_resources[self.vertiport_id][fato.resource_id]['num_jobs_in_queue'] = len(fato.fato_resource.queue)
+            entity_resources[fato.resource_id]['num_jobs_in_service'] = fato.fato_resource.count
+            entity_resources[fato.resource_id]['num_jobs_in_queue'] = len(fato.fato_resource.queue)
 
         if self.parking_space_store is not None:
             # entity_resources[self.vertiport_id]['PARK']['parking_space_store'] = self.parking_space_store
-            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_service'] = self.get_parking_pad_availability()
-            entity_resources[self.vertiport_id]['PARK']['num_jobs_in_queue'] = self.get_parking_pad_queue_length()
+            entity_resources['park']['num_jobs_in_service'] = self.get_parking_pad_availability()
+            entity_resources['park']['num_jobs_in_queue'] = self.get_parking_pad_queue_length()
 
         if self.taxiway_node_store is not None:
             # entity_resources[self.vertiport_id]['TAXI']['taxiway_node_store'] = self.taxiway_node_store
-            entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
-            entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
+            entity_resources['taxi']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
+            entity_resources['taxi']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
 
         # Save the occupancy of the arrival fixes
-        entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_service'] = self.arrival_fix_resource.count
-        entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
+        entity_resources['arrival_fix']['num_jobs_in_service'] = self.arrival_fix_resource.count
+        entity_resources['arrival_fix']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
 
-        entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_service'] = self.departure_fix_resource.count
-        entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
+        entity_resources['departure_fix']['num_jobs_in_service'] = self.departure_fix_resource.count
+        entity_resources['departure_fix']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
 
         # Save the number of aircraft in the vertiport
-        entity_resources[self.vertiport_id]['num_aircraft'] = self.num_aircraft
+        entity_resources['num_aircraft'] = self.num_aircraft
 
         # Save the number of flight requests at the vertiport
-        entity_resources[self.vertiport_id]['num_flight_requests'] = self.num_flight_requests
+        entity_resources['num_flight_requests'] = self.num_flight_requests
 
         # Save the number of available fatos at the vertiport
-        entity_resources[self.vertiport_id]['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
+        entity_resources['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
 
         # Save the number of available parking pads at the vertiport
-        entity_resources[self.vertiport_id]['num_available_parking_pad'] = self.get_parking_pad_availability()
+        entity_resources['num_available_parking_pad'] = self.get_parking_pad_availability()
 
         # # Save the number of waiting passengers at the vertiport
-        # entity_resources[self.vertiport_id]['num_waiting_passengers'] = self.num_waiting_passengers
         for destination, waiting_room_store in self.waiting_room_stores.items():
-            entity_resources[self.vertiport_id]['WAITING_ROOM'][destination] = {
-                'num_waiting_passengers': len(waiting_room_store.items),
-            }        
+            entity_resources['num_waiting_passengers'] = {
+                f'to_{destination}': len(waiting_room_store.items)
+            }
 
         # Save the total waiting time of passengers at the vertiport
-        entity_resources[self.vertiport_id]['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
+        entity_resources['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
 
         return entity_resources
 
