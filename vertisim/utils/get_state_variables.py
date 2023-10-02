@@ -79,6 +79,14 @@ def collect_flow_entity_state_variables_human_readable(aircraft_agents: Dict, pa
     return aircraft_states
 
 
+def get_simulator_states(vertiports: Dict, aircraft_agents: Dict, passenger_agents: Dict, num_aircraft: int):
+    # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
+    # We want all the states after all the aircraft have been initialized.
+    if len(aircraft_agents) < num_aircraft:
+        return
+        
+    system_manager = get_system_manager(aircraft_agents)
+
 def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.array, aircraft_agents: Dict, num_aircraft: int):
 
     # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
@@ -134,7 +142,10 @@ def get_aircraft(aircraft_agents):
     return list(aircraft_agents.values())[0]
 
 def get_node_location_list(aircraft_agents):
-    return list(get_aircraft(aircraft_agents).system_manager.node_locations.keys())
+    return list(get_system_manager(aircraft_agents=aircraft_agents).node_locations.keys())
 
 def get_vertiport_list(aircraft_agents):
-    return get_aircraft(aircraft_agents).system_manager.vertiport_ids
+    return get_system_manager(aircraft_agents=aircraft_agents).vertiport_ids
+
+def get_system_manager(aircraft_agents: Dict) -> object:
+    return get_aircraft(aircraft_agents=aircraft_agents).system_manager

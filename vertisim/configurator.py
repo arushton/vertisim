@@ -125,7 +125,7 @@ class VertiportConfig:
             }        
 
         # Save the total waiting time of passengers at the vertiport
-        entity_resources[self.vertiport_id]['total_waiting_time'] = self.get_total_passenger_waiting_time()
+        entity_resources[self.vertiport_id]['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
 
         return entity_resources
 

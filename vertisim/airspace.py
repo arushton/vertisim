@@ -117,6 +117,18 @@ class Airspace:
         wind_direction = wind_data_row['winddir']
         return wind_speed, wind_direction
 
+    def get_waypoint_rank(self, waypoint_id: str, flight_direction: str) -> int:
+        """
+        Returns the rank of the waypoint in the flight direction.
+        """
+        return self.waypoint_ids[flight_direction].index(waypoint_id)
+    
+    def get_flight_length(self, flight_direction: str) -> int:
+        """
+        Returns the number of waypoints in the flight direction.
+        """
+        return len(self.waypoint_ids[flight_direction])
+
 class Airnode:
     def __init__(self, env: simpy.Environment(), 
                  airnode_id: str,
