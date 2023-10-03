@@ -1,6 +1,6 @@
 from vertiport_layout_creator import VertiportLayout
 from configurator import VertiportConfig, TaxiOperationsConfig
-from vertiport_manager import VertiportManager
+from system_manager import SystemManager
 from airspace_creator import AirspaceCreator
 from airspace import Airspace
 from collections import defaultdict
@@ -57,7 +57,7 @@ def set_taxi_operations_config(is_simultaneous_taxi_and_take_off_allowed) -> Tax
     return TaxiOperationsConfig
 
 
-# def create_vertiport_manager(env,
+# def create_system_manager(env,
 #                              vertiports,
 #                              vertiport_ids,
 #                              scheduler,
@@ -80,7 +80,7 @@ def set_taxi_operations_config(is_simultaneous_taxi_and_take_off_allowed) -> Tax
 #                              node_locations,
 #                              flight_duration_constant,
 #                              logger):
-#     return VertiportManager(env=env,
+#     return SystemManager(env=env,
 #                             vertiports=vertiports,
 #                             vertiport_ids=vertiport_ids,
 #                             scheduler=scheduler,

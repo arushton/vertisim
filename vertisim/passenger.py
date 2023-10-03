@@ -6,7 +6,7 @@ from typing import Dict, Union, Any
 
 class Passenger:
     """
-    Passenger agent. If the constant is None, then the distributions from vertiport_manager will be used.
+    Passenger agent. If the constant is None, then the distributions from system_manager will be used.
     Distributions are not inputted directly to the passenger, because it will increase the overhead of each passenger
     object.
     """
@@ -16,7 +16,7 @@ class Passenger:
                  destination_vertiport_id: Any,
                  location: str,
                  passenger_params: Dict,
-                 vertiport_manager: object):
+                 system_manager: object):
         self.env = env
         self.passenger_id = passenger_id
         self.origin_vertiport_id = origin_vertiport_id
@@ -29,7 +29,7 @@ class Passenger:
         self.boarding_gate_to_aircraft_time_constant = sec_to_ms(self.passenger_params['boarding_gate_to_aircraft_time_constant'])
         self.deboard_aircraft_and_walk_to_exit_constant = sec_to_ms(self.passenger_params['deboard_aircraft_and_walk_to_exit_constant'])
         self.randomize_constants = self.passenger_params['randomize_constants']
-        self.vertiport_manager = vertiport_manager
+        self.system_manager = system_manager
         self.vertiport_arrival_time = None
         self.waiting_room_arrival_time = None
         self.waiting_room_store = None
@@ -48,8 +48,8 @@ class Passenger:
                 )
             else:
                 yield self.env.timeout(self.car_to_entrance_walking_time_constant)
-        elif self.vertiport_manager.passenger_distributions['car_to_entrance_walking_time_dist']:
-            dist = self.vertiport_manager.passenger_distributions['car_to_entrance_walking_time_dist']
+        elif self.system_manager.passenger_distributions['car_to_entrance_walking_time_dist']:
+            dist = self.system_manager.passenger_distributions['car_to_entrance_walking_time_dist']
             distribution = DistributionGenerator(
                 distribution_params=dist,
                 max_val_in_dist=dist['max_val_in_dist'])
@@ -68,8 +68,8 @@ class Passenger:
                 )
             else:
                 yield self.env.timeout(self.security_check_time_constant)
-        elif self.vertiport_manager.passenger_distributions['security_check_time_dist']:
-            dist = self.vertiport_manager.passenger_distributions['security_check_time_dist']
+        elif self.system_manager.passenger_distributions['security_check_time_dist']:
+            dist = self.system_manager.passenger_distributions['security_check_time_dist']
             distribution = DistributionGenerator(distribution_params=dist,
                                                  max_val_in_dist=dist['max_val_in_dist'])
             yield self.env.timeout(distribution.pick_number_from_distribution())
@@ -89,8 +89,8 @@ class Passenger:
                 )
             else:
                 yield self.env.timeout(self.waiting_room_to_boarding_gate_walking_time_constant)
-        elif self.vertiport_manager.passenger_distributions['waiting_room_to_boarding_gate_walking_time_dist']:
-            dist = self.vertiport_manager.passenger_distributions['waiting_room_to_boarding_gate_walking_time_dist']
+        elif self.system_manager.passenger_distributions['waiting_room_to_boarding_gate_walking_time_dist']:
+            dist = self.system_manager.passenger_distributions['waiting_room_to_boarding_gate_walking_time_dist']
             distribution = DistributionGenerator(
                 distribution_params=dist,
                 max_val_in_dist=dist['max_val_in_dist'])
@@ -111,8 +111,8 @@ class Passenger:
                 )
             else:
                 yield self.env.timeout(self.boarding_gate_to_aircraft_time_constant)
-        elif self.vertiport_manager.passenger_distributions['boarding_gate_to_aircraft_time_dist']:
-            dist = self.vertiport_manager.passenger_distributions['boarding_gate_to_aircraft_time_dist']
+        elif self.system_manager.passenger_distributions['boarding_gate_to_aircraft_time_dist']:
+            dist = self.system_manager.passenger_distributions['boarding_gate_to_aircraft_time_dist']
             distribution = DistributionGenerator(
                 distribution_params=dist,
                 max_val_in_dist=dist['max_val_in_dist'])

@@ -117,38 +117,37 @@ class Airspace:
         wind_direction = wind_data_row['winddir']
         return wind_speed, wind_direction
 
+    def get_waypoint_rank(self, waypoint_id: str, flight_direction: str) -> int:
+        """
+        Returns the rank of the waypoint in the flight direction.
+        """
+        return self.waypoint_ids[flight_direction].index(waypoint_id)
+    
+    def get_flight_length(self, flight_direction: str) -> int:
+        """
+        Returns the number of waypoints in the flight direction.
+        """
+        return len(self.waypoint_ids[flight_direction])
+
 class Airnode:
     def __init__(self, env: simpy.Environment(), 
                  airnode_id: str,
                  airnode_capacity: int = 1,
-                 airnode_resource: simpy.Resource = None, 
-                 wind_speed: float = 0.0,
-                 wind_direction: float = 0.0) -> None:
+                 airnode_resource: simpy.Resource = None) -> None:
         self.env = env
         self.airnode_id = airnode_id
         self.airnode_capacity = airnode_capacity
         self.airnode_resource = airnode_resource or simpy.Resource(self.env, capacity=self.airnode_capacity)
-        self.wind_speed = wind_speed
-        self.wind_direction = wind_direction
-        self.airnode_resource_states = self.get_airnode_states_dict()
     
+
     def get_airnode_states_dict(self) -> Dict:
         return {
             self.airnode_id: {
                 'num_jobs_in_service': self.airnode_resource.count,
-                'num_jobs_in_queue': len(self.airnode_resource.queue),
-                'wind_speed': self.wind_speed,
-                'wind_direction': self.wind_direction
+                'num_jobs_in_queue': len(self.airnode_resource.queue)
             }
         }
     
-    def get_airnode_states_array(self) -> np.array:
-        return np.array([
-            self.airnode_resource.count,
-            len(self.airnode_resource.queue),
-            self.wind_speed,
-            self.wind_direction
-        ])    
     
     def __repr__(self) -> str:
         return f"Airnode: {self.airnode_id}"

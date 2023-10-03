@@ -48,7 +48,7 @@ def collect_flow_entity_state_variables_human_readable(aircraft_agents: Dict, pa
             'state': aircraft.detailed_status,
             'location': aircraft.location,
             'serviced_time_at_the_location': aircraft.serviced_time_at_the_location,
-            'horizontal_speed': aircraft.speed,
+            'horizontal_speed': aircraft.forward_velocity,
             'vertical_velocity': aircraft.vertical_velocity,
             'altitude': aircraft.altitude,            
             'flight_direction': aircraft.flight_direction,
@@ -79,6 +79,14 @@ def collect_flow_entity_state_variables_human_readable(aircraft_agents: Dict, pa
     return aircraft_states
 
 
+def get_simulator_states(vertiports: Dict, aircraft_agents: Dict, passenger_agents: Dict, num_aircraft: int):
+    # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
+    # We want all the states after all the aircraft have been initialized.
+    if len(aircraft_agents) < num_aircraft:
+        return
+        
+    system_manager = get_system_manager(aircraft_agents)
+
 def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.array, aircraft_agents: Dict, num_aircraft: int):
 
     # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
@@ -103,9 +111,6 @@ def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.a
     # Save numpy array to a file
     np.save('../../output/state.npy', states)
 
-    # # Save numpy array to a csv file
-    # states_ = np.asarray(states)
-    # np.savetxt('../../output/state.csv', states_, delimiter=',', fmt='%s')
 
 def collect_structural_entity_state_variables_machine_readable(vertiports: Dict, airspace_states: np.array):
     states = np.array([])
@@ -137,7 +142,10 @@ def get_aircraft(aircraft_agents):
     return list(aircraft_agents.values())[0]
 
 def get_node_location_list(aircraft_agents):
-    return list(get_aircraft(aircraft_agents).vertiport_manager.node_locations.keys())
+    return list(get_system_manager(aircraft_agents=aircraft_agents).node_locations.keys())
 
 def get_vertiport_list(aircraft_agents):
-    return get_aircraft(aircraft_agents).vertiport_manager.vertiport_ids
+    return get_system_manager(aircraft_agents=aircraft_agents).vertiport_ids
+
+def get_system_manager(aircraft_agents: Dict) -> object:
+    return get_aircraft(aircraft_agents=aircraft_agents).system_manager

@@ -61,7 +61,7 @@ class AirspaceCreator:
             lon_rad = np.arctan2(y, x)
             lat, lon = np.degrees(lat_rad), np.degrees(lon_rad)
             waypoints.append((lat, lon, cruise_altitude))
-        return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+97.5)] + waypoints + [(lat2, lon2, destination_altitude+97.5)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 97.5 is the altitude of the approach departure fix. This is according to one model. Needs to change.
+        return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+60)] + waypoints + [(lat2, lon2, destination_altitude+60)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 60 is the altitude of the approach departure fix. This is according to one model. Needs to change.
 
     
     def determine_num_waypoints(self) -> Dict: # vertiport_distances: pd.DataFrame
@@ -89,6 +89,7 @@ class AirspaceCreator:
                                                                                                                 dest_arrival_fix_lat, 
                                                                                                                 dest_arrival_fix_lng)
         return airlinks_start_end_endpoints
+    
     
     def get_origin_destination_vertiport_locs(self):
         origin_destination_vertiport_locs = defaultdict(dict)

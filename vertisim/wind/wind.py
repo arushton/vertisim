@@ -1,11 +1,25 @@
 import numpy as np
 from math import sin, cos, asin, atan2, pi
+from typing import Dict, List, Union
+from utils.process_wind_data import WindDataProcessor
+from utils.units import ms_to_hr
+
 
 class Wind:
     
     """Relevant usage in:
-        lines 932-947 of aircraft.py
+        lines 894-914 of aircraft.py
     """
+
+    def __init__(self, static_wind=True, wind_magnitude=0, wind_angle=0, wind_data_file_path=None):
+        self.static_wind = static_wind
+        if self.static_wind:
+            self.wind_magnitude = wind_magnitude
+            self.wind_angle = wind_angle
+        else:
+            self.wind_data_processor = WindDataProcessor(wind_data_file_path)
+
+
 
     RADIUS_EARTH = 6371 # km
             
@@ -55,26 +69,25 @@ class Wind:
         
         return np.subtract(v_desired, v_wind)
     
-    @staticmethod
-    def make_wind_vector_relative_to_the_aircraft(aircraft_heading: float, desired_wind_angle: float, wind_magnitude: float = 8.0) -> np.ndarray:
+    def make_static_wind_vector_relative_to_the_aircraft(self, aircraft_heading: float) -> np.ndarray:
         """Generate a wind vector with a desired angle (radians) relative to the aircraft's heading 
          (0 = tailwind, 0.5pi = starboard crosswind, pi = headwind, 1.5pi = port crosswind).
         """
         
-        assert(0 <= desired_wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
+        assert(0 <= self.wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
     
-        wind_heading = desired_wind_angle + aircraft_heading
+        wind_heading = self.wind_angle + aircraft_heading
                 
-        return Wind.heading_to_vector(wind_heading, magnitude=wind_magnitude)
+        return Wind.heading_to_vector(wind_heading, magnitude=self.wind_magnitude)
 
-    @staticmethod
-    def make_wind_vector_relative_to_north(wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
+
+    def make_wind_vector_relative_to_north(self, wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
         """Generate a wind vector coming from wind_origin_heading, where wind_origin_heading is relative to north.
         (0 = South wind, 0.5pi = West wind, pi = North wind, 1.5pi = East wind).
         """
         
         # Ensure angles are in the correct range
-        assert(0 <= wind_origin_heading <= 2 * np.pi), "Wind angle must be in radians, and between 0 and 2pi."
+        assert(0 <= wind_origin_heading <= 2 * np.pi), f"Wind angle must be in radians, and between 0 and 2pi. Wind angle = {wind_origin_heading}"
         
         return Wind.heading_to_vector(wind_origin_heading + pi, magnitude=wind_magnitude)        
 
@@ -149,6 +162,62 @@ class Wind:
         if not (abs(ground_speed - ground_threshold) < 1e-9): # the aircraft was able to maintain its heading flying @ true_airspeed
             true_airspeed = Wind.magnitude(true_airspeed_v)
             assert abs(true_airspeed - cruise_speed) < 1e-9, f'Aircraft true airspeed is not equal to cruise speed. Cruise speed = {cruise_speed}, True airspeed = {true_airspeed}.'
+
+    def get_static_wind_data(self) -> Dict[str, Union[float, int]]:
+        """
+        Returns static wind data if available.
+        
+        Returns:
+            dict: A dictionary containing wind magnitude and wind angle.
+        """
+        return {'wind_magnitude': self.wind_magnitude, 'wind_angle': self.wind_angle}
+
+    
+    def fetch_wind_states(self, locations: List[str]) -> Dict[str, Dict[str, Union[float, int]]]:
+        """
+        Retrieves wind data for given locations. Returns static wind data if it's enabled.
+        
+        Args:
+            locations (List[str]): List of locations to fetch the wind data for.
+        
+        Returns:
+            dict: A dictionary containing wind data for each location.
+            
+        Raises:
+            ValueError: If unique locations in the wind data don't match with the provided locations list.
+        """
+        if self.static_wind:
+            return self.get_static_wind_data()
+
+        unique_locations = self.wind_data_processor.wind_data['locationname'].unique().tolist()
+
+        if set(locations) != set(unique_locations):
+            raise ValueError(
+                f'Locations in the wind data do not match with the vertiport locations list. '
+                f'Locations in the wind data = {unique_locations}, Vertiport locations list = {locations}.'
+            )
+
+        return {
+            location_id: self.get_time_and_location_specific_wind_states(
+                time_of_day=int(ms_to_hr(self.env.now)), 
+                location=location_id
+            )
+            for location_id in locations
+        }
+
+    
+    def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str) -> Dict:
+        """
+        Retrieves wind data for a specific time and location.
+        
+        Args:
+            time_of_day (int): The specific hour of the day.
+            location (str): The desired location for wind data retrieval.
+        
+        Returns:
+            dict: A dictionary containing wind data for the specified time and location.
+        """        
+        return self.wind_data_processor.get_time_and_location_specific_wind_states(time_of_day, location)
     
     # --- NOT IMPLEMENTED (YET)
     

@@ -70,15 +70,15 @@ class VertiportConfig:
         return total_waiting_time_min
 
     
-    def get_vertiport_states_array(self):
-        return np.array([self.num_waiting_passengers,
-                         self.get_total_passenger_waiting_time(),
-                         self.num_flight_requests,
-                         self.get_num_fato() - self.get_fato_occupancy(),
-                         self.get_parking_pad_availability()
-                         ])
+    # def get_vertiport_states_array(self):
+    #     return np.array([self.num_waiting_passengers,
+    #                      self.get_total_passenger_waiting_time(),
+    #                      self.num_flight_requests,
+    #                      self.get_num_fato() - self.get_fato_occupancy(),
+    #                      self.get_parking_pad_availability()
+    #                      ])
 
-    def get_vertiport_states_dict(self):
+    def get_vertiport_states(self):
         """
         Will be deprecated in the future.
         """
@@ -98,18 +98,34 @@ class VertiportConfig:
             entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
             entity_resources[self.vertiport_id]['TAXI']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
 
-        for destination, waiting_room_store in self.waiting_room_stores.items():
-            entity_resources[self.vertiport_id]['WAITING_ROOM'][destination] = {
-                # 'waiting_room_store': waiting_room_store,
-                'num_passengers': len(waiting_room_store.items),
-            }
-        # entity_resources[self.vertiport_id]['ARRIVAL_FIX']['arrival_fix_resource'] = self.arrival_fix_resource
+        # Save the occupancy of the arrival fixes
         entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_service'] = self.arrival_fix_resource.count
         entity_resources[self.vertiport_id]['ARRIVAL_FIX']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
 
-        # entity_resources[self.vertiport_id]['DEPARTURE_FIX']['departure_fix_resource'] = self.departure_fix_resource
         entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_service'] = self.departure_fix_resource.count
         entity_resources[self.vertiport_id]['DEPARTURE_FIX']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
+
+        # Save the number of aircraft in the vertiport
+        entity_resources[self.vertiport_id]['num_aircraft'] = self.num_aircraft
+
+        # Save the number of flight requests at the vertiport
+        entity_resources[self.vertiport_id]['num_flight_requests'] = self.num_flight_requests
+
+        # Save the number of available fatos at the vertiport
+        entity_resources[self.vertiport_id]['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
+
+        # Save the number of available parking pads at the vertiport
+        entity_resources[self.vertiport_id]['num_available_parking_pad'] = self.get_parking_pad_availability()
+
+        # # Save the number of waiting passengers at the vertiport
+        # entity_resources[self.vertiport_id]['num_waiting_passengers'] = self.num_waiting_passengers
+        for destination, waiting_room_store in self.waiting_room_stores.items():
+            entity_resources[self.vertiport_id]['WAITING_ROOM'][destination] = {
+                'num_waiting_passengers': len(waiting_room_store.items),
+            }        
+
+        # Save the total waiting time of passengers at the vertiport
+        entity_resources[self.vertiport_id]['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
 
         return entity_resources
 

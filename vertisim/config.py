@@ -3,6 +3,7 @@ from sim_setup import SimSetup
 import os
 from pathlib import Path
 import re
+from math import pi
 
 cwd = Path.cwd()
 
@@ -22,6 +23,9 @@ sim_params = {
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
     'step_by_step_sim': False,
     'step_by_step_sim_state_type': 'array', # 'array' or 'dict' array can be used by the external optimization tools. dict is for human readability.
+    'simulation_states': ['num_aircraft', 'num_flight_requests', 'num_available_fato', 'num_available_parking_pad', 'num_waiting_passengers',
+                          'total_passenger_waiting_time', 'arrival_fix', 'origin_vertiport_id', 'destination_vertiport_id', 'soc',
+                          'time_to_arrival', 'status', 'wind_speed', 'wind_direction'], # For every vertiport, aircraft, and airspace node
     'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
@@ -145,14 +149,17 @@ network_and_demand = {
 # Airspace parameters
 # -------------------
 airspace_params = {
-    'airspace_layout_file_path': None, #f'{str(cwd)}/input/airspace/finalized_route_0615.csv',
+    'airspace_layout_file_path': None, #f'{str(cwd)}/vertisim/input/airspace/finalized_route_0615.csv',
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
     'airlink_segment_length': 1,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
-    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/wind_data.csv'
+    'static_wind': False, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.
+    'wind_magnitude': 8,  # m/s
+    'wind_angle': pi,  # deg - Relative to the aircraft heading
+    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/SFBayArea_wind_data.csv'
 }
 
 # Passenger parameters
@@ -197,11 +204,24 @@ aircraft_params = {
     
     # MISSION PARAMETERS
     # -----------------
-    'vertical_takeoff_velocity': 5.5,  # m/s
-    'vertical_landing_velocity': 5.5,  # m/s
-    'max_vertical_velocity': 6,  # m/s
+    'vertical_takeoff_velocity': 1.5,  # m/s
+    'vertical_landing_velocity': 1.5,  # m/s
+    'climb_transition_end_forward_velocity': 18,  # m/s
+    'climb_transition_vertical_velocity': 1.5,  # m/s
+    # 'initial_climb_phase_end_forward_velocity': 45,  # m/s
+    # 'initial_climb_phase_vertical_velocity': 3.125,  # m/s
+    'climb_phase_end_forward_velocity': 45,  # m/s
+    'climb_phase_vertical_velocity': 3.125,  # m/s
+    'cruise_speed': 67, #30, # or None
+    # 'initial_descend_phase_end_forward_velocity': 36,  # m/s
+    # 'initial_descend_phase_vertical_velocity': 3,  # m/s
+    'descend_phase_end_forward_velocity': 36,  # m/s
+    'descend_phase_vertical_velocity': 3.8,  # m/s
+    'descend_transition_end_forward_velocity': 0,  # m/s
+    'descend_transition_vertical_velocity': 3.8,  # m/s
+
+    'max_vertical_velocity': 5,  # m/s
     'max_horizontal_velocity': 89,  # m/s - 173 knots | 200 mph
-    'cruise_velocity': None, #30, # or None
     # # Altitude
     'ground_altitude': 0,  # m
     'hover_altitude': 15,  # m
@@ -211,14 +231,14 @@ aircraft_params = {
     'time_tug_connection': 0,  # sec
     'time_tug_disconnection': 0,  # sec
     'time_pre_take_off_check_list': 0,  # sec
-    'time_rotor_spin_up': 5,  # sec - will be included in the hover time
+    'time_rotor_spin_up': 5,  # sec - included in the hover time. Doesn't consume energy
     'time_hover_climb': 15,  # sec - NOT USED
     'time_climb_transition': 30,  # sec - NOT USED
     'time_climb': 65,  # sec - NOT USED  
     'time_descend': 65,  # sec - NOT USED
     'time_descend_transition': 30,  # sec - NOT USED
     'time_hover_descend': 15,  # sec - NOT USED
-    'time_rotor_spin_down': 5,  # sec - will be included in the hover time
+    'time_rotor_spin_down': 5,  # sec - included in the hover time. Doesn't consume energy
     'time_post_landing_safety_checks': 0,  # sec    
     'ground_taxi_speed': 3.67, # 3.67 # ft/s
     'time_passenger_embark_disembark': 60 * 2, #60 * 2,  # secs
@@ -275,9 +295,9 @@ aircraft_params = {
 }
 
 output_params = {
-    'output_folder_path': f'{str(cwd.parent.parent)}/output/results',
+    'output_folder_path': f'{str(cwd.parent)}/output/results',
     'config_output_file_name': 'config',
-    'performance_metrics_output_file_name': 'performance_metrics',
+    'performance_metrics_output_file_name': 'performance_metrics'
 }
 
 # ----------------------------------------------------------

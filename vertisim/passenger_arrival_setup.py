@@ -13,7 +13,7 @@ class PassengerArrivalSetup:
                  network_and_demand: Dict,
                  passenger_params: Dict,
                  vertiport_ids: List,
-                 vertiport_manager: int,
+                 system_manager: int,
                  aircraft_params: Dict = None,
                  network_simulation: bool = False,
                  passenger_logger: object = None):
@@ -22,7 +22,7 @@ class PassengerArrivalSetup:
         self.vertiport_configs = network_and_demand['vertiports']
         self.passenger_params = passenger_params
         self.vertiport_ids = vertiport_ids
-        self.vertiport_manager = vertiport_manager
+        self.system_manager = system_manager
         self.aircraft_params = aircraft_params
         self.network_simulation = network_simulation
         self.passenger_logger = passenger_logger
@@ -85,7 +85,7 @@ class PassengerArrivalSetup:
                 passenger_arrival_interval_time = self.vertiport_configs[origin_vertiport_id]['passenger_arrival_process']['passenger_interarrival_constant']
             else:
                 passenger_arrival_interval_time = self.vertiport_configs[origin_vertiport_id]['passenger_arrival_process']['passenger_arrival_distribution']['parameters']['scale']   
-            num_parking_pads = self.vertiport_manager.vertiports[origin_vertiport_id].vertiport_layout.num_parking_pad # This is the number of parking pads at the first vertiport. Might be improved.
+            num_parking_pads = self.system_manager.vertiports[origin_vertiport_id].vertiport_layout.num_parking_pad # This is the number of parking pads at the first vertiport. Might be improved.
             time_to_fill_vertiport = int(num_parking_pads/2) * (
                 self.aircraft_params['time_descend_transition'] +
                 self.aircraft_params['time_hover_descend'] +
@@ -131,10 +131,10 @@ class PassengerArrivalSetup:
             origin_vertiport_id=origin_vertiport_id,
             destination_vertiport_id=destination_vertiport_id,
             passenger_params=self.passenger_params,
-            vertiport_manager=self.vertiport_manager
+            system_manager=self.system_manager
         )
 
         # Add passenger to the passenger agents dictionary.
-        self.vertiport_manager.passenger_agents[f'passenger_{passenger_id}'] = passenger
+        self.system_manager.passenger_agents[f'passenger_{passenger_id}'] = passenger
         # Initiate passenger arrival.
-        self.env.process(self.vertiport_manager.simulate_passenger_arrival(passenger))
+        self.env.process(self.system_manager.simulate_passenger_arrival(passenger))

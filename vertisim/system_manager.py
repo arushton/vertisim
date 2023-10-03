@@ -1,7 +1,7 @@
 import simpy
 import networkx as nx
 from typing import Any, Dict, Generator, Optional
-from utils.units import sec_to_ms, ms_to_sec, ms_to_min
+from utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from utils.distribution_generator import DistributionGenerator
 from utils.weighted_random_chooser import random_choose_exclude_element
 from utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
@@ -15,12 +15,13 @@ from utils.calc_required_charge_time_from_required_energy import calc_required_c
 from typing import List, Union
 
 
-class VertiportManager:
+class SystemManager:
     def __init__(self,
                  env: object,
                  vertiports: Dict,
                  vertiport_ids: List,
                  scheduler: object,
+                 wind: object,
                  arrival_priority: int,
                  departure_priority: int,
                  airspace: object,
@@ -46,6 +47,7 @@ class VertiportManager:
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
         self.scheduler = scheduler
+        self.wind = wind
         self.airspace = airspace
         self.arrival_priority = arrival_priority
         self.departure_priority = departure_priority
@@ -65,7 +67,7 @@ class VertiportManager:
         self.num_aircraft = self.get_aircraft_count()
         self.aircraft_agents = {}
         self.passenger_agents = {}
-        self.flight_durations = defaultdict(list)
+        self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         # if not self.network_simulation:
         self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()
@@ -91,7 +93,75 @@ class VertiportManager:
             vertiport.num_aircraft
             for _, vertiport in self.vertiports.items()
         )
+    
+    def _initialize_avg_flight_durations(self):
+        def inner_dict():
+            return {'average_flight_duration': None, 'num_flights': 0, 'total_duration': 0}
+    
+        # The outer defaultdict
+        dd = defaultdict(inner_dict)
+        for flight_direction in self.airspace.flight_directions:
+            dd[flight_direction]
+        return dd
 
+    def update_flight_duration(self, flight_direction: str, flight_duration: float):        
+        # Update total duration and number of flights.
+        self.increase_total_flight_duration(flight_direction, flight_duration)
+        self.increase_flight_count(flight_direction)
+        
+        # Recalculate and update average flight duration.
+        average_flight_duration = round(self.get_total_flight_time(flight_direction) / self.get_flight_count(flight_direction), 2)
+        self.set_average_flight_time(flight_direction, average_flight_duration)
+
+    def get_average_flight_time(self, flight_direction: str) -> float:
+        """
+        Retrieve the average flight time for the specified flight direction.
+        """
+        return self.average_flight_durations_per_od_pair[flight_direction]['average_flight_duration']
+
+    def get_total_flight_time(self, flight_direction: str) -> float:
+        """
+        Retrieve the total flight time for the specified flight direction.
+        """
+        return self.average_flight_durations_per_od_pair[flight_direction]['total_duration']
+    
+    def get_flight_count(self, flight_direction: str) -> int:
+        """
+        Retrieve the number of flights for the specified flight direction.
+        """
+        return self.average_flight_durations_per_od_pair[flight_direction]['num_flights']
+    
+    def set_average_flight_time(self, flight_direction: str, average_time: float) -> None:
+        """
+        Set the average flight time for the specified flight direction.
+        """
+        self.average_flight_durations_per_od_pair[flight_direction]['average_flight_duration'] = average_time 
+
+    def decrease_flight_count(self, flight_direction: str) -> None:
+        """
+        Decrease the number of flights for the specified flight direction.
+        """
+        self.average_flight_durations_per_od_pair[flight_direction]['num_flights'] -= 1
+    
+    def increase_flight_count(self, flight_direction: str) -> None:
+        """
+        Increase the number of flights for the specified flight direction.
+        """
+        self.average_flight_durations_per_od_pair[flight_direction]['num_flights'] += 1
+    
+    def increase_total_flight_duration(self, flight_direction: str, flight_duration: float) -> None:
+        """
+        Increase the total flight duration for the specified flight direction.
+        """
+        self.average_flight_durations_per_od_pair[flight_direction]['total_duration'] += flight_duration
+
+    def initial_flight_duration_estimate(self, origin_id: str, destination_id: str, cruise_speed: float) -> float:
+        """
+        Compute the average flight time based on distance and aircraft speed.
+        """
+        flight_distance = miles_to_m(self.get_mission_length(origin_id, destination_id))
+        return flight_distance / cruise_speed * 1.25        
+    
     def build_charging_time_distribution(self) -> Optional[DistributionGenerator]:
         """
         Builds the charging time distribution with the given parameters
