@@ -1,8 +1,11 @@
 import pandas as pd
 import numpy as np
+import json
+from typing import Union
 
+from typing import Union, Any
 
-def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> pd.DataFrame:
+def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> Union[pd.DataFrame, Any]:
     """
     Function that can read the input file and create a pandas dataframe.
     The input file extension can be types of .csv, .parquet, .hdf5, and .xlsx
@@ -22,6 +25,10 @@ def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> pd.DataFrame:
         df = pd.read_hdf(file_path)
     elif file_type in ['xlsx', 'xls']:
         df = pd.read_excel(file_path, sheet_name=sheet_name)
+    elif file_type == 'json':
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        return data
     else:
         raise ValueError(f'The file type is not supported: {file_path}')
 
@@ -29,6 +36,7 @@ def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> pd.DataFrame:
     df = df.dropna(how='all')
 
     return df
+
 
 
 def detect_file_type(file_path: str) -> str:

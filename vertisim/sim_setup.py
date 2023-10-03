@@ -48,6 +48,7 @@ class SimSetup:
         self.env = self.create_environment()
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
+        self.stopping_events = self.define_stopping_events() # Dictionary of stopping events. TODO: These needs to be user input.
         self.vertiport_layouts = self.create_vertiport_layout()
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
@@ -102,6 +103,16 @@ class SimSetup:
         vertiport_logger.create_logger(name='vertiport', env=self.env)
 
         return logger, aircraft_logger, passenger_logger, vertiport_logger
+    
+    def define_stopping_events(self):
+        return {
+            'passenger_arrival_event': self.env.event(),
+            'aircraft_faf_arrival_event': self.env.event(),
+            'aircraft_parking_pad_arrival_event': self.env.event(),
+            'aircraft_departure_fix_departure_event': self.env.event(),
+            'charging_start_event': self.env.event(),
+            'charging_end_event': self.env.event()
+        }
 
     def create_vertiport_layout(self):
         """
@@ -283,26 +294,20 @@ class SimSetup:
             env=self.env,
             vertiports=self.vertiports,
             vertiport_ids=self.vertiport_ids,
+            stopping_events=self.stopping_events,
             scheduler=self.scheduler,
             wind=self.wind,
-            arrival_priority=self.sim_params['arrival_priority'],
-            departure_priority=self.sim_params['departure_priority'],
             airspace=self.airspace,
             taxi_config=self.taxi_config,
-            only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
+            sim_params=self.sim_params,            
             aircraft_params=self.aircraft_params,
             vertiport_distances=self.vertiport_distances,
             passenger_distributions=self.passenger_distributions,
-            max_flight_waiting_time=self.sim_params['max_passenger_waiting_time'],
-            charging_interuption=self.sim_params['charge_interruption'],
             event_saver=self.event_saver,
-            network_simulation=self.sim_params['network_simulation'],
             fixed_charge_schedule=check_not_none(self.network_and_demand['charge_schedule_file_path']),
             fixed_schedule=check_not_none(self.network_and_demand['flight_schedule_file_path']),
-            fleet_rebalancing=self.sim_params['fleet_rebalancing'],
             node_locations=self.node_locations,
             flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
-            charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
             logger=self.logger,
             aircraft_logger=self.aircraft_logger,
             passenger_logger=self.passenger_logger

@@ -1,11 +1,12 @@
 from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables, get_simulator_states
 import time
+from typing import Dict, List
 
 def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, system_manager, max_sim_time, simulation_states, response_type='auto'):
     while env.peek() < max_sim_time:
         env.step()
         if response_type == 'auto':
-            get_machine_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, system_manager=system_manager, simulation_states=simulation_states)
+            call_simulator_states(vertiports=vertiports, airspace=airspace, system_manager=system_manager, simulation_states=simulation_states)
             # Sleep for 1 second
             # time.sleep(1)
         elif response_type == 'hil':
@@ -18,6 +19,26 @@ def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_gro
         else:
             raise ValueError(f"state_type must be either 'hil' or 'auto'. Received {response_type} instead.")
 
+def run_steps_until_specific_events(env: object, 
+                                    max_sim_time: int, 
+                                    vertiports: Dict,
+                                    airspace: object,
+                                    system_manager: object,
+                                    simulation_states: List,
+                                    terminal_event: object):
+    while env.peek() < max_sim_time and terminal_event.triggered == False:
+        env.step()
+        # Check if any of the stopping events have occurred.
+        for event_name, event in system_manager.stopping_event.items():
+            if event.triggered:
+                # Get the states
+                states = call_simulator_states(vertiports, airspace, system_manager, simulation_states)
+                # Reset the event
+                system_manager.stopping_event[event_name] = env.event()
+                # Return the states
+                
+
+
 
 
 def get_human_readable_simulation_state_variables(vertiports, airspace, system_manager):
@@ -26,7 +47,7 @@ def get_human_readable_simulation_state_variables(vertiports, airspace, system_m
                         aircraft_agents=system_manager.aircraft_agents,
                         passenger_agents=system_manager.passenger_agents)
     
-def get_machine_readable_simulation_state_variables(vertiports, airspace, system_manager, simulation_states):
+def call_simulator_states(vertiports, airspace, system_manager, simulation_states):
     get_simulator_states(vertiports=vertiports, 
                         aircraft_agents=system_manager.aircraft_agents,
                         num_aircraft=system_manager.num_aircraft,

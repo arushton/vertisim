@@ -18,7 +18,7 @@ def get_aircraft(aircraft_agents):
 def get_system_manager(aircraft_agents: Dict) -> object:
     return get_aircraft(aircraft_agents=aircraft_agents).system_manager
 
-def get_simulator_states(
+def get_simulator_state(
     vertiports: Dict[str, Any],
     aircraft_agents: Dict[str, Any],
     num_aircraft: int,
@@ -61,6 +61,9 @@ def get_simulator_states(
         'environmental_states': environmental_states
     }
 
+
+def get_initial_state():
+    raise NotImplementedError
 
 
 
