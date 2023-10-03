@@ -1,37 +1,42 @@
 import simpy
 from typing import Any, Dict
 from sim_setup import SimSetup
+from vertisim.sim_engine_runner import SimEngineRunner
 import time
 from utils.read_files import read_input_file
+from test_config import sim_params, network_and_demand_params, airspace_params, passenger_params, aircraft_params, output_params
 
 
 class VertiSim:
-    def __init__(self, env: simpy.Environment, config_file_path: str):
+    def __init__(self, env: simpy.Environment, config, terminal_event: simpy.Event):
         self.env = env
         self.terminal_event = env.event()
-        config = read_input_file(config_file_path)
+        self.config = config
 
         start_time = time.time()
+        self.sim_setup = SimSetup(env=self.env,
+                                  sim_params=sim_params,
+                                  network_and_demand_params=network_and_demand_params,
+                                  airspace_params=airspace_params,
+                                  passenger_params=passenger_params,
+                                  aircraft_params=aircraft_params,
+                                  output_params=output_params)
 
+        self.sim_engine_runner = SimEngineRunner(env=env)
 
         # TODO: Start vertisim and run step-by-step simulation. Get the states and continue the simulation until the terminal event is triggered.
 
-    def step(self):
-        # TODO: Implement this
-        state: Dict[str, Any] = {}
-        reward: float = 0.0
-        terminated: bool = False
-        truncated: bool = False
-        info: Dict[str, Any] = {}
-        return state, reward, terminated, truncated, info
+    def run_one_step(self, action):
+        # Pass action to the SimEngineRunner
+        self.sim_engine_runner.apply_action(action)
+        # Run the simulator for one timestep
+        state, reward, terminated, truncated = self.sim_engine_runner.run_one_timestep()
+        # Return new state, reward, and terminated and truncated flag to the VertiSimEnv
+        return state, reward, terminated, truncated
     
-    def reset(self):
-        # Trigger the terminal event
-        self.terminal_event.succeed()
-        # Restart the simulation
-        self.simulator = VertiSim(self.env, self.config)
-        # Return the initial state
-        return self.simulator.get_initial_state()
+    def reset_simulation(self):
+        # Get the initial states of the simulation using the config file.
+        return self.sim_engine_runner.get_initial_state()
 
     def render(self):
         raise NotImplementedError

@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     # Create the environment
     config_file_path = args.config_file_path  # Point this to your actual config file path
-    env = gym.make("VertiSim", config_file_path=config_file_path)
+    env = gym.make("VertiSim")
     discrete = isinstance(env.action_space, gym.spaces.Discrete)
 
     max_ep_len = args.ep_len or env.spec.max_episode_steps

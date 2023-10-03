@@ -13,24 +13,22 @@ class VertiSimEnv(gym.Env):
         self.action_space = VertiSimEnv.set_action_space(self.config) #TODO: Implement this
         self.observation_space = VertiSimEnv.set_observation_space(self.config) #TODO: Implement this
         self.simpy_env = simpy.Environment()
-        self.simulator = VertiSim(self.simpy_env, self.config)
+        self.terminal_event = self.simpy_env.event()
+        self.simulator = VertiSim(self.simpy_env, self.config, self.terminal_event)
 
     def step(self, action: Any) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         # Apply action to vertisim and get the next state, reward, terminated, truncated, and info dict
-        state, reward, terminated, truncated, info = self.simulator.step(action)
-        # # Determine if the episode is done
-        # if terminated:
-        #     # Reset the environment
-        #     self.reset()
-        # Return the next state, reward, terminated, truncated, and info dict
+        state, reward, terminated, truncated, info = self.simulator.run_one_step(action)
         return state, reward, terminated, truncated, info
     
     def reset(self) -> None:
-        # Terminate the simulator
-        self.simulator.reset()
-        # Reset the simulator
-        self.simulator = VertiSim(self.simpy_env, self.config)
-        return 
+        # Terminate the simulation
+        self.terminal_event.succeed()
+        # Recreate the terminal event
+        self.terminal_event = self.simpy_env.event()
+        # Reset the simulator and return the initial state
+        self.simulator = VertiSim(self.simpy_env, self.config, self.terminal_event)
+        return self.simulator.reset_simulation()
 
     def render(self, mode: str = "human") -> None:
         pass

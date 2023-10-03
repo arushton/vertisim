@@ -6,7 +6,7 @@ import numpy as np
 from collections import defaultdict
 from sim_setup import SimSetup
 
-class RunSimEngine:
+class SimEngineRunner:
     def __init__(self, 
                  env: simpy.Environment, 
                  flight_schedule_file_path: str,
@@ -62,7 +62,7 @@ class RunSimEngine:
         """
         Get the current state of the simulation.
         """
-        return RunSimEngine.get_simulator_states(vertiports=self.vertiports,
+        return SimEngineRunner.get_simulator_states(vertiports=self.vertiports,
                                         aircraft_agents=self.system_manager.aircraft_agents,
                                         num_aircraft=self.system_manager.num_aircraft,
                                         simulation_states=self.simulation_states)
@@ -71,7 +71,7 @@ class RunSimEngine:
         """
         Reset the simulation.
         """
-        return RunSimEngine.get_initial_states()
+        return SimEngineRunner.get_initial_states()
     
     def calculate_reward(self):
         """
@@ -121,15 +121,15 @@ class RunSimEngine:
         if len(aircraft_agents) < num_aircraft:
             return {}
 
-        system_manager = RunSimEngine.get_system_manager(aircraft_agents)
+        system_manager = SimEngineRunner.get_system_manager(aircraft_agents)
 
         vertiport_states = {
-            vertiport_id: RunSimEngine.filter_and_get_states(vertiport, vertiport.get_vertiport_states, simulation_states)
+            vertiport_id: SimEngineRunner.filter_and_get_states(vertiport, vertiport.get_vertiport_states, simulation_states)
             for vertiport_id, vertiport in vertiports.items()
         }
 
         aircraft_states = {
-            tail_number: RunSimEngine.filter_and_get_states(aircraft, aircraft.get_aircraft_states, simulation_states)
+            tail_number: SimEngineRunner.filter_and_get_states(aircraft, aircraft.get_aircraft_states, simulation_states)
             for tail_number, aircraft in aircraft_agents.items()
         }
 
@@ -157,4 +157,4 @@ class RunSimEngine:
 
     @staticmethod
     def get_system_manager(aircraft_agents: Dict) -> object:
-        return RunSimEngine.get_aircraft(aircraft_agents=aircraft_agents).system_manager    
+        return SimEngineRunner.get_aircraft(aircraft_agents=aircraft_agents).system_manager    

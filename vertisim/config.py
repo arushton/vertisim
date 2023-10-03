@@ -45,7 +45,7 @@ sim_params = {
 
 # Network and Trips
 # -----------------
-network_and_demand = {
+network_and_demand_params = {
     'vertiport_network_file_path': f'{str(cwd)}/vertisim/input/network/network_SFO_MV.csv',
     'vertiport_layout_file_path': f'{str(cwd)}/vertisim/input/vertiport_layouts/vertiport_layout.xls',
 
