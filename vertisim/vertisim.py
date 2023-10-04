@@ -34,24 +34,6 @@ class VertiSim:
                                                  stopping_events=stopping_events,
                                                  reward_function_parameters=reward_function_parameters)
 
-        if not self.sim_setup.sim_params['step_by_step_sim']:
-            self.run_uninterrupted_simulation(flight_schedule_file_path=self.sim_setup.network_and_demand_params['flight_schedule_file_path'])
-        elif self.sim_setup['step_by_step_sim'] == 'hil':
-            run_step_by_step_simulation(env=self.env,
-                                        vertiports=self.sim_setup.vertiports,
-                                        airspace=self.sim_setup.airspace,
-                                        structural_entity_groups=self.sim_setup.structural_entity_groups,
-                                        system_manager=self.sim_setup.system_manager,
-                                        max_sim_time=self.sim_setup.sim_params['max_sim_time'],
-                                        simulation_states=self.sim_setup.sim_params['simulation_states'])
-        elif self.sim_setup['step_by_step_sim'] != 'auto':
-            raise Exception(f"Step-by-step simulation is only supported for hil and autoresponse types. Received {self.sim_setup['step_by_step_sim']} instead.")
-
-        self.print_total_time_to_run()
-        performance_metrics = self.sim_setup.calculate_performance_metrics()
-        self.sim_setup.save_results(performance_metrics)
-
-
     def run_one_step(self, action):
         # Pass action to the SimEngineRunner
         self.sim_engine_runner.apply_action(action)
@@ -79,4 +61,22 @@ class VertiSim:
     def print_total_time_to_run(self):
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')           
+        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')  
+
+    def run(self):
+        if not self.sim_setup.sim_params['step_by_step_sim']:
+            self.run_uninterrupted_simulation(flight_schedule_file_path=self.sim_setup.network_and_demand_params['flight_schedule_file_path'])
+        elif self.sim_setup['step_by_step_sim'] == 'hil':
+            run_step_by_step_simulation(env=self.env,
+                                        vertiports=self.sim_setup.vertiports,
+                                        airspace=self.sim_setup.airspace,
+                                        structural_entity_groups=self.sim_setup.structural_entity_groups,
+                                        system_manager=self.sim_setup.system_manager,
+                                        max_sim_time=self.sim_setup.sim_params['max_sim_time'],
+                                        simulation_states=self.sim_setup.sim_params['simulation_states'])
+        elif self.sim_setup['step_by_step_sim'] != 'auto':
+            raise Exception(f"Step-by-step simulation is only supported for hil and autoresponse types. Received {self.sim_setup['step_by_step_sim']} instead.")
+
+        self.print_total_time_to_run()
+        performance_metrics = self.sim_setup.calculate_performance_metrics()
+        self.sim_setup.save_results(performance_metrics)
