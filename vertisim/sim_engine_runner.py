@@ -18,21 +18,8 @@ class SimEngineRunner:
         self.stopping_events = stopping_events
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         self.terminal_event = terminal_event
-
-        # if not step_by_step_sim:
-        #     self.run_uninterrupted_simulation(flight_schedule_file_path)
-        # else:
-        #     while self.env.peek() < self.max_sim_time and self.terminal_event.triggered == False:
-        #         self.env.step()
-        #         # Check if any of the stopping events have occurred.
-        #         for event_name, event in self.system_manager.stopping_event.items():
-        #             if event.triggered:
-        #                 # Get the states
-        #                 states = self.get_current_state()
-        #                 # Reset the event
-        #                 self.system_manager.stopping_event[event_name] = self.env.event()
+        self.reward_function_parameters = reward_function_parameters
                         
-
     def run_uninterrupted_simulation(self, flight_schedule_file_path):
         """
         Run the simulation until the max simulation time or there is no event left in the queue.
