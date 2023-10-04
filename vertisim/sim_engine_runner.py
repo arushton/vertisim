@@ -1,46 +1,36 @@
 import simpy
 from typing import Any, Dict, List
-from utils.units import ms_to_min
+from utils.units import ms_to_min, sec_to_ms
+from utils.get_state_variables import get_simulator_states
 from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
 from collections import defaultdict
-from sim_setup import SimSetup
 
 class SimEngineRunner:
     def __init__(self, 
                  env: simpy.Environment, 
-                 flight_schedule_file_path: str,
-                 vertiports: Dict, 
-                 airspace: object, 
-                 structural_entity_groups: Dict,
-                 system_manager: object,
-                 max_sim_time: int,
-                 simulation_states: List,
-                 step_by_step_sim: bool = False,
-                 response_type: str = 'auto',
+                 sim_setup: object,
+                 stopping_events: Dict = None,
+                 reward_function_parameters: Dict = None,
                  terminal_event: object = None):
         self.env = env
-        self.vertiports = vertiports
-        self.airspace = airspace
-        self.structural_entity_groups = structural_entity_groups
-        self.system_manager = system_manager
-        self.max_sim_time = max_sim_time
-        self.simulation_states = simulation_states
-        self.response_type = response_type
+        self.sim_setup = sim_setup
+        self.stopping_events = stopping_events
+        self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         self.terminal_event = terminal_event
 
-        if not step_by_step_sim:
-            self.run_uninterrupted_simulation(flight_schedule_file_path)
-        else:
-            while self.env.peek() < self.max_sim_time and self.terminal_event.triggered == False:
-                self.env.step()
-                # Check if any of the stopping events have occurred.
-                for event_name, event in self.system_manager.stopping_event.items():
-                    if event.triggered:
-                        # Get the states
-                        states = self.get_current_state()
-                        # Reset the event
-                        self.system_manager.stopping_event[event_name] = self.env.event()
+        # if not step_by_step_sim:
+        #     self.run_uninterrupted_simulation(flight_schedule_file_path)
+        # else:
+        #     while self.env.peek() < self.max_sim_time and self.terminal_event.triggered == False:
+        #         self.env.step()
+        #         # Check if any of the stopping events have occurred.
+        #         for event_name, event in self.system_manager.stopping_event.items():
+        #             if event.triggered:
+        #                 # Get the states
+        #                 states = self.get_current_state()
+        #                 # Reset the event
+        #                 self.system_manager.stopping_event[event_name] = self.env.event()
                         
 
     def run_uninterrupted_simulation(self, flight_schedule_file_path):
@@ -62,16 +52,18 @@ class SimEngineRunner:
         """
         Get the current state of the simulation.
         """
-        return SimEngineRunner.get_simulator_states(vertiports=self.vertiports,
-                                        aircraft_agents=self.system_manager.aircraft_agents,
-                                        num_aircraft=self.system_manager.num_aircraft,
-                                        simulation_states=self.simulation_states)
+        return get_simulator_states(vertiports=self.sim_setup.vertiports,
+                                    aircraft_agents=self.sim_setup.system_manager.aircraft_agents,
+                                    num_initial_aircraft=self.sim_setup.system_manager.num_initial_aircraft,
+                                    simulation_states=self.sim_setup.sim_params['simulation_states'])
     
     def get_initial_state(self):
         """
         Reset the simulation.
         """
-        return SimEngineRunner.get_initial_states()
+        while self.sim_setup.system_manager.get_aircraft_count() < self.sim_setup.system_manager.num_initial_aircraft:
+            self.env.step()   
+        return self.get_current_state()
     
     def calculate_reward(self):
         """
@@ -79,11 +71,21 @@ class SimEngineRunner:
         """
         raise NotImplementedError
     
-    def advance_timestep(self):
+    def advance_to_next_stopping_event(self):
         """
         Run the simulation until the next defined stopping event.
         """
-        raise NotImplementedError
+        while self.env.peek() < self.max_sim_time and self.terminal_event.triggered == False:
+            self.env.step()
+            # Check if any events in stopping_events have triggered.
+            for event_name, event in self.stopping_events.items():
+                if event.triggered:
+                    # Get the states
+                    states = self.get_current_state()
+                    # Reset the event
+                    self.stopping_events[event_name] = self.env.event()
+                    # Return the states
+                    return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
     
     def check_terminated(self):
         """
@@ -95,66 +97,4 @@ class SimEngineRunner:
         """
         Check if the simulation has truncated.
         """
-        raise NotImplementedError
-
-    @staticmethod
-    def get_simulator_states(
-        vertiports: Dict[str, Any],
-        aircraft_agents: Dict[str, Any],
-        num_aircraft: int,
-        simulation_states: List[str]
-    ) -> Dict[str, Any]:
-        """
-        Get the states for simulation entities.
-
-        Args:
-        - vertiports: Dictionary containing vertiport details.
-        - aircraft_agents: Dictionary containing aircraft agent details.
-        - num_aircraft: Total number of aircraft expected in simulation.
-        - simulation_states: List of state keys to be filtered from the results.
-
-        Returns:
-        - Dictionary containing filtered states for vertiports, aircrafts, and environment.
-        """
-
-        # Return if not all aircraft are initialized.
-        if len(aircraft_agents) < num_aircraft:
-            return {}
-
-        system_manager = SimEngineRunner.get_system_manager(aircraft_agents)
-
-        vertiport_states = {
-            vertiport_id: SimEngineRunner.filter_and_get_states(vertiport, vertiport.get_vertiport_states, simulation_states)
-            for vertiport_id, vertiport in vertiports.items()
-        }
-
-        aircraft_states = {
-            tail_number: SimEngineRunner.filter_and_get_states(aircraft, aircraft.get_aircraft_states, simulation_states)
-            for tail_number, aircraft in aircraft_agents.items()
-        }
-
-        environmental_states = system_manager.wind.get_wind_states()
-
-        return {
-            'vertiport_states': vertiport_states,
-            'aircraft_states': aircraft_states,
-            'environmental_states': environmental_states
-        }
-
-    @staticmethod
-    def get_initial_states():
-        raise NotImplementedError    
-    
-    @staticmethod
-    def filter_and_get_states(entity, get_states_func, keys):
-        """Helper function to get and filter states for given entity."""
-        states = get_states_func(entity)
-        return filter_nested_dict_by_given_keys(states, keys)
-
-    @staticmethod
-    def get_aircraft(aircraft_agents):
-        return list(aircraft_agents.values())[0]
-
-    @staticmethod
-    def get_system_manager(aircraft_agents: Dict) -> object:
-        return SimEngineRunner.get_aircraft(aircraft_agents=aircraft_agents).system_manager    
+        raise NotImplementedError 

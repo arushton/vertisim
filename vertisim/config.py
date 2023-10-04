@@ -11,7 +11,7 @@ cwd = Path.cwd()
 # Simulation parameters
 # --------------------
 sim_params = {
-    'sim_time': 60 * 60 * 60,  # seconds
+    'max_sim_time': 60 * 60 * 60,  # seconds
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,

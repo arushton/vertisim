@@ -67,7 +67,9 @@ class Airspace:
         all_states = {}
         for flight_direction in self.flight_directions:
             for airnode_id in self.waypoint_ids[flight_direction]:
-                all_states.update(self.airlink_resources[flight_direction][airnode_id].get_airnode_states())
+                all_states |= self.airlink_resources[flight_direction][
+                    airnode_id
+                ].get_airnode_states()
         return all_states
     
     

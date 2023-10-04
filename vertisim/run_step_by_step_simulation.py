@@ -1,23 +1,23 @@
-from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables, get_simulator_states
+# from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables, get_simulator_states
+from utils.get_state_variables import get_simulator_states, get_human_readable_state_variables
 import time
 from typing import Dict, List
 
-def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, system_manager, max_sim_time, simulation_states, response_type='auto'):
+def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, system_manager, max_sim_time):
     while env.peek() < max_sim_time:
+        # Run the simulation one step.
         env.step()
-        if response_type == 'auto':
-            call_simulator_states(vertiports=vertiports, airspace=airspace, system_manager=system_manager, simulation_states=simulation_states)
-            # Sleep for 1 second
-            # time.sleep(1)
-        elif response_type == 'hil':
-            get_human_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, system_manager=system_manager)
-            modify = get_user_input()
-            if modify.isdigit():
-                fast_forward_simulation(env=env, steps=int(modify))
-            elif modify.lower() == "y":
-                modify_aircraft_state(env=env, structural_entity_groups=structural_entity_groups, airspace=airspace, system_manager=system_manager)            
-        else:
-            raise ValueError(f"state_type must be either 'hil' or 'auto'. Received {response_type} instead.")
+        # Get the human-readable states
+        get_human_readable_simulation_state_variables(vertiports=vertiports, airspace=airspace, system_manager=system_manager)
+        # Wait for user input
+        modify = get_user_input()
+        # If the input is a number, then fast-forward the simulation by the entered number of steps.
+        if modify.isdigit():
+            fast_forward_simulation(env=env, steps=int(modify))
+        # If the user wants to modify an aircraft's state, then modify it.
+        elif modify.lower() == "y":
+            modify_aircraft_state(env=env, structural_entity_groups=structural_entity_groups, airspace=airspace, system_manager=system_manager)            
+
 
 def run_steps_until_specific_events(env: object, 
                                     max_sim_time: int, 
@@ -36,9 +36,6 @@ def run_steps_until_specific_events(env: object,
                 # Reset the event
                 system_manager.stopping_event[event_name] = env.event()
                 # Return the states
-                
-
-
 
 
 def get_human_readable_simulation_state_variables(vertiports, airspace, system_manager):

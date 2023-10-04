@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import time
 
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
@@ -17,6 +21,7 @@ from wind.wind import Wind
 from logger import Logger
 from run_step_by_step_simulation import run_step_by_step_simulation
 from utils.create_output_folders import create_output_folders
+from utils.get_aircraft_count import get_aircraft_count
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_not_none
@@ -35,21 +40,20 @@ class SimSetup:
                  passenger_params: Dict,
                  aircraft_params: Dict,
                  output_params: Dict,
-                 sim_start_time: int):
+                 stopping_events: Dict = None):
         self.sim_params = sim_params
         self.network_and_demand_params = network_and_demand_params
         self.airspace_params = airspace_params
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
-        self.sim_start_time = sim_start_time
 
         self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
         self.env = env
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
-        self.stopping_events = self.define_stopping_events() # Dictionary of stopping events. TODO: These needs to be user input.
+        self.stopping_events = stopping_events
         self.vertiport_layouts = self.create_vertiport_layout()
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
@@ -75,11 +79,9 @@ class SimSetup:
 
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
-        self.run_simulation()
 
-        self.sim_id = get_random_id()
-        self.performance_metrics = self.calculate_performance_metrics()
-        self.save_results()
+        
+
 
     def create_environment(self):
         """
@@ -104,16 +106,6 @@ class SimSetup:
         vertiport_logger.create_logger(name='vertiport', env=self.env)
 
         return logger, aircraft_logger, passenger_logger, vertiport_logger
-    
-    def define_stopping_events(self):
-        return {
-            'passenger_arrival_event': self.env.event(),
-            'aircraft_faf_arrival_event': self.env.event(),
-            'aircraft_parking_pad_arrival_event': self.env.event(),
-            'aircraft_departure_fix_departure_event': self.env.event(),
-            'charging_start_event': self.env.event(),
-            'charging_end_event': self.env.event()
-        }
 
     def create_vertiport_layout(self):
         """
@@ -295,6 +287,7 @@ class SimSetup:
             env=self.env,
             vertiports=self.vertiports,
             vertiport_ids=self.vertiport_ids,
+            num_aircraft=get_aircraft_count(self.network_and_demand_params),
             stopping_events=self.stopping_events,
             scheduler=self.scheduler,
             wind=self.wind,
@@ -380,7 +373,7 @@ class SimSetup:
                 print("Success: Passenger arrival process is created.")
 
     def run_simulation(self):
-        max_sim_time = sec_to_ms(self.sim_params['sim_time'])
+        max_sim_time = sec_to_ms(self.sim_params['max_sim_time'])
         if self.sim_params['step_by_step_sim']:
             run_step_by_step_simulation(env=self.env, 
                                         vertiports=self.vertiports, 
@@ -395,14 +388,10 @@ class SimSetup:
                 self.env.run()
             else:
                 self.env.run(until=max_sim_time)
-        self.print_total_time_to_run()  
-
-    def print_total_time_to_run(self):
-        end_time = time.time()
-        time_taken = end_time - self.sim_start_time
-        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')                      
 
     def calculate_performance_metrics(self):
+        # Get a random id for the simulation
+        self.sim_id = get_random_id()
         # Print and save performance metrics
         print("Calculating performance metrics... \n")
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
@@ -416,7 +405,7 @@ class SimSetup:
                                   sim_end_timestamp=self.env.now,
                                   verbose=self.sim_params['verbose']).performance_metrics
 
-    def save_results(self):
+    def save_results(self, performance_metrics):
         # Save the results
         save_output(
             trajectories={
@@ -449,7 +438,7 @@ class SimSetup:
             # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
             # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
             performance_metrics_output_file_name=self.output_params['performance_metrics_output_file_name'],
-            performance_metrics=self.performance_metrics,
+            performance_metrics=performance_metrics,
             sim_id=self.sim_id
         )
         print(f"Success: Results are saved in {self.output_folder_path}.")

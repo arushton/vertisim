@@ -21,6 +21,7 @@ class SystemManager:
                  env: object,
                  vertiports: Dict,
                  vertiport_ids: List,
+                 num_aircraft: int,
                  stopping_events: Dict,
                  scheduler: object,
                  wind: object,
@@ -54,7 +55,7 @@ class SystemManager:
         self.fixed_charge_schedule = fixed_charge_schedule
         self.node_locations = node_locations
         self.fixed_schedule = fixed_schedule
-        self.num_aircraft = self.get_aircraft_count()
+        self.num_initial_aircraft = num_aircraft
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
@@ -81,7 +82,7 @@ class SystemManager:
             vertiport.num_aircraft
             for _, vertiport in self.vertiports.items()
         )
-    
+        
     def _initialize_avg_flight_durations(self):
         def inner_dict():
             return {'average_flight_duration': None, 'num_flights': 0, 'total_duration': 0}
@@ -897,8 +898,8 @@ class SystemManager:
     def simulate_passenger_arrival(self, passenger):
         """ Simulate passenger."""
         # Save passenger creation time
-        # self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='vertiport_entrance')
-        # passenger.vertiport_arrival_time = self.env.now
+        self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='vertiport_entrance')
+        passenger.vertiport_arrival_time = self.env.now
 
         # # Simulate agent's walk from car to the vertiport entrance
         # self.env.process(passenger.walk_to_entrance())
@@ -937,18 +938,16 @@ class SystemManager:
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
-        if self.sim_params['step_by_step_simulation'] and self.sim_params['step_by_step_sim_response_type'] == 'auto':
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.sim_params['step_by_step_sim'] == 'auto':
             self.stopping_events['passenger_arrival_event'].succeed()
-            get_simulator_states(vertiports=self.vertiports,
-                                 aircraft_agents=self.aircraft_agents,
-                                 num_aircraft=self.num_aircraft,
-                                 simulation_states=self.sim_params['simulation_states'])
-
-        # If not fixed schedule, trigger the scheduler to check if there are enough passengers to create a flight
-        if not self.fixed_schedule:
-            yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
-                                                        destination_vertiport_id=passenger.destination_vertiport_id, 
-                                                        passengers_waiting_room=passengers_waiting_room))
+        else:
+            # If not fixed schedule, trigger the scheduler to check if there are enough passengers to create a flight
+            if not self.fixed_schedule:
+                yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
+                                                            destination_vertiport_id=passenger.destination_vertiport_id, 
+                                                            passengers_waiting_room=passengers_waiting_room))
 
     # -------------------------
 
@@ -1012,6 +1011,11 @@ class SystemManager:
 
         aircraft.arrival_fix_resource = arrival_fix_resource
         aircraft.arrival_fix_usage_request = arrival_fix_usage_request  
+
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.sim_params['step_by_step_sim'] == 'auto':
+            self.stopping_events['aircraft_faf_arrival_event'].succeed()        
 
         yield self.env.process(self.fato_and_parking_pad_usage_process(aircraft=aircraft))
 

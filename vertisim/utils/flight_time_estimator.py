@@ -11,6 +11,10 @@ def time_to_arrival_estimator(cruise_speed: Dict,
     """
     Estimates the time to arrival at the destination vertiport.
     """
+    if destination_vertiport_id is None:
+        return 0
+    if origin_vertiport_id == destination_vertiport_id:
+        return 0
     average_flight_time = system_manager.get_average_flight_time(flight_direction)
     initialization_checker = average_flight_time is None
 
