@@ -11,7 +11,7 @@ class VertiSimEnv(gym.Env):
         self.config = read_input_file(file_path=config_file_path)
 
         self.action_space = VertiSimEnv.set_action_space(self.config)
-        self.observation_space = VertiSimEnv.set_observation_space(self.config) #TODO: Implement this
+        self.observation_space = VertiSimEnv.set_observation_space(self.config)
         self.simpy_env = simpy.Environment()
         self.stopping_events = self.define_stopping_events()
         self.terminal_event = self.simpy_env.event()
@@ -57,15 +57,18 @@ class VertiSimEnv(gym.Env):
         # Get the number of vertiports
         num_vertiports = len(config['network_and_demand_params']['vertiports'])
 
+        # Get number of aircraft defined in the config file
         num_aircraft = sum(
             vertiport['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
             for vertiport in config['network_and_demand_params']['vertiports'].items()
         )
 
+        # Get the total number of state variables
         total_state_variables = num_vertiports * config['sim_params']['num_vertiport_state_variables'] +\
                                 num_aircraft * config['sim_params']['num_aircraft_state_variables'] +\
                                 num_vertiports * config['sim_params']['num_environmental_state_variables']
         
+        # Return the observation space
         return gym.spaces.Box(low=0, high=np.inf, shape=(total_state_variables,), dtype=np.float32)
 
 
