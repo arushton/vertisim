@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import time
 
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
@@ -17,6 +21,7 @@ from wind.wind import Wind
 from logger import Logger
 from run_step_by_step_simulation import run_step_by_step_simulation
 from utils.create_output_folders import create_output_folders
+from utils.get_aircraft_count import get_aircraft_count
 from utils.bundle_passenger_related_distributions import bundle_distributions
 from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_not_none
@@ -28,26 +33,27 @@ from utils.units import sec_to_ms
 
 class SimSetup:
     def __init__(self,
-                 sim_params,
-                 network_and_demand: Dict,
+                 env: simpy.Environment,
+                 sim_params: Dict,
+                 network_and_demand_params: Dict,
                  airspace_params: Dict,
                  passenger_params: Dict,
                  aircraft_params: Dict,
                  output_params: Dict,
-                 sim_start_time: int):
+                 stopping_events: Dict = None):
         self.sim_params = sim_params
-        self.network_and_demand = network_and_demand
+        self.network_and_demand_params = network_and_demand_params
         self.airspace_params = airspace_params
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
-        self.sim_start_time = sim_start_time
 
         self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
-        self.env = self.create_environment()
+        self.env = env
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
+        self.stopping_events = stopping_events
         self.vertiport_layouts = self.create_vertiport_layout()
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
@@ -63,7 +69,7 @@ class SimSetup:
         # self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
 
-        if self.network_and_demand['flight_schedule_file_path'] is not None:
+        if self.network_and_demand_params['flight_schedule_file_path'] is not None:
             self.fixed_schedule = True
         else:
             self.fixed_schedule = False
@@ -73,11 +79,9 @@ class SimSetup:
 
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
-        self.run_simulation()
 
-        self.sim_id = get_random_id()
-        self.performance_metrics = self.calculate_performance_metrics()
-        self.save_results()
+        
+
 
     def create_environment(self):
         """
@@ -108,7 +112,7 @@ class SimSetup:
         Creates the vertiport layouts and adds them to the network_and_demand dictionary
         """
         # Create vertiport layouts
-        vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand,
+        vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand_params,
                                                      output_folder_path=self.output_folder_path)
         if self.sim_params['verbose']:
             print("Success: Vertiport layout(s) created.")
@@ -118,7 +122,7 @@ class SimSetup:
         """
         Returns the vertiport ids
         """
-        return list(self.network_and_demand['vertiports'].keys())    
+        return list(self.network_and_demand_params['vertiports'].keys())    
     
     def create_wind(self):
         """
@@ -135,7 +139,7 @@ class SimSetup:
         """
         # Import vertiport distance
         vertiport_distances = calc_vertiport_distances(
-            vertiport_network_file_path=self.network_and_demand['vertiport_network_file_path'],
+            vertiport_network_file_path=self.network_and_demand_params['vertiport_network_file_path'],
             vertiport_ids=self.vertiport_ids,
             vertiport_layouts=self.vertiport_layouts,
             network_simulation=self.sim_params['network_simulation'])
@@ -161,7 +165,7 @@ class SimSetup:
         return vertiport_config(
             env=self.env,
             vertiport_layouts=self.vertiport_layouts,
-            vertiports=self.network_and_demand['vertiports'],
+            vertiports=self.network_and_demand_params['vertiports'],
             vertiport_ids=self.vertiport_ids
         )
     
@@ -283,26 +287,21 @@ class SimSetup:
             env=self.env,
             vertiports=self.vertiports,
             vertiport_ids=self.vertiport_ids,
+            num_aircraft=get_aircraft_count(self.network_and_demand_params),
+            stopping_events=self.stopping_events,
             scheduler=self.scheduler,
             wind=self.wind,
-            arrival_priority=self.sim_params['arrival_priority'],
-            departure_priority=self.sim_params['departure_priority'],
             airspace=self.airspace,
             taxi_config=self.taxi_config,
-            only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
+            sim_params=self.sim_params,            
             aircraft_params=self.aircraft_params,
             vertiport_distances=self.vertiport_distances,
             passenger_distributions=self.passenger_distributions,
-            max_flight_waiting_time=self.sim_params['max_passenger_waiting_time'],
-            charging_interuption=self.sim_params['charge_interruption'],
             event_saver=self.event_saver,
-            network_simulation=self.sim_params['network_simulation'],
-            fixed_charge_schedule=check_not_none(self.network_and_demand['charge_schedule_file_path']),
-            fixed_schedule=check_not_none(self.network_and_demand['flight_schedule_file_path']),
-            fleet_rebalancing=self.sim_params['fleet_rebalancing'],
+            fixed_charge_schedule=check_not_none(self.network_and_demand_params['charge_schedule_file_path']),
+            fixed_schedule=check_not_none(self.network_and_demand_params['flight_schedule_file_path']),
             node_locations=self.node_locations,
             flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
-            charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
             logger=self.logger,
             aircraft_logger=self.aircraft_logger,
             passenger_logger=self.passenger_logger
@@ -310,15 +309,15 @@ class SimSetup:
 
     def create_aircraft_arrival_process(self):
         # Load or generate aircraft arrival schedule and start the aircraft arrival process
-        if self.network_and_demand['flight_schedule_file_path'] is not None:
+        if self.network_and_demand_params['flight_schedule_file_path'] is not None:
             # Load aircraft arrival schedule
             aircraft_arrival_process = AircraftArrivalSetup(
                 env=self.env,
                 network_simulation=self.sim_params['network_simulation'],
-                vertiport_configs=self.network_and_demand['vertiports'],
+                vertiport_configs=self.network_and_demand_params['vertiports'],
                 vertiport_layouts=self.vertiport_layouts,
-                flight_schedule_file_path=self.network_and_demand['flight_schedule_file_path'],
-                charge_schedule_file_path=self.network_and_demand['charge_schedule_file_path'],
+                flight_schedule_file_path=self.network_and_demand_params['flight_schedule_file_path'],
+                charge_schedule_file_path=self.network_and_demand_params['charge_schedule_file_path'],
                 aircraft_params=self.aircraft_params,
                 system_manager=self.system_manager,
                 scheduler=self.scheduler,
@@ -335,7 +334,7 @@ class SimSetup:
                 env=self.env,
                 network_simulation=self.sim_params['network_simulation'],
                 vertiport_layouts=self.vertiport_layouts,                
-                vertiport_configs=self.network_and_demand['vertiports'],
+                vertiport_configs=self.network_and_demand_params['vertiports'],
                 flight_schedule_file_path=None,
                 charge_schedule_file_path=None,
                 aircraft_params=self.aircraft_params,
@@ -359,7 +358,7 @@ class SimSetup:
             # Load or generate passenger arrival schedule and start the passenger arrival process
             passenger_arrival_process = PassengerArrivalSetup(
                 env=self.env,
-                network_and_demand=self.network_and_demand,
+                network_and_demand=self.network_and_demand_params,
                 passenger_params=self.passenger_params,
                 vertiport_ids=self.vertiport_ids,
                 system_manager=self.system_manager,
@@ -374,7 +373,7 @@ class SimSetup:
                 print("Success: Passenger arrival process is created.")
 
     def run_simulation(self):
-        max_sim_time = sec_to_ms(self.sim_params['sim_time'])
+        max_sim_time = sec_to_ms(self.sim_params['max_sim_time'])
         if self.sim_params['step_by_step_sim']:
             run_step_by_step_simulation(env=self.env, 
                                         vertiports=self.vertiports, 
@@ -382,20 +381,17 @@ class SimSetup:
                                         structural_entity_groups=self.structural_entity_groups,
                                         system_manager=self.system_manager,
                                         max_sim_time=max_sim_time,
-                                        state_type='array')
+                                        simulation_states=self.sim_params['simulation_states'],
+                                        response_type=self.sim_params['step_by_step_sim_response_type'])
         else:
-            if self.network_and_demand['flight_schedule_file_path'] is not None:
+            if self.network_and_demand_params['flight_schedule_file_path'] is not None:
                 self.env.run()
             else:
                 self.env.run(until=max_sim_time)
-        self.print_total_time_to_run()  
-
-    def print_total_time_to_run(self):
-        end_time = time.time()
-        time_taken = end_time - self.sim_start_time
-        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')                      
 
     def calculate_performance_metrics(self):
+        # Get a random id for the simulation
+        self.sim_id = get_random_id()
         # Print and save performance metrics
         print("Calculating performance metrics... \n")
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
@@ -409,7 +405,7 @@ class SimSetup:
                                   sim_end_timestamp=self.env.now,
                                   verbose=self.sim_params['verbose']).performance_metrics
 
-    def save_results(self):
+    def save_results(self, performance_metrics):
         # Save the results
         save_output(
             trajectories={
@@ -431,7 +427,7 @@ class SimSetup:
             },
             simulation_params={
                 'sim_params': self.sim_params,
-                'network_and_demand': self.network_and_demand,
+                'network_and_demand': self.network_and_demand_params,
                 'passenger_params': self.passenger_params,
                 'aircraft_params': self.aircraft_params,
                 'output_params': self.output_params
@@ -442,7 +438,7 @@ class SimSetup:
             # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
             # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
             performance_metrics_output_file_name=self.output_params['performance_metrics_output_file_name'],
-            performance_metrics=self.performance_metrics,
+            performance_metrics=performance_metrics,
             sim_id=self.sim_id
         )
         print(f"Success: Results are saved in {self.output_folder_path}.")

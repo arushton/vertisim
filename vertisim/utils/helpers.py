@@ -182,6 +182,13 @@ def nested_dict_filter_keys(d, depth, key):
                     yield i
 
 
+def filter_nested_dict_by_given_keys(d: Dict, keys: List):
+    """
+    Filters a nested dictionary by given keys.
+    """
+    return {k: d[k] for k in keys if k in d}    
+
+
 def get_str_before_first_occurrence_of_char(string, char):
     """
     Get string before first occurrence of a character.

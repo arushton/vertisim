@@ -1,20 +1,79 @@
-from typing import Dict
+from typing import Dict, List, Any
 from collections import defaultdict
 import json
 import subprocess
 from utils.units import ms_to_min
-from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round
+from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
 
-"""
-Human readable state variables are the exhaustive list of state variables that are used for humman-in-the-loop simulation.
-They are requndant for any external applications (AI and Optimization algorithms) that use the simulation as the environment.
 
-Machine readable state variables are the minimal set of state variables that are useful for external applications.
-If needed, modify the following function to return the minimal set of state variables that are useful for your application:
-collect_structural_entity_state_variables_machine_readable(.)
-collect_flow_entity_state_variables_machine_readable(.)
-"""
+def filter_and_get_states(entity, get_states_func, keys):
+    """Helper function to get and filter states for given entity."""
+    states = get_states_func(entity)
+    return filter_nested_dict_by_given_keys(states, keys)
+
+def get_aircraft(aircraft_agents):
+    return list(aircraft_agents.values())[0]
+
+def get_system_manager(aircraft_agents: Dict) -> object:
+    return get_aircraft(aircraft_agents=aircraft_agents).system_manager
+
+def get_simulator_states(
+    vertiports: Dict[str, Any],
+    aircraft_agents: Dict[str, Any],
+    num_initial_aircraft: int,
+    simulation_states: List[str]
+) -> Dict[str, Any]:  # sourcery skip: raise-specific-error
+    """
+    Get the states for simulation entities.
+
+    Args:
+    - vertiports: Dictionary containing vertiport details.
+    - aircraft_agents: Dictionary containing aircraft agent details.
+    - num_aircraft: Total number of aircraft expected in simulation.
+    - simulation_states: List of state keys to be filtered from the results.
+
+    Returns:
+    - Dictionary containing filtered states for vertiports, aircrafts, and environment.
+    """
+
+    # Return if not all aircraft are initialized.
+    if len(aircraft_agents) < num_initial_aircraft:
+        raise Exception('Not all aircraft are initialized.')
+
+    system_manager = get_system_manager(aircraft_agents)
+
+    vertiport_states = {
+        vertiport_id: filter_and_get_states(vertiport, vertiport.get_vertiport_states, simulation_states)
+        for vertiport_id, vertiport in vertiports.items()
+    }
+
+    aircraft_states = {
+        tail_number: filter_and_get_states(aircraft, aircraft.get_aircraft_states, simulation_states)
+        for tail_number, aircraft in aircraft_agents.items()
+    }
+
+    environmental_states = system_manager.wind.get_wind_states(locations=system_manager.vertiport_ids,
+                                                                time=system_manager.env.now)
+
+    return {
+        'vertiport_states': vertiport_states,
+        'aircraft_states': aircraft_states,
+        'environmental_states': environmental_states
+    }
+
+
+
+
+# """
+# Human readable state variables are the exhaustive list of state variables that are used for humman-in-the-loop simulation.
+# They are requndant for any external applications (AI and Optimization algorithms) that use the simulation as the environment.
+
+# Machine readable state variables are the minimal set of state variables that are useful for external applications.
+# If needed, modify the following function to return the minimal set of state variables that are useful for your application:
+# collect_structural_entity_state_variables_machine_readable(.)
+# collect_flow_entity_state_variables_machine_readable(.)
+# """
 
 def get_human_readable_state_variables(vertiports:Dict, airspace_states: Dict, aircraft_agents: Dict, passenger_agents: Dict):
     structural_entity_states = collect_structural_entity_state_variables_human_readable(vertiports, airspace_states)
@@ -36,7 +95,7 @@ def get_human_readable_state_variables(vertiports:Dict, airspace_states: Dict, a
 def collect_structural_entity_state_variables_human_readable(vertiports: Dict, airspace_states: Dict):
     states = defaultdict(lambda: defaultdict(dict))
     for _, vertiport in vertiports.items():
-        states |= vertiport.get_vertiport_states_dict()
+        states |= vertiport.get_vertiport_states()
     states |= airspace_states
     return {'Structural Entities': states}
 
@@ -78,74 +137,95 @@ def collect_flow_entity_state_variables_human_readable(aircraft_agents: Dict, pa
     aircraft_states |= passenger_states
     return aircraft_states
 
-
-def get_simulator_states(vertiports: Dict, aircraft_agents: Dict, passenger_agents: Dict, num_aircraft: int):
-    # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
-    # We want all the states after all the aircraft have been initialized.
-    if len(aircraft_agents) < num_aircraft:
-        return
+# # def get_simulator_states(vertiports: Dict, aircraft_agents: Dict, num_aircraft: int, simulation_states: List):
+# #     # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
+# #     # We want all the states after all the aircraft have been initialized.
+# #     if len(aircraft_agents) < num_aircraft:
+# #         return
         
-    system_manager = get_system_manager(aircraft_agents)
+# #     system_manager = get_system_manager(aircraft_agents)
 
-def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.array, aircraft_agents: Dict, num_aircraft: int):
+# #     vertiport_states = defaultdict(lambda: defaultdict(dict))
+# #     for vertiport_id, vertiport in vertiports.items():
+# #         states = vertiport.get_vertiport_states()
+# #         states = filter_nested_dict_by_given_keys(states, simulation_states)
+# #         vertiport_states[vertiport_id] = states
 
-    # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
-    # We want all the states after all the aircraft have been initialized.
-    if len(aircraft_agents) < num_aircraft:
-        return
+# #     aircraft_states = defaultdict(dict)
+# #     for tail_number, aircraft in aircraft_agents.items():
+# #         states = aircraft.get_aircraft_states()
+# #         states = filter_nested_dict_by_given_keys(states, simulation_states)
+# #         aircraft_states[tail_number] = states
+
+# #     environmental_states = system_manager.wind.get_wind_states()
+
+# #     states = {
+# #         'vertiport_states': vertiport_states,
+# #         'aircraft_states': aircraft_states,
+# #         'environmental_states': environmental_states
+# #     }
+
+
+
+
+
+
+# def get_machine_readable_state_variables(vertiports: Dict, airspace_states: np.array, aircraft_agents: Dict, num_aircraft: int):
+
+#     # Return if the number of aircraft is less than the number of aircraft specified in the simulation parameters.
+#     # We want all the states after all the aircraft have been initialized.
+#     if len(aircraft_agents) < num_aircraft:
+#         return
     
-    structural_entity_states = collect_structural_entity_state_variables_machine_readable(vertiports, airspace_states)
+#     structural_entity_states = collect_structural_entity_state_variables_machine_readable(vertiports, airspace_states)
 
-    flow_entity_states = collect_flow_entity_state_variables_machine_readable(aircraft_agents=aircraft_agents)
+#     flow_entity_states = collect_flow_entity_state_variables_machine_readable(aircraft_agents=aircraft_agents)
 
-    # TODO: Temporary solution. DO NOT HARDCODE THE NUMBER OF AIRCRAFT STATES
-    if len(flow_entity_states) < num_aircraft*5:
-        # Return if all aircraft have not been initialized
-        return
-    # Merge the arrays
-    states = np.concatenate((structural_entity_states, flow_entity_states))
+#     # TODO: Temporary solution. DO NOT HARDCODE THE NUMBER OF AIRCRAFT STATES
+#     if len(flow_entity_states) < num_aircraft*5:
+#         # Return if all aircraft have not been initialized
+#         return
+#     # Merge the arrays
+#     states = np.concatenate((structural_entity_states, flow_entity_states))
 
-    if len(states) == 0:
-        print('No states to save')
+#     if len(states) == 0:
+#         print('No states to save')
 
-    # Save numpy array to a file
-    np.save('../../output/state.npy', states)
-
-
-def collect_structural_entity_state_variables_machine_readable(vertiports: Dict, airspace_states: np.array):
-    states = np.array([])
-    for _, vertiport in vertiports.items():
-        states = np.concatenate((states, vertiport.get_vertiport_states_array()))
-    states = np.concatenate((states, airspace_states))
-    return states
+#     # Save numpy array to a file
+#     np.save('../../output/state.npy', states)
 
 
-def collect_flow_entity_state_variables_machine_readable(aircraft_agents: Dict):
-    aircraft_states = np.array([])
-    node_locations_list = get_node_location_list(aircraft_agents)
-    vertiport_list = get_vertiport_list(aircraft_agents)
+# def collect_structural_entity_state_variables_machine_readable(vertiports: Dict, airspace_states: np.array):
+#     states = np.array([])
+#     for _, vertiport in vertiports.items():
+#         states = np.concatenate((states, vertiport.get_vertiport_states_array()))
+#     states = np.concatenate((states, airspace_states))
+#     return states
 
-    for tail_number, aircraft in aircraft_agents.items():
-        states = np.array([
-            node_locations_list.index(aircraft.location),
-            vertiport_list.index(aircraft.destination_vertiport_id),
-            round(aircraft.soc),
-            len(aircraft.passengers_onboard),
-            # TODO: Add Estimated Remaining Trip Time
-            aircraft.status.value
-        ])
-        aircraft_states = np.concatenate((aircraft_states, states))
 
-    return aircraft_states
+# def collect_flow_entity_state_variables_machine_readable(aircraft_agents: Dict):
+#     aircraft_states = np.array([])
+#     node_locations_list = get_node_location_list(aircraft_agents)
+#     vertiport_list = get_vertiport_list(aircraft_agents)
 
-def get_aircraft(aircraft_agents):
-    return list(aircraft_agents.values())[0]
+#     for tail_number, aircraft in aircraft_agents.items():
+#         states = np.array([
+#             node_locations_list.index(aircraft.location),
+#             vertiport_list.index(aircraft.destination_vertiport_id),
+#             round(aircraft.soc),
+#             len(aircraft.passengers_onboard),
+#             # TODO: Add Estimated Remaining Trip Time
+#             aircraft.status.value
+#         ])
+#         aircraft_states = np.concatenate((aircraft_states, states))
 
-def get_node_location_list(aircraft_agents):
-    return list(get_system_manager(aircraft_agents=aircraft_agents).node_locations.keys())
+#     return aircraft_states
 
-def get_vertiport_list(aircraft_agents):
-    return get_system_manager(aircraft_agents=aircraft_agents).vertiport_ids
 
-def get_system_manager(aircraft_agents: Dict) -> object:
-    return get_aircraft(aircraft_agents=aircraft_agents).system_manager
+
+# def get_node_location_list(aircraft_agents):
+#     return list(get_system_manager(aircraft_agents=aircraft_agents).node_locations.keys())
+
+# def get_vertiport_list(aircraft_agents):
+#     return get_system_manager(aircraft_agents=aircraft_agents).vertiport_ids
+

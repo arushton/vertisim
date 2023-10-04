@@ -3,6 +3,7 @@ import networkx as nx
 from typing import Any, Dict, Generator, Optional
 from utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from utils.distribution_generator import DistributionGenerator
+from utils.get_state_variables import get_simulator_states
 from utils.weighted_random_chooser import random_choose_exclude_element
 from utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
@@ -20,68 +21,56 @@ class SystemManager:
                  env: object,
                  vertiports: Dict,
                  vertiport_ids: List,
+                 num_aircraft: int,
+                 stopping_events: Dict,
                  scheduler: object,
                  wind: object,
-                 arrival_priority: int,
-                 departure_priority: int,
                  airspace: object,
                  taxi_config: object,
-                 only_aircraft_simulation: bool,
+                 sim_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: pd.DataFrame,
                  passenger_distributions: Dict,
-                 max_flight_waiting_time: int,
-                 charging_interuption: bool,
                  event_saver: object,
-                 network_simulation: bool,
                  fixed_charge_schedule: bool,
                  fixed_schedule: bool,
-                 fleet_rebalancing: bool,
                  node_locations: Dict,
                  flight_duration_constant: float,
-                 charge_assignment_sensitivity: float,
                  logger: object,
                  aircraft_logger: object,
                  passenger_logger: object):
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
+        self.stopping_events = stopping_events
         self.scheduler = scheduler
         self.wind = wind
+        self.sim_params = sim_params
         self.airspace = airspace
-        self.arrival_priority = arrival_priority
-        self.departure_priority = departure_priority
         self.taxi_config = taxi_config
-        self.only_aircraft_simulation = only_aircraft_simulation
         self.aircraft_params = aircraft_params
         self.vertiport_distances = vertiport_distances
         self.passenger_distributions = passenger_distributions
-        self.max_flight_waiting_time = max_flight_waiting_time
-        self.charging_interuption = charging_interuption
         self.event_saver = event_saver
-        self.network_simulation = network_simulation
         self.fixed_charge_schedule = fixed_charge_schedule
         self.node_locations = node_locations
         self.fixed_schedule = fixed_schedule
-        self.fleet_rebalancing = fleet_rebalancing
-        self.num_aircraft = self.get_aircraft_count()
+        self.num_initial_aircraft = num_aircraft
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
-        # if not self.network_simulation:
         self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()
         self.taxi_resource = simpy.Resource(self.env, 1)
         if (
-            not self.only_aircraft_simulation
+            not self.sim_params['only_aircraft_simulation']
             and not self.fixed_schedule
-            and self.max_flight_waiting_time
+            and self.sim_params['max_passenger_waiting_time']
         ):
             self.env.process(self.check_passenger_max_waiting_time_threshold())
         # self.available_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         # self.active_aircraft_store = simpy.FilterStore(self.env) # This is stored at vertiport class
         self.flight_duration_constant = flight_duration_constant
-        self.charge_assignment_sensitivity = charge_assignment_sensitivity
         self.logger = logger
         self.aircraft_logger = aircraft_logger
         self.passenger_logger = passenger_logger
@@ -93,7 +82,7 @@ class SystemManager:
             vertiport.num_aircraft
             for _, vertiport in self.vertiports.items()
         )
-    
+        
     def _initialize_avg_flight_durations(self):
         def inner_dict():
             return {'average_flight_duration': None, 'num_flights': 0, 'total_duration': 0}
@@ -249,9 +238,9 @@ class SystemManager:
             Class object that provides the FATO resource by request.
         """
         if operation_type == 'arrival':
-            priority = self.arrival_priority
+            priority = self.sim_params['arrival_priority']
         elif operation_type == 'departure':
-            priority = self.departure_priority
+            priority = self.sim_params['departure_priority']
         else:
             raise ValueError("Operation type is not valid. Operation type should be 'arrival' or 'departure'.")
         return assigned_fato_resource.fato_resource.request(priority=priority)
@@ -630,7 +619,7 @@ class SystemManager:
                 departing_passengers=departing_passengers)
                 )
         
-        if self.fleet_rebalancing:
+        if self.sim_params['fleet_rebalancing']:
             num_available_aircraft_at_origin = self.check_num_available_aircraft(origin_vertiport_id)
             num_available_aircraft_at_dest = self.check_num_available_aircraft(destination_vertiport_id)
             num_pax_groups = int(self.get_num_waiting_passengers(passengers_waiting_room) / self.aircraft_params['pax'])
@@ -740,7 +729,7 @@ class SystemManager:
             self.validate_soc(soc)
 
             return self.vertiports[origin_vertiport_id].available_aircraft_store.get(
-                lambda aircraft: abs(soc - aircraft.soc) <= self.charge_assignment_sensitivity)
+                lambda aircraft: abs(soc - aircraft.soc) <= self.sim_params['charge_assignment_sensitivity'])
             # return (yield from self.retrieve_aircraft_by_soc(origin_vertiport_id, soc, wait_time))
 
         # Handle the case where both tail_number and soc are specified
@@ -878,14 +867,14 @@ class SystemManager:
     def check_passenger_max_waiting_time_threshold(self):
         """
         Checks all of the waiting rooms. If there are passengers who are waiting
-        more than max_flight_waiting_time, it creates a flight for those passengers immediately.
+        more than self.sim_params['max_passenger_waiting_time'], it creates a flight for those passengers immediately.
         """
         while True:
             # Check the waiting rooms every max_waiting_time/2.
-            yield self.env.timeout(sec_to_ms(self.max_flight_waiting_time) / 2)
+            yield self.env.timeout(sec_to_ms(self.sim_params['max_passenger_waiting_time']) / 2)
 
             if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold(
-                    sec_to_ms(self.max_flight_waiting_time)):
+                    sec_to_ms(self.sim_params['max_passenger_waiting_time'])):
 
                 for origin in departing_passenger_groups:
                     for destination in departing_passenger_groups[origin]:
@@ -912,12 +901,12 @@ class SystemManager:
         self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='vertiport_entrance')
         passenger.vertiport_arrival_time = self.env.now
 
-        # Simulate agent's walk from car to the vertiport entrance
-        self.env.process(passenger.walk_to_entrance())
-        # self.passenger_logger.debug(f'Passenger {passenger.passenger_id} completed walking to the vertiport entrance at {passenger.origin_vertiport_id}')
+        # # Simulate agent's walk from car to the vertiport entrance
+        # self.env.process(passenger.walk_to_entrance())
+        # # self.passenger_logger.debug(f'Passenger {passenger.passenger_id} completed walking to the vertiport entrance at {passenger.origin_vertiport_id}')
 
-        # Simulate agent's security check
-        self.env.process(passenger.security_check())
+        # # Simulate agent's security check
+        # self.env.process(passenger.security_check())
         # self.passenger_logger.debug(f'Passenger {passenger.passenger_id} completed security check at {passenger.origin_vertiport_id}')
 
         # Put the passenger into the waiting room
@@ -948,11 +937,17 @@ class SystemManager:
         passenger.waiting_room_store = passengers_waiting_room
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
-        # If not fixed schedule, trigger the scheduler to check if there are enough passengers to create a flight
-        if not self.fixed_schedule:
-            yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
-                                                        destination_vertiport_id=passenger.destination_vertiport_id, 
-                                                        passengers_waiting_room=passengers_waiting_room))
+
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.sim_params['step_by_step_sim'] == 'auto':
+            self.stopping_events['passenger_arrival_event'].succeed()
+        else:
+            # If not fixed schedule, trigger the scheduler to check if there are enough passengers to create a flight
+            if not self.fixed_schedule:
+                yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
+                                                            destination_vertiport_id=passenger.destination_vertiport_id, 
+                                                            passengers_waiting_room=passengers_waiting_room))
 
     # -------------------------
 
@@ -999,7 +994,7 @@ class SystemManager:
         self.logger.debug(f'Aircraft {aircraft.tail_number} requesting arrival fix resource at {aircraft.destination_vertiport_id}.'
                          f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
                          f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
-        if self.fleet_rebalancing and not self.fixed_schedule:
+        if self.sim_params['fleet_rebalancing'] and not self.fixed_schedule:
             self.check_holding_aircraft(flight_direction=aircraft.flight_direction,
                                         origin_vertiport_id=aircraft.origin_vertiport_id,
                                         destination_vertiport_id=aircraft.destination_vertiport_id)
@@ -1016,6 +1011,11 @@ class SystemManager:
 
         aircraft.arrival_fix_resource = arrival_fix_resource
         aircraft.arrival_fix_usage_request = arrival_fix_usage_request  
+
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.sim_params['step_by_step_sim'] == 'auto':
+            self.stopping_events['aircraft_faf_arrival_event'].succeed()        
 
         yield self.env.process(self.fato_and_parking_pad_usage_process(aircraft=aircraft))
 
@@ -1043,7 +1043,7 @@ class SystemManager:
             else:
                 if aircraft.flight_duration and self.env.now - aircraft.pushback_time < self.flight_duration_constant:
                     ground_holding_time = self.flight_duration_constant - (self.env.now - aircraft.pushback_time) - 1
-                    self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Flight duration is less than {ms_to_min(self.flight_duration_constant)} minutes.'
+                    self.logger.debug(f"|{duplicate_str(aircraft.tail_number)}| Flight duration is less than {ms_to_min(self.flight_duration_constant)} minutes."
                                       f' Pushback time was {miliseconds_to_hms(aircraft.pushback_time)}. Aircraft {aircraft.tail_number}'
                                       f' will hold for {ms_to_min(ground_holding_time)} ({miliseconds_to_hms(ground_holding_time)}) mins at {aircraft.location}')
                     yield self.env.timeout(ground_holding_time)
@@ -1254,7 +1254,7 @@ class SystemManager:
         self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                         aircraft=aircraft)
 
-        if self.only_aircraft_simulation and not self.network_simulation:
+        if self.sim_params['only_aircraft_simulation'] and not self.sim_params['network_simulation']:
             yield self.env.process(
                 self.simulate_aircraft_departure_process(aircraft=aircraft, origin_vertiport_id=aircraft.origin_vertiport_id, destination_vertiport_id=None)
             )     
@@ -1283,7 +1283,7 @@ class SystemManager:
 
         yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='departure'))
 
-        if not self.only_aircraft_simulation and len(aircraft.passengers_onboard) > 0:
+        if not self.sim_params['only_aircraft_simulation'] and len(aircraft.passengers_onboard) > 0:
             # Decrease the passenger departure queue counter
             self.event_saver.update_passenger_departure_queue_counter(vertiport_id=aircraft.origin_vertiport_id,
                                                                       queue_update=-1)

@@ -586,6 +586,11 @@ class Aircraft:
                 self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=vertiport_id,
                                                                        queue_update=-1)     
                 self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked_on_fato_pad')
+
+                # If the simulation is running by an optimization algorithm, then this will
+                # trigger this event and the optimization algorithm will make a decision.
+                if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()     
             return                          
 
         self.detailed_status = 'taxiing'
@@ -619,6 +624,7 @@ class Aircraft:
                 
             # Put back the only edge on the taxi route
             self.system_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))
+
             if operation_type == 'departure':
                 # Release the parking space of the departing aircraft. FATO nodes handled by the vertiport manager.
                 self.system_manager.release_parking_space(vertiport_id=vertiport_id,
@@ -638,6 +644,15 @@ class Aircraft:
             # Save park time
             if operation_type == 'arrival':
                 self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked')
+
+                # Updated the status of the aircraft
+                self.detailed_status = 'parked'
+                self.status = AircraftStatus.IDLE
+
+                # If the simulation is running by an optimization algorithm, then this will
+                # trigger this event and the optimization algorithm will make a decision.
+                if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
         else:
             # Reserve all of the taxiway nodes
             taxiway_nodes = []
@@ -709,18 +724,24 @@ class Aircraft:
             yield self.env.timeout(node_to_node_move_time)
             
             self.location = last_node
-            self.forward_velocity = 0            
+            self.forward_velocity = 0         
+            
+            # Put back the previous node and edge
+            self.system_manager.vertiports[vertiport_id].taxiway_node_store.put(previous_node)
+            self.system_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))               
 
             # Save park time
             if operation_type == 'arrival':
                 self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked')
 
-            # Put back the previous node and edge
-            self.system_manager.vertiports[vertiport_id].taxiway_node_store.put(previous_node)
-            self.system_manager.vertiports[vertiport_id].edge_store.put(taxiway_edges.pop(0))
+                # Updated the status of the aircraft
+                self.detailed_status = 'parked'
+                self.status = AircraftStatus.IDLE
 
-        self.detailed_status = 'parked'
-        self.status = AircraftStatus.IDLE
+                # If the simulation is running by an optimization algorithm, then this will
+                # trigger this event and the optimization algorithm will make a decision.
+                if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
 
 
     def aircraft_take_off_process(self, take_off_fato_id):
@@ -729,7 +750,14 @@ class Aircraft:
         yield self.env.process(self.initial_takeoff_procedure(take_off_fato_id))
         yield self.env.process(self.hover_climb_phase())
         yield self.env.process(self.climb_transition_phase())
-        self.release_fato_and_departure_fix()        
+        # Release the FATO pad and departure fix resource after reaching to the nextNode
+        self.release_fato_and_departure_fix()
+
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+            self.system_manager.stopping_events['aircraft_departure_fix_departure_event'].succeed()       
+
         yield self.env.process(self.climb_to_cruise_altitude())
 
     def initial_takeoff_procedure(self, take_off_fato_id):
@@ -1000,6 +1028,12 @@ class Aircraft:
             return
         
         self.status = AircraftStatus.CHARGE
+
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+            self.system_manager.stopping_events['charging_start_event'].succeed()             
+        
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:
             used_charger_resource, selected_charging_request = self.handle_shared_charger(parking_space)
@@ -1032,6 +1066,11 @@ class Aircraft:
 
         # Set the aircraft status to idle
         self.status = AircraftStatus.IDLE
+        # If the simulation is running by an optimization algorithm, then this will
+        # trigger this event and the optimization algorithm will make a decision.
+        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+            self.system_manager.stopping_events['charging_end_event'].succeed()     
+
         # Reset the target_soc to None for the next flight
         self.set_target_soc_none()
         # Release the charger resource that is used by the aircraft and the charging request
@@ -1367,7 +1406,6 @@ class Aircraft:
 
         return origin_vertiport_id if origin_distance < destination_distance else destination_vertiport_id
     
-
     def estimate_time_to_arrival(self):
         """
         Returns the estimated time to arrival in minutes.
@@ -1377,7 +1415,22 @@ class Aircraft:
                                                origin_vertiport_id=self.origin_vertiport_id,
                                                destination_vertiport_id=self.destination_vertiport_id,
                                                flight_direction=self.flight_direction,
-                                               system_manager=self.system_manager)/60, 2)        
+                                               system_manager=self.system_manager)/60, 2)     
+
+    def get_vertiport_list(self):
+        return self.system_manager.vertiport_ids
+
+    def get_aircraft_states(self) -> Dict:
+        """
+        Returns the aircraft states.
+        """
+        return {
+            'origin_vertiport_id': self.get_vertiport_list().index(self.origin_vertiport_id),
+            'destination_vertiport_id': self.get_vertiport_list().index(self.destination_vertiport_id),
+            'soc': round(self.soc, 2),
+            'time_to_arrival': self.estimate_time_to_arrival(),
+            'status': self.status
+        }
 
 
     

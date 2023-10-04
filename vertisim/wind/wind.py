@@ -87,7 +87,7 @@ class Wind:
         """
         
         # Ensure angles are in the correct range
-        assert(0 <= wind_origin_heading <= 2 * np.pi), f"Wind angle must be in radians, and between 0 and 2pi. Wind angle = {wind_origin_heading}"
+        assert(0 <= wind_origin_heading <= 2 * np.pi + 0.01), f"Wind angle must be in radians, and between 0 and 2pi. Wind angle = {wind_origin_heading}"
         
         return Wind.heading_to_vector(wind_origin_heading + pi, magnitude=wind_magnitude)        
 
@@ -173,7 +173,7 @@ class Wind:
         return {'wind_magnitude': self.wind_magnitude, 'wind_angle': self.wind_angle}
 
     
-    def fetch_wind_states(self, locations: List[str]) -> Dict[str, Dict[str, Union[float, int]]]:
+    def get_wind_states(self, locations: List[str], time: int) -> Dict[str, Dict[str, Union[float, int]]]:
         """
         Retrieves wind data for given locations. Returns static wind data if it's enabled.
         
@@ -199,7 +199,7 @@ class Wind:
 
         return {
             location_id: self.get_time_and_location_specific_wind_states(
-                time_of_day=int(ms_to_hr(self.env.now)), 
+                time_of_day=int(ms_to_hr(time)), 
                 location=location_id
             )
             for location_id in locations
