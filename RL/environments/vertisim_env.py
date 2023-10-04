@@ -48,8 +48,8 @@ class VertiSimEnv(gym.Env):
         }    
     
     @staticmethod
-    def set_action_space():
-        return gym.spaces.Discrete(5)
+    def set_action_space(config):
+        return gym.spaces.Discrete(config['sim_params']['num_actions'])
     
     @staticmethod
     def set_observation_space(config):
