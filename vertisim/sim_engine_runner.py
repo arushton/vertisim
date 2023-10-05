@@ -32,8 +32,13 @@ class SimEngineRunner:
     def apply_action(self, action: Any):
         """
         Apply action to the simulation.
+
+        Actions:
+        0: Do nothing
+        1: Idle to charge
+        2: Idle to service
         """
-        raise NotImplementedError
+        pass
     
     def get_current_state(self):
         """
@@ -56,7 +61,10 @@ class SimEngineRunner:
         """
         Calculate the reward for the current state of the simulation.
         """
-        raise NotImplementedError
+        return sum(
+            vertiport.get_total_passenger_waiting_time()
+            for _, vertiport in self.sim_setup.vertiports.items()
+        )
     
     def advance_to_next_stopping_event(self):
         """
@@ -72,7 +80,10 @@ class SimEngineRunner:
                     # Reset the event
                     self.stopping_events[event_name] = self.env.event()
                     # Return the states
-                    return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
+                    return states, self.calculate_reward(), self.check_terminated() # TODO: Return check_truncated
+
+        if self.env.peek() < self.max_sim_time:
+            self.terminal_event.succeed()
     
     def check_terminated(self):
         """

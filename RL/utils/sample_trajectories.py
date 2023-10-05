@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import numpy as np
 import copy
-from vertisim_env import VertiSimEnv
+from environments.vertisim_env import VertiSimEnv
 import os
 import pickle
 from typing import Dict, Tuple, List
@@ -18,7 +18,7 @@ def sample_trajectory(
         ac: np.ndarray = policy.get_action(ob)
 
         # Use that action to take a step in the environment
-        next_ob, rew, done, _ = env.step(ac)
+        next_ob, rew, done = env.step(ac)
 
         # Rollout can end due to done, or due to max_length
         steps += 1

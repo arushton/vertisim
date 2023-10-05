@@ -71,5 +71,3 @@ class VertiSimEnv(gym.Env):
         # Return the observation space
         return gym.spaces.Box(low=0, high=np.inf, shape=(total_state_variables,), dtype=np.float32)
 
-
-

@@ -38,9 +38,9 @@ class VertiSim:
         # Pass action to the SimEngineRunner
         self.sim_engine_runner.apply_action(action)
         # Run the simulator for one timestep
-        state, reward, terminated, truncated = self.sim_engine_runner.advance_to_next_stopping_event()
+        state, reward, terminated = self.sim_engine_runner.advance_to_next_stopping_event()
         # Return new state, reward, and terminated and truncated flag to the VertiSimEnv
-        return state, reward, terminated, truncated
+        return state, reward, terminated
     
     def reset_simulation(self):
         # Get the initial states of the simulation using the config file.
@@ -66,7 +66,7 @@ class VertiSim:
     def run(self):
         if not self.sim_setup.sim_params['step_by_step_sim']:
             self.run_uninterrupted_simulation(flight_schedule_file_path=self.sim_setup.network_and_demand_params['flight_schedule_file_path'])
-        elif self.sim_setup['step_by_step_sim'] == 'hil':
+        elif self.sim_setup.sim_params['step_by_step_sim'] == 'hil':
             run_step_by_step_simulation(env=self.env,
                                         vertiports=self.sim_setup.vertiports,
                                         airspace=self.sim_setup.airspace,
