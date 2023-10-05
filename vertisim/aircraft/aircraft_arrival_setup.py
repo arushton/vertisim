@@ -383,7 +383,7 @@ class AircraftArrivalSetup:
 
     def initiate_aircraft_arrival(self,
                                   departure_time: int = None,
-                                  tail_number: str = None,
+                                  tail_number: int = None,
                                   soc: int = 100,
                                   target_soc = None,
                                   input_cruise_speed: int = 72,
@@ -424,7 +424,7 @@ class AircraftArrivalSetup:
         
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.
-        self.system_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
+        self.system_manager.aircraft_agents[aircraft.tail_number] = aircraft
 
         self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
 

@@ -12,11 +12,13 @@ class VertiSim:
                  env: simpy.Environment, 
                  config: Dict, 
                  terminal_event: simpy.Event = None, 
+                 truncation_event: simpy.Event = None,
                  stopping_events: Dict = None,
                  reward_function_parameters: Dict = None):
         # sourcery skip: raise-specific-error
         self.env = env
         self.terminal_event = terminal_event
+        self.truncation_event = truncation_event
         self.config = config
 
         self.sim_start_time = time.time()
@@ -27,20 +29,22 @@ class VertiSim:
                                   passenger_params=config['passenger_params'],
                                   aircraft_params=config['aircraft_params'],
                                   output_params=config['output_params'],
-                                  stopping_events=stopping_events)
+                                  stopping_events=stopping_events,
+                                  truncation_event=self.truncation_event)
 
         self.sim_engine_runner = SimEngineRunner(env=self.env,
                                                  sim_setup=self.sim_setup,
                                                  stopping_events=stopping_events,
-                                                 reward_function_parameters=reward_function_parameters)
+                                                 reward_function_parameters=reward_function_parameters,
+                                                 terminal_event=self.terminal_event)
 
     def run_one_step(self, action):
         # Pass action to the SimEngineRunner
         self.sim_engine_runner.apply_action(action)
         # Run the simulator for one timestep
-        state, reward, terminated = self.sim_engine_runner.advance_to_next_stopping_event()
+        state, reward, terminated, truncated = self.sim_engine_runner.advance_to_next_stopping_event()
         # Return new state, reward, and terminated and truncated flag to the VertiSimEnv
-        return state, reward, terminated
+        return state, reward, terminated, truncated
     
     def reset_simulation(self):
         # Get the initial states of the simulation using the config file.

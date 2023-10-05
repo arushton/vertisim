@@ -1007,6 +1007,54 @@ class Aircraft:
         self.logger.debug(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
         
         return charge_time
+    
+    def charge_aircraft_rl(self) -> None:
+        self.status = AircraftStatus.CHARGE
+
+        # Stop at the charging start event
+        self.system_manager.stopping_events['charging_start_event'].succeed()           
+
+        # Request charger
+        used_charger_resource, selected_charging_request = self.request_charger()
+        yield selected_charging_request   
+
+        self.start_charging_process()
+        if not self.charged_during_turnaround:
+            idle_time = self.env.now - self.ground_holding_end_time
+            self.idle_time += idle_time
+        else:
+            idle_time = self.env.now - self.charging_end_time
+            self.idle_time += idle_time
+
+        self.save_process_time(event='idle', process_time=idle_time)
+        self.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {self.tail_number} at {self.location}.')  
+
+        self.detailed_status = 'charging'
+        # Increment the soc by 2%
+        charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.soc + 2)
+
+        yield self.env.timeout(round(charge_time))
+        self.save_process_time(event='charge', process_time=charge_time)
+        self.detailed_status = 'idle'
+        self.save_process_time(event='idle', process_time=self.compute_holding_after_charge(charge_time))
+        yield self.env.process(self.hold_for_charging_schedule_compatibility(charge_time))
+        self.end_charging_process()
+        self.logger.info(f'Saved idle time of {miliseconds_to_hms(self.compute_holding_after_charge(charge_time))} for after charge holding for aircraft {self.tail_number} at {self.location}.')
+
+        old_soc = self.soc
+        self.soc_charge_update(charge_time)
+
+        # Set the aircraft status to idle
+        self.status = AircraftStatus.IDLE 
+
+        # Release the charger resource that is used by the aircraft and the charging request
+        self.release_charger_resource(used_charger_resource, selected_charging_request)
+        # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround
+        self.charged_during_turnaround = True
+        self.logger.debug(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(self.soc, 2)}")
+
+        # Stop at the charging end event
+        self.system_manager.stopping_events['charging_end_event'].succeed()             
 
     def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
         """
@@ -1028,11 +1076,6 @@ class Aircraft:
             return
         
         self.status = AircraftStatus.CHARGE
-
-        # If the simulation is running by an optimization algorithm, then this will
-        # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
-            self.system_manager.stopping_events['charging_start_event'].succeed()             
         
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:
@@ -1065,11 +1108,7 @@ class Aircraft:
         self.soc_charge_update(charge_time)
 
         # Set the aircraft status to idle
-        self.status = AircraftStatus.IDLE
-        # If the simulation is running by an optimization algorithm, then this will
-        # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
-            self.system_manager.stopping_events['charging_end_event'].succeed()     
+        self.status = AircraftStatus.IDLE 
 
         # Reset the target_soc to None for the next flight
         self.set_target_soc_none()
@@ -1183,11 +1222,14 @@ class Aircraft:
         float
             Charge time required to reach the target soc level.
         """
-        check_magnitude_order(init_soc, target_soc)
-        df = self.system_manager.aircraft_battery_models[self.destination_vertiport_id]
-        init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
-        target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
-        return sec_to_ms(target_soc_time - init_soc_time)
+        if check_magnitude_order(init_soc, target_soc):
+            df = self.system_manager.aircraft_battery_models[self.destination_vertiport_id]
+            init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
+            target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
+            return sec_to_ms(target_soc_time - init_soc_time)
+        else:
+            self.logger.error(f"Final soc level ({target_soc}) is greater than 100).")
+            self.system_manager.truncation_event.succeed()
 
     def soc_charge_update(self, charge_time) -> None:
         """

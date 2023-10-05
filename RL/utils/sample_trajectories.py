@@ -18,7 +18,7 @@ def sample_trajectory(
         ac: np.ndarray = policy.get_action(ob)
 
         # Use that action to take a step in the environment
-        next_ob, rew, done = env.step(ac)
+        next_ob, rew, done, truncated = env.step(ac)
 
         # Rollout can end due to done, or due to max_length
         steps += 1

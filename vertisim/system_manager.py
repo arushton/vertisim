@@ -23,6 +23,7 @@ class SystemManager:
                  vertiport_ids: List,
                  num_aircraft: int,
                  stopping_events: Dict,
+                 truncation_event: object,
                  scheduler: object,
                  wind: object,
                  airspace: object,
@@ -43,6 +44,7 @@ class SystemManager:
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
         self.stopping_events = stopping_events
+        self.truncation_event = truncation_event
         self.scheduler = scheduler
         self.wind = wind
         self.sim_params = sim_params
@@ -1241,14 +1243,20 @@ class SystemManager:
 
 
     def aircraft_charging_process(self, aircraft: object):
-
-        # Charge the aircraft
-        yield self.env.process(
-            aircraft.charge_aircraft(
-                parking_space=aircraft.parking_space,
-                shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
+        # TODO: Use a better design pattern for this
+        if self.sim_params['step_by_step_sim'] == 'auto':
+            # Charge the aircraft
+            yield self.env.process(
+                aircraft.charge_aircraft_rl()
             )
-        )
+        else:
+            # Charge the aircraft
+            yield self.env.process(
+                aircraft.charge_aircraft(
+                    parking_space=aircraft.parking_space,
+                    shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
+                )
+            )
 
         # Put aircraft into available aircraft store
         self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,

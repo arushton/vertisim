@@ -4,6 +4,7 @@ from utils.units import ms_to_min, sec_to_ms
 from utils.get_state_variables import get_simulator_states
 from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
+import gymnasium as gym
 from collections import defaultdict
 
 class SimEngineRunner:
@@ -12,12 +13,14 @@ class SimEngineRunner:
                  sim_setup: object,
                  stopping_events: Dict = None,
                  reward_function_parameters: Dict = None,
-                 terminal_event: object = None):
+                 terminal_event: object = None,
+                 truncation_event: object = None):
         self.env = env
         self.sim_setup = sim_setup
         self.stopping_events = stopping_events
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         self.terminal_event = terminal_event
+        self.truncation_event = truncation_event
         self.reward_function_parameters = reward_function_parameters
                         
     def run_uninterrupted_simulation(self, flight_schedule_file_path):
@@ -29,7 +32,7 @@ class SimEngineRunner:
         else:
             self.env.run(until=self.max_sim_time)
 
-    def apply_action(self, action: Any):
+    def apply_action(self, action: gym.spaces.Tuple[gym.spaces.Discrete]):
         """
         Apply action to the simulation.
 
@@ -38,7 +41,14 @@ class SimEngineRunner:
         1: Idle to charge
         2: Idle to service
         """
-        pass
+        process_list = []
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if action[aircraft_id] == 1:
+                self.env.process(aircraft.charge_aircraft_rl())
+            elif action[aircraft_id] == 2:
+                self.env.process(aircraft.reserve_aircraft())
+            process_list.append(aircraft.process)
+        yield self.env.all_of(process_list)
     
     def get_current_state(self):
         """
@@ -70,7 +80,7 @@ class SimEngineRunner:
         """
         Run the simulation until the next defined stopping event.
         """
-        while self.env.peek() < self.max_sim_time and self.terminal_event.triggered == False:
+        while self._should_continue_simulation():
             self.env.step()
             # Check if any events in stopping_events have triggered.
             for event_name, event in self.stopping_events.items():
@@ -78,13 +88,25 @@ class SimEngineRunner:
                     # Get the states
                     states = self.get_current_state()
                     # Reset the event
-                    self.stopping_events[event_name] = self.env.event()
+                    self._reset_event(event_name)
                     # Return the states
-                    return states, self.calculate_reward(), self.check_terminated() # TODO: Return check_truncated
+                    return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
+        self._handle_end_of_simulation()
+        return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
+
+    def _should_continue_simulation(self):
+        return (self.env.peek() < self.max_sim_time and 
+                not self.terminal_event.triggered and 
+                not self.truncation_event.triggered)
+
+    def _reset_event(self, event_name):
+        self.stopping_events[event_name] = self.env.event()
+
+    def _handle_end_of_simulation(self):
         if self.env.peek() < self.max_sim_time:
             self.terminal_event.succeed()
-    
+
     def check_terminated(self):
         """
         Check if the simulation has terminated.
@@ -95,4 +117,4 @@ class SimEngineRunner:
         """
         Check if the simulation has truncated.
         """
-        raise NotImplementedError 
+        return self.truncation_event.triggered

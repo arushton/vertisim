@@ -44,7 +44,13 @@
         "charge_assignment_sensitivity": 2.4,   
         "charge_schedule_file_path": null,
         "flight_schedule_file_path": null, 
-        "soc_adjustment": null
+        "soc_adjustment": null,
+
+        "online_optimization": false,
+        "num_vertiport_state_variables": 7,
+        "num_aircraft_state_variables": 5,
+        "num_environmental_state_variables": 2,
+        "num_actions": 3      
     },
 
     "network_and_demand_params": {

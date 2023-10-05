@@ -388,7 +388,7 @@ def create_save_path(original_path, list_of_keys):
     # Create the new path by joining the directory and the new filename
     return f"{original_path}/{new_filename}"
 
-def check_magnitude_order(value1, value2):
+def check_magnitude_order(value1, value2, max_val=100):
     """
     Check whether the magnitude of value1 is greater than the magnitude of value2.
     """
@@ -396,6 +396,7 @@ def check_magnitude_order(value1, value2):
         raise ValueError(
             f'The magnitude of value1 ({value1}) is greater than the magnitude of value2 ({value2}).'
         )
+    return value2 <= max_val
     
 def miliseconds_to_hms(milliseconds):
     seconds = milliseconds // 1000

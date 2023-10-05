@@ -40,13 +40,15 @@ class SimSetup:
                  passenger_params: Dict,
                  aircraft_params: Dict,
                  output_params: Dict,
-                 stopping_events: Dict = None):
+                 stopping_events: Dict = None,
+                 truncation_event: simpy.Event = None):
         self.sim_params = sim_params
         self.network_and_demand_params = network_and_demand_params
         self.airspace_params = airspace_params
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
+        self.truncation_event = truncation_event
 
         self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
@@ -289,6 +291,7 @@ class SimSetup:
             vertiport_ids=self.vertiport_ids,
             num_aircraft=get_aircraft_count(self.network_and_demand_params),
             stopping_events=self.stopping_events,
+            truncation_event=self.truncation_event,
             scheduler=self.scheduler,
             wind=self.wind,
             airspace=self.airspace,

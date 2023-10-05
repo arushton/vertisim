@@ -1,4 +1,4 @@
-from typing import Any, SupportsFloat, Dict
+from typing import Any, SupportsFloat, Dict, Tuple
 import gymnasium as gym
 import numpy as np
 import simpy
@@ -15,9 +15,11 @@ class VertiSimEnv(gym.Env):
         self.simpy_env = simpy.Environment()
         self.stopping_events = self.define_stopping_events()
         self.terminal_event = self.simpy_env.event()
+        self.truncation_event = self.simpy_env.event()
         self.simulator = VertiSim(env=self.simpy_env, 
                                   config=self.config, 
                                   terminal_event=self.terminal_event, 
+                                  truncation_event=self.truncation_event,
                                   stopping_events=self.stopping_events)
 
     def step(self, action: Any) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
@@ -37,7 +39,7 @@ class VertiSimEnv(gym.Env):
     def render(self, mode: str = "human") -> None:
         pass
 
-    def define_stopping_events(self):
+    def define_stopping_events(self) -> Dict:
         return {
             'passenger_arrival_event': self.simpy_env.event(),
             'aircraft_faf_arrival_event': self.simpy_env.event(),
@@ -48,20 +50,23 @@ class VertiSimEnv(gym.Env):
         }    
     
     @staticmethod
-    def set_action_space(config):
-        return gym.spaces.Discrete(config['sim_params']['num_actions'])
+    def set_action_space(config: Dict) -> gym.spaces.Tuple[gym.spaces.Discrete]:
+        """
+        Creates the action space for each aircraft.
+        """
+        n_actions = config['sim_params']['num_actions']
+        n_aircraft = VertiSimEnv.get_num_aircraft(config=config)
+        return gym.spaces.Tuple((gym.spaces.Discrete(n_actions) for _ in range(n_aircraft)))
+
     
     @staticmethod
-    def set_observation_space(config):
+    def set_observation_space(config: Dict) -> gym.spaces.Box:
         # Vertiport states
         # Get the number of vertiports
         num_vertiports = len(config['network_and_demand_params']['vertiports'])
 
         # Get number of aircraft defined in the config file
-        num_aircraft = sum(
-            vertiport['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
-            for vertiport in config['network_and_demand_params']['vertiports'].items()
-        )
+        num_aircraft = VertiSimEnv.get_num_aircraft(config=config)
 
         # Get the total number of state variables
         total_state_variables = num_vertiports * config['sim_params']['num_vertiport_state_variables'] +\
@@ -70,4 +75,11 @@ class VertiSimEnv(gym.Env):
         
         # Return the observation space
         return gym.spaces.Box(low=0, high=np.inf, shape=(total_state_variables,), dtype=np.float32)
+    
+    @staticmethod
+    def get_num_aircraft(config: Dict) -> int:
+        return sum(
+            vertiport['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
+            for vertiport in config['network_and_demand_params']['vertiports'].items()
+        )
 
