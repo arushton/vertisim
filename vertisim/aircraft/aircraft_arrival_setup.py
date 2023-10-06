@@ -37,7 +37,8 @@ class AircraftArrivalSetup:
                  event_saver: object,
                  logger: object,
                  aircraft_logger: object,
-                 vertiport_logger: object):
+                 vertiport_logger: object,
+                 charging_strategy: object):
         self.env = env
         self.network_simulation = network_simulation
         self.vertiport_layouts = vertiport_layouts
@@ -56,6 +57,7 @@ class AircraftArrivalSetup:
         self.logger = logger
         self.aircraft_logger = aircraft_logger
         self.vertiport_logger = vertiport_logger
+        self.charging_strategy = charging_strategy
             
     @staticmethod
     def validate_columns(dataframe: pd.DataFrame, required_columns: list, optional_columns: dict, check_none_columns: list) -> None:
@@ -419,7 +421,8 @@ class AircraftArrivalSetup:
                             wind=self.wind,
                             event_saver=self.event_saver,
                             logger=logger,
-                            aircraft_logger=aircraft_logger
+                            aircraft_logger=aircraft_logger,
+                            charging_strategy=self.charging_strategy
                             )
         
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')

@@ -15,7 +15,6 @@ class VertiSim:
                  truncation_event: simpy.Event = None,
                  stopping_events: Dict = None,
                  reward_function_parameters: Dict = None):
-        # sourcery skip: raise-specific-error
         self.env = env
         self.terminal_event = terminal_event
         self.truncation_event = truncation_event
@@ -24,6 +23,7 @@ class VertiSim:
         self.sim_start_time = time.time()
         self.sim_setup = SimSetup(env=self.env,
                                   sim_params=config['sim_params'],
+                                  external_optimization_params=config['external_optimization_params'],
                                   network_and_demand_params=config['network_and_demand_params'],
                                   airspace_params=config['airspace_params'],
                                   passenger_params=config['passenger_params'],

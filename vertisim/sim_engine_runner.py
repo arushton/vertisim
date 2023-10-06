@@ -32,21 +32,23 @@ class SimEngineRunner:
         else:
             self.env.run(until=self.max_sim_time)
 
-    def apply_action(self, action: gym.spaces.Tuple[gym.spaces.Discrete]):
+    def apply_action(self, action: gym.spaces.Tuple):
         """
         Apply action to the simulation.
 
         Actions:
         0: Do nothing
         1: Idle to charge
-        2: Idle to service
+        2: Idle to service (vertiport 1)
+        3: Idle to service (vertiport 2)
         """
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
-                self.env.process(aircraft.charge_aircraft_rl())
+                self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space,
+                                                          ))
             elif action[aircraft_id] == 2:
-                self.env.process(aircraft.reserve_aircraft())
+                self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft))
             process_list.append(aircraft.process)
         yield self.env.all_of(process_list)
     

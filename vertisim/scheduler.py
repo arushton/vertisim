@@ -141,6 +141,15 @@ class Scheduler:
                                     f" Remaining passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}."
                                     f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}.")            
         return departing_passengers
+    
+    def collect_departing_passengers_by_od_vertiport(self, origin_vertiport_id, destination_vertiport_id):
+        """
+        Collects departing passengers based on their O-D
+        """
+        # Get the waiting room for the destination
+        waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
+        return self.collect_departing_passengers(waiting_room, self.aircraft_capacity)
+
 
     def get_aircraft_with_closest_init_soc(self, vertiport_id, init_soc, target_soc):
         """

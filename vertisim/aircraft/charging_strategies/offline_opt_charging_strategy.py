@@ -1,0 +1,4 @@
+from aircraft.charging_strategies.base_charging_strategy import BaseChargingStrategy
+
+class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
+    pass

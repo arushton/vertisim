@@ -3,7 +3,6 @@ import networkx as nx
 from typing import Any, Dict, Generator, Optional
 from utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from utils.distribution_generator import DistributionGenerator
-from utils.get_state_variables import get_simulator_states
 from utils.weighted_random_chooser import random_choose_exclude_element
 from utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
@@ -714,17 +713,15 @@ class SystemManager:
         Returns:
             The requested aircraft, or None if no suitable aircraft was found.
         """
-        # print('Searching for aircraft...')
         # Handle the case where neither tail_number nor soc are specified
         if tail_number is None and soc is None:
             aircraft_request = self.vertiports[origin_vertiport_id].available_aircraft_store.get()
-            return aircraft_request # (yield aircraft_request)
+            return aircraft_request
 
         # Handle the case where only tail_number is specified
         if tail_number is not None and soc is None:
             self.validate_tail_number(tail_number)
             return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
-            # return (yield from self.retrieve_aircraft_by_tail_number(origin_vertiport_id, tail_number, wait_time))
 
         # Handle the case where only soc is specified
         if tail_number is None and soc is not None:
@@ -732,12 +729,6 @@ class SystemManager:
 
             return self.vertiports[origin_vertiport_id].available_aircraft_store.get(
                 lambda aircraft: abs(soc - aircraft.soc) <= self.sim_params['charge_assignment_sensitivity'])
-            # return (yield from self.retrieve_aircraft_by_soc(origin_vertiport_id, soc, wait_time))
-
-        # Handle the case where both tail_number and soc are specified
-        # self.validate_tail_number(tail_number)
-        # self.validate_soc(soc)
-        # return (yield from self.retrieve_aircraft_by_tail_and_soc(origin_vertiport_id, tail_number, soc, wait_time))
 
     def validate_tail_number(self, tail_number):
         if not isinstance(tail_number, (int, str)):
@@ -747,62 +738,62 @@ class SystemManager:
         if not isinstance(soc, (int, float)):
             raise ValueError("SOC should be an integer or a float.")
 
-    def retrieve_aircraft_by_tail_number(self, vertiport_id, tail_number, wait_time):
-        while True:
-            if aircraft := self.find_aircraft_by_tail_number(vertiport_id, tail_number):
-                aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == aircraft)
-                return (yield aircraft_request)
-            else:
-                yield self.env.timeout(wait_time)
+    # def retrieve_aircraft_by_tail_number(self, vertiport_id, tail_number, wait_time):
+    #     while True:
+    #         if aircraft := self.find_aircraft_by_tail_number(vertiport_id, tail_number):
+    #             aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == aircraft)
+    #             return (yield aircraft_request)
+    #         else:
+    #             yield self.env.timeout(wait_time)
 
-    def retrieve_aircraft_by_soc(self, vertiport_id, soc, wait_time):
-        while True:
-            if suitable_aircraft := self.find_aircraft_by_soc(vertiport_id, soc):
-                aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == suitable_aircraft)
-                return (yield aircraft_request)
-            else:
-                yield self.env.timeout(wait_time)
+    # def retrieve_aircraft_by_soc(self, vertiport_id, soc, wait_time):
+    #     while True:
+    #         if suitable_aircraft := self.find_aircraft_by_soc(vertiport_id, soc):
+    #             aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == suitable_aircraft)
+    #             return (yield aircraft_request)
+    #         else:
+    #             yield self.env.timeout(wait_time)
 
-    def retrieve_aircraft_by_tail_and_soc(self, vertiport_id, tail_number, soc, wait_time):
-        while True:
-            aircraft = self.find_aircraft_by_tail_number(vertiport_id, tail_number)
-            if aircraft and abs(aircraft.soc - soc) <= 5:
-                aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == aircraft)
-                return (yield aircraft_request)
-            else:
-                yield self.env.timeout(wait_time)
+    # def retrieve_aircraft_by_tail_and_soc(self, vertiport_id, tail_number, soc, wait_time):
+    #     while True:
+    #         aircraft = self.find_aircraft_by_tail_number(vertiport_id, tail_number)
+    #         if aircraft and abs(aircraft.soc - soc) <= 5:
+    #             aircraft_request = self.vertiports[vertiport_id].available_aircraft_store.get(lambda a: a == aircraft)
+    #             return (yield aircraft_request)
+    #         else:
+    #             yield self.env.timeout(wait_time)
 
-    def find_aircraft_by_tail_number(self, vertiport_id, tail_number):
-        """
-        Search for an aircraft by its tail number in the specified vertiport's available aircraft store.
-        Returns the aircraft if found, otherwise None.
-        """
-        return next(
-            (
-                aircraft
-                for aircraft in self.vertiports[
-                    vertiport_id
-                ].available_aircraft_store.items
-                if aircraft.tail_number == tail_number
-            ),
-            None,
-        )
+    # def find_aircraft_by_tail_number(self, vertiport_id, tail_number):
+    #     """
+    #     Search for an aircraft by its tail number in the specified vertiport's available aircraft store.
+    #     Returns the aircraft if found, otherwise None.
+    #     """
+    #     return next(
+    #         (
+    #             aircraft
+    #             for aircraft in self.vertiports[
+    #                 vertiport_id
+    #             ].available_aircraft_store.items
+    #             if aircraft.tail_number == tail_number
+    #         ),
+    #         None,
+    #     )
 
-    def find_aircraft_by_soc(self, vertiport_id, soc):
-        """
-        Search for an aircraft by its SOC (State of Charge) in the specified vertiport's available aircraft store.
-        Returns the aircraft if found, otherwise None.
-        """
-        return next(
-            (
-                aircraft
-                for aircraft in self.vertiports[
-                    vertiport_id
-                ].available_aircraft_store.items
-                if abs(aircraft.soc - soc) <= 5
-            ),
-            None,
-        )                
+    # def find_aircraft_by_soc(self, vertiport_id, soc):
+    #     """
+    #     Search for an aircraft by its SOC (State of Charge) in the specified vertiport's available aircraft store.
+    #     Returns the aircraft if found, otherwise None.
+    #     """
+    #     return next(
+    #         (
+    #             aircraft
+    #             for aircraft in self.vertiports[
+    #                 vertiport_id
+    #             ].available_aircraft_store.items
+    #             if abs(aircraft.soc - soc) <= 5
+    #         ),
+    #         None,
+    #     )                
 
 
     def save_aircraft_allocation_time(self, origin_vertiport_id, aircraft, start_time):
@@ -860,11 +851,6 @@ class SystemManager:
     def initiate_passenger_departure(self, departing_passengers):
         yield self.env.process(self.simulate_passenger_departure(departing_passengers=departing_passengers))
 
-    def simulate_aircraft_departure(self, aircraft, origin_vertiport_id, destination_vertiport_id):
-        yield self.env.process(
-            self.simulate_aircraft_departure_process(aircraft=aircraft,
-                                                    origin_vertiport_id=origin_vertiport_id,
-                                                    destination_vertiport_id=destination_vertiport_id))
 
     def check_passenger_max_waiting_time_threshold(self):
         """
