@@ -1,17 +1,17 @@
 import simpy
 import networkx as nx
 from typing import Any, Dict, Generator, Optional
-from utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
-from utils.distribution_generator import DistributionGenerator
-from utils.weighted_random_chooser import random_choose_exclude_element
-from utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
+from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
+from ..utils.distribution_generator import DistributionGenerator
+from ..utils.weighted_random_chooser import random_choose_exclude_element
+from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
-from aircraft.battery_model import BatteryModel
-from aircraft.aircraft import Aircraft, AircraftStatus
+from ..aircraft.battery_model import BatteryModel
+from ..aircraft.aircraft import Aircraft, AircraftStatus
 import pandas as pd
 from enum import Enum
 from collections import defaultdict
-from utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
+from ..utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
 from typing import List, Union
 
 class BaseSystemManager:
@@ -19,7 +19,7 @@ class BaseSystemManager:
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 num_aircraft: int,                                 
+                 num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
                  airspace: object,
@@ -36,7 +36,7 @@ class BaseSystemManager:
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
-        self.num_aircraft = num_aircraft
+        self.num_initial_aircraft = num_initial_aircraft
         self.scheduler = scheduler
         self.wind = wind
         self.airspace = airspace

@@ -1,8 +1,8 @@
 import numpy as np
 from math import sin, cos, asin, atan2, pi
 from typing import Dict, List, Union
-from utils.process_wind_data import WindDataProcessor
-from utils.units import ms_to_hr
+from ..utils.process_wind_data import WindDataProcessor
+from ..utils.units import ms_to_hr
 
 
 class Wind:

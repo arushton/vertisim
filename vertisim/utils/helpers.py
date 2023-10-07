@@ -2,10 +2,11 @@ import random
 import math
 import numpy as np
 from enum import Enum
-from utils.units import sec_to_ms
+from ..utils.units import sec_to_ms
 from typing import List, Union, Dict, Any, Optional
 import re
 import pandas as pd # For type hinting
+import pkg_resources
 
 
 def set_seed(seed=None, how='instant'):
@@ -25,6 +26,11 @@ def set_seed(seed=None, how='instant'):
         random.seed(42)
         np.random.seed(42)
 
+
+def get_absolute_path(resource_path: str) -> str:
+    path = pkg_resources.resource_filename('vertisim', resource_path)
+    print(f"Path: {path}")
+    return path
 
 def compute_interarrival_times_from_schedule(schedule):
     """

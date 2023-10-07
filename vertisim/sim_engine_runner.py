@@ -1,8 +1,8 @@
 import simpy
 from typing import Any, Dict, List
-from utils.units import ms_to_min, sec_to_ms
-from utils.get_state_variables import get_simulator_states
-from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
+from .utils.units import ms_to_min, sec_to_ms
+from .utils.get_state_variables import get_simulator_states
+from .utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
 import gymnasium as gym
 from collections import defaultdict
@@ -45,8 +45,7 @@ class SimEngineRunner:
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
-                self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space,
-                                                          ))
+                self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space))
             elif action[aircraft_id] == 2:
                 self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft))
             process_list.append(aircraft.process)

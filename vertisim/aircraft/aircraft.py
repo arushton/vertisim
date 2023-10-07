@@ -1,19 +1,19 @@
-from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
-from utils.distance import haversine_dist
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
-from utils.flight_time_estimator import time_to_arrival_estimator
+from ..utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
+from ..utils.distance import haversine_dist
+from ..utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
+from ..utils.flight_time_estimator import time_to_arrival_estimator
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
 from collections import defaultdict
-from aircraft.optimize_velocity import VelocityOptimizer
-from utils.distance import distance_3d
-from utils.helpers import set_seed
-from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
-from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
-from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
+from .optimize_velocity import VelocityOptimizer
+from ..utils.distance import distance_3d
+from ..utils.helpers import set_seed
+from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
+from ..utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
+from .power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
-from wind.wind import Wind
+from ..wind.wind import Wind
 from math import pi
 from enum import Enum
 

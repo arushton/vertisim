@@ -1,10 +1,10 @@
 import os
 import pandas as pd
 from typing import List, Dict
-from utils.distance import haversine_dist
-from utils.read_files import read_input_file
-from utils.create_vertiport_network import create_fully_connected_vertiport_network
-from utils.helpers import create_save_path
+from .distance import haversine_dist
+from .read_files import read_input_file
+from .create_vertiport_network import create_fully_connected_vertiport_network
+from .helpers import create_save_path
 
 def get_fato_coordinates(vertiport_ids: List, vertiport_layouts: Dict) -> List:
     """Get list of fato coordinates for given vertiport IDs"""

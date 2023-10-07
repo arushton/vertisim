@@ -2,8 +2,8 @@ from typing import Dict, List, Any
 from collections import defaultdict
 import json
 import subprocess
-from utils.units import ms_to_min
-from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
+from .units import ms_to_min
+from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
 
 

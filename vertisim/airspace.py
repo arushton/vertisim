@@ -1,7 +1,7 @@
 from typing import List, Dict
 import simpy
-from utils.read_files import read_input_file
-from utils.distance import haversine_dist
+from .utils.read_files import read_input_file
+from .utils.distance import haversine_dist
 from collections import defaultdict
 import pandas as pd
 import numpy as np

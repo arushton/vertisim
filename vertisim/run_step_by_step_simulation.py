@@ -1,5 +1,5 @@
 # from utils.get_state_variables import get_human_readable_state_variables, get_machine_readable_state_variables, get_simulator_states
-from utils.get_state_variables import get_simulator_states, get_human_readable_state_variables
+from .utils.get_state_variables import get_simulator_states, get_human_readable_state_variables
 import time
 from typing import Dict, List
 

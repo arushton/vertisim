@@ -1,15 +1,17 @@
 from .base_system_manager import BaseSystemManager
 import simpy
-from aircraft.aircraft import AircraftStatus
+from ..aircraft.aircraft import AircraftStatus
 from typing import Dict, List, Any
 from collections import defaultdict
-from utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
-from utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
+from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
+from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
 
 class RLSystemManager(BaseSystemManager):
     def __init__(self,
                  env: simpy.Environment,
                  vertiports: Dict,
+                 vertiport_ids: List, 
+                 num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
                  airspace: object,
@@ -17,6 +19,7 @@ class RLSystemManager(BaseSystemManager):
                  sim_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: Dict,
+                 passenger_distributions: Dict,                 
                  event_saver: object,
                  node_locations: Dict,
                  logger: object,
@@ -26,6 +29,8 @@ class RLSystemManager(BaseSystemManager):
                  ):
         super().__init__(env=env,
                         vertiports=vertiports,
+                        vertiport_ids=vertiport_ids,
+                        num_initial_aircraft=num_initial_aircraft,
                         scheduler=scheduler,
                         wind=wind,
                         airspace=airspace,
@@ -33,6 +38,7 @@ class RLSystemManager(BaseSystemManager):
                         sim_params=sim_params,
                         aircraft_params=aircraft_params,
                         vertiport_distances=vertiport_distances,
+                        passenger_distributions=passenger_distributions,
                         event_saver=event_saver,
                         node_locations=node_locations,
                         logger=logger,

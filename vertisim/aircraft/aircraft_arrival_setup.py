@@ -10,15 +10,15 @@ There are three ways to set up aircraft arrival (initiation) process for network
 
 import pandas as pd
 
-from aircraft.aircraft import Aircraft, AircraftStatus
+from .aircraft import Aircraft, AircraftStatus
 import pandas as pd
-from utils.units import sec_to_ms, ms_to_sec
-from utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, \
+from ..utils.units import sec_to_ms, ms_to_sec
+from ..utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, \
     careful_conversion, lower_str
-from utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
+from ..utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
 # from utils.defaults import DEFAULT_AIRCRAFT_ARRIVAL_PROCESS
 from typing import Dict, List, Union, Tuple
-from utils.read_files import read_input_file
+from ..utils.read_files import read_input_file
 
 
 class AircraftArrivalSetup:

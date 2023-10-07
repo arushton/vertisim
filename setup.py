@@ -6,8 +6,9 @@ with open("README.md", "r") as fh:
 setup(
     name='vertisim',
     version='1.0.0',
-    package_dir={"": "vertisim"},
-    packages=find_packages(where="vertisim"),
+    # package_dir={"": "vertisim"},
+    packages=find_packages(),
+    include_package_data=True,
     install_requires=[
         "geog==0.0.2",
         "geopandas>=0.9.0",

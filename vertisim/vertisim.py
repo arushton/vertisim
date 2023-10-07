@@ -1,10 +1,10 @@
 import simpy
 from typing import Any, Dict
-from sim_setup import SimSetup
-from sim_engine_runner import SimEngineRunner
+from .sim_setup import SimSetup
+from .sim_engine_runner import SimEngineRunner
 import time
-from utils.read_files import read_input_file
-from run_step_by_step_simulation import run_step_by_step_simulation
+from .utils.read_files import read_input_file
+from .run_step_by_step_simulation import run_step_by_step_simulation
 
 
 class VertiSim:
@@ -42,9 +42,9 @@ class VertiSim:
         # Pass action to the SimEngineRunner
         self.sim_engine_runner.apply_action(action)
         # Run the simulator for one timestep
-        state, reward, terminated, truncated = self.sim_engine_runner.advance_to_next_stopping_event()
+        next_state, reward, terminated, truncated = self.sim_engine_runner.advance_to_next_stopping_event()
         # Return new state, reward, and terminated and truncated flag to the VertiSimEnv
-        return state, reward, terminated, truncated
+        return next_state, reward, terminated, truncated
     
     def reset_simulation(self):
         # Get the initial states of the simulation using the config file.

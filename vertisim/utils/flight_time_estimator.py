@@ -1,5 +1,5 @@
 from typing import Dict
-from utils.units import miles_to_m
+from ..utils.units import miles_to_m
 
 
 def time_to_arrival_estimator(cruise_speed: Dict, 

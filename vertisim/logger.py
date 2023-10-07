@@ -1,6 +1,6 @@
 import logging
 import os
-from utils.helpers import miliseconds_to_hms
+from .utils.helpers import miliseconds_to_hms
 import datetime
 
 

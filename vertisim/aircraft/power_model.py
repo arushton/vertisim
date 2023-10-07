@@ -1,4 +1,4 @@
-from aircraft.flight_helpers import rho, weight, temperature, lift_induced_drag_coef, rotor_disk_area, G_CONSTANT
+from .flight_helpers import rho, weight, temperature, lift_induced_drag_coef, rotor_disk_area, G_CONSTANT
 import numpy as np
 
 def transition_power(altitude, aircraft_params, tom):

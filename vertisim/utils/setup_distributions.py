@@ -1,4 +1,4 @@
-from utils.distribution_generator import DistributionGenerator
+from .distribution_generator import DistributionGenerator
 
 
 def setup_passenger_distributions(**distributions_bundle) -> dict:

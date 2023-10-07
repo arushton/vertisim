@@ -1,14 +1,14 @@
-from vertiport_layout_creator import VertiportLayout
-from configurator import VertiportConfig, TaxiOperationsConfig
-from system_manager import SystemManager
-from airspace_creator import AirspaceCreator
-from airspace import Airspace
+from .vertiport_layout_creator import VertiportLayout
+from .configurator import VertiportConfig, TaxiOperationsConfig
+from .airspace_creator import AirspaceCreator
+from .airspace import Airspace
+from .utils.helpers import get_absolute_path
 from collections import defaultdict
 from typing import Dict, List
 
 
 def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) -> Dict:
-    layout_file_path = network_and_demand['vertiport_layout_file_path']
+    layout_file_path = get_absolute_path(network_and_demand['vertiport_layout_file_path'])
     vertiport_layouts = defaultdict(dict)
     for vertiport_id, vertiport_data in network_and_demand['vertiports'].items():
         layout = vertiport_data['layout']

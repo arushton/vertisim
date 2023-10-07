@@ -1,7 +1,7 @@
 import pandas as pd
 import os
-from utils.json_formatter import create_trajectory_json
-from utils.helpers import is_shared_charger, none_checker, get_str_before_first_occurrence_of_char, find_first_int, \
+from .utils.json_formatter import create_trajectory_json
+from .utils.helpers import is_shared_charger, none_checker, get_str_before_first_occurrence_of_char, find_first_int, \
     find_second_int
 from typing import Dict, List, Union
 import json

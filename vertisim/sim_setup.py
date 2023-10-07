@@ -9,31 +9,31 @@ import simpy
 from typing import Dict, List
 import pandas as pd
 from collections import defaultdict
-from aircraft.aircraft_arrival_setup import AircraftArrivalSetup
-from event_saver import EventSaver
-from system_manager import SystemManager
-from system_managers.rl_system_manager import RLSystemManager
-from system_managers.offline_opt_system_manager import OfflineOptimizationSystemManager
-from system_managers.ondemand_system_manager import OnDemandSystemManager
-from aircraft.charging_strategies.ondemand_charging_strategy import OnDemandChargingStrategy
-from aircraft.charging_strategies.rl_charging_strategy import RLChargingStrategy
-from aircraft.charging_strategies.offline_opt_charging_strategy import OfflineOptimizationChargingStrategy
-from module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
-from passenger_arrival_setup import PassengerArrivalSetup
-from performance_metrics import PerformanceMetrics
-from save_output import save_output
-from scheduler import Scheduler
-from wind.wind import Wind
-from logger import Logger
-from run_step_by_step_simulation import run_step_by_step_simulation
-from utils.create_output_folders import create_output_folders
-from utils.get_aircraft_count import get_aircraft_count
-from utils.bundle_passenger_related_distributions import bundle_distributions
-from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
-from utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_not_none
-from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
-from utils.setup_distributions import setup_passenger_distributions
-from utils.units import sec_to_ms
+from .aircraft.aircraft_arrival_setup import AircraftArrivalSetup
+from .event_saver import EventSaver
+from .system_manager import SystemManager
+from .system_managers.rl_system_manager import RLSystemManager
+from .system_managers.offline_opt_system_manager import OfflineOptimizationSystemManager
+from .system_managers.ondemand_system_manager import OnDemandSystemManager
+from .aircraft.charging_strategies.ondemand_charging_strategy import OnDemandChargingStrategy
+from .aircraft.charging_strategies.rl_charging_strategy import RLChargingStrategy
+from .aircraft.charging_strategies.offline_opt_charging_strategy import OfflineOptimizationChargingStrategy
+from .module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
+from .passenger_arrival_setup import PassengerArrivalSetup
+from .performance_metrics import PerformanceMetrics
+from .save_output import save_output
+from .scheduler import Scheduler
+from .wind.wind import Wind
+from .logger import Logger
+from .run_step_by_step_simulation import run_step_by_step_simulation
+from .utils.create_output_folders import create_output_folders
+from .utils.get_aircraft_count import get_aircraft_count
+from .utils.bundle_passenger_related_distributions import bundle_distributions
+from .utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
+from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_not_none, get_absolute_path
+from .utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
+from .utils.setup_distributions import setup_passenger_distributions
+from .utils.units import sec_to_ms
 
 
 
@@ -141,7 +141,7 @@ class SimSetup:
         return Wind(static_wind=self.airspace_params['static_wind'],
                     wind_magnitude=self.airspace_params['wind_magnitude'],
                     wind_angle=self.airspace_params['wind_angle'],
-                    wind_data_file_path=self.airspace_params['wind_data_file_path'])
+                    wind_data_file_path=get_absolute_path(self.airspace_params['wind_data_file_path']))
     
     def compute_vertiport_distances(self) -> pd.DataFrame:
         """
@@ -149,7 +149,7 @@ class SimSetup:
         """
         # Import vertiport distance
         vertiport_distances = calc_vertiport_distances(
-            vertiport_network_file_path=self.network_and_demand_params['vertiport_network_file_path'],
+            vertiport_network_file_path=get_absolute_path(self.network_and_demand_params['vertiport_network_file_path']),
             vertiport_ids=self.vertiport_ids,
             vertiport_layouts=self.vertiport_layouts,
             network_simulation=self.sim_params['network_simulation'])
@@ -218,7 +218,7 @@ class SimSetup:
         # Import aircraft energy consumption data
         if self.aircraft_params['aircraft_energy_consumption_data_folder_path'] is not None:
             aircraft_energy_consumption_data = import_aircraft_energy_consumption_data(
-                folder_path=self.aircraft_params['aircraft_energy_consumption_data_folder_path'],
+                folder_path=get_absolute_path(self.aircraft_params['aircraft_energy_consumption_data_folder_path']),
                 aircraft_models=list(self.aircraft_params['aircraft_model']),
                 ranges=list(self.vertiport_distances['distance']))
             if self.sim_params['verbose']:
@@ -268,7 +268,7 @@ class SimSetup:
                                     vertiports=self.vertiports,
                                     vertiport_distances=self.vertiport_distances,
                                     airspace_params=self.airspace_params,
-                                    wind_data_file_path=self.airspace_params['wind_data_file_path'])
+                                    wind_data_file_path=get_absolute_path(self.airspace_params['wind_data_file_path']))
     
     def build_node_locations_dict(self):
         # Build node locations dictionary
@@ -323,7 +323,7 @@ class SimSetup:
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
-                'num_aircraft': get_aircraft_count(self.network_and_demand_params),
+                'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
                 'scheduler': self.scheduler,
                 'wind': self.wind,
                 'airspace': self.airspace,
@@ -342,7 +342,7 @@ class SimSetup:
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
-                'num_aircraft': get_aircraft_count(self.network_and_demand_params),
+                'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
                 'scheduler': self.scheduler,
                 'wind': self.wind,
                 'airspace': self.airspace,
@@ -362,7 +362,7 @@ class SimSetup:
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
-                'num_aircraft': get_aircraft_count(self.network_and_demand_params),
+                'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
                 'scheduler': self.scheduler,
                 'wind': self.wind,
                 'airspace': self.airspace,
@@ -401,8 +401,8 @@ class SimSetup:
                 network_simulation=self.sim_params['network_simulation'],
                 vertiport_configs=self.network_and_demand_params['vertiports'],
                 vertiport_layouts=self.vertiport_layouts,
-                flight_schedule_file_path=self.network_and_demand_params['flight_schedule_file_path'],
-                charge_schedule_file_path=self.network_and_demand_params['charge_schedule_file_path'],
+                flight_schedule_file_path=get_absolute_path(self.network_and_demand_params['flight_schedule_file_path']),
+                charge_schedule_file_path=get_absolute_path(self.network_and_demand_params['charge_schedule_file_path']),
                 aircraft_params=self.aircraft_params,
                 system_manager=self.system_manager,
                 scheduler=self.scheduler,

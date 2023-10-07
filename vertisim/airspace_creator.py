@@ -1,7 +1,7 @@
-from utils.distance import haversine_dist
+from .utils.distance import haversine_dist
 import numpy as np
 from typing import List, Dict
-from utils.read_files import read_input_file
+from .utils.read_files import read_input_file
 from collections import defaultdict
 import pandas as pd
 

@@ -1,7 +1,7 @@
-from aircraft.charging_strategies.base_charging_strategy import BaseChargingStrategy
-from utils.units import ms_to_sec, sec_to_ms
-from utils.helpers import check_magnitude_order, miliseconds_to_hms, careful_round
-from aircraft.aircraft import AircraftStatus
+from .base_charging_strategy import BaseChargingStrategy
+from ...utils.units import ms_to_sec, sec_to_ms
+from ...utils.helpers import check_magnitude_order, miliseconds_to_hms, careful_round
+from ..aircraft import AircraftStatus
 
 class RLChargingStrategy(BaseChargingStrategy):
     def get_charging_time(self, aircraft):

@@ -1,4 +1,4 @@
-from vertisim import VertiSim
+from .vertisim import VertiSim
 import json
 import simpy
 
