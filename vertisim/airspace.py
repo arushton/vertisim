@@ -60,17 +60,17 @@ class Airspace:
         }
     
     
-    def get_airspace_states_array(self) -> np.array:
+    def get_airspace_states(self) -> Dict:
         """
-        Flattens the airspace states into a 1D array.
+        Gets the states of all the airnodes in the airspace.
         """
-        all_states = []
+        all_states = {}
         for flight_direction in self.flight_directions:
-            all_states.extend(
-                self.airlink_resources[flight_direction][airnode_id].get_airnode_states_array()
-                for airnode_id in self.waypoint_ids[flight_direction]
-            )
-        return np.concatenate(all_states)
+            for airnode_id in self.waypoint_ids[flight_direction]:
+                all_states |= self.airlink_resources[flight_direction][
+                    airnode_id
+                ].get_airnode_states()
+        return all_states
     
     
     @staticmethod
@@ -140,7 +140,7 @@ class Airnode:
         self.airnode_resource = airnode_resource or simpy.Resource(self.env, capacity=self.airnode_capacity)
     
 
-    def get_airnode_states_dict(self) -> Dict:
+    def get_airnode_states(self) -> Dict:
         return {
             self.airnode_id: {
                 'num_jobs_in_service': self.airnode_resource.count,

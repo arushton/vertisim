@@ -4,32 +4,14 @@ import os
 from pathlib import Path
 import re
 from math import pi
-import matplotlib.pyplot as plt
 
 cwd = Path.cwd()
 
 # ------------------------ Inputs ------------------------
-
-def refresh_wind_params(static_wind: bool, wind_magnitude: float, wind_angle: float):
-    """Used for repeatedly calling SimSetup. """
-    return {
-    'airspace_layout_file_path': None,
-    'airspace_layout_sheet_name': None,
-    'airlink_capacity': 1,
-    # If the airlink file is not None, then the below parameters are not used.
-    'airlink_segment_length': 1,  # miles
-    'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
-    'cruise_altitude': 450,  # m
-    'static_wind': static_wind, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.
-    'wind_magnitude': wind_magnitude,  # m/s
-    'wind_angle': wind_angle,  # deg - Relative to the aircraft heading
-    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/SFBayArea_wind_data.csv'
-    }  
-
 # Simulation parameters
 # --------------------
 sim_params = {
-    'sim_time': 3 * 60 * 60,  # seconds
+    'max_sim_time': 3 * 60 * 60,  # seconds
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
@@ -39,11 +21,17 @@ sim_params = {
     'flight_duration_constant': None,  # seconds or None - Applies ground holding if the flight duration is less than this value.
     'charge_interruption': False, #TODO: Not supported yet.
     'charge_assignment_sensitivity': 2.4, # WILL REMOVE THIS PARAMETER.
-    'step_by_step_sim': False,
-    'step_by_step_sim_state_type': 'array', # 'array' or 'dict' array can be used by the external optimization tools. dict is for human readability.
-    'simulation_states': ['num_aircraft', 'num_flight_requests', 'num_available_fato', 'num_available_parking_pad', 'num_waiting_passengers',
-                          'total_passenger_waiting_time', 'arrival_fix', 'origin_vertiport_id', 'destination_vertiport_id', 'soc',
+    'step_by_step_sim': True,
+    'step_by_step_sim_response_type': 'auto', # ['hil', 'auto']. HIL stops the simulation at each event and waits input from user to continue 
+                                              # 'auto' stops the simulation at the specific events and dumps the states. 
+                                              # 'auto' can be used by the external optimization tools.
+    'simulation_states': ['num_aircraft', 'num_flight_requests', 'num_available_fato', 'num_available_parking_pad', 
+                          'num_waiting_passengers', 'total_passenger_waiting_time', 'arrival_fix', 
+                          'origin_vertiport_id', 'destination_vertiport_id', 'soc',
                           'time_to_arrival', 'status', 'wind_speed', 'wind_direction'], # For every vertiport, aircraft, and airspace node
+                          # These are the states that will be returned by the simulator if any external applications
+                          # (AI and Optimization algorithms) that use the simulator as the environment.
+                          # If not needed, keep it None.
     'fleet_rebalancing': True,
     'save_trajectories': True, # If True, then the simulator will save the trajectories of the aircraft and passengers.
     'only_aircraft_simulation': False,  # If True, then the simulation will only simulate aircraft turnaround.
@@ -57,7 +45,7 @@ sim_params = {
 
 # Network and Trips
 # -----------------
-network_and_demand = {
+network_and_demand_params = {
     'vertiport_network_file_path': f'{str(cwd)}/vertisim/input/network/network_SFO_MV.csv',
     'vertiport_layout_file_path': f'{str(cwd)}/vertisim/input/vertiport_layouts/vertiport_layout.xls',
 
@@ -166,7 +154,19 @@ network_and_demand = {
 
 # Airspace parameters
 # -------------------
-airspace_params = refresh_wind_params(False, 8, pi)
+airspace_params = {
+    'airspace_layout_file_path': None, #f'{str(cwd)}/vertisim/input/airspace/finalized_route_0615.csv',
+    'airspace_layout_sheet_name': None,
+    'airlink_capacity': 1,
+    # If the airlink file is not None, then the below parameters are not used.
+    'airlink_segment_length': 1,  # miles
+    'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
+    'cruise_altitude': 450,  # m
+    'static_wind': False, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.
+    'wind_magnitude': 8,  # m/s
+    'wind_angle': pi,  # deg - Relative to the aircraft heading
+    'wind_data_file_path': f'{str(cwd)}/vertisim/input/airspace/SFBayArea_wind_data.csv'
+}
 
 # Passenger parameters
 # --------------------
@@ -315,6 +315,5 @@ SimSetup(sim_params=sim_params,
          passenger_params=passenger_params,
          aircraft_params=aircraft_params,
          output_params=output_params,
-         sim_start_time=start_time,
-         plt=plt
+         sim_start_time=start_time
          )

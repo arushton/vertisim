@@ -58,10 +58,12 @@ For questions and collaborations, please email eminburak_onat@berkeley.edu. Than
 
 # How To Run
 1. Activate the vertisim environment (for conda users `conda activate vertisim`)
-2. There are three ways of running vertisim. <br>
+2. Create config.json file
+3. There are three ways of running vertisim. <br>
 (inside VertiSim folder): <br>
-a) Run a single configuration: `python3 vertisim/config.py` <br>
-b) Run many configuration serially: `python3 vertisim/loop_runner.py` <br>
-c) Run many configuration in parallel (CPU parallelization by multiprocessing): `python3 vertisim/loop_runner_multiprocess.py`
+a) Run a single configuration: `python3 vertisim/runner.py` <br>
+Currently, the below methods are not maintained and won't work.  <br>
+b) Run many configuration serially: `loop_runner.py` <br>
+c) Run many configuration in parallel (CPU parallelization by multiprocessing): `loop_runner_multiprocess.py`
 
 
