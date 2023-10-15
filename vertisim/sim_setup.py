@@ -434,9 +434,6 @@ class SimSetup:
             },
             output_dir=self.output_folder_path,
             config_output_file_name=self.output_params['config_output_file_name'],
-            # aircraft_trajectory_output_file_name=output_params['aircraft_trajectory_output_file_name'],
-            # passenger_trajectory_output_file_name=output_params['passenger_trajectory_output_file_name'],
-            # flight_schedule_output_file_name=output_params['flight_schedule_output_file_name'],
             performance_metrics_output_file_name=self.output_params['performance_metrics_output_file_name'],
             performance_metrics=performance_metrics,
             sim_id=self.sim_id

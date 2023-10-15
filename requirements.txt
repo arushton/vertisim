@@ -10,3 +10,5 @@ simpy==4.0.1
 sympy>=1.11.1
 tqdm>=4.64.1
 xlrd>=2.0.1
+mysql
+mysql-connector-python

@@ -127,12 +127,12 @@ class Wind:
         return Wind.swap_angle_relative_x_axis_north(angle_from_x) 
     
     @staticmethod
-    def magnitude(vector: np.ndarray):
+    def magnitude(vector: np.ndarray) -> float:
         """Calculate magnitude of numpy vector."""
         return np.sqrt(np.dot(vector, vector))
     
     @staticmethod
-    def convert_to_range_zero_to_two_pi(angle: float, epsilon=1e-9):
+    def convert_to_range_zero_to_two_pi(angle: float, epsilon=1e-9) -> float:
         """Bring an angle (radians) into the range [0, 2pi)."""
         
         while angle > 2 * pi:
