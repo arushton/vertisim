@@ -5,6 +5,7 @@ from utils.read_files import read_input_file
 from utils.helpers import set_seed
 from utils.units import mph_to_metersec, degrees_to_radians
 import datetime as dt
+from math import pi
 
 
 class WindDataProcessor:
@@ -17,7 +18,7 @@ class WindDataProcessor:
         data = read_input_file(file_path)
         data['datetime'] = pd.to_datetime(data['datetime'])
         data['windspeed'] = data['windspeed'].apply(mph_to_metersec)
-        data['winddir'] = data['winddir'].apply(degrees_to_radians)
+        data['winddir'] = data['winddir'].apply(lambda x: x * pi / 180)
         return data[['locationname', 'datetime', 'windspeed', 'winddir']]        
 
     def pick_random_day(self) -> dt.date:
@@ -28,11 +29,22 @@ class WindDataProcessor:
         set_seed(how='instant')
         return random.choice(unique_days)
 
+    def pick_random_day_wind_max_threshold(self, max_wind_speed_threshold) -> dt.date:
+        """
+        Picks a random day from the wind data where maximum windspeed is greater than max_wind_speed_threshold [m/s].
+        """
+        grouped_data = self.wind_data.groupby(self.wind_data['datetime'].dt.date)['windspeed'].max()
+        filtered_days = grouped_data[grouped_data > max_wind_speed_threshold].index.tolist()
+        if len(filtered_days) == 0:
+            raise ValueError(f"No days with maximum windspeed greater than {max_wind_speed_threshold} m/s found.")
+        set_seed(how='instant')
+        return random.choice(filtered_days)
+
     def get_wind_data_for_random_day(self):
         """
         Filters the wind data for a randomly selected day.
         """
-        random_day = self.pick_random_day()
+        random_day = self.pick_random_day_wind_max_threshold(max_wind_speed_threshold=15) # self.pick_random_day()
         mask = (self.wind_data['datetime'].dt.date == random_day)
         return self.wind_data[mask].reset_index(drop=True)
     

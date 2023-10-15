@@ -7,8 +7,10 @@ from utils.units import ms_to_hr
 
 class Wind:
     
+    RADIUS_EARTH = 6371 # km
+
     """Relevant usage in:
-        lines 894-914 of aircraft.py
+        lines 894-935 of aircraft.py
     """
 
     def __init__(self, static_wind=True, wind_magnitude=0, wind_angle=0, wind_data_file_path=None):
@@ -18,10 +20,6 @@ class Wind:
             self.wind_angle = wind_angle
         else:
             self.wind_data_processor = WindDataProcessor(wind_data_file_path)
-
-
-
-    RADIUS_EARTH = 6371 # km
             
     @staticmethod
     def ground_velocity(true_air_velocity: np.ndarray, v_wind: np.ndarray) -> np.ndarray:
@@ -79,7 +77,6 @@ class Wind:
         wind_heading = self.wind_angle + aircraft_heading
                 
         return Wind.heading_to_vector(wind_heading, magnitude=self.wind_magnitude)
-
 
     def make_wind_vector_relative_to_north(self, wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
         """Generate a wind vector coming from wind_origin_heading, where wind_origin_heading is relative to north.
@@ -163,6 +160,8 @@ class Wind:
             true_airspeed = Wind.magnitude(true_airspeed_v)
             assert abs(true_airspeed - cruise_speed) < 1e-9, f'Aircraft true airspeed is not equal to cruise speed. Cruise speed = {cruise_speed}, True airspeed = {true_airspeed}.'
 
+    # --- WIND SPEED / DIR GETTERS ---
+
     def get_static_wind_data(self) -> Dict[str, Union[float, int]]:
         """
         Returns static wind data if available.
@@ -171,7 +170,6 @@ class Wind:
             dict: A dictionary containing wind magnitude and wind angle.
         """
         return {'wind_magnitude': self.wind_magnitude, 'wind_angle': self.wind_angle}
-
     
     def fetch_wind_states(self, locations: List[str]) -> Dict[str, Dict[str, Union[float, int]]]:
         """
@@ -205,7 +203,6 @@ class Wind:
             for location_id in locations
         }
 
-    
     def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str) -> Dict:
         """
         Retrieves wind data for a specific time and location.
@@ -218,14 +215,6 @@ class Wind:
             dict: A dictionary containing wind data for the specified time and location.
         """        
         return self.wind_data_processor.get_time_and_location_specific_wind_states(time_of_day, location)
-    
-    # --- NOT IMPLEMENTED (YET)
-    
-    @staticmethod
-    def api_wind_velocity(latitude: float, longitude: float, altitude: float) -> np.ndarray:
-        """Get the approximate wind speed at the given point (latitude, longitude, altitude above sea level)."""
-        # TODO: implement, High Resolution Rapid Refresh API
-        pass
     
     # --- UNUSED FUNCTIONS BELOW ---
 

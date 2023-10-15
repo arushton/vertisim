@@ -19,6 +19,8 @@ from enum import Enum
 import sys
 sys.path.append("vertisim")
 from memoize import PhaseParameters
+from utils.visualize import Visualizer
+import matplotlib.pyplot as plt
 
 class Aircraft:
     """
@@ -427,7 +429,6 @@ class Aircraft:
     def guess_initial_velocity(self):
         return [self.forward_velocity, np.mean([self.vertical_velocity, self.max_vertical_velocity])]
 
-
     def descend_to_final_approach_fix(self, final_approach_fix):  
         horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, final_approach_fix)  
 
@@ -728,7 +729,6 @@ class Aircraft:
         self.detailed_status = 'parked'
         self.status = AircraftStatus.IDLE
 
-
     def aircraft_take_off_process(self, take_off_fato_id):
         """Defines the take-off process of an aircraft."""
         self.preflight_soc = self.soc
@@ -814,7 +814,6 @@ class Aircraft:
                                         f' climb transition energy consumption: {climb_transition_energy_consumption}.')
         
         self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
-
 
     def climb_to_cruise_altitude(self):
         """Climbing to cruise altitude phase."""
@@ -946,7 +945,6 @@ class Aircraft:
         yield self.env.process(self.system_manager.simulate_terminal_airspace_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
         )        
-
 
     def release_fato_and_departure_fix(self):
         """Releasing FATO and departure fix."""
@@ -1311,7 +1309,7 @@ class Aircraft:
         cruise_power = self.energy_cache.get(parameters, None)
         
         if not cruise_power:
-            cruise_power = cruise_phase_power(cruise_velocity=cruise_velocity,
+            cruise_power = cruise_phase_power(cruise_speed=cruise_velocity,
                                             aircraft_params=self.aircraft_params,
                                             tom=self.tom)
             cruise_power = watt_to_kw(cruise_power)
@@ -1406,7 +1404,6 @@ class Aircraft:
         destination_distance = haversine_dist(aircraft_lat, aircraft_long, destination_lat, destination_long)
 
         return origin_vertiport_id if origin_distance < destination_distance else destination_vertiport_id
-    
 
     def estimate_time_to_arrival(self):
         """
@@ -1418,156 +1415,9 @@ class Aircraft:
                                                destination_vertiport_id=self.destination_vertiport_id,
                                                flight_direction=self.flight_direction,
                                                system_manager=self.system_manager)/60, 2)        
-
-
     
 class AircraftStatus(Enum):
     CHARGE = 1
     IDLE = 2
     FLY = 3
-
-
-
-
-    # def fly_in_the_airspace(self, user_modification=False):
-    #     """
-    #     Finds the location of the aircraft in the airspace from self.system_manager.airspace.airlink_resources
-    #     and traverses the airspace starting from that location        
-    #     """      
-    #     first_waypoint = True
-    #     # Get the airlink resources for the flight direction
-    #     airlink_resources = self.system_manager.airspace.airlink_resources[self.flight_direction]
-
-    #     # Find the current location of the aircraft in the airlink resources
-    #     current_location_index = None
-    #     for index, (waypoint_id, _) in enumerate(airlink_resources.items()):
-    #         if waypoint_id == self.location:
-    #             current_location_index = index
-    #             break
-
-    #     if current_location_index is None:
-    #         raise ValueError(f"Aircraft's current location ({self.location}) not found in the airlink resources")
-
-    #     # Start iterating the airlink resources from the next location. Second to last node is the final approach fix 
-    #     # and the last node is th ehover fix. We don't request them here.
-    #     if user_modification:
-    #         starting_index = current_location_index
-    #     else:
-    #         starting_index = current_location_index + 1
-
-    #     for waypoint_id, resource in list(airlink_resources.items())[starting_index:-2]:
-    #         with resource.airnode_resource.request() as req:
-    #             yield req
-    #             # Compute the horizontal and vertical distance between the current location and the next waypoint
-    #             horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, waypoint_id)
-    #             # If the vertical distance is not zero, then the aircraft is climbing or descending. If the previous flight phase
-    #             # is not cruise, then the aircraft is climbing. Otherwise, the aircraft is descending.
-    #             # TODO: Flight phase might need to be an input parameter. Otherwise, climb-cruise-climb combination is not possible to capture.
-    #             if vertical_distance != 0 and self.detailed_status == 'climb':
-    #                 initial_velocity_guess = self.guess_initial_velocity()
-    #                 self.forward_velocity, self.vertical_velocity = self.velocity_optimizer.optimize(
-    #                                                         V=initial_velocity_guess,
-    #                                                         tom=self.tom,
-    #                                                         altitude=self.altitude,
-    #                                                         horizontal_distance=horizontal_distance,
-    #                                                         vertical_distance=vertical_distance,
-    #                                                         cost_type='climb')
-    #                 climb_time = round(horizontal_distance / self.forward_velocity)
-    #                 yield self.env.timeout(round(sec_to_ms(climb_time)))
-    #                 energy_consumption = round(self.climb_energy_consumption(velocity=self.forward_velocity,
-    #                                                                         climb_end_altitude=self.get_node_altitude(waypoint_id),
-    #                                                                         climb_time=climb_time), 2)
-    #                 self.total_energy_consumption += energy_consumption  
-
-    #                 self.save_process_time(event='climb', process_time=climb_time)
-    #                 self.save_flight_phase_energy(flight_phase='climb', energy=energy_consumption)
-
-    #                 self.aircraft_logger.debug(f'Continue Climb: Aircraft {self.tail_number} has arrived at {waypoint_id} with forward velocity {self.forward_velocity} and'
-    #                                             f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Climb time: {climb_time},'
-    #                                                 f' climb energy consumption: {energy_consumption}.')
-    #             # If the vertical distance is not zero and the previous flight phase is cruise or descend, then the aircraft is descending.
-    #             elif vertical_distance != 0 and self.detailed_status in ['descend', 'cruise']:
-    #                 self.detailed_status = 'descend'
-    #                 initial_velocity_guess = self.guess_initial_velocity()
-    #                 self.forward_velocity, self.vertical_velocity = self.velocity_optimizer.optimize(
-    #                                                         V=initial_velocity_guess,
-    #                                                         tom=self.tom,
-    #                                                         altitude=self.altitude,
-    #                                                         horizontal_distance=horizontal_distance,
-    #                                                         vertical_distance=vertical_distance,
-    #                                                         cost_type='descend')
-    #                 descend_time = round(horizontal_distance / self.forward_velocity)
-    #                 yield self.env.timeout(sec_to_ms(descend_time))
-    #                 energy_consumption = round(self.descend_energy_consumption(velocity=self.forward_velocity,
-    #                                                                         descend_end_altitude=self.get_node_altitude(waypoint_id),
-    #                                                                         descend_time=descend_time), 2)
-    #                 self.total_energy_consumption += energy_consumption 
-
-    #                 self.save_process_time(event='descend', process_time=descend_time)
-    #                 self.save_flight_phase_energy(flight_phase='descend', energy=energy_consumption)
-
-    #                 self.aircraft_logger.debug(f'Descend: Aircraft {self.tail_number} has arrived at {waypoint_id} with forward velocity {self.forward_velocity} and'
-    #                                               f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Descend time: {descend_time},'
-    #                                                     f' descend energy consumption: {energy_consumption}.')               
-    #             else:
-    #                 # If the vertical distance is zero, then the aircraft is in cruise
-    #                 self.detailed_status = 'cruise'
-    #                 if self.aircraft_params['cruise_speed']:
-    #                     cruise_speed = self.aircraft_params['cruise_speed'] 
-    #                 else:                   
-    #                     cruise_speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
-                        
-    #                 """
-    #                 WIND IMPLEMENTATION
-                    
-    #                 Airspeed affects power. Ground speed affects travel time, which then affects total energy consumption.
-    #                 Therefore the effects of wind on power are decoupled from those on travel time.
-    #                 """   
-                                            
-    #                 latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
-    #                 latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[waypoint_id]
-    #                 destination_heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
-                    
-    #                 set_seed(how='instant')
-    #                 # wind_speed, wind_direction = self.system_manager.airspace.get_wind_speed_and_direction()
-    #                 # v_wind = Wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
-
-    #                 # minimum ground speed allowed
-    #                 self.stall_speed = 30
-
-    #                 # forcing static wind type
-    #                 wind_speed = 8 # m / s
-    #                 wind_direction = pi # headwind
-    #                 v_wind = Wind.make_wind_vector_relative_to_the_aircraft(destination_heading, wind_direction, wind_speed)
-                    
-    #                 # note: |true_vector| = self.forward_velocity UNLESS wind is too strong, and a greater true_airspeed is needed
-    #                 true_vector = Wind.wind_adjusted_true_velocity(self.forward_velocity, destination_heading, v_wind, self.stall_speed)
-                    
-    #                 ground_vector = Wind.ground_velocity(true_vector, v_wind)
-                    
-    #                 # Verify aircraft flight direction and speeds.
-    #                 Wind.verify_aircraft_heading(ground_vector, destination_heading)
-    #                 Wind.verify_aircraft_speeds(ground_vector, self.stall_speed, self.forward_velocity, true_vector)
-                        
-    #                 link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
-    #                                                                                     destination=waypoint_id, 
-    #                                                                                     horizontal_speed=Wind.magnitude(ground_vector))
-    #                 yield self.env.timeout(sec_to_ms(link_traversal_time))
-                    
-    #                 # Compute energy consumption
-    #                 energy_consumption = round(self.cruise_energy_consumption(velocity=Wind.magnitude(true_vector), 
-    #                                                                           time_cruise=link_traversal_time), 2)
-    #                 self.total_energy_consumption += energy_consumption
-
-    #                 # Logging
-    #                 self.save_process_time(event='cruise', process_time=link_traversal_time)
-    #                 self.save_flight_phase_energy(flight_phase='cruise', energy=energy_consumption)
-            
-    #                 self.aircraft_logger.debug(f"Aircraft {self.tail_number} V_h: {self.forward_velocity}, V_v velocity: {self.vertical_velocity}, time: {link_traversal_time},"
-    #                                         f" energy consumption: {energy_consumption} during {self.detailed_status} from {self.location} to {waypoint_id}. SOC: {round(self.soc, 2)}")
-                    
-    #         self.update_aircraft_state(waypoint_id, energy_consumption, 'cruise')         
-
-    #     yield self.env.process(self.system_manager.simulate_terminal_airspace_arrival_process(
-    #         aircraft=self, arriving_passengers=self.passengers_onboard)
-    #     )    
+    

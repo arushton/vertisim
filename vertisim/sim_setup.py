@@ -23,6 +23,7 @@ from utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_
 from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from utils.setup_distributions import setup_passenger_distributions
 from utils.units import sec_to_ms
+import numpy as np
 
 
 
@@ -34,7 +35,8 @@ class SimSetup:
                  passenger_params: Dict,
                  aircraft_params: Dict,
                  output_params: Dict,
-                 sim_start_time: int):
+                 sim_start_time: int,
+                 plt=None):
         self.sim_params = sim_params
         self.network_and_demand = network_and_demand
         self.airspace_params = airspace_params
@@ -78,6 +80,9 @@ class SimSetup:
         self.sim_id = get_random_id()
         self.performance_metrics = self.calculate_performance_metrics()
         self.save_results()
+        
+        if plt: # Used to plot energy consumption and flight time when SimSetup is called repeatedly.
+            self.add_to_energy_time_plot(plt)
 
     def create_environment(self):
         """
@@ -353,7 +358,6 @@ class SimSetup:
         if self.sim_params['verbose']:
             print("Success: Aircraft arrival process is created.")
 
-
     def create_passenger_arrival_process(self):
         if self.sim_params['only_aircraft_simulation'] is False:
             # Load or generate passenger arrival schedule and start the passenger arrival process
@@ -446,3 +450,36 @@ class SimSetup:
             sim_id=self.sim_id
         )
         print(f"Success: Results are saved in {self.output_folder_path}.")
+
+    def add_to_energy_time_plot(self, plt):
+        
+        flight_directions = []  
+        mean_energies = []
+        std_deviations = [] 
+        
+        for flight_direction in self.airspace.flight_directions:
+            
+            mean_energy = self.performance_metrics[flight_direction]['energy_consumption']['mean']
+            std_deviation = self.performance_metrics[flight_direction]['energy_consumption']['std']
+        
+            flight_directions.append(flight_direction)
+            mean_energies.append(mean_energy)
+            std_deviations.append(std_deviation)
+        
+        num_bars = len(flight_directions)
+        
+        x_coords = np.arange(num_bars)
+        
+        bars = plt.bar(x_coords, mean_energies, label='Mean Energy')
+        
+        plt.errorbar(x_coords, mean_energies, yerr=std_deviations, fmt='none', color='black', label='Standard Deviation')
+        
+        plt.xticks(x_coords, flight_directions)
+        
+        plt.xlabel('Flight Direction')
+        plt.ylabel('Mean Energy')
+        plt.title('Average Energy Consumption Across Network')
+        plt.legend()
+        
+        plt.show()
+        
