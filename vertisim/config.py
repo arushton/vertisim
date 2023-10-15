@@ -310,7 +310,7 @@ output_params = {
 start_time = time.time()
 
 SimSetup(sim_params=sim_params,
-         network_and_demand=network_and_demand,
+         network_and_demand_params=network_and_demand_params,
          airspace_params=airspace_params,
          passenger_params=passenger_params,
          aircraft_params=aircraft_params,
