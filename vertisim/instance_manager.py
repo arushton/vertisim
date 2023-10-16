@@ -1,4 +1,4 @@
-from .vertisim import VertiSim
+from vertisim import VertiSim
 
 class InstanceManager:
     def __init__(self, env, config, reward_function_parameters):

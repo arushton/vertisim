@@ -1,15 +1,19 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
-from ..vertisim.instance_manager import InstanceManager
+import sys
+sys.path.append('/app')
+
+from vertisim.instance_manager import InstanceManager
 from .models import create_action_models
 import simpy
 from .config import CONFIG  # Import the loaded configuration
 
+
 app = FastAPI()
 
 env = simpy.Environment()
-reward_function_parameters = CONFIG["reward_function_parameters"]
+reward_function_parameters = CONFIG["external_optimization_params"]["reward_function_parameters"]
 
 instance_manager = InstanceManager(env=env,
                                    config=CONFIG,
