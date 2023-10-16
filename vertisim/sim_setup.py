@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import time
 
@@ -9,25 +9,31 @@ import simpy
 from typing import Dict, List
 import pandas as pd
 from collections import defaultdict
-from aircraft.aircraft_arrival_setup import AircraftArrivalSetup
-from event_saver import EventSaver
-from system_manager import SystemManager
-from module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
-from passenger_arrival_setup import PassengerArrivalSetup
-from performance_metrics import PerformanceMetrics
-from save_output import save_output
-from scheduler import Scheduler
-from wind.wind import Wind
-from logger import Logger
-from run_step_by_step_simulation import run_step_by_step_simulation
-from utils.create_output_folders import create_output_folders
-from utils.get_aircraft_count import get_aircraft_count
-from utils.bundle_passenger_related_distributions import bundle_distributions
-from utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
-from utils.helpers import set_seed, get_random_id, create_dict_for_fixes, check_not_none
-from utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
-from utils.setup_distributions import setup_passenger_distributions
-from utils.units import sec_to_ms
+from .aircraft.aircraft_arrival_setup import AircraftArrivalSetup
+from .event_saver import EventSaver
+from .system_manager import SystemManager
+from .system_managers.rl_system_manager import RLSystemManager
+from .system_managers.offline_opt_system_manager import OfflineOptimizationSystemManager
+from .system_managers.ondemand_system_manager import OnDemandSystemManager
+from .aircraft.charging_strategies.ondemand_charging_strategy import OnDemandChargingStrategy
+from .aircraft.charging_strategies.rl_charging_strategy import RLChargingStrategy
+from .aircraft.charging_strategies.offline_opt_charging_strategy import OfflineOptimizationChargingStrategy
+from .module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
+from .passenger_arrival_setup import PassengerArrivalSetup
+from .performance_metrics import PerformanceMetrics
+from .save_output import save_output
+from .scheduler import Scheduler
+from .wind.wind import Wind
+from .logger import Logger
+from .run_step_by_step_simulation import run_step_by_step_simulation
+from .utils.create_output_folders import create_output_folders
+from .utils.get_aircraft_count import get_aircraft_count
+from .utils.bundle_passenger_related_distributions import bundle_distributions
+from .utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
+from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes
+from .utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
+from .utils.setup_distributions import setup_passenger_distributions
+from .utils.units import sec_to_ms
 
 
 
@@ -35,18 +41,24 @@ class SimSetup:
     def __init__(self,
                  env: simpy.Environment,
                  sim_params: Dict,
+                 sim_mode: Dict,
+                 external_optimization_params: Dict,
                  network_and_demand_params: Dict,
                  airspace_params: Dict,
                  passenger_params: Dict,
                  aircraft_params: Dict,
                  output_params: Dict,
-                 stopping_events: Dict = None):
+                 stopping_events: Dict = None,
+                 truncation_event: simpy.Event = None):
         self.sim_params = sim_params
+        self.sim_mode = sim_mode
+        self.external_optimization_params = external_optimization_params
         self.network_and_demand_params = network_and_demand_params
         self.airspace_params = airspace_params
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
+        self.truncation_event = truncation_event
 
         self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
@@ -55,7 +67,8 @@ class SimSetup:
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
         self.stopping_events = stopping_events
         self.vertiport_layouts = self.create_vertiport_layout()
-        self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids        
+        self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids 
+        self.vertiport_id_index_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)       
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
         self.check_inputs()
         self.num_destinations = self.get_num_destinations()
@@ -80,14 +93,7 @@ class SimSetup:
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
 
-        
 
-
-    def create_environment(self):
-        """
-        Creates the environment
-        """
-        return simpy.Environment()   
 
     def create_loggers(self):
         """
@@ -122,7 +128,14 @@ class SimSetup:
         """
         Returns the vertiport ids
         """
-        return list(self.network_and_demand_params['vertiports'].keys())    
+        return list(self.network_and_demand_params['vertiports'].keys()) 
+
+    @staticmethod
+    def create_vertiport_id_index_mapping(vertiport_ids: List):
+        """
+        Creates a mapping between vertiport ids and their index in the list
+        """
+        return dict(enumerate(vertiport_ids))
     
     def create_wind(self):
         """
@@ -153,6 +166,24 @@ class SimSetup:
         """
         if len(self.vertiport_ids) != len(self.vertiport_layouts.keys()):
             raise ValueError('The number of vertiport ids and layouts do not match. Check the vertiport network or vertiport input configs.')
+            
+        if self.sim_mode['offline_optimization'] == True and self.sim_mode['client_server'] == True:
+            raise ValueError('Both offline and client_server cannot be True at the same time. Check sim_mode.')
+        
+        if self.sim_mode['offline_optimization'] == True and self.sim_mode['ondemand'] == True:
+            raise ValueError('Both offline optimization and ondemand cannot be True at the same time. Check sim_mode.')
+        
+        if self.sim_mode['client_server'] == True and self.sim_mode['ondemand'] == True:
+            raise ValueError('Both online optimization and ondemand cannot be True at the same time. Check sim_mode.')
+        
+        if self.sim_mode['offline_optimization'] == False and self.sim_mode['client_server'] == False and self.sim_mode['ondemand'] == False:
+            raise ValueError('At least one of offline optimization, online optimization or ondemand must be True. Check sim_mode.')
+        
+        if self.sim_mode['offline_optimization'] == True and self.network_and_demand_params['flight_schedule_file_path'] is None:
+            raise ValueError('Offline optimization cannot be run without a flight schedule. Check network_and_demand_params.')
+        
+        if self.external_optimization_params['charge_assignment_sensitivity'] and self.network_and_demand_params['charge_schedule_file_path'] is None:
+            raise ValueError('Charge assignment sensitivity is needed to run charge schedule. Check network_and_demand_params and external_optimization_params.')
 
     def get_num_destinations(self) -> int:
         """
@@ -245,8 +276,8 @@ class SimSetup:
                             vertiports=self.vertiports,
                             system_manager=None,
                             aircraft_capacity=self.aircraft_params['pax'],
-                            is_fixed_schedule=self.fixed_schedule,
-                            charge_assignment_sensitivity=self.sim_params['charge_assignment_sensitivity'],
+                            is_fixed_schedule=self.sim_mode['offline_optimization'],
+                            charge_assignment_sensitivity=self.external_optimization_params['charge_assignment_sensitivity'],
                             logger=self.logger,
                             aircraft_logger=self.aircraft_logger,
                             passenger_logger=self.passenger_logger,
@@ -257,8 +288,7 @@ class SimSetup:
         return create_airspace_layout(env=self.env,
                                     vertiports=self.vertiports,
                                     vertiport_distances=self.vertiport_distances,
-                                    airspace_params=self.airspace_params,
-                                    wind_data_file_path=self.airspace_params['wind_data_file_path'])
+                                    airspace_params=self.airspace_params)
     
     def build_node_locations_dict(self):
         # Build node locations dictionary
@@ -281,72 +311,134 @@ class SimSetup:
         merged_dict |= fix_nodes
         return dict(merged_dict)
     
+    @staticmethod
+    def check_system_manager_type(sim_mode):
+        if sim_mode['offline_optimization'] and sim_mode['client_server']:
+            raise ValueError("Both offline and online optimization cannot be True at the same time. Check sim_mode params")
+
+    def get_system_manager_type(self):
+        # Check system manager type input
+        SimSetup.check_system_manager_type(self.sim_mode)
+        # Return system manager type
+        if self.sim_mode['offline_optimization']:
+            return 'offline_optimization'
+        elif self.sim_mode['client_server']:
+            return 'client_server'
+        else:
+            return 'ondemand'
+        
+    @staticmethod
+    def set_system_manager_type(system_manager_type, **kwargs):
+        if system_manager_type == 'offline_optimization':
+            return OfflineOptimizationSystemManager(**kwargs)
+        elif system_manager_type == 'client_server':
+            return RLSystemManager(**kwargs)
+        else:
+            return OnDemandSystemManager(**kwargs) 
+    
     def create_system_manager(self):
-        # Create vertiport manager
-        return SystemManager(
-            env=self.env,
-            vertiports=self.vertiports,
-            vertiport_ids=self.vertiport_ids,
-            num_aircraft=get_aircraft_count(self.network_and_demand_params),
-            stopping_events=self.stopping_events,
-            scheduler=self.scheduler,
-            wind=self.wind,
-            airspace=self.airspace,
-            taxi_config=self.taxi_config,
-            sim_params=self.sim_params,            
-            aircraft_params=self.aircraft_params,
-            vertiport_distances=self.vertiport_distances,
-            passenger_distributions=self.passenger_distributions,
-            event_saver=self.event_saver,
-            fixed_charge_schedule=check_not_none(self.network_and_demand_params['charge_schedule_file_path']),
-            fixed_schedule=check_not_none(self.network_and_demand_params['flight_schedule_file_path']),
-            node_locations=self.node_locations,
-            flight_duration_constant=sec_to_ms(self.sim_params['flight_duration_constant']),
-            logger=self.logger,
-            aircraft_logger=self.aircraft_logger,
-            passenger_logger=self.passenger_logger
-        )
+        system_manager_type = self.get_system_manager_type()
+        configurations = {
+            'ondemand': {
+                'env': self.env,
+                'vertiports': self.vertiports,
+                'vertiport_ids': self.vertiport_ids,
+                'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
+                'scheduler': self.scheduler,
+                'wind': self.wind,
+                'airspace': self.airspace,
+                'taxi_config': self.taxi_config,
+                'sim_params': self.sim_params,
+                'aircraft_params': self.aircraft_params,
+                'vertiport_distances': self.vertiport_distances,
+                'passenger_distributions': self.passenger_distributions,
+                'event_saver': self.event_saver,
+                'node_locations': self.node_locations,
+                'logger': self.logger,
+                'aircraft_logger': self.aircraft_logger,
+                'passenger_logger': self.passenger_logger,
+                'sim_mode': system_manager_type
+            },
+            'client_server': {
+                'env': self.env,
+                'vertiports': self.vertiports,
+                'vertiport_ids': self.vertiport_ids,
+                'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
+                'scheduler': self.scheduler,
+                'wind': self.wind,
+                'airspace': self.airspace,
+                'taxi_config': self.taxi_config,
+                'sim_params': self.sim_params,
+                'aircraft_params': self.aircraft_params,
+                'vertiport_distances': self.vertiport_distances,
+                'passenger_distributions': self.passenger_distributions,
+                'event_saver': self.event_saver,
+                'node_locations': self.node_locations,
+                'logger': self.logger,
+                'aircraft_logger': self.aircraft_logger,
+                'passenger_logger': self.passenger_logger,
+                'stopping_events': self.stopping_events,
+                'truncation_event': self.truncation_event,
+                'sim_mode': system_manager_type
+            },
+            'offline_optimization': {
+                'env': self.env,
+                'vertiports': self.vertiports,
+                'vertiport_ids': self.vertiport_ids,
+                'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
+                'scheduler': self.scheduler,
+                'wind': self.wind,
+                'airspace': self.airspace,
+                'taxi_config': self.taxi_config,
+                'sim_params': self.sim_params,
+                'aircraft_params': self.aircraft_params,
+                'vertiport_distances': self.vertiport_distances,
+                'passenger_distributions': self.passenger_distributions,
+                'event_saver': self.event_saver,
+                'node_locations': self.node_locations,
+                'logger': self.logger,
+                'aircraft_logger': self.aircraft_logger,
+                'passenger_logger': self.passenger_logger,
+                'sim_mode': system_manager_type
+            },
+        }
+
+        return SimSetup.set_system_manager_type(system_manager_type,
+                                                **configurations[system_manager_type])
+    
+    def get_charging_strategy(self):
+        if self.sim_mode['offline_optimization']:
+            return OfflineOptimizationChargingStrategy()
+        elif self.sim_mode['client_server']:
+            return RLChargingStrategy()
+        else:
+            return OnDemandChargingStrategy()
 
     def create_aircraft_arrival_process(self):
         # Load or generate aircraft arrival schedule and start the aircraft arrival process
-        if self.network_and_demand_params['flight_schedule_file_path'] is not None:
-            # Load aircraft arrival schedule
-            aircraft_arrival_process = AircraftArrivalSetup(
-                env=self.env,
-                network_simulation=self.sim_params['network_simulation'],
-                vertiport_configs=self.network_and_demand_params['vertiports'],
-                vertiport_layouts=self.vertiport_layouts,
-                flight_schedule_file_path=self.network_and_demand_params['flight_schedule_file_path'],
-                charge_schedule_file_path=self.network_and_demand_params['charge_schedule_file_path'],
-                aircraft_params=self.aircraft_params,
-                system_manager=self.system_manager,
-                scheduler=self.scheduler,
-                wind=self.wind,
-                structural_entity_groups=self.structural_entity_groups,
-                event_saver=self.event_saver,
-                logger=self.logger,
-                aircraft_logger=self.aircraft_logger,
-                vertiport_logger=self.vertiport_logger
-            )
-        else:
-            # Create aircraft arrival process
-            aircraft_arrival_process = AircraftArrivalSetup(
-                env=self.env,
-                network_simulation=self.sim_params['network_simulation'],
-                vertiport_layouts=self.vertiport_layouts,                
-                vertiport_configs=self.network_and_demand_params['vertiports'],
-                flight_schedule_file_path=None,
-                charge_schedule_file_path=None,
-                aircraft_params=self.aircraft_params,
-                system_manager=self.system_manager,
-                scheduler=self.scheduler,
-                wind=self.wind,
-                structural_entity_groups=self.structural_entity_groups,                
-                event_saver=self.event_saver,
-                logger=self.logger,
-                aircraft_logger=self.aircraft_logger,
-                vertiport_logger=self.vertiport_logger
-            )
+        flight_schedule_file_path = self.network_and_demand_params.get('flight_schedule_file_path', None)
+        charge_schedule_file_path = self.network_and_demand_params.get('charge_schedule_file_path', None)
+
+        # Load aircraft arrival schedule
+        aircraft_arrival_process = AircraftArrivalSetup(
+            env=self.env,
+            network_simulation=self.sim_params['network_simulation'],
+            vertiport_configs=self.network_and_demand_params['vertiports'],
+            vertiport_layouts=self.vertiport_layouts,
+            flight_schedule_file_path=flight_schedule_file_path,
+            charge_schedule_file_path=charge_schedule_file_path,
+            aircraft_params=self.aircraft_params,
+            system_manager=self.system_manager,
+            scheduler=self.scheduler,
+            wind=self.wind,
+            structural_entity_groups=self.structural_entity_groups,
+            event_saver=self.event_saver,
+            logger=self.logger,
+            aircraft_logger=self.aircraft_logger,
+            vertiport_logger=self.vertiport_logger,
+            charging_strategy=self.get_charging_strategy()
+        )
+
         aircraft_arrival_process.create_aircraft_arrival()
 
         if self.sim_params['verbose']:
@@ -371,23 +463,6 @@ class SimSetup:
             )
             if self.sim_params['verbose']:
                 print("Success: Passenger arrival process is created.")
-
-    def run_simulation(self):
-        max_sim_time = sec_to_ms(self.sim_params['max_sim_time'])
-        if self.sim_params['step_by_step_sim']:
-            run_step_by_step_simulation(env=self.env, 
-                                        vertiports=self.vertiports, 
-                                        airspace=self.airspace,
-                                        structural_entity_groups=self.structural_entity_groups,
-                                        system_manager=self.system_manager,
-                                        max_sim_time=max_sim_time,
-                                        simulation_states=self.sim_params['simulation_states'],
-                                        response_type=self.sim_params['step_by_step_sim_response_type'])
-        else:
-            if self.network_and_demand_params['flight_schedule_file_path'] is not None:
-                self.env.run()
-            else:
-                self.env.run(until=max_sim_time)
 
     def calculate_performance_metrics(self):
         # Get a random id for the simulation
@@ -442,3 +517,6 @@ class SimSetup:
             sim_id=self.sim_id
         )
         print(f"Success: Results are saved in {self.output_folder_path}.")
+
+
+

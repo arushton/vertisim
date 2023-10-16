@@ -1,6 +1,6 @@
 import random
-from utils.distribution_generator import DistributionGenerator
-from utils.units import sec_to_ms
+from .utils.distribution_generator import DistributionGenerator
+from .utils.units import sec_to_ms
 from typing import Dict, Union, Any
 
 

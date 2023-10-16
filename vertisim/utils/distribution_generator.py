@@ -1,7 +1,7 @@
 import scipy.stats as stats
 from typing import Dict, Union
-from utils.units import sec_to_ms
-from utils.helpers import set_seed
+from .units import sec_to_ms
+from .helpers import set_seed
 import random
 
 # def pick_number(population, probabilities):

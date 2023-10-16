@@ -2,10 +2,15 @@ from typing import Dict, List, Any
 from collections import defaultdict
 import json
 import subprocess
-from utils.units import ms_to_min
-from utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
+from .units import ms_to_min
+from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
+from pydantic import BaseModel
 
+class SimulatorStates(BaseModel):
+    vertiport_states: Dict[str, Any]
+    aircraft_states: Dict[str, Any]
+    environmental_states: Dict[str, Any]
 
 def filter_and_get_states(entity, get_states_func, keys):
     """Helper function to get and filter states for given entity."""
@@ -23,7 +28,7 @@ def get_simulator_states(
     aircraft_agents: Dict[str, Any],
     num_initial_aircraft: int,
     simulation_states: List[str]
-) -> Dict[str, Any]:  # sourcery skip: raise-specific-error
+) -> Dict[str, Any]:
     """
     Get the states for simulation entities.
 
@@ -39,7 +44,7 @@ def get_simulator_states(
 
     # Return if not all aircraft are initialized.
     if len(aircraft_agents) < num_initial_aircraft:
-        raise Exception('Not all aircraft are initialized.')
+        return {}
 
     system_manager = get_system_manager(aircraft_agents)
 
@@ -56,11 +61,17 @@ def get_simulator_states(
     environmental_states = system_manager.wind.get_wind_states(locations=system_manager.vertiport_ids,
                                                                 time=system_manager.env.now)
 
-    return {
+    simulator_states = {
         'vertiport_states': vertiport_states,
         'aircraft_states': aircraft_states,
         'environmental_states': environmental_states
     }
+
+    # Validate and serialize the data using Pydantic
+    valid_simulator_states = SimulatorStates(**simulator_states)
+
+    # Return the validated data
+    return valid_simulator_states.dict()
 
 
 

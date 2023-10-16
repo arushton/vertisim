@@ -1,10 +1,10 @@
 from typing import Dict, Union, List, Any
 import pandas as pd
-from utils.read_files import read_input_file
-from utils.helpers import compute_interarrival_times_from_schedule
-from utils.generate_artificial_supply_demand import generate_passenger_network_demand
-from utils.units import sec_to_ms
-from passenger import Passenger
+from .utils.read_files import read_input_file
+from .utils.helpers import compute_interarrival_times_from_schedule
+from .utils.generate_artificial_supply_demand import generate_passenger_network_demand
+from .utils.units import sec_to_ms
+from .passenger import Passenger
 
 
 class PassengerArrivalSetup:

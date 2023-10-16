@@ -1,9 +1,10 @@
 import pandas as pd
 import random
 from typing import Dict
-from utils.read_files import read_input_file
-from utils.helpers import set_seed
-from utils.units import mph_to_metersec, degrees_to_radians
+from ..utils.read_files import read_input_file
+from ..utils.helpers import set_seed
+from ..utils.units import mph_to_metersec, degrees_to_radians
+from ..wind.wind_models import DynamicWindState
 import datetime as dt
 
 
@@ -61,4 +62,5 @@ class WindDataProcessor:
         if data.empty:
             raise ValueError(f'No wind data for {location} at {time_of_day}:00.')
         row = data.iloc[0]
-        return {'windspeed': row['windspeed'], 'winddir': row['winddir']}
+        wind_state = DynamicWindState(locationname=location, windspeed=row['windspeed'], winddir=row['winddir'])
+        return wind_state.dict()

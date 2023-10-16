@@ -1,0 +1,23 @@
+from .vertisim import VertiSim
+
+class InstanceManager:
+    def __init__(self, env, config, reward_function_parameters):
+        self.env = env
+        self.config = config
+        self.reward_function_parameters = reward_function_parameters
+        self.sim_instance = VertiSim(
+            env=self.env, 
+            config=self.config, 
+            reward_function_parameters=self.reward_function_parameters
+        )
+    
+    def reset(self):
+        self.sim_instance = VertiSim(
+            env=self.env, 
+            config=self.config, 
+            reward_function_parameters=self.reward_function_parameters
+        )
+        return self.sim_instance.reset()
+    
+    def step(self, actions):
+        return self.sim_instance.step(actions)

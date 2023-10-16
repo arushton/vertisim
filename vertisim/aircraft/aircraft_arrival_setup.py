@@ -10,15 +10,15 @@ There are three ways to set up aircraft arrival (initiation) process for network
 
 import pandas as pd
 
-from aircraft.aircraft import Aircraft, AircraftStatus
+from .aircraft import Aircraft, AircraftStatus
 import pandas as pd
-from utils.units import sec_to_ms, ms_to_sec
-from utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, \
+from ..utils.units import sec_to_ms, ms_to_sec
+from ..utils.helpers import compute_interarrival_times_from_schedule, check_if_none_exists, \
     careful_conversion, lower_str
-from utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
+from ..utils.generate_artificial_supply_demand import generate_aircraft_network_schedule
 # from utils.defaults import DEFAULT_AIRCRAFT_ARRIVAL_PROCESS
 from typing import Dict, List, Union, Tuple
-from utils.read_files import read_input_file
+from ..utils.read_files import read_input_file
 
 
 class AircraftArrivalSetup:
@@ -37,7 +37,8 @@ class AircraftArrivalSetup:
                  event_saver: object,
                  logger: object,
                  aircraft_logger: object,
-                 vertiport_logger: object):
+                 vertiport_logger: object,
+                 charging_strategy: object):
         self.env = env
         self.network_simulation = network_simulation
         self.vertiport_layouts = vertiport_layouts
@@ -56,6 +57,7 @@ class AircraftArrivalSetup:
         self.logger = logger
         self.aircraft_logger = aircraft_logger
         self.vertiport_logger = vertiport_logger
+        self.charging_strategy = charging_strategy
             
     @staticmethod
     def validate_columns(dataframe: pd.DataFrame, required_columns: list, optional_columns: dict, check_none_columns: list) -> None:
@@ -383,7 +385,7 @@ class AircraftArrivalSetup:
 
     def initiate_aircraft_arrival(self,
                                   departure_time: int = None,
-                                  tail_number: str = None,
+                                  tail_number: int = None,
                                   soc: int = 100,
                                   target_soc = None,
                                   input_cruise_speed: int = 72,
@@ -419,12 +421,13 @@ class AircraftArrivalSetup:
                             wind=self.wind,
                             event_saver=self.event_saver,
                             logger=logger,
-                            aircraft_logger=aircraft_logger
+                            aircraft_logger=aircraft_logger,
+                            charging_strategy=self.charging_strategy
                             )
         
         self.event_saver.save_agent_state(agent=aircraft, agent_type='aircraft', event='agent_creation')
         # Save aircraft in aircraft_agent dictionary.
-        self.system_manager.aircraft_agents[f'tail_number_{aircraft.tail_number}'] = aircraft
+        self.system_manager.aircraft_agents[aircraft.tail_number] = aircraft
 
         self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
 

@@ -1,8 +1,7 @@
-from vertiport_layout_creator import VertiportLayout
-from configurator import VertiportConfig, TaxiOperationsConfig
-from system_manager import SystemManager
-from airspace_creator import AirspaceCreator
-from airspace import Airspace
+from .vertiport_layout_creator import VertiportLayout
+from .configurator import VertiportConfig, TaxiOperationsConfig
+from .airspace_creator import AirspaceCreator
+from .airspace import Airspace
 from collections import defaultdict
 from typing import Dict, List
 
@@ -22,8 +21,7 @@ def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) 
 def create_airspace_layout(env: object, 
                             vertiports: Dict, 
                             vertiport_distances, 
-                            airspace_params,
-                            wind_data_file_path) -> AirspaceCreator:
+                            airspace_params) -> AirspaceCreator:
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
                                        airspace_params=airspace_params,
@@ -35,8 +33,7 @@ def create_airspace_layout(env: object,
                     airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                     waypoint_ids=airspace_creator.waypoint_ids,
                     waypoint_locations=airspace_creator.waypoint_locations,
-                    flight_directions=airspace_creator.flight_directions,
-                    wind_data_file_path=wind_data_file_path)
+                    flight_directions=airspace_creator.flight_directions)
 
 
 def vertiport_config(env: object,
@@ -55,51 +52,3 @@ def vertiport_config(env: object,
 def set_taxi_operations_config(is_simultaneous_taxi_and_take_off_allowed) -> TaxiOperationsConfig:
     TaxiOperationsConfig.is_simultaneous_taxi_and_take_off_allowed = is_simultaneous_taxi_and_take_off_allowed
     return TaxiOperationsConfig
-
-
-# def create_system_manager(env,
-#                              vertiports,
-#                              vertiport_ids,
-#                              scheduler,
-#                              arrival_priority,
-#                              departure_priority,
-#                              airspace,
-#                              taxi_config,
-#                              only_aircraft_simulation,
-#                              aircraft_params,
-#                              vertiport_distances,
-#                              aircraft_energy_consumption_data,
-#                              passenger_distributions,
-#                              max_flight_waiting_time,
-#                              charging_interuption,
-#                              event_saver,
-#                              network_simulation,
-#                              fixed_charge_schedule,
-#                              fixed_schedule,
-#                              fleet_rebalancing,
-#                              node_locations,
-#                              flight_duration_constant,
-#                              logger):
-#     return SystemManager(env=env,
-#                             vertiports=vertiports,
-#                             vertiport_ids=vertiport_ids,
-#                             scheduler=scheduler,
-#                             arrival_priority=arrival_priority,
-#                             departure_priority=departure_priority,
-#                             airspace=airspace,
-#                             taxi_config=taxi_config,
-#                             only_aircraft_simulation=only_aircraft_simulation,
-#                             aircraft_params=aircraft_params,
-#                             vertiport_distances=vertiport_distances,
-#                             aircraft_energy_consumption_data=aircraft_energy_consumption_data,
-#                             passenger_distributions=passenger_distributions,
-#                             max_flight_waiting_time=max_flight_waiting_time,
-#                             charging_interuption=charging_interuption,
-#                             event_saver=event_saver,
-#                             network_simulation=network_simulation,
-#                             fixed_charge_schedule=fixed_charge_schedule,
-#                             fixed_schedule=fixed_schedule,
-#                             fleet_rebalancing=fleet_rebalancing,
-#                             node_locations=node_locations,
-#                             flight_duration_constant=flight_duration_constant,
-#                             logger=logger)

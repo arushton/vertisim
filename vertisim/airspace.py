@@ -1,7 +1,7 @@
 from typing import List, Dict
 import simpy
-from utils.read_files import read_input_file
-from utils.distance import haversine_dist
+from .utils.read_files import read_input_file
+from .utils.distance import haversine_dist
 from collections import defaultdict
 import pandas as pd
 import numpy as np
@@ -13,8 +13,7 @@ class Airspace:
                  airlink_segment_length_miles: float = 0.25,
                  waypoint_ids: Dict = None,
                  waypoint_locations: Dict = None,
-                 flight_directions: List = None,
-                 wind_data_file_path: str = None) -> None:
+                 flight_directions: List = None) -> None:
         self.env = env
         self.holding_unit_capacity = holding_unit_capacity
         self.airlink_capacity = airlink_capacity
@@ -25,7 +24,6 @@ class Airspace:
         self.flight_directions = flight_directions
         self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_locations)
         self.airlink_resources = self.create_airlink_resources()
-        self.wind_data = read_input_file(wind_data_file_path)
 
     def create_airlink_resources(self):
         airlink_resources = defaultdict(dict)
