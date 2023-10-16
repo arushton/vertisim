@@ -11,7 +11,6 @@ import pandas as pd
 from collections import defaultdict
 from .aircraft.aircraft_arrival_setup import AircraftArrivalSetup
 from .event_saver import EventSaver
-from .system_manager import SystemManager
 from .system_managers.rl_system_manager import RLSystemManager
 from .system_managers.offline_opt_system_manager import OfflineOptimizationSystemManager
 from .system_managers.ondemand_system_manager import OnDemandSystemManager

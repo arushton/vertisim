@@ -6,4 +6,4 @@ def load_config(file_path: str) -> Dict[str, Any]:
         return json.load(file)
 
 # Load the configuration at the start of the application
-CONFIG = load_config("config.json")
+CONFIG = load_config("vertisim/config.json")
