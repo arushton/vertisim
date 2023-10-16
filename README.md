@@ -61,7 +61,7 @@ For questions and collaborations, please email eminburak_onat@berkeley.edu. Than
 2. Create config.json file
 3. There are three ways of running vertisim. <br>
 (inside VertiSim folder): <br>
-a) Run a single configuration: `python3 vertisim/runner.py` <br>
+a) Run a single configuration: `python3 -m vertisim.runner --config vertisim/config.json` <br>
 Currently, the below methods are not maintained and won't work.  <br>
 b) Run many configuration serially: `loop_runner.py` <br>
 c) Run many configuration in parallel (CPU parallelization by multiprocessing): `loop_runner_multiprocess.py`
