@@ -32,7 +32,8 @@ class BaseSystemManager:
                  node_locations: Dict,
                  logger: object,
                  aircraft_logger: object,
-                 passenger_logger: object):
+                 passenger_logger: object,
+                 sim_mode: str):
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
@@ -48,6 +49,7 @@ class BaseSystemManager:
         self.event_saver = event_saver
         self.node_locations = node_locations
         self.logger = logger
+        self.sim_mode = sim_mode
         self.aircraft_logger = aircraft_logger
         self.passenger_logger = passenger_logger
         self.aircraft_agents = {}

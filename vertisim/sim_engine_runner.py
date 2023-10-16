@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from .utils.units import ms_to_min, sec_to_ms
 from .utils.get_state_variables import get_simulator_states
 from .utils.helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
+from .run_step_by_step_simulation import get_user_input, fast_forward_simulation, modify_aircraft_state
 import numpy as np
 import gymnasium as gym
 from collections import defaultdict
@@ -23,11 +24,11 @@ class SimEngineRunner:
         self.truncation_event = truncation_event
         self.reward_function_parameters = reward_function_parameters
                         
-    def run_uninterrupted_simulation(self, flight_schedule_file_path):
+    def run_uninterrupted_simulation(self):
         """
         Run the simulation until the max simulation time or there is no event left in the queue.
         """
-        if flight_schedule_file_path is not None:
+        if self.sim_setup.sim_mode['offline_optimization']:
             self.env.run()
         else:
             self.env.run(until=self.max_sim_time)

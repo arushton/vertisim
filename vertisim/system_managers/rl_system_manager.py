@@ -25,7 +25,9 @@ class RLSystemManager(BaseSystemManager):
                  logger: object,
                  aircraft_logger: object,
                  passenger_logger: object,
-                 stopping_events: Dict
+                 stopping_events: Dict,
+                 truncation_event: simpy.Event,
+                 sim_mode: str = 'client_server'
                  ):
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -43,7 +45,9 @@ class RLSystemManager(BaseSystemManager):
                         node_locations=node_locations,
                         logger=logger,
                         aircraft_logger=aircraft_logger,
-                        passenger_logger=passenger_logger
+                        passenger_logger=passenger_logger,
+                        truncation_event=truncation_event,
+                        sim_mode=sim_mode
                         )
         
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
@@ -240,8 +244,7 @@ class RLSystemManager(BaseSystemManager):
                 raise ValueError('Unknown initial process for the aircraft')        
 
     def aircraft_charging_process(self, aircraft: object):
-        # TODO: Use a better design pattern for this
-        if self.sim_params['step_by_step_sim'] == 'auto':
+        if self.sim_mode == 'client_server':
             # Charge the aircraft
             yield self.env.process(
                 aircraft.charge_aircraft_rl()

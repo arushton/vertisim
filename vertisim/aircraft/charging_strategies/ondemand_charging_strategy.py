@@ -64,7 +64,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
             used_charger_resource, selected_charging_request = self.request_charger(aircraft=aircraft)
             yield selected_charging_request
 
-        aircraft.start_charging_process()
+        self.start_charging_process(aircraft=aircraft)
         if not aircraft.charged_during_turnaround:
             idle_time = aircraft.env.now - aircraft.arrival_time
         else:

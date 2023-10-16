@@ -2,13 +2,12 @@ from .vertiport_layout_creator import VertiportLayout
 from .configurator import VertiportConfig, TaxiOperationsConfig
 from .airspace_creator import AirspaceCreator
 from .airspace import Airspace
-from .utils.helpers import get_absolute_path
 from collections import defaultdict
 from typing import Dict, List
 
 
 def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) -> Dict:
-    layout_file_path = get_absolute_path(network_and_demand['vertiport_layout_file_path'])
+    layout_file_path = network_and_demand['vertiport_layout_file_path']
     vertiport_layouts = defaultdict(dict)
     for vertiport_id, vertiport_data in network_and_demand['vertiports'].items():
         layout = vertiport_data['layout']
@@ -22,8 +21,7 @@ def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) 
 def create_airspace_layout(env: object, 
                             vertiports: Dict, 
                             vertiport_distances, 
-                            airspace_params,
-                            wind_data_file_path) -> AirspaceCreator:
+                            airspace_params) -> AirspaceCreator:
     # Create the airspace layout
     airspace_creator = AirspaceCreator(vertiports=vertiports,
                                        airspace_params=airspace_params,
@@ -35,8 +33,7 @@ def create_airspace_layout(env: object,
                     airlink_segment_length_miles=airspace_params['airlink_segment_length'],
                     waypoint_ids=airspace_creator.waypoint_ids,
                     waypoint_locations=airspace_creator.waypoint_locations,
-                    flight_directions=airspace_creator.flight_directions,
-                    wind_data_file_path=wind_data_file_path)
+                    flight_directions=airspace_creator.flight_directions)
 
 
 def vertiport_config(env: object,

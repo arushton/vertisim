@@ -2,6 +2,7 @@
 from .utils.get_state_variables import get_simulator_states, get_human_readable_state_variables
 import time
 from typing import Dict, List
+import json
 
 def run_step_by_step_simulation(env, vertiports, airspace, structural_entity_groups, system_manager, max_sim_time):
     while env.peek() < max_sim_time:
@@ -25,16 +26,18 @@ def run_steps_until_specific_events(env: object,
                                     airspace: object,
                                     system_manager: object,
                                     simulation_states: List,
-                                    terminal_event: object):
+                                    terminal_event: object,
+                                    stopping_events: Dict):
     while env.peek() < max_sim_time and terminal_event.triggered == False:
         env.step()
         # Check if any of the stopping events have occurred.
-        for event_name, event in system_manager.stopping_event.items():
+        for event_name, event in stopping_events.items():
             if event.triggered:
                 # Get the states
-                states = call_simulator_states(vertiports, airspace, system_manager, simulation_states)
+                states = get_simulator_states(vertiports, airspace, system_manager, simulation_states)
+                print(states.json(indent=4))
                 # Reset the event
-                system_manager.stopping_event[event_name] = env.event()
+                stopping_events[event_name] = env.event()
                 # Return the states
 
 

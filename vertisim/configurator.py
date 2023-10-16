@@ -7,7 +7,23 @@ from .charger_model import ChargerModel
 import numpy as np
 from enum import Enum
 from .utils.units import ms_to_min
+from pydantic import BaseModel
 
+class EntitySubState(BaseModel):
+    num_jobs_in_service: int
+    num_jobs_in_queue: int
+
+class VertiportStates(BaseModel):
+    num_aircraft: int
+    num_flight_requests: int
+    num_available_fato: int
+    num_available_parking_pad: int
+    num_waiting_passengers: Dict[str, int]
+    total_passenger_waiting_time: int
+    departure_fix: EntitySubState
+    arrival_fix: EntitySubState
+    taxi: EntitySubState = None
+    park: EntitySubState = None
 
 class VertiportConfig:
 
@@ -69,64 +85,93 @@ class VertiportConfig:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
 
-    
-    # def get_vertiport_states_array(self):
-    #     return np.array([self.num_waiting_passengers,
-    #                      self.get_total_passenger_waiting_time(),
-    #                      self.num_flight_requests,
-    #                      self.get_num_fato() - self.get_fato_occupancy(),
-    #                      self.get_parking_pad_availability()
-    #                      ])
+    # def get_vertiport_states(self):
+    #     """
+    #     Will be deprecated in the future.
+    #     """
+    #     entity_states = defaultdict(lambda: defaultdict(dict))
+    #     entity_states['num_waiting_passengers'] = {}
+
+    #     for fato in self.fato_store.items:
+    #         entity_states[fato.resource_id]['num_jobs_in_service'] = fato.fato_resource.count
+    #         entity_states[fato.resource_id]['num_jobs_in_queue'] = len(fato.fato_resource.queue)
+
+    #     if self.parking_space_store is not None:
+    #         entity_states['park']['num_jobs_in_service'] = self.get_parking_pad_availability()
+    #         entity_states['park']['num_jobs_in_queue'] = self.get_parking_pad_queue_length()
+
+    #     if self.taxiway_node_store is not None:
+    #         entity_states['taxi']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
+    #         entity_states['taxi']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
+
+    #     # Save the occupancy of the arrival fixes
+    #     entity_states['arrival_fix']['num_jobs_in_service'] = self.arrival_fix_resource.count
+    #     entity_states['arrival_fix']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
+
+    #     entity_states['departure_fix']['num_jobs_in_service'] = self.departure_fix_resource.count
+    #     entity_states['departure_fix']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
+
+    #     # Save the number of aircraft in the vertiport
+    #     entity_states['num_aircraft'] = self.num_aircraft
+
+    #     # Save the number of flight requests at the vertiport
+    #     entity_states['num_flight_requests'] = self.num_flight_requests
+
+    #     # Save the number of available fatos at the vertiport
+    #     entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
+
+    #     # Save the number of available parking pads at the vertiport
+    #     entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
+
+    #     # # Save the number of waiting passengers at the vertiport
+    #     for destination, waiting_room_store in self.waiting_room_stores.items():
+    #         entity_states['num_waiting_passengers'][f'to_{destination}'] = len(waiting_room_store.items)            
+
+    #     # Save the total waiting time of passengers at the vertiport
+    #     entity_states['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
+
+    #     return entity_states
 
     def get_vertiport_states(self):
         """
         Will be deprecated in the future.
         """
-        entity_resources = defaultdict(lambda: defaultdict(dict))
+        entity_states = {}
+        entity_states['num_waiting_passengers'] = {}
+
         for fato in self.fato_store.items:
-            # entity_resources[self.vertiport_id][fato.resource_id]['fato_resource'] = fato.fato_resource
-            entity_resources[fato.resource_id]['num_jobs_in_service'] = fato.fato_resource.count
-            entity_resources[fato.resource_id]['num_jobs_in_queue'] = len(fato.fato_resource.queue)
+            entity_states[fato.resource_id] = {'num_jobs_in_service': fato.fato_resource.count,
+                                            'num_jobs_in_queue': len(fato.fato_resource.queue)}
 
         if self.parking_space_store is not None:
-            # entity_resources[self.vertiport_id]['PARK']['parking_space_store'] = self.parking_space_store
-            entity_resources['park']['num_jobs_in_service'] = self.get_parking_pad_availability()
-            entity_resources['park']['num_jobs_in_queue'] = self.get_parking_pad_queue_length()
+            entity_states['park'] = {'num_jobs_in_service': self.get_parking_pad_availability(),
+                                    'num_jobs_in_queue': self.get_parking_pad_queue_length()}
 
         if self.taxiway_node_store is not None:
-            # entity_resources[self.vertiport_id]['TAXI']['taxiway_node_store'] = self.taxiway_node_store
-            entity_resources['taxi']['num_jobs_in_service'] = len(self.taxiway_node_store.items)
-            entity_resources['taxi']['num_jobs_in_queue'] = len(self.taxiway_node_store.get_queue)
+            entity_states['taxi'] = {'num_jobs_in_service': len(self.taxiway_node_store.items),
+                                    'num_jobs_in_queue': len(self.taxiway_node_store.get_queue)}
 
-        # Save the occupancy of the arrival fixes
-        entity_resources['arrival_fix']['num_jobs_in_service'] = self.arrival_fix_resource.count
-        entity_resources['arrival_fix']['num_jobs_in_queue'] = len(self.arrival_fix_resource.queue)
+        entity_states['arrival_fix'] = {'num_jobs_in_service': self.arrival_fix_resource.count,
+                                        'num_jobs_in_queue': len(self.arrival_fix_resource.queue)}
 
-        entity_resources['departure_fix']['num_jobs_in_service'] = self.departure_fix_resource.count
-        entity_resources['departure_fix']['num_jobs_in_queue'] = len(self.departure_fix_resource.queue)
+        entity_states['departure_fix'] = {'num_jobs_in_service': self.departure_fix_resource.count,
+                                        'num_jobs_in_queue': len(self.departure_fix_resource.queue)}
 
-        # Save the number of aircraft in the vertiport
-        entity_resources['num_aircraft'] = self.num_aircraft
+        entity_states['num_aircraft'] = self.num_aircraft
+        entity_states['num_flight_requests'] = self.num_flight_requests
+        entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
+        entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
-        # Save the number of flight requests at the vertiport
-        entity_resources['num_flight_requests'] = self.num_flight_requests
-
-        # Save the number of available fatos at the vertiport
-        entity_resources['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
-
-        # Save the number of available parking pads at the vertiport
-        entity_resources['num_available_parking_pad'] = self.get_parking_pad_availability()
-
-        # # Save the number of waiting passengers at the vertiport
         for destination, waiting_room_store in self.waiting_room_stores.items():
-            entity_resources['num_waiting_passengers'] = {
-                f'to_{destination}': len(waiting_room_store.items)
-            }
+            entity_states['num_waiting_passengers'][f'to_{destination}'] = len(waiting_room_store.items)
 
-        # Save the total waiting time of passengers at the vertiport
-        entity_resources['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
+        entity_states['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
 
-        return entity_resources
+        # Validate and serialize the data using Pydantic
+        valid_entity_states = VertiportStates(**entity_states)
+
+        # Return the validated data
+        return valid_entity_states.dict()    
 
 
     def check_charger_resource_type(self):

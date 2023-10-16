@@ -20,7 +20,7 @@ class OnDemandSystemManager(BaseSystemManager):
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 num_aircraft: int,                                 
+                 num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
                  airspace: object,
@@ -33,12 +33,13 @@ class OnDemandSystemManager(BaseSystemManager):
                  node_locations: Dict,
                  logger: object,
                  aircraft_logger: object,
-                 passenger_logger: object):
+                 passenger_logger: object,
+                 sim_mode: str = 'ondemand'):
 
         super().__init__(env=env,
                         vertiports=vertiports,
                         vertiport_ids=vertiport_ids,
-                        num_aircraft=num_aircraft,
+                        num_initial_aircraft=num_initial_aircraft,
                         scheduler=scheduler,
                         wind=wind,
                         airspace=airspace,
@@ -51,7 +52,8 @@ class OnDemandSystemManager(BaseSystemManager):
                         node_locations=node_locations,
                         logger=logger,
                         aircraft_logger=aircraft_logger,
-                        passenger_logger=passenger_logger
+                        passenger_logger=passenger_logger,
+                        sim_mode=sim_mode
                         )
         self.aircraft_agents = {}
         self.passenger_agents = {}

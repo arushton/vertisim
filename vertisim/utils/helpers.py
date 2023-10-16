@@ -468,6 +468,13 @@ def get_list_elements_from_enum(enum_object: Enum):
     return [object.name for object in enum_object]
 
 
+import simpy
+def get_stopping_events(env: simpy.Environment, stopping_events: List):
+    """
+    Get stopping events.
+    """
+    return {event_name: env.event() for event_name in stopping_events}
+
 # def nested_dict_filter_values(d, depth, value):
 #     """
 #     Usage:

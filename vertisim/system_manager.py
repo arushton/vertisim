@@ -28,6 +28,7 @@ class SystemManager:
                  airspace: object,
                  taxi_config: object,
                  sim_params: Dict,
+                 external_optimization_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: pd.DataFrame,
                  passenger_distributions: Dict,
@@ -47,6 +48,7 @@ class SystemManager:
         self.scheduler = scheduler
         self.wind = wind
         self.sim_params = sim_params
+        self.external_optimization_params = external_optimization_params
         self.airspace = airspace
         self.taxi_config = taxi_config
         self.aircraft_params = aircraft_params
