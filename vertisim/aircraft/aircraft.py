@@ -936,7 +936,8 @@ class Aircraft:
                                                                         origin_vertiport_id=self.origin_vertiport_id,
                                                                         destination_vertiport_id=self.destination_vertiport_id)
                     wind_states: Dict = self.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(self.env.now)),
-                                                                                             location=wind_impact_area)
+                                                                                             location=wind_impact_area,
+                                                                                             locations=self.system_manager.vertiport_ids)
                     v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],
                                                                                       wind_magnitude=wind_states['windspeed'])    
                 

@@ -139,6 +139,21 @@ def map_nested_dict_keys_to_values_from_list(dictionary, list_of_keys, last_key)
     return [dictionary[key][last_key] for key in list_of_keys]
 
 
+def extract_dict_values(d):
+    """
+    Extracts all values from a nested dictionary with any depth.
+    """
+    values_list = []
+
+    for key, value in d.items():
+        if isinstance(value, dict):
+            values_list.extend(extract_dict_values(value))
+        else:
+            values_list.append(value)
+
+    return values_list
+
+
 def nested_dict_all_values(d, depth):
     """
     Usage:

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
+from typing import List
 import sys
 sys.path.append('/app')
 
@@ -9,6 +10,8 @@ from .models import create_action_models
 import simpy
 from .config import CONFIG  # Import the loaded configuration
 
+class Actions(BaseModel):
+    actions: List[int]
 
 app = FastAPI()
 
@@ -18,16 +21,24 @@ reward_function_parameters = CONFIG["external_optimization_params"]["reward_func
 instance_manager = InstanceManager(env=env,
                                    config=CONFIG,
                                    reward_function_parameters=reward_function_parameters)
-Actions = create_action_models(instance_manager.sim_instance.get_vertiport_count())
+
+# Actions = create_action_models(instance_manager.sim_instance.get_vertiport_count())
 
 @app.post("/reset")
 async def reset():
-    initial_state = instance_manager.reset()
+    instance_manager.reset()
+    return {"status": "Success", "message": "Vertisim instance reset successfully."}
+
+@app.get("/get_initial_state")
+async def get_initial_state():
+    initial_state = instance_manager.get_initial_state()
     return {"initial_state": initial_state}
 
 @app.post("/step")
 async def step(actions: Actions):
-    new_state, reward, terminated, truncated = instance_manager.step(actions.actions_list)
+    print(f"actions: {actions.actions}")
+    # TODO: Action input should be list of enums
+    new_state, reward, terminated, truncated = instance_manager.step(actions.actions)
     return {
         "new_state": new_state,
         "reward": reward,
@@ -49,5 +60,5 @@ async def get_space_params():
     }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5000) 
+    uvicorn.run(app, host="0.0.0.0", port=5001) 
 
