@@ -1,18 +1,20 @@
-from utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
-from utils.distance import haversine_dist
-from utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
-from utils.flight_time_estimator import time_to_arrival_estimator
+from ..utils.helpers import timestamp_to_datetime, get_key_from_value, check_magnitude_order, roundup_to_five_minutes, miliseconds_to_hms, careful_round
+from ..utils.distance import haversine_dist
+from ..utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
+from ..utils.flight_time_estimator import time_to_arrival_estimator
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
 from collections import defaultdict
-from aircraft.optimize_velocity import VelocityOptimizer
-from utils.distance import distance_3d
-from utils.helpers import set_seed
-from aircraft.flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
-from utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
-from aircraft.power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
+from .optimize_velocity import VelocityOptimizer
+from ..utils.distance import distance_3d
+from ..utils.helpers import set_seed
+from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
+from ..utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
+from .power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
+from ..wind.wind import Wind
+from math import pi
 from enum import Enum
 from memoize import PhaseParameters
 from utils.visualize import Visualizer
@@ -35,7 +37,7 @@ class Aircraft:
                  arrival_time, 
                  departure_time,
                  location,
-                 serviced_time_at_the_location,
+                 serviced_time_at_the_location, # Not used
                  priority,
                  initial_process,
                  aircraft_params, 
@@ -43,7 +45,8 @@ class Aircraft:
                  wind,
                  event_saver,
                  logger,
-                 aircraft_logger):
+                 aircraft_logger,
+                 charging_strategy):
         self.env = env        
         self.tail_number = tail_number
         self.system_manager = system_manager
@@ -153,6 +156,8 @@ class Aircraft:
         # self.logger = setup_logger(name='main', log_file=logfile, env=self.env)
         self.logger = logger
         self.aircraft_logger = aircraft_logger
+        self.charging_strategy = charging_strategy    
+
         
         # CACHE ENERGY CONSUMPTION
         self.energy_cache = {} # hashmap
@@ -518,14 +523,14 @@ class Aircraft:
         self.aircraft_logger.debug(f'Landed: Aircraft {self.tail_number} landed at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}, flight duration: {ms_to_min(self.flight_duration)}, holding time: {self.holding_time}, total energy consumption: {self.total_energy_consumption}')
         self.total_energy_consumption = 0
         self.idle_time = 0
-         # TODO: Remove below. HARDCODED for optimization integration
-        if self.system_manager.fixed_schedule:
-            if self.flight_direction == 'LAX_DTLA':
-                self.soc = self.preflight_soc - 10
-            elif self.flight_direction == 'DTLA_LAX':
-                self.soc = self.preflight_soc - 7.5
-            else:
-                raise ValueError(f'Invalid flight direction: {self.flight_direction}')
+        #  # TODO: Remove below. HARDCODED for optimization integration
+        # if self.system_manager.fixed_schedule:
+        #     if self.flight_direction == 'LAX_DTLA':
+        #         self.soc = self.preflight_soc - 10
+        #     elif self.flight_direction == 'DTLA_LAX':
+        #         self.soc = self.preflight_soc - 7.5
+        #     else:
+        #         raise ValueError(f'Invalid flight direction: {self.flight_direction}')
 
     def post_landing_procedures(self):
         yield self.env.timeout(round(self.time_post_landing_safety_checks))
@@ -592,7 +597,7 @@ class Aircraft:
 
                 # If the simulation is running by an optimization algorithm, then this will
                 # trigger this event and the optimization algorithm will make a decision.
-                if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+                if self.system_manager.sim_mode == 'client_server':
                     self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()     
             return                          
 
@@ -654,7 +659,7 @@ class Aircraft:
 
                 # If the simulation is running by an optimization algorithm, then this will
                 # trigger this event and the optimization algorithm will make a decision.
-                if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+                if self.system_manager.sim_mode == 'client_server':
                     self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
         else:
             # Reserve all of the taxiway nodes
@@ -743,7 +748,7 @@ class Aircraft:
 
                 # If the simulation is running by an optimization algorithm, then this will
                 # trigger this event and the optimization algorithm will make a decision.
-                if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+                if self.system_manager.sim_mode == 'client_server':
                     self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
 
     def aircraft_take_off_process(self, take_off_fato_id):
@@ -757,7 +762,7 @@ class Aircraft:
 
         # If the simulation is running by an optimization algorithm, then this will
         # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
+        if self.system_manager.sim_mode == 'client_server':
             self.system_manager.stopping_events['aircraft_departure_fix_departure_event'].succeed()       
 
         yield self.env.process(self.climb_to_cruise_altitude())
@@ -980,222 +985,220 @@ class Aircraft:
         self.system_manager.release_fix_resource(aircraft=self, operation='departure')        
 
     # ==================== CHARGING METHODS ====================
-    def request_charger(self):
-        """
-        This method is used when the charger configuration is normal (any parking pads can use any chargers).
-        Returns the charger resource that is used by the aircraft and the charging request.
-        """
-        used_charger_resource = self.system_manager.vertiports[self.destination_vertiport_id].charger_resource
-        return used_charger_resource, used_charger_resource.request()
+    # def request_charger(self):
+    #     """
+    #     This method is used when the charger configuration is normal (any parking pads can use any chargers).
+    #     Returns the charger resource that is used by the aircraft and the charging request.
+    #     """
+    #     used_charger_resource = self.system_manager.vertiports[self.destination_vertiport_id].charger_resource
+    #     return used_charger_resource, used_charger_resource.request()
 
-    def get_charging_time(self):
-        """
-        Get charging time - Two options: Constant charging time or draw a number from distribution
-        """
-        if self.time_charging is not None:
-            return max(self.time_passenger_embark_disembark, self.time_charging)
-        elif self.target_soc:
-            charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
-        elif self.target_soc_constant:
-            charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc_constant)
-        else:
-            charge_time = sec_to_ms(self.system_manager.charging_time_distribution.pick_number_from_distribution())
-            charge_time = max(self.time_passenger_embark_disembark, charge_time)
+    # def get_charging_time(self):
+    #     """
+    #     Get charging time - Two options: Constant charging time or draw a number from distribution
+    #     """
+    #     if self.time_charging is not None:
+    #         return max(self.time_passenger_embark_disembark, self.time_charging)
+    #     elif self.target_soc:
+    #         charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
+    #     elif self.target_soc_constant:
+    #         charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc_constant)
+    #     else:
+    #         charge_time = sec_to_ms(self.system_manager.charging_time_distribution.pick_number_from_distribution())
+    #         charge_time = max(self.time_passenger_embark_disembark, charge_time)
 
-        self.event_saver.save_aircraft_charging_time(vertiport_id=self.destination_vertiport_id,
-                                                     charging_time=charge_time)
-        self.logger.debug(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
+    #     self.event_saver.save_aircraft_charging_time(vertiport_id=self.destination_vertiport_id,
+    #                                                  charging_time=charge_time)
+    #     self.logger.debug(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
         
-        return charge_time
-
-    def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
-        """
-        If the charger configuration is fixed and share-limited, all of the chargers that a parking pad has access
-        should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
-        easier to follow which resource is being used by which aircraft.
-        """
-        if not self.target_soc and self.soc >= self.aircraft_params['min_reserve_soc']:
-            self.set_charging_time_trackers()
-            self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')
-            # After deboarding the passengers aircraft will be ready for the next flight.
-            if len(self.passengers_onboard) > 0:
-                self.detailed_status = 'embark_disembark'
-                yield self.env.timeout(round(self.time_passenger_embark_disembark))
-            else:
-                yield self.env.timeout(0)
-            self.save_process_time(event='embark_disembark', process_time=self.time_passenger_embark_disembark)
-            self.detailed_status = 'idle'
-            return
-        
-        self.status = AircraftStatus.CHARGE
-
-        # If the simulation is running by an optimization algorithm, then this will
-        # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
-            self.system_manager.stopping_events['charging_start_event'].succeed()             
-        
-        # If the chargers are shared, request all of the chargers that the parking pad has access to.
-        if shared_charger:
-            used_charger_resource, selected_charging_request = self.handle_shared_charger(parking_space)
-        else:
-            used_charger_resource, selected_charging_request = self.request_charger()
-            yield selected_charging_request
-
-        self.start_charging_process()
-        if not self.charged_during_turnaround:
-            idle_time = self.env.now - self.ground_holding_end_time
-            self.idle_time += idle_time
-        else:
-            idle_time = self.env.now - self.charging_end_time
-            self.idle_time += idle_time
-        self.save_process_time(event='idle', process_time=idle_time)
-        self.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {self.tail_number} at {self.location}.')
-
-        self.detailed_status = 'charging'
-        charge_time = self.get_charging_time()
-        yield self.env.timeout(round(charge_time))
-        self.save_process_time(event='charge', process_time=charge_time)
-        self.detailed_status = 'idle'
-        self.save_process_time(event='idle', process_time=self.compute_holding_after_charge(charge_time))
-        yield self.env.process(self.hold_for_charging_schedule_compatibility(charge_time))
-        self.end_charging_process()
-        self.logger.info(f'Saved idle time of {miliseconds_to_hms(self.compute_holding_after_charge(charge_time))} for after charge holding for aircraft {self.tail_number} at {self.location}.')
-
-        old_soc = self.soc
-        self.soc_charge_update(charge_time)
-
-        # Set the aircraft status to idle
-        self.status = AircraftStatus.IDLE
-        # If the simulation is running by an optimization algorithm, then this will
-        # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_params['step_by_step_sim'] == 'auto':
-            self.system_manager.stopping_events['charging_end_event'].succeed()     
-
-        # Reset the target_soc to None for the next flight
-        self.set_target_soc_none()
-        # Release the charger resource that is used by the aircraft and the charging request
-        self.release_charger_resource(used_charger_resource, selected_charging_request)
-        # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround
-        self.charged_during_turnaround = True
-        self.logger.debug(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(self.soc, 2)}")
-
-    def hold_for_charging_schedule_compatibility(self, charge_time):
-        holding_time = self.compute_holding_after_charge(charge_time)
-        yield self.env.timeout(holding_time)
+    #     return charge_time
     
-    def compute_holding_after_charge(self, charge_time):
-        """
-        If the charging schedule is fixed, the aircraft should hold until the next time step.
-        """
-        if self.system_manager.fixed_charge_schedule:
-            rounded_charge_time = roundup_to_five_minutes(charge_time)
-            return rounded_charge_time - charge_time
-        else:
-            return 0
+    def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
+        yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
+      
 
-    def set_charging_time_trackers(self):
-        self.charging_start_time = self.env.now
-        self.charging_end_time = self.env.now
+    # def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
+    #     """
+    #     If the charger configuration is fixed and share-limited, all of the chargers that a parking pad has access
+    #     should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
+    #     easier to follow which resource is being used by which aircraft.
+    #     """
+    #     if not self.target_soc and self.soc >= self.aircraft_params['min_reserve_soc']:
+    #         self.set_charging_time_trackers()
+    #         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')
+    #         # After deboarding the passengers aircraft will be ready for the next flight.
+    #         if len(self.passengers_onboard) > 0:
+    #             self.detailed_status = 'embark_disembark'
+    #             yield self.env.timeout(round(self.time_passenger_embark_disembark))
+    #         else:
+    #             yield self.env.timeout(0)
+    #         self.save_process_time(event='embark_disembark', process_time=self.time_passenger_embark_disembark)
+    #         self.detailed_status = 'idle'
+    #         return
+        
+    #     self.status = AircraftStatus.CHARGE
+        
+    #     # If the chargers are shared, request all of the chargers that the parking pad has access to.
+    #     if shared_charger:
+    #         used_charger_resource, selected_charging_request = self.handle_shared_charger(parking_space)
+    #     else:
+    #         used_charger_resource, selected_charging_request = self.request_charger()
+    #         yield selected_charging_request
 
-    def set_target_soc_none(self):
-        self.target_soc = None
+    #     self.start_charging_process()
+    #     if not self.charged_during_turnaround:
+    #         idle_time = self.env.now - self.ground_holding_end_time
+    #         self.idle_time += idle_time
+    #     else:
+    #         idle_time = self.env.now - self.charging_end_time
+    #         self.idle_time += idle_time
+    #     self.save_process_time(event='idle', process_time=idle_time)
+    #     self.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {self.tail_number} at {self.location}.')
 
-    def handle_shared_charger(self, parking_space: object):
-        charger_requests = self.env.process(self.request_all_chargers(parking_space))
-        charging_requests_list = self.get_first_filled_charger_request(charger_requests)
-        selected_charging_request = charging_requests_list[0]
-        used_charger_resource = get_key_from_value(charger_requests, selected_charging_request)
-        # Find which charger request is being used
-        self.release_unused_charger_resources(charger_requests, used_charger_resource, charging_requests_list)
-        return used_charger_resource, selected_charging_request
+    #     self.detailed_status = 'charging'
+    #     charge_time = self.get_charging_time()
+    #     yield self.env.timeout(round(charge_time))
+    #     self.save_process_time(event='charge', process_time=charge_time)
+    #     self.detailed_status = 'idle'
+    #     self.save_process_time(event='idle', process_time=self.compute_holding_after_charge(charge_time))
+    #     yield self.env.process(self.hold_for_charging_schedule_compatibility(charge_time))
+    #     self.end_charging_process()
+    #     self.logger.info(f'Saved idle time of {miliseconds_to_hms(self.compute_holding_after_charge(charge_time))} for after charge holding for aircraft {self.tail_number} at {self.location}.')
 
-    def request_all_chargers(self, parking_space: object):
-        # Request all of the chargers that the parking pad has access.
-        charger_requests = {charger: charger.request() for charger in parking_space.charger_resources}
-        # Yield all of the charger requests. When any_of used it fires all of the requests.
-        yield self.env.any_of(list(charger_requests.values()))
-        return charger_requests
+    #     old_soc = self.soc
+    #     self.soc_charge_update(charge_time)
 
-    def get_first_filled_charger_request(self, charger_requests: dict):
-        # The selected charging request is the on top of the list
-        return list(charger_requests.keys())
+    #     # Set the aircraft status to idle
+    #     self.status = AircraftStatus.IDLE 
 
-    def release_unused_charger_resources(self, charger_requests: dict, used_charger_resource: object, charging_requests_list: object):
-        # Since any_of() used more than one request might be filled. Only one should be kept and the rest should be canceled.        
-        for charger_res, charger_req in charger_requests.items():
-            if charger_res != used_charger_resource:
-                if len(charging_requests_list) > 1:
-                    charger_res.release(charger_req)
-                else:
-                    charger_req.cancel()
+    #     # Reset the target_soc to None for the next flight
+    #     self.set_target_soc_none()
+    #     # Release the charger resource that is used by the aircraft and the charging request
+    #     self.release_charger_resource(used_charger_resource, selected_charging_request)
+    #     # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround
+    #     self.charged_during_turnaround = True
+    #     self.logger.debug(f"Finished Charging: Aircraft {self.tail_number} at {self.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(self.soc, 2)}")
 
-    def start_charging_process(self):
-        self.charging_start_time = self.env.now
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_start')
+    # def hold_for_charging_schedule_compatibility(self, charge_time):
+    #     holding_time = self.compute_holding_after_charge(charge_time)
+    #     yield self.env.timeout(holding_time)
+    
+    # def compute_holding_after_charge(self, charge_time):
+    #     """
+    #     If the charging schedule is fixed, the aircraft should hold until the next time step.
+    #     """
+    #     if self.system_manager.fixed_charge_schedule:
+    #         rounded_charge_time = roundup_to_five_minutes(charge_time)
+    #         return rounded_charge_time - charge_time
+    #     else:
+    #         return 0
 
-    def end_charging_process(self):
-        self.charging_end_time = self.env.now
-        self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_end')
+    # def set_charging_time_trackers(self):
+    #     self.charging_start_time = self.env.now
+    #     self.charging_end_time = self.env.now
 
-    def release_charger_resource(self, used_charger_resource: object, selected_charging_request: object):
-        used_charger_resource.release(selected_charging_request)
+    # def set_target_soc_none(self):
+    #     self.target_soc = None
 
-    @staticmethod
-    def calc_soc_from_charge_time(charge_time: int, initial_soc: int, df: pd.DataFrame) -> int:
-        """
-        charge_time is the time between the current time and the charging start time.
+    # def handle_shared_charger(self, parking_space: object):
+    #     charger_requests = self.env.process(self.request_all_chargers(parking_space))
+    #     charging_requests_list = self.get_first_filled_charger_request(charger_requests)
+    #     selected_charging_request = charging_requests_list[0]
+    #     used_charger_resource = get_key_from_value(charger_requests, selected_charging_request)
+    #     # Find which charger request is being used
+    #     self.release_unused_charger_resources(charger_requests, used_charger_resource, charging_requests_list)
+    #     return used_charger_resource, selected_charging_request
 
-        Parameters
-        ----------
-        charge_time: int
-            Time between the current time and the charging start time in miliseconds.
-        soc: int
-            Initial soc level of the aircraft.
-        df: pd.DataFrame
-            Dataframe that contains the soc levels and the time information.
+    # def request_all_chargers(self, parking_space: object):
+    #     # Request all of the chargers that the parking pad has access.
+    #     charger_requests = {charger: charger.request() for charger in parking_space.charger_resources}
+    #     # Yield all of the charger requests. When any_of used it fires all of the requests.
+    #     yield self.env.any_of(list(charger_requests.values()))
+    #     return charger_requests
 
-        Returns
-        -------
-        int
-            The soc level of the aircraft after the charging time.
-        """
-        # Get the time at initial soc level
-        initial_soc_time = df[df.soc == round(initial_soc)]['time_sec'].values[0]
-        # Get the time at final soc level
-        final_soc_time = initial_soc_time + ms_to_sec(charge_time)
-        # Get the soc at final soc level
-        idx_final_soc = df['time_sec'].sub(final_soc_time).abs().idxmin()
-        return df.loc[idx_final_soc]['soc']
+    # def get_first_filled_charger_request(self, charger_requests: dict):
+    #     # The selected charging request is the on top of the list
+    #     return list(charger_requests.keys())
 
-    def get_charge_time_from_soc(self, init_soc: int, target_soc: int) -> float:
-        """
-        Calculates the charge time required to reach the target soc level.
+    # def release_unused_charger_resources(self, charger_requests: dict, used_charger_resource: object, charging_requests_list: object):
+    #     # Since any_of() used more than one request might be filled. Only one should be kept and the rest should be canceled.        
+    #     for charger_res, charger_req in charger_requests.items():
+    #         if charger_res != used_charger_resource:
+    #             if len(charging_requests_list) > 1:
+    #                 charger_res.release(charger_req)
+    #             else:
+    #                 charger_req.cancel()
 
-        Parameters
-        ----------
-        init_soc: int
-            Initial soc level of the aircraft.
-        target_soc: int
-            Target soc level of the aircraft.
+    # def start_charging_process(self):
+    #     self.charging_start_time = self.env.now
+    #     self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_start')
 
-        Returns
-        -------
-        float
-            Charge time required to reach the target soc level.
-        """
-        check_magnitude_order(init_soc, target_soc)
-        df = self.system_manager.aircraft_battery_models[self.destination_vertiport_id]
-        init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
-        target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
-        return sec_to_ms(target_soc_time - init_soc_time)
+    # def end_charging_process(self):
+    #     self.charging_end_time = self.env.now
+    #     self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='charging_end')
 
-    def soc_charge_update(self, charge_time) -> None:
-        """
-        Updates the charge level of the aircraft using current charge time.
-        """
-        charge_lookup_table = self.system_manager.aircraft_battery_models[self.destination_vertiport_id]
-        final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.soc, df=charge_lookup_table)
-        self._soc = final_soc
+    # def release_charger_resource(self, used_charger_resource: object, selected_charging_request: object):
+    #     used_charger_resource.release(selected_charging_request)
+
+    # @staticmethod
+    # def calc_soc_from_charge_time(charge_time: int, initial_soc: int, df: pd.DataFrame) -> int:
+    #     """
+    #     charge_time is the time between the current time and the charging start time.
+
+    #     Parameters
+    #     ----------
+    #     charge_time: int
+    #         Time between the current time and the charging start time in miliseconds.
+    #     soc: int
+    #         Initial soc level of the aircraft.
+    #     df: pd.DataFrame
+    #         Dataframe that contains the soc levels and the time information.
+
+    #     Returns
+    #     -------
+    #     int
+    #         The soc level of the aircraft after the charging time.
+    #     """
+    #     # Get the time at initial soc level
+    #     initial_soc_time = df[df.soc == round(initial_soc)]['time_sec'].values[0]
+    #     # Get the time at final soc level
+    #     final_soc_time = initial_soc_time + ms_to_sec(charge_time)
+    #     # Get the soc at final soc level
+    #     idx_final_soc = df['time_sec'].sub(final_soc_time).abs().idxmin()
+    #     return df.loc[idx_final_soc]['soc']
+
+    # def get_charge_time_from_soc(self, init_soc: int, target_soc: int) -> float:
+    #     """
+    #     Calculates the charge time required to reach the target soc level.
+
+    #     Parameters
+    #     ----------
+    #     init_soc: int
+    #         Initial soc level of the aircraft.
+    #     target_soc: int
+    #         Target soc level of the aircraft.
+
+    #     Returns
+    #     -------
+    #     float
+    #         Charge time required to reach the target soc level.
+    #     """
+    #     if check_magnitude_order(init_soc, target_soc):
+    #         df = self.system_manager.aircraft_battery_models[self.destination_vertiport_id]
+    #         init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
+    #         target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
+    #         return sec_to_ms(target_soc_time - init_soc_time)
+    #     else:
+    #         self.logger.error(f"Final soc level ({target_soc}) is greater than 100).")
+    #         self.system_manager.truncation_event.succeed()
+
+    # def soc_charge_update(self, charge_time) -> None:
+    #     """
+    #     Updates the charge level of the aircraft using current charge time.
+    #     """
+    #     charge_lookup_table = self.system_manager.aircraft_battery_models[self.destination_vertiport_id]
+    #     final_soc = Aircraft.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=self.soc, df=charge_lookup_table)
+    #     self._soc = final_soc
         # self._soc = min(100, final_soc)
 
     def convert_kwh_soc(self, kwh: float) -> int:
@@ -1458,13 +1461,16 @@ class Aircraft:
         """
         Returns the aircraft states.
         """
-        return {
+        state_data = {
             'origin_vertiport_id': self.get_vertiport_list().index(self.origin_vertiport_id),
             'destination_vertiport_id': self.get_vertiport_list().index(self.destination_vertiport_id),
             'soc': round(self.soc, 2),
             'time_to_arrival': self.estimate_time_to_arrival(),
             'status': self.status
         }
+        
+        # Validate and serialize the state data
+        return AircraftState(**state_data).dict()
 
 
     
@@ -1472,4 +1478,156 @@ class AircraftStatus(Enum):
     CHARGE = 1
     IDLE = 2
     FLY = 3
-    
+
+
+from pydantic import BaseModel
+
+class AircraftState(BaseModel):
+    origin_vertiport_id: int
+    destination_vertiport_id: int
+    soc: float
+    time_to_arrival: float
+    status: AircraftStatus
+
+    # def fly_in_the_airspace(self, user_modification=False):
+    #     """
+    #     Finds the location of the aircraft in the airspace from self.system_manager.airspace.airlink_resources
+    #     and traverses the airspace starting from that location        
+    #     """      
+    #     first_waypoint = True
+    #     # Get the airlink resources for the flight direction
+    #     airlink_resources = self.system_manager.airspace.airlink_resources[self.flight_direction]
+
+    #     # Find the current location of the aircraft in the airlink resources
+    #     current_location_index = None
+    #     for index, (waypoint_id, _) in enumerate(airlink_resources.items()):
+    #         if waypoint_id == self.location:
+    #             current_location_index = index
+    #             break
+
+    #     if current_location_index is None:
+    #         raise ValueError(f"Aircraft's current location ({self.location}) not found in the airlink resources")
+
+    #     # Start iterating the airlink resources from the next location. Second to last node is the final approach fix 
+    #     # and the last node is th ehover fix. We don't request them here.
+    #     if user_modification:
+    #         starting_index = current_location_index
+    #     else:
+    #         starting_index = current_location_index + 1
+
+    #     for waypoint_id, resource in list(airlink_resources.items())[starting_index:-2]:
+    #         with resource.airnode_resource.request() as req:
+    #             yield req
+    #             # Compute the horizontal and vertical distance between the current location and the next waypoint
+    #             horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, waypoint_id)
+    #             # If the vertical distance is not zero, then the aircraft is climbing or descending. If the previous flight phase
+    #             # is not cruise, then the aircraft is climbing. Otherwise, the aircraft is descending.
+    #             # TODO: Flight phase might need to be an input parameter. Otherwise, climb-cruise-climb combination is not possible to capture.
+    #             if vertical_distance != 0 and self.detailed_status == 'climb':
+    #                 initial_velocity_guess = self.guess_initial_velocity()
+    #                 self.forward_velocity, self.vertical_velocity = self.velocity_optimizer.optimize(
+    #                                                         V=initial_velocity_guess,
+    #                                                         tom=self.tom,
+    #                                                         altitude=self.altitude,
+    #                                                         horizontal_distance=horizontal_distance,
+    #                                                         vertical_distance=vertical_distance,
+    #                                                         cost_type='climb')
+    #                 climb_time = round(horizontal_distance / self.forward_velocity)
+    #                 yield self.env.timeout(round(sec_to_ms(climb_time)))
+    #                 energy_consumption = round(self.climb_energy_consumption(velocity=self.forward_velocity,
+    #                                                                         climb_end_altitude=self.get_node_altitude(waypoint_id),
+    #                                                                         climb_time=climb_time), 2)
+    #                 self.total_energy_consumption += energy_consumption  
+
+    #                 self.save_process_time(event='climb', process_time=climb_time)
+    #                 self.save_flight_phase_energy(flight_phase='climb', energy=energy_consumption)
+
+    #                 self.aircraft_logger.debug(f'Continue Climb: Aircraft {self.tail_number} has arrived at {waypoint_id} with forward velocity {self.forward_velocity} and'
+    #                                             f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Climb time: {climb_time},'
+    #                                                 f' climb energy consumption: {energy_consumption}.')
+    #             # If the vertical distance is not zero and the previous flight phase is cruise or descend, then the aircraft is descending.
+    #             elif vertical_distance != 0 and self.detailed_status in ['descend', 'cruise']:
+    #                 self.detailed_status = 'descend'
+    #                 initial_velocity_guess = self.guess_initial_velocity()
+    #                 self.forward_velocity, self.vertical_velocity = self.velocity_optimizer.optimize(
+    #                                                         V=initial_velocity_guess,
+    #                                                         tom=self.tom,
+    #                                                         altitude=self.altitude,
+    #                                                         horizontal_distance=horizontal_distance,
+    #                                                         vertical_distance=vertical_distance,
+    #                                                         cost_type='descend')
+    #                 descend_time = round(horizontal_distance / self.forward_velocity)
+    #                 yield self.env.timeout(sec_to_ms(descend_time))
+    #                 energy_consumption = round(self.descend_energy_consumption(velocity=self.forward_velocity,
+    #                                                                         descend_end_altitude=self.get_node_altitude(waypoint_id),
+    #                                                                         descend_time=descend_time), 2)
+    #                 self.total_energy_consumption += energy_consumption 
+
+    #                 self.save_process_time(event='descend', process_time=descend_time)
+    #                 self.save_flight_phase_energy(flight_phase='descend', energy=energy_consumption)
+
+    #                 self.aircraft_logger.debug(f'Descend: Aircraft {self.tail_number} has arrived at {waypoint_id} with forward velocity {self.forward_velocity} and'
+    #                                               f' vertical velocity {self.vertical_velocity}, SOC: {round(self.soc, 2)}. Descend time: {descend_time},'
+    #                                                     f' descend energy consumption: {energy_consumption}.')               
+    #             else:
+    #                 # If the vertical distance is zero, then the aircraft is in cruise
+    #                 self.detailed_status = 'cruise'
+    #                 if self.aircraft_params['cruise_speed']:
+    #                     cruise_speed = self.aircraft_params['cruise_speed'] 
+    #                 else:                   
+    #                     cruise_speed = self.velocity_optimizer.max_range_speed(altitude=self.altitude, tom=self.tom)
+                        
+    #                 """
+    #                 WIND IMPLEMENTATION
+                    
+    #                 Airspeed affects power. Ground speed affects travel time, which then affects total energy consumption.
+    #                 Therefore the effects of wind on power are decoupled from those on travel time.
+    #                 """   
+                                            
+    #                 latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
+    #                 latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[waypoint_id]
+    #                 destination_heading = Wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
+                    
+    #                 set_seed(how='instant')
+    #                 # wind_speed, wind_direction = self.system_manager.airspace.get_wind_speed_and_direction()
+    #                 # v_wind = Wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_direction, wind_magnitude=mph_to_metersec(wind_speed))
+
+    #                 # minimum ground speed allowed
+    #                 self.stall_speed = 30
+
+    #                 # forcing static wind type
+    #                 wind_speed = 8 # m / s
+    #                 wind_direction = pi # headwind
+    #                 v_wind = Wind.make_wind_vector_relative_to_the_aircraft(destination_heading, wind_direction, wind_speed)
+                    
+    #                 # note: |true_vector| = self.forward_velocity UNLESS wind is too strong, and a greater true_airspeed is needed
+    #                 true_vector = Wind.wind_adjusted_true_velocity(self.forward_velocity, destination_heading, v_wind, self.stall_speed)
+                    
+    #                 ground_vector = Wind.ground_velocity(true_vector, v_wind)
+                    
+    #                 # Verify aircraft flight direction and speeds.
+    #                 Wind.verify_aircraft_heading(ground_vector, destination_heading)
+    #                 Wind.verify_aircraft_speeds(ground_vector, self.stall_speed, self.forward_velocity, true_vector)
+                        
+    #                 link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
+    #                                                                                     destination=waypoint_id, 
+    #                                                                                     horizontal_speed=Wind.magnitude(ground_vector))
+    #                 yield self.env.timeout(sec_to_ms(link_traversal_time))
+                    
+    #                 # Compute energy consumption
+    #                 energy_consumption = round(self.cruise_energy_consumption(velocity=Wind.magnitude(true_vector), 
+    #                                                                           time_cruise=link_traversal_time), 2)
+    #                 self.total_energy_consumption += energy_consumption
+
+    #                 # Logging
+    #                 self.save_process_time(event='cruise', process_time=link_traversal_time)
+    #                 self.save_flight_phase_energy(flight_phase='cruise', energy=energy_consumption)
+            
+    #                 self.aircraft_logger.debug(f"Aircraft {self.tail_number} V_h: {self.forward_velocity}, V_v velocity: {self.vertical_velocity}, time: {link_traversal_time},"
+    #                                         f" energy consumption: {energy_consumption} during {self.detailed_status} from {self.location} to {waypoint_id}. SOC: {round(self.soc, 2)}")
+                    
+    #         self.update_aircraft_state(waypoint_id, energy_consumption, 'cruise')         
+
+    #     yield self.env.process(self.system_manager.simulate_terminal_airspace_arrival_process(
+    #         aircraft=self, arriving_passengers=self.passengers_onboard)
+    #     )

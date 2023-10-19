@@ -1,14 +1,12 @@
 import numpy as np
 from math import sin, cos, asin, atan2, pi
 from typing import Dict, List, Union
-from utils.process_wind_data import WindDataProcessor
-from utils.units import ms_to_hr
-
+from ..utils.process_wind_data import WindDataProcessor
+from ..utils.units import ms_to_hr
+from .wind_models import DynamicWindState, StaticWindState
 
 class Wind:
     
-    RADIUS_EARTH = 6371 # km
-
     """Relevant usage in:
         lines 894-935 of aircraft.py
     """
@@ -169,9 +167,14 @@ class Wind:
         Returns:
             dict: A dictionary containing wind magnitude and wind angle.
         """
-        return {'wind_magnitude': self.wind_magnitude, 'wind_angle': self.wind_angle}
+        data = {'windspeed': self.wind_magnitude, 'winddir': self.wind_angle}
+        # Validate and serialize the data using StaticWindData
+        valid_data = StaticWindState(**data)
+        
+        return valid_data.dict()        
+
     
-    def get_wind_states(self, locations: List[str], time: int) -> Dict[str, Dict[str, Union[float, int]]]:
+    def get_wind_states(self, locations: List[str], time: int) -> Dict[str, Union[StaticWindState, Dict[str, DynamicWindState]]]:
         """
         Retrieves wind data for given locations. Returns static wind data if it's enabled.
         
@@ -196,13 +199,16 @@ class Wind:
             )
 
         return {
-            location_id: self.get_time_and_location_specific_wind_states(
-                time_of_day=int(ms_to_hr(time)), 
-                location=location_id
-            )
+            location_id: DynamicWindState(
+                locationname=location_id, 
+                **self.get_time_and_location_specific_wind_states(
+                    time_of_day=int(ms_to_hr(time)), 
+                    location=location_id
+                )
+            ).dict()
             for location_id in locations
         }
-
+    
     def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str) -> Dict:
         """
         Retrieves wind data for a specific time and location.
@@ -234,6 +240,4 @@ class Wind:
         """
         x = Wind.RADIUS_EARTH * cos(latitude) * cos(longitude)
         y = Wind.RADIUS_EARTH * cos(latitude) * sin(longitude)
-        return np.array([x, 
-                            y])
-    
+        return np.array([x, y])

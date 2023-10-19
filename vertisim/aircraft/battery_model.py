@@ -6,9 +6,8 @@ import numpy as np
 
 
 class BatteryModel:
-    def __init__(self, charger_model, min_reserve_soc):
+    def __init__(self, charger_model):
         self.charger_model = charger_model
-        self.min_reserve_soc = min_reserve_soc
 
     def charge_process(self, battery_capacity=160):
         """
@@ -49,12 +48,6 @@ class BatteryModel:
         charge_df['time_sec'] = charge_df['time_hr']*3600
         charge_df = charge_df[charge_df.soc <= 100]
         return charge_df
-    
-    def discharge_process(self):
-        # TODO: Complete discharge process using CM paper.
-        pass
-
-
 
 
 # battery_model = BatteryModel()

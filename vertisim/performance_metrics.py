@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from utils.units import ms_to_min, sec_to_min, hr_to_ms
-from utils.helpers import nested_dict_all_values, remove_larger_keys, get_values_from_nested_dict, \
+from .utils.units import ms_to_min, sec_to_min, hr_to_ms
+from .utils.helpers import nested_dict_all_values, remove_larger_keys, get_values_from_nested_dict, \
     get_length_of_longest_list, get_length_of_shortest_list
 import matplotlib.pyplot as plt
 from typing import List

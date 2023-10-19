@@ -1,4 +1,4 @@
-from utils.read_files import read_input_file
+from .read_files import read_input_file
 
 
 def import_aircraft_energy_consumption_data(folder_path: str, aircraft_models: list, ranges: list) -> dict:

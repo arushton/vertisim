@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.units import sec_to_ms
+from .units import sec_to_ms
 
 
 def calc_required_charge_time_from_required_energy(mission_required_energy: float,
