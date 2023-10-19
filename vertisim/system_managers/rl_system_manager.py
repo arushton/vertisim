@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 from collections import defaultdict
 from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
+from ..utils.weighted_random_chooser import random_choose_exclude_element
 
 class RLSystemManager(BaseSystemManager):
     def __init__(self,
@@ -46,14 +47,19 @@ class RLSystemManager(BaseSystemManager):
                         logger=logger,
                         aircraft_logger=aircraft_logger,
                         passenger_logger=passenger_logger,
-                        truncation_event=truncation_event,
                         sim_mode=sim_mode
                         )
         
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.stopping_events = stopping_events
+        self.truncation_event = truncation_event
     
-    def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str):
+    def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
+        # If the destination vertiport is not assigned, then randomly choose one
+        if destination_vertiport_id is None:
+            destination_vertiport_id = random_choose_exclude_element(elements_list=self.vertiport_ids,
+                                                                    exclude_element=aircraft.origin_vertiport_id,
+                                                                    num_selection=1)[0]
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
         # Update the vertiport flight request state

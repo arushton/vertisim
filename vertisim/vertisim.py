@@ -127,7 +127,7 @@ class VertiSim:
         Run the simulation for one timestep.
         """
         # Apply the action
-        self.apply_action(actions)
+        self.env.process(self.apply_action(actions))
         # Advance to the next stopping event
         return self.advance_to_next_stopping_event()
 
@@ -157,7 +157,7 @@ class VertiSim:
             for _, vertiport in self.sim_setup.vertiports.items()
         )        
 
-    def apply_action(self, action: gym.spaces.Tuple):
+    def apply_action(self, action: np.array):
         """
         Apply action to the simulation.
 
@@ -165,24 +165,22 @@ class VertiSim:
         0: Do nothing
         1: Idle to charge
         2: Idle to service (vertiport 1)
-        3: Idle to service (vertiport 2)
         """
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
-                self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space))
+                process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
-                self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft))
-            process_list.append(aircraft.process)
+                process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
         yield self.env.all_of(process_list)
 
-    def set_action_space(self, config: Dict) -> gym.spaces.Tuple:
+    def set_action_space(self, config: Dict) -> gym.spaces.MultiDiscrete:
         """
         Creates the action space for each aircraft.
         """
         n_actions = self.get_action_count()
         n_aircraft = self.get_aircraft_count(config=config)
-        return gym.spaces.Tuple((gym.spaces.Discrete(n_actions) for _ in range(n_aircraft)))
+        return gym.spaces.MultiDiscrete([n_actions] * n_aircraft)
     
     def set_observation_space(self) -> gym.spaces.Box:
         # Vertiport states
