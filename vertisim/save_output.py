@@ -1,43 +1,14 @@
 import mysql.connector
+import datetime
+from utils.helpers import flatten
+from collections import defaultdict
 
-def save_output():
+def save_output(simulation_params: dict, performance_metrics: defaultdict, simulationID: str) -> None:
     """Saves output to mySQL database.
-    Simulation: ID | Timestamp | Config
-    Performance Metrics: ID | SimulationID | Metric_1 | Metric_2 | ... | Metric_N """
+    Vertisim Database:
+    Simulation Table: Config (Primary Key) | Timestamp | SimulationID
+    Performance Metrics Table: ID (Primary Key) | SimulationID | Metric_1 | Metric_2 | ... | Metric_N """
     
-    # TODO: Pick save_output parameters
-    """ save_output(
-            trajectories={
-                'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
-                'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory
-            },
-            time_tables={
-                'flight_schedule': self.event_saver.flight_schedule,
-                'ground_aircraft_counter': self.event_saver.ground_aircraft_counter,
-                'flying_aircraft_counter': self.event_saver.flying_aircraft_counter
-            },
-            trackers={
-                'aircraft_idle_time_tracker': self.event_saver.aircraft_idle_time_tracker,
-                'flight_and_time_tracker': self.event_saver.flight_and_time_tracker,
-                'aircraft_holding_time': self.event_saver.aircraft_holding_time,
-                'passenger_trip_time_tracker': self.event_saver.passenger_trip_time_tracker,
-                'aircraft_process_time_tracker': self.event_saver.aircraft_process_time_tracker,
-                'flight_phase_energy_consumption_tracker': self.event_saver.flight_phase_energy_consumption_tracker
-            },
-            simulation_params={
-                'sim_params': self.sim_params,
-                'network_and_demand': self.network_and_demand_params,
-                'passenger_params': self.passenger_params,
-                'aircraft_params': self.aircraft_params,
-                'output_params': self.output_params
-            },
-            output_dir=self.output_folder_path,
-            config_output_file_name=self.output_params['config_output_file_name'],
-            performance_metrics_output_file_name=self.output_params['performance_metrics_output_file_name'],
-            performance_metrics=performance_metrics,
-            sim_id=self.sim_id
-        ) """
-
     db = mysql.connector.connect(
         host="localhost",
         user="root",
@@ -47,4 +18,57 @@ def save_output():
 
     cursor = db.cursor()
     
-    # TODO: initialize Simulation and Performance Metrics Tables
+    # --- SIMULATION TABLE ---
+    
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    config = flatten(simulation_params)
+    
+    try:
+        cursor.execute("""CREATE TABLE IF NOT EXISTS Simulation (
+                            Config TEXT PRIMARY KEY,
+                            Timestamp DATETIME,
+                            SimulationID TEXT 
+                        ); """)
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+    
+    try:
+        cursor.execute("""INSERT INTO Simulation (Config, Timestamp, SimulationID)
+                        VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE Timestamp = VALUES(Timestamp), SimulationID = VALUES(SimulationID);""", 
+                        (config, timestamp, simulationID))
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+    
+    # --- PERFORMANCE METRICS TABLE --- 
+    
+    # Metrics: Energy Consumption, Flight Time
+    
+    
+    try:
+        cursor.execute("""CREATE TABLE IF NOT EXISTS PerformanceMetrics (
+                            ID INT AUTO_INCREMENT PRIMARY KEY,
+                            SimulationID TEXT,
+                            Metric_1 FLOAT,
+                            Metric_2 FLOAT,
+                            ...,
+                            Metric_N FLOAT,
+                            FOREIGN KEY (SimulationID) REFERENCES Simulation(SimulationID) 
+                        );""")
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+    
+    try:
+        cursor.execute("""
+            INSERT INTO PerformanceMetrics (SimulationID, Metric_1, Metric_2, ..., Metric_N)
+            VALUES (%s, %s, %s, ..., %s);
+        """, (simulationID, *performance_metrics))
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+
+    # Commit the changes
+    db.commit()
+    
+    # Close the cursor and disconnect from the database
+    cursor.close()
+    db.close()
+    
