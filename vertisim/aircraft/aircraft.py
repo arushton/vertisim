@@ -13,12 +13,8 @@ from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb
 from ..utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 from .power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
-from ..wind.wind import Wind
-from math import pi
 from enum import Enum
-from memoize import PhaseParameters
-from utils.visualize import Visualizer
-import matplotlib.pyplot as plt
+from vertisim.memoize import PhaseParameters
 
 class Aircraft:
     """
