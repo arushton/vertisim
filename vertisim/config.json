@@ -60,16 +60,16 @@
     },
 
     "network_and_demand_params": {
-        "vertiport_network_file_path": "input/network/network_SFO_MV.csv",
+        "vertiport_network_file_path": "input/network/network_LAX_DTLA.csv",
         "vertiport_layout_file_path": "input/vertiport_layouts/vertiport_layout.xls",
         "charge_schedule_file_path": null,
         "flight_schedule_file_path": null,
-        "passenger_schedule_file_path": null,
-        "passenger_arrival_rates_path": "input/passenger/passenger_arrival_rates_sfo_mv.csv",
+        "passenger_schedule_file_path": "input/passenger/passenger_arrival_process_test.csv",
+        "passenger_arrival_rates_path": null,
         "demand_probabilities": null,
         "vertiports": {
-            "SFO": {
-                "layout": "clover_1_fato_8_park_sfo",
+            "LAX": {
+                "layout": "clover_1_fato_8_park_lax",
                 "holding_unit_capacity": 20,
                 "num_security_check_servers": 10,
                 "num_chargers": 8,
@@ -92,8 +92,8 @@
                     "initial_arrival_queue_state": 0
                 }
             },
-            "MV": {
-                "layout": "clover_1_fato_8_park_mv",
+            "DTLA": {
+                "layout": "clover_1_fato_13_park_dtla",
                 "holding_unit_capacity": 20,
                 "num_security_check_servers": 10,
                 "num_chargers": 8,
@@ -112,7 +112,7 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 8,
+                    "num_initial_aircraft_in_vertiport": 6,
                     "initial_arrival_queue_state": 0
                 }
             }
@@ -129,7 +129,7 @@
         "static_wind": false, 
         "wind_magnitude": 8, 
         "wind_angle": 3.14159, 
-        "wind_data_file_path": "input/airspace/SFBayArea_wind_data.csv"
+        "wind_data_file_path": "input/airspace/LA_wind_data.csv"
     },
 
     "passenger_params" : {
