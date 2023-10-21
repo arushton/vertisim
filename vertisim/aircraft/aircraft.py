@@ -935,6 +935,7 @@ class Aircraft:
 
                 if self.wind.static_wind:
                     v_wind: np.ndarray = self.wind.make_static_wind_vector_relative_to_the_aircraft(destination_heading)
+                    # v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(destination_heading)
                 else:
                     wind_impact_area: str = self.closest_vertiport_to_aircraft(location=self.location, 
                                                                         origin_vertiport_id=self.origin_vertiport_id,
