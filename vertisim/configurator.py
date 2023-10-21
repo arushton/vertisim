@@ -19,7 +19,7 @@ class VertiportStates(BaseModel):
     num_available_fato: int
     num_available_parking_pad: int
     num_waiting_passengers: Dict[str, int]
-    total_passenger_waiting_time: int
+    total_passenger_waiting_time: float
     departure_fix: EntitySubState
     arrival_fix: EntitySubState
     taxi: EntitySubState = None
