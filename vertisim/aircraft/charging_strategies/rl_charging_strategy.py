@@ -49,6 +49,7 @@ class RLChargingStrategy(BaseChargingStrategy):
         """
 
         aircraft.status = AircraftStatus.CHARGE
+        aircraft.system_manager.trigger_stopping_event(event_name="charging_start_event", id=aircraft.id)
 
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:
@@ -79,6 +80,7 @@ class RLChargingStrategy(BaseChargingStrategy):
 
         # Set the aircraft status to idle
         aircraft.status = AircraftStatus.IDLE 
+        aircraft.system_manager.trigger_stopping_event(event_name="charging_end_event", id=aircraft.id)
 
         # Release the charger resource that is used by the aircraft and the charging request
         self.release_charger_resource(used_charger_resource, selected_charging_request)

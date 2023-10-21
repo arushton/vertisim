@@ -12,6 +12,7 @@ class InstanceManager:
         )
     
     def reset(self):
+        self.sim_instance.reset()
         self.sim_instance = VertiSim(
             env=self.env, 
             config=self.config, 

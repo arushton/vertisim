@@ -484,11 +484,44 @@ def get_list_elements_from_enum(enum_object: Enum):
 
 
 import simpy
-def get_stopping_events(env: simpy.Environment, stopping_events: List):
+def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_count: int, vertiport_ids: int):
     """
     Get stopping events.
     """
-    return {event_name: env.event() for event_name in stopping_events}
+    # return {event_name: env.event() for event_name in stopping_events}
+    events = {}
+    for event_name in stopping_events:
+        if event_name in [
+            "aircraft_faf_arrival_event",
+            "aircraft_departure_fix_departure_event",
+        ]:
+            for vertiport_id in vertiport_ids:
+                key = f"{event_name}_{vertiport_id}"
+                events[key] = env.event()
+        elif event_name in [
+            "aircraft_parking_pad_arrival_event",
+            "charging_start_event",
+            "charging_end_event",
+        ]:
+            for aircraft_id in range(aircraft_count):
+                key = f"{event_name}_{aircraft_id}"
+                events[key] = env.event()
+        elif event_name in [
+            "passenger_arrival_event"
+        ]:
+            for pax in range(50):
+                key = f"{event_name}_{pax}"
+                events[key] = env.event()
+    return events
+
+
+# def create_aircraft_events(env: simpy.Environment, aircraft_count: int):
+#     """
+#     Create a dedicated parking pad arrival event for each aircraft.
+#     """
+#     return {f"aircraft_{aircraft_id}_parking_pad_arrival_event": env.event() for aircraft_id in range(aircraft_count)}
+
+
 
 # def nested_dict_filter_values(d, depth, value):
 #     """
