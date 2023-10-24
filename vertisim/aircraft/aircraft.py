@@ -486,8 +486,22 @@ class Aircraft:
                                                                                   destination=hover_fix_id,
                                                                                   vertical_velocity=self.vertical_velocity)
 
+        """WIND IMPLEMENTATION"""
+        energy_speed = round(self.forward_velocity/2, 2)
+
+        destination_heading = self.compute_destination_heading(hover_fix_id)
+        v_wind = self.compute_v_wind(destination_heading)
+        
+        # note: |true_vector| = average_climb_speed UNLESS wind is too strong, and a greater true_airspeed is needed
+        true_vector = self.wind.wind_adjusted_true_velocity(energy_speed, destination_heading, v_wind, self.stall_speed)
+        ground_vector = self.wind.ground_velocity(true_vector, v_wind)
+        
+        # Verify aircraft flight direction and speeds.
+        self.wind.verify_aircraft_heading(ground_vector, destination_heading)
+        self.wind.verify_aircraft_speeds(ground_vector, self.stall_speed, energy_speed, true_vector)
+
         descend_transition_energy_consumption = round(self.descend_transition_energy_consumption(
-            velocity=round(self.forward_velocity/2),
+            velocity=self.wind.magnitude(true_vector),
             descend_transition_end_altitude=self.get_node_altitude(hover_fix_id),
             descend_transition_time=descend_transition_time), 2)
         
@@ -836,7 +850,22 @@ class Aircraft:
         self.forward_velocity = self.aircraft_params['climb_transition_end_forward_velocity']
         self.vertical_velocity = self.aircraft_params['climb_transition_vertical_velocity']
         climb_transition_time = round(vertical_distance / self.vertical_velocity)
-        climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=round(self.forward_velocity/2, 2),
+        
+        """WIND IMPLEMENTATION"""
+        energy_speed = round(self.forward_velocity/2, 2)
+
+        destination_heading = self.compute_destination_heading(departure_fix_id)
+        v_wind = self.compute_v_wind(destination_heading)
+        
+        # note: |true_vector| = average_climb_speed UNLESS wind is too strong, and a greater true_airspeed is needed
+        true_vector = self.wind.wind_adjusted_true_velocity(energy_speed, destination_heading, v_wind, self.stall_speed)
+        ground_vector = self.wind.ground_velocity(true_vector, v_wind)
+        
+        # Verify aircraft flight direction and speeds.
+        self.wind.verify_aircraft_heading(ground_vector, destination_heading)
+        self.wind.verify_aircraft_speeds(ground_vector, self.stall_speed, energy_speed, true_vector)
+        
+        climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=self.wind.magnitude(true_vector),
                                                                                     climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
                                                                                     climb_transition_time=climb_transition_time), 2)
         self.total_energy_consumption += climb_transition_energy_consumption
@@ -901,7 +930,7 @@ class Aircraft:
         # note: |true_vector| = average_climb_speed UNLESS wind is too strong, and a greater true_airspeed is needed
         true_vector = self.wind.wind_adjusted_true_velocity(average_climb_speed, destination_heading, v_wind, self.stall_speed)
         ground_vector = self.wind.ground_velocity(true_vector, v_wind)
-        
+
         # Verify aircraft flight direction and speeds.
         self.wind.verify_aircraft_heading(ground_vector, destination_heading)
         self.wind.verify_aircraft_speeds(ground_vector, self.stall_speed, average_climb_speed, true_vector)
