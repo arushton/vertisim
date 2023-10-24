@@ -22,30 +22,26 @@ class WindDataProcessor:
         data['winddir'] = data['winddir'].apply(lambda x: x * pi / 180)
         return data[['locationname', 'datetime', 'windspeed', 'winddir']]        
 
-    def pick_random_day(self) -> dt.date:
+    def pick_random_day(self, max_wind_speed_threshold=None) -> dt.date:
         """
-        Picks a random day from the wind data.
+        Picks a random day from the wind data. Optionally, specifiy a threshold for the max wind speed on that day (at least max_wind_speed_threshold) [m/s].
         """
-        unique_days = self.wind_data['datetime'].dt.date.unique().tolist()
         set_seed(how='instant')
-        return random.choice(unique_days)
-
-    def pick_random_day_wind_max_threshold(self, max_wind_speed_threshold) -> dt.date:
-        """
-        Picks a random day from the wind data where maximum windspeed is greater than max_wind_speed_threshold [m/s].
-        """
-        grouped_data = self.wind_data.groupby(self.wind_data['datetime'].dt.date)['windspeed'].max()
-        filtered_days = grouped_data[grouped_data > max_wind_speed_threshold].index.tolist()
-        if len(filtered_days) == 0:
-            raise ValueError(f"No days with maximum windspeed greater than {max_wind_speed_threshold} m/s found.")
-        set_seed(how='instant')
-        return random.choice(filtered_days)
+        if max_wind_speed_threshold:
+            grouped_data = self.wind_data.groupby(self.wind_data['datetime'].dt.date)['windspeed'].max()
+            filtered_days = grouped_data[grouped_data > max_wind_speed_threshold].index.tolist()
+            if len(filtered_days) == 0:
+                raise ValueError(f"No days with maximum windspeed greater than {max_wind_speed_threshold} m/s found.")
+            return random.choice(filtered_days)
+        else:
+            unique_days = self.wind_data['datetime'].dt.date.unique().tolist()
+            return random.choice(unique_days)
 
     def get_wind_data_for_random_day(self):
         """
         Filters the wind data for a randomly selected day.
         """
-        random_day = self.pick_random_day_wind_max_threshold(max_wind_speed_threshold=15) # self.pick_random_day()
+        random_day = self.pick_random_day()
         mask = (self.wind_data['datetime'].dt.date == random_day)
         return self.wind_data[mask].reset_index(drop=True)
     
@@ -75,4 +71,4 @@ class WindDataProcessor:
             raise ValueError(f'No wind data for {location} at {time_of_day}:00.')
         row = data.iloc[0]
         wind_state = DynamicWindState(locationname=locations.index(location), windspeed=row['windspeed'], winddir=row['winddir'])
-        return wind_state.dict()
+        return wind_state.model_dump()

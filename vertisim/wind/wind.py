@@ -1,9 +1,11 @@
 import numpy as np
-from math import sin, cos, asin, atan2, pi
+from math import sin, asin, pi
 from typing import Dict, List, Union
 from ..utils.process_wind_data import WindDataProcessor
 from ..utils.units import ms_to_hr
 from .wind_models import DynamicWindState, StaticWindState
+from ..aircraft.aircraft import Aircraft
+from ..utils.vectorMath import vector_to_heading, swap_angle_relative_x_axis_north, heading_to_vector, magnitude, convert_to_range_zero_to_two_pi
 
 class Wind:
 
@@ -30,20 +32,20 @@ class Wind:
         and |B| = wind_mag and |A| = cruise_speed.
         """
         
-        wind_mag = Wind.magnitude(v_wind)
-        a = Wind.swap_angle_relative_x_axis_north(desired_heading)
-        b = Wind.swap_angle_relative_x_axis_north(Wind.vector_to_heading(v_wind))
+        wind_mag = magnitude(v_wind)
+        a = swap_angle_relative_x_axis_north(desired_heading)
+        b = swap_angle_relative_x_axis_north(vector_to_heading(v_wind))
         B_over_A = wind_mag / cruise_speed
         right_hand_side = B_over_A * sin(b - a)
         c = a - asin(right_hand_side) # technically, c = a - asin(rhs) - 2pi * k
-        required_heading = Wind.swap_angle_relative_x_axis_north(c)
+        required_heading = swap_angle_relative_x_axis_north(c)
         
         # new velocities
-        true_velocity = Wind.heading_to_vector(required_heading, magnitude=cruise_speed)
+        true_velocity = heading_to_vector(required_heading, magnitude=cruise_speed)
         ground_velocity = Wind.ground_velocity(true_velocity, v_wind)
                 
         # if ground_speed @ given true_airspeed < threshold, return the minimum true velocity needed to fly in the desired heading @ threshold
-        if ground_speed_threshold and Wind.magnitude(ground_velocity) < ground_speed_threshold:
+        if ground_speed_threshold and magnitude(ground_velocity) < ground_speed_threshold:
             return Wind.rta_velocity_wind_adjusted(ground_speed_threshold, desired_heading, v_wind)
 
         return true_velocity
@@ -57,22 +59,24 @@ class Wind:
          np.array: Velocity vector required to move with the desired heading at the desired speed.
         """
         
-        v_desired = Wind.heading_to_vector(desired_heading, magnitude=desired_speed)
+        v_desired = heading_to_vector(desired_heading, magnitude=desired_speed)
         
         return np.subtract(v_desired, v_wind)
     
-    def make_static_wind_vector_relative_to_the_aircraft(self, aircraft_heading: float) -> np.ndarray:
+    @staticmethod
+    def make_static_wind_vector_relative_to_the_aircraft(wind_angle: float, aircraft_heading: float, wind_magnitude: float = None) -> np.ndarray:
         """Generate a wind vector with a desired angle (radians) relative to the aircraft's heading 
          (0 = tailwind, 0.5pi = starboard crosswind, pi = headwind, 1.5pi = port crosswind).
         """
         
-        assert(0 <= self.wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
+        assert(0 <= wind_angle <= 2 * pi), "Angle must be in radians, and between 0 and 2pi."
     
-        wind_heading = self.wind_angle + aircraft_heading
+        wind_heading = wind_angle + aircraft_heading
                 
-        return Wind.heading_to_vector(wind_heading, magnitude=self.wind_magnitude)
+        return heading_to_vector(wind_heading, magnitude=wind_magnitude)
 
-    def make_wind_vector_relative_to_north(self, wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
+    @staticmethod
+    def make_wind_vector_relative_to_north(wind_origin_heading: float, wind_magnitude: float = 8.0) -> np.ndarray:
         """Generate a wind vector coming from wind_origin_heading, where wind_origin_heading is relative to north.
         (0 = South wind, 0.5pi = West wind, pi = North wind, 1.5pi = East wind).
         """
@@ -80,78 +84,57 @@ class Wind:
         # Ensure angles are in the correct range
         assert(0 <= wind_origin_heading <= 2 * np.pi + 0.01), f"Wind angle must be in radians, and between 0 and 2pi. Wind angle = {wind_origin_heading}"
         
-        return Wind.heading_to_vector(wind_origin_heading + pi, magnitude=wind_magnitude)        
-
-    @staticmethod   
-    def heading_to_vector(heading: float, magnitude: float = 1.0) -> np.ndarray:
-        """Converts a heading to a unit vector. Optional argument of vector magnitude.
-        Heading is N=0, (+) direction = clockwise [i.e. aircraft_heading = 10° means 80° in polar where pos X = 0 and (+) direction = counterclockwise]."""
-
-        # note that the vertical (y axis) component corresponds to cos(heading)
-        return np.array([magnitude * sin(heading),
-                            magnitude * cos(heading)])
-
-    @staticmethod   
-    def lat_long_to_heading(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> float:
-        """Find the heading of an aircraft moving from point A (latitude_1, longitude_1) to point B (latitude_2, longitude_2).
-        Assumes the Earth is a spheroid - reasonable.
-        
-        Source:
-            https://www.movable-type.co.uk/scripts/latlong.html
-        """
-        
-        longitude_difference = longitude_2 - longitude_1
-        return atan2(sin(longitude_difference) * cos(latitude_2), cos(latitude_1) * sin(latitude_2) - sin(latitude_1) * cos(latitude_2) * cos(longitude_difference))
+        return heading_to_vector(wind_origin_heading + pi, magnitude=wind_magnitude)        
     
     @staticmethod
-    def swap_angle_relative_x_axis_north(angle: float) -> float:
-        """Converts an angle (radians) relative to the x-axis (CCW = pos) to be relative to North (CW = pos), and vice versa."""
-        if angle <= pi / 2:
-            return (pi / 2) - angle
-            
-        return (5 * pi / 2) - angle
+    def compute_aircraft_velocity(aircraft: Aircraft, true_airspeed_desired: float) -> (np.ndarray, np.ndarray):
+        """ Computes the true velocity vector of the aircraft such that the aircraft flies toward its 
+        destination with respect to the ground in the presence of cross wind, while only applying the 
+        desired (power optimal) true airspeed.
         
-    @staticmethod
-    def vector_to_heading(vector: np.ndarray) -> float:
-        """Returns the angle of the vector relative to the positive Y-axis (North) in radians."""
+        Returns: (true_velocity_vector: np.ndarray, ground_velocity_vector: np.ndarray)
         
-        # angle relative to x axis
-        angle_from_x = atan2(vector[1], vector[0])
+        Airspeed affects power. Ground speed affects travel time, which then affects total energy consumption. 
+        Therefore, the effects of wind on power are decoupled from those on travel time, and we can change the 
+        heading of the aircraft without changing its airspeed (unless ground speed < threshold) such that the 
+        aircraft flies in the right direction relative to the ground in the presence of crosswind."""
         
-        return Wind.swap_angle_relative_x_axis_north(angle_from_x) 
-    
-    @staticmethod
-    def magnitude(vector: np.ndarray) -> float:
-        """Calculate magnitude of numpy vector."""
-        return np.sqrt(np.dot(vector, vector))
-    
-    @staticmethod
-    def convert_to_range_zero_to_two_pi(angle: float, epsilon=1e-9) -> float:
-        """Bring an angle (radians) into the range [0, 2pi)."""
+        # compute wind vector in the context of the aircraft
+        if aircraft.wind.static_wind:
+            v_wind: np.ndarray = Wind.make_static_wind_vector_relative_to_the_aircraft(aircraft.wind.wind_angle, aircraft.destination_heading, aircraft.wind.wind_magnitude)
+        else:
+            wind_impact_area: str = aircraft.closest_vertiport_to_aircraft(location=aircraft.location, 
+                                                                origin_vertiport_id=aircraft.origin_vertiport_id,
+                                                                destination_vertiport_id=aircraft.destination_vertiport_id)
+            wind_states: Dict = aircraft.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(aircraft.env.now)),
+                                                                                             location=wind_impact_area,
+                                                                                             locations=aircraft.system_manager.vertiport_ids)
+            v_wind: np.ndarray = aircraft.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],
+                                                                                wind_magnitude=wind_states['windspeed'])    
         
-        while angle > 2 * pi:
-            angle -= 2 * pi
-        while angle < 0:
-            angle += 2 * pi
-            
-        if abs(angle - 2 * pi) < epsilon:
-            return 0
-    
-        return angle
+        # note: |true_vector| = true_airspeed_desired UNLESS wind is too strong, and a greater true_airspeed is needed
+        true_vector = Wind.wind_adjusted_true_velocity(true_airspeed_desired, aircraft.destination_heading, v_wind, aircraft.stall_speed)
+        ground_vector = Wind.ground_velocity(true_vector, v_wind)
+        
+        # Verify aircraft flight direction and speeds.
+        Wind.verify_aircraft_heading(ground_vector, aircraft.destination_heading)
+        Wind.verify_aircraft_speeds(ground_vector, aircraft.stall_speed, true_airspeed_desired, true_vector)
+        
+        return (true_vector, ground_vector)
     
     # --- VERIFICATION -- 
     @staticmethod
     def verify_aircraft_heading(ground_v: np.ndarray, destination_heading: float) -> None:
-        aircraft_heading = Wind.convert_to_range_zero_to_two_pi(Wind.vector_to_heading(ground_v))
-        destination_heading = Wind.convert_to_range_zero_to_two_pi(destination_heading)
+        aircraft_heading = convert_to_range_zero_to_two_pi(vector_to_heading(ground_v))
+        destination_heading = convert_to_range_zero_to_two_pi(destination_heading)
         assert abs(aircraft_heading - destination_heading) < 1e-9, f'Wrong direction. Aircraft heading = {aircraft_heading}, Destination Heading = {destination_heading}.'
     
     @staticmethod
     def verify_aircraft_speeds(ground_v: np.ndarray, ground_threshold: float, desired_true_airspeed: float, adjusted_true_v: np.ndarray) -> None: 
-        ground_speed = Wind.magnitude(ground_v)
+        ground_speed = magnitude(ground_v)
         assert ground_speed > ground_threshold or abs(ground_speed - ground_threshold) < 1e-9, f'Aircraft is not flying fast enough. Ground speed = {ground_speed}. Minimum = {ground_threshold}.'
         if not (abs(ground_speed - ground_threshold) < 1e-9): # the aircraft was able to maintain its heading flying @ true_airspeed
-            true_airspeed = Wind.magnitude(adjusted_true_v)
+            true_airspeed = magnitude(adjusted_true_v)
             assert abs(true_airspeed - desired_true_airspeed) < 1e-9, f'Aircraft true airspeed is not equal to desired true airspeed. Desired true airspeed = {desired_true_airspeed}, Actual true airspeed = {true_airspeed}.'
 
     # --- WIND SPEED / DIR GETTERS ---
@@ -200,7 +183,7 @@ class Wind:
                     location=location_id,
                     locations=locations
                 )
-            ).dict()
+            ).model_dump()
             for location_id in locations
         }
     
@@ -216,23 +199,3 @@ class Wind:
             dict: A dictionary containing wind data for the specified time and location.
         """        
         return self.wind_data_processor.get_time_and_location_specific_wind_states(time_of_day=time_of_day, location=location, locations=locations)
-    
-    # --- UNUSED FUNCTIONS BELOW ---
-
-    @staticmethod   
-    def xyVector(latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float) -> np.ndarray:
-        """Calculates the vector in the XY plane between point A (latitude_1, longitude_1) and B (latitude_2, longitude_2) where +X = East and +Y = North.
-        """
-        origin_point = Wind.latLongToXY(latitude_1, longitude_1)
-        destination_point = Wind.latLongToXY(latitude_2, longitude_2)
-        
-        return destination_point - origin_point
-    
-    @staticmethod    
-    def latLongToXY(latitude: float, longitude: float) -> np.ndarray:
-        """Converts (latitude, longitude) to (x, y) where +X = East and +Y = North.
-        Assumes the Earth is a spheroid - reasonable for short distances.
-        """
-        x = Wind.RADIUS_EARTH * cos(latitude) * cos(longitude)
-        y = Wind.RADIUS_EARTH * cos(latitude) * sin(longitude)
-        return np.array([x, y])
