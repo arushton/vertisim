@@ -59,7 +59,7 @@ class SimSetup:
         self.output_params = output_params
         self.truncation_event = truncation_event
 
-        self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
+        self.sim_start_timestamp = 0 #sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
         self.env = env
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])

@@ -620,7 +620,8 @@ class Aircraft:
                 # If the simulation is running by an optimization algorithm, then this will
                 # trigger this event and the optimization algorithm will make a decision.
                 if self.system_manager.sim_mode == 'client_server':
-                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()     
+                    self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
+                                                               id=self.id)
             return                          
 
         self.detailed_status = 'taxiing'
@@ -682,7 +683,8 @@ class Aircraft:
                 # If the simulation is running by an optimization algorithm, then this will
                 # trigger this event and the optimization algorithm will make a decision.
                 if self.system_manager.sim_mode == 'client_server':
-                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
+                    self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
+                                                               id=self.id) 
         else:
             # Reserve all of the taxiway nodes
             taxiway_nodes = []
@@ -785,7 +787,8 @@ class Aircraft:
         # If the simulation is running by an optimization algorithm, then this will
         # trigger this event and the optimization algorithm will make a decision.
         if self.system_manager.sim_mode == 'client_server':
-            self.system_manager.stopping_events['aircraft_departure_fix_departure_event'].succeed()       
+            self.system_manager.trigger_stopping_event(event_name='aircraft_departure_fix_departure_event',
+                                                       id=self.origin_vertiport_id)            
 
         yield self.env.process(self.climb_to_cruise_altitude())
 

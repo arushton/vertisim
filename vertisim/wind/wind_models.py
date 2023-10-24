@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 class DynamicWindState(BaseModel):
-    locationname: str
+    locationname: int
     windspeed: float
     winddir: float
 

@@ -9,12 +9,12 @@ from pydantic import BaseModel
 
 class SimulatorStates(BaseModel):
     vertiport_states: Dict[str, Any]
-    aircraft_states: Dict[str, Any]
-    environmental_states: Dict[str, Any]
+    aircraft_states: Dict[int, Any]
+    environmental_states: Dict[Any, Any]
 
-def filter_and_get_states(entity, get_states_func, keys):
+def filter_and_get_states(get_states_func, keys):
     """Helper function to get and filter states for given entity."""
-    states = get_states_func(entity)
+    states = get_states_func()
     return filter_nested_dict_by_given_keys(states, keys)
 
 def get_aircraft(aircraft_agents):
@@ -25,10 +25,10 @@ def get_system_manager(aircraft_agents: Dict) -> object:
 
 def get_simulator_states(
     vertiports: Dict[str, Any],
-    aircraft_agents: Dict[str, Any],
+    aircraft_agents: Dict[int, Any],
     num_initial_aircraft: int,
     simulation_states: List[str]
-) -> Dict[str, Any]:
+) -> Dict:
     """
     Get the states for simulation entities.
 
@@ -49,17 +49,17 @@ def get_simulator_states(
     system_manager = get_system_manager(aircraft_agents)
 
     vertiport_states = {
-        vertiport_id: filter_and_get_states(vertiport, vertiport.get_vertiport_states, simulation_states)
+        vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, keys=simulation_states)
         for vertiport_id, vertiport in vertiports.items()
     }
 
     aircraft_states = {
-        tail_number: filter_and_get_states(aircraft, aircraft.get_aircraft_states, simulation_states)
+        tail_number: filter_and_get_states(get_states_func=aircraft.get_aircraft_states, keys=simulation_states)
         for tail_number, aircraft in aircraft_agents.items()
     }
 
     environmental_states = system_manager.wind.get_wind_states(locations=system_manager.vertiport_ids,
-                                                                time=system_manager.env.now)
+                                                               time=system_manager.env.now)
 
     simulator_states = {
         'vertiport_states': vertiport_states,

@@ -1,6 +1,6 @@
 import pandas as pd
 import random
-from typing import Dict
+from typing import Dict, List
 from ..utils.read_files import read_input_file
 from ..utils.helpers import set_seed
 from ..utils.units import mph_to_metersec, degrees_to_radians
@@ -69,10 +69,10 @@ class WindDataProcessor:
             raise ValueError(f'No wind data for {location}.')
         return {time: {'windspeed': ws, 'winddir': wd} for time, ws, wd in zip(data['datetime'], data['windspeed'], data['winddir'])}
 
-    def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str) -> Dict:
+    def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str, locations: List[str]) -> Dict:
         data = self._get_filtered_data(time_of_day, location)
         if data.empty:
             raise ValueError(f'No wind data for {location} at {time_of_day}:00.')
         row = data.iloc[0]
-        wind_state = DynamicWindState(locationname=location, windspeed=row['windspeed'], winddir=row['winddir'])
+        wind_state = DynamicWindState(locationname=locations.index(location), windspeed=row['windspeed'], winddir=row['winddir'])
         return wind_state.dict()

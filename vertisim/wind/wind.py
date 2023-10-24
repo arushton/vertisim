@@ -195,16 +195,16 @@ class Wind:
 
         return {
             location_id: DynamicWindState(
-                locationname=location_id, 
                 **self.get_time_and_location_specific_wind_states(
                     time_of_day=int(ms_to_hr(time)), 
-                    location=location_id
+                    location=location_id,
+                    locations=locations
                 )
             ).dict()
             for location_id in locations
         }
     
-    def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str) -> Dict:
+    def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str, locations: List[str]) -> Dict:
         """
         Retrieves wind data for a specific time and location.
         
@@ -215,7 +215,7 @@ class Wind:
         Returns:
             dict: A dictionary containing wind data for the specified time and location.
         """        
-        return self.wind_data_processor.get_time_and_location_specific_wind_states(time_of_day, location)
+        return self.wind_data_processor.get_time_and_location_specific_wind_states(time_of_day=time_of_day, location=location, locations=locations)
     
     # --- UNUSED FUNCTIONS BELOW ---
 

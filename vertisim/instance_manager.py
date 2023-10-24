@@ -12,12 +12,15 @@ class InstanceManager:
         )
     
     def reset(self):
+        self.sim_instance.reset()
         self.sim_instance = VertiSim(
             env=self.env, 
             config=self.config, 
             reward_function_parameters=self.reward_function_parameters
         )
-        return self.sim_instance.reset()
+    
+    def get_initial_state(self):
+        return self.sim_instance.get_initial_state()
     
     def step(self, actions):
         return self.sim_instance.step(actions)

@@ -43,7 +43,7 @@
         "flight_schedule_file_path": null, 
         "soc_adjustment": null,
 
-        "num_vertiport_state_variables": 7,
+        "num_vertiport_state_variables": 8,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_actions": 3,
