@@ -6,10 +6,6 @@ from ..utils.units import ms_to_hr
 from .wind_models import DynamicWindState, StaticWindState
 
 class Wind:
-    
-    """Relevant usage in:
-        lines 894-935 of aircraft.py
-    """
 
     def __init__(self, static_wind=True, wind_magnitude=0, wind_angle=0, wind_data_file_path=None):
         self.static_wind = static_wind
@@ -151,12 +147,12 @@ class Wind:
         assert abs(aircraft_heading - destination_heading) < 1e-9, f'Wrong direction. Aircraft heading = {aircraft_heading}, Destination Heading = {destination_heading}.'
     
     @staticmethod
-    def verify_aircraft_speeds(ground_v: np.ndarray, ground_threshold: float, cruise_speed: float, true_airspeed_v: np.ndarray):
+    def verify_aircraft_speeds(ground_v: np.ndarray, ground_threshold: float, desired_true_airspeed: float, adjusted_true_v: np.ndarray) -> None: 
         ground_speed = Wind.magnitude(ground_v)
         assert ground_speed > ground_threshold or abs(ground_speed - ground_threshold) < 1e-9, f'Aircraft is not flying fast enough. Ground speed = {ground_speed}. Minimum = {ground_threshold}.'
         if not (abs(ground_speed - ground_threshold) < 1e-9): # the aircraft was able to maintain its heading flying @ true_airspeed
-            true_airspeed = Wind.magnitude(true_airspeed_v)
-            assert abs(true_airspeed - cruise_speed) < 1e-9, f'Aircraft true airspeed is not equal to cruise speed. Cruise speed = {cruise_speed}, True airspeed = {true_airspeed}.'
+            true_airspeed = Wind.magnitude(adjusted_true_v)
+            assert abs(true_airspeed - desired_true_airspeed) < 1e-9, f'Aircraft true airspeed is not equal to desired true airspeed. Desired true airspeed = {desired_true_airspeed}, Actual true airspeed = {true_airspeed}.'
 
     # --- WIND SPEED / DIR GETTERS ---
 
@@ -171,8 +167,7 @@ class Wind:
         # Validate and serialize the data using StaticWindData
         valid_data = StaticWindState(**data)
         
-        return valid_data.dict()        
-
+        return valid_data.model_dump()        
     
     def get_wind_states(self, locations: List[str], time: int) -> Dict[str, Union[StaticWindState, Dict[str, DynamicWindState]]]:
         """

@@ -486,6 +486,7 @@ class SimSetup:
                 'network_and_demand': self.network_and_demand_params,
                 'passenger_params': self.passenger_params,
                 'aircraft_params': self.aircraft_params,
+                'airspace_params': self.airspace_params,
                 'output_params': self.output_params
             },
             performance_metrics=performance_metrics,

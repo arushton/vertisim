@@ -126,7 +126,7 @@
         "airlink_segment_length": 1,
         "holding_unit_capacity": 20, 
         "cruise_altitude": 450,  
-        "static_wind": false, 
+        "static_wind": true, 
         "wind_magnitude": 8, 
         "wind_angle": 3.14159, 
         "wind_data_file_path": "input/airspace/SFBayArea_wind_data.csv"

@@ -445,7 +445,19 @@ class Aircraft:
                                                                        destination=final_approach_fix,
                                                                        vertical_velocity=self.vertical_velocity)
         
-        descend_energy_consumption = round(self.descend_energy_consumption(velocity=average_speed,
+        """WIND IMPLEMENTATION"""
+        destination_heading = self.compute_destination_heading(final_approach_fix)
+        v_wind = self.compute_v_wind(destination_heading)
+        
+        # note: |true_vector| = average_speed UNLESS wind is too strong, and a greater true_airspeed is needed
+        true_vector = self.wind.wind_adjusted_true_velocity(average_speed, destination_heading, v_wind, self.stall_speed)
+        ground_vector = self.wind.ground_velocity(true_vector, v_wind)
+        
+        # Verify aircraft flight direction and speeds.
+        self.wind.verify_aircraft_heading(ground_vector, destination_heading)
+        self.wind.verify_aircraft_speeds(ground_vector, self.stall_speed, average_speed, true_vector)
+        
+        descend_energy_consumption = round(self.descend_energy_consumption(velocity=self.wind.magnitude(true_vector),
                                                                            descend_end_altitude=self.get_node_altitude(final_approach_fix),
                                                                            descend_time=descend_time), 2)
         
@@ -840,6 +852,31 @@ class Aircraft:
         
         self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
 
+    def compute_v_wind(self, destination_heading: float) -> np.ndarray:
+        """Compute wind velocity vector."""
+        
+        if self.wind.static_wind:
+            v_wind: np.ndarray = self.wind.make_static_wind_vector_relative_to_the_aircraft(destination_heading)
+        else:
+            wind_impact_area: str = self.closest_vertiport_to_aircraft(location=self.location, 
+                                                                origin_vertiport_id=self.origin_vertiport_id,
+                                                                destination_vertiport_id=self.destination_vertiport_id)
+            wind_states: Dict = self.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(self.env.now)),
+                                                                                        location=wind_impact_area)
+            v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],
+                                                                                wind_magnitude=wind_states['windspeed'])    
+        
+        return v_wind
+
+    def compute_destination_heading(self, wp_d_id: int):
+        """Compute aircraft heading (from current location toward destination waypoint). """
+
+        latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
+        latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[wp_d_id]
+        destination_heading = self.wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
+        
+        return destination_heading
+        
     def climb_to_cruise_altitude(self):
         """Climbing to cruise altitude phase."""
         self.detailed_status = 'climb'
@@ -857,7 +894,19 @@ class Aircraft:
         average_climb_speed = round((self.forward_velocity + self.aircraft_params['climb_phase_end_forward_velocity']) / 2, 2)
         self.forward_velocity = self.aircraft_params['climb_phase_end_forward_velocity']
 
-        climb_energy_consumption = round(self.climb_energy_consumption(velocity=average_climb_speed,
+        """WIND IMPLEMENTATION"""
+        destination_heading = self.compute_destination_heading(first_waypoint)
+        v_wind = self.compute_v_wind(destination_heading)
+        
+        # note: |true_vector| = average_climb_speed UNLESS wind is too strong, and a greater true_airspeed is needed
+        true_vector = self.wind.wind_adjusted_true_velocity(average_climb_speed, destination_heading, v_wind, self.stall_speed)
+        ground_vector = self.wind.ground_velocity(true_vector, v_wind)
+        
+        # Verify aircraft flight direction and speeds.
+        self.wind.verify_aircraft_heading(ground_vector, destination_heading)
+        self.wind.verify_aircraft_speeds(ground_vector, self.stall_speed, average_climb_speed, true_vector)
+        
+        climb_energy_consumption = round(self.climb_energy_consumption(velocity=self.wind.magnitude(true_vector),
                                                                        climb_end_altitude=self.get_node_altitude(first_waypoint),
                                                                        climb_time=climb_time), 2)
         self.total_energy_consumption += climb_energy_consumption
@@ -924,21 +973,9 @@ class Aircraft:
                 Therefore the effects of wind on power are decoupled from those on travel time.
                 """   
                                         
-                latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
-                latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[waypoint_id]
-                destination_heading = self.wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
+                destination_heading = self.compute_destination_heading(waypoint_id)
+                v_wind = self.compute_v_wind(destination_heading)
 
-                if self.wind.static_wind:
-                    v_wind: np.ndarray = self.wind.make_static_wind_vector_relative_to_the_aircraft(destination_heading)
-                else:
-                    wind_impact_area: str = self.closest_vertiport_to_aircraft(location=self.location, 
-                                                                        origin_vertiport_id=self.origin_vertiport_id,
-                                                                        destination_vertiport_id=self.destination_vertiport_id)
-                    wind_states: Dict = self.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(self.env.now)),
-                                                                                             location=wind_impact_area)
-                    v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],
-                                                                                      wind_magnitude=wind_states['windspeed'])    
-                
                 # note: |true_vector| = self.forward_velocity UNLESS wind is too strong, and a greater true_airspeed is needed
                 true_vector = self.wind.wind_adjusted_true_velocity(self.forward_velocity, destination_heading, v_wind, self.stall_speed)
                 
