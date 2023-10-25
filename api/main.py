@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from typing import List
@@ -23,6 +23,12 @@ instance_manager = InstanceManager(env=env,
                                    reward_function_parameters=reward_function_parameters)
 
 # Actions = create_action_models(instance_manager.sim_instance.get_vertiport_count())
+
+@app.get("/status")
+async def get_status():
+    if not instance_manager.status:
+        raise HTTPException(status_code=503, detail="Vertisim is not ready.")
+    return {"status": "Success", "message": "Vertisim is ready."}
 
 @app.post("/reset")
 async def reset():

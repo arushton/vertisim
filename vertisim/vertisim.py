@@ -33,6 +33,7 @@ class VertiSim:
                                   stopping_events=self.stopping_events,
                                   truncation_event=self.truncation_event)
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
+        self.status = True
 
     def set_simulation_events(self, env, config):
         """
