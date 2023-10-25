@@ -31,9 +31,9 @@
     },
 
     "sim_mode": {
-        "ondemand": true,
+        "ondemand": false,
         "offline_optimization": false,
-        "client_server": false
+        "client_server": true
     },
 
     "external_optimization_params":{
@@ -46,6 +46,7 @@
         "num_vertiport_state_variables": 8,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
+        "num_additional_state_variables": 1,
         "num_actions": 3,
         "stopping_events":[
             "passenger_arrival_event",

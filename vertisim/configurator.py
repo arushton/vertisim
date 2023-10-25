@@ -37,9 +37,9 @@ class VertiportConfig:
         self.vertiport_id = vertiport_id
         self.vertiport_data = vertiport_data
         self.vertiport_layout = vertiport_layout
+        self.parking_pad_ids = vertiport_layout.parking_pad_ids
         self.vertiport_ids = vertiport_ids
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
-
         self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
         self.charger_model = self.set_charger_model()
         self.fato_store = self.add_fato_ids_to_store()
@@ -57,6 +57,10 @@ class VertiportConfig:
         self.num_flight_requests = 0
         self.num_waiting_passengers = 0
 
+
+    def is_parking_pad_location(self, location):
+        return location in self.parking_pad_ids
+    
     def map_vertiport_id_to_index(self, vertiport_id: str) -> int:
         """
         Returns the index of the vertiport ID in the vertiport_ids list.

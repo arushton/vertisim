@@ -6,6 +6,7 @@ import time
 import numpy as np
 import gymnasium as gym
 from .utils.get_state_variables import get_simulator_states
+from .initiate_flow_entities import initiate_flow_entities
 from .utils.units import sec_to_ms
 from .run_step_by_step_simulation import run_step_by_step_simulation, run_steps_until_specific_events
 
@@ -31,9 +32,14 @@ class VertiSim:
                                   aircraft_params=config['aircraft_params'],
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
-                                  truncation_event=self.truncation_event)
+                                  truncation_event=self.truncation_event)       
+        # Initiate flow entities and create events
+        initiate_flow_entities(sim_setup=self.sim_setup)             
+        # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
+        # The status of the simulation provides information whether the simulation running or not
         self.status = True
+
 
     def set_simulation_events(self, env, config):
         """
@@ -49,7 +55,7 @@ class VertiSim:
 
     def run(self):
         # This only runs uninterrupted simulation. No distinction for online optimization
-        self.run_uninterrupted_simulation()
+        self.run_uninterrupted_simulation()          
         self.finalize_simulation()
 
     def finalize_simulation(self):
@@ -66,9 +72,6 @@ class VertiSim:
         else:
             self.env.run(until=self.max_sim_time)
 
-    def run_client_server_simulation(self):
-        pass
-
     def reset(self):
         """
         Reset the simulation.
@@ -79,8 +82,9 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
+        print(f"Running step from vertisim.py. Current time: {self.env.now/1000}. Actions: {actions}")
         # Apply the action
-        self.apply_action(actions)
+        self.env.process(self.apply_action(actions))
         # Advance to the next stopping event
         return self.advance_to_next_stopping_event()
 
@@ -191,6 +195,8 @@ class VertiSim:
     #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()    
 
     def _should_continue_simulation(self):
+        if self.terminal_event.triggered:
+            print("Terminal event triggered")
         return (self.env.peek() < self.max_sim_time and 
                 not self.terminal_event.triggered and 
                 not self.truncation_event.triggered)
@@ -292,6 +298,9 @@ class VertiSim:
     
     def get_environmental_state_variable_count(self):
         return self.config['external_optimization_params']['num_environmental_state_variables']
+    
+    def get_additional_state_variable_count(self):
+        return self.config['external_optimization_params']['num_additional_state_variables']
     
     def print_total_time_to_run(self):
         end_time = time.time()

@@ -25,23 +25,23 @@ instance_manager = InstanceManager(env=env,
 # Actions = create_action_models(instance_manager.sim_instance.get_vertiport_count())
 
 @app.get("/status")
-async def get_status():
+def get_status():
     if not instance_manager.status:
         raise HTTPException(status_code=503, detail="Vertisim is not ready.")
     return {"status": "Success", "message": "Vertisim is ready."}
 
 @app.post("/reset")
-async def reset():
+def reset():
     instance_manager.reset()
     return {"status": "Success", "message": "Vertisim instance reset successfully."}
 
 @app.get("/get_initial_state")
-async def get_initial_state():
+def get_initial_state():
     initial_state = instance_manager.get_initial_state()
     return {"initial_state": initial_state}
 
 @app.post("/step")
-async def step(actions: Actions):
+def step(actions: Actions):
     print(f"actions: {actions.actions}")
     # TODO: Action input should be list of enums
     new_state, reward, terminated, truncated = instance_manager.step(actions.actions)
@@ -53,7 +53,7 @@ async def step(actions: Actions):
     }
 
 @app.get("/get_space_params")
-async def get_space_params():
+def get_space_params():
     # Extract and return the parameters needed to construct action 
     # and observation spaces in the RL algorithm.
     return {
@@ -62,7 +62,8 @@ async def get_space_params():
         "n_vertiports": instance_manager.sim_instance.get_vertiport_count(),
         "n_vertiport_state_variables": instance_manager.sim_instance.get_vertiport_state_variable_count(),
         "n_aircraft_state_variables": instance_manager.sim_instance.get_aircraft_state_variable_count(),
-        "n_environmental_state_variables": instance_manager.sim_instance.get_environmental_state_variable_count()
+        "n_environmental_state_variables": instance_manager.sim_instance.get_environmental_state_variable_count(),
+        "n_additional_state_variables": instance_manager.sim_instance.get_additional_state_variable_count()
     }
 
 if __name__ == "__main__":
