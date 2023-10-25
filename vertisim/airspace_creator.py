@@ -19,6 +19,7 @@ class AirspaceCreator:
             self.waypoint_locations = self.match_waypoint_names_locations()
         else:
             self.waypoint_ids, self.waypoint_locations, self.flight_directions = self.read_waypoint_locations_from_file()
+            print("Success: Airspace layout file imported.")
 
 
     def read_waypoint_locations_from_file(self):

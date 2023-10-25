@@ -2,6 +2,7 @@ from ..utils.helpers import timestamp_to_datetime, get_key_from_value, check_mag
 from ..utils.distance import haversine_dist
 from ..utils.units import sec_to_ms, min_to_sec, ms_to_sec, sec_to_hr, ms_to_min, hr_to_ms, ms_to_hr, ft_to_m, m_to_ft, mph_to_metersec, metersec_to_mph, watt_to_kw, miles_to_m, degrees_to_radians
 from ..utils.flight_time_estimator import time_to_arrival_estimator
+from ..utils.vectorMath import lat_long_to_heading, magnitude
 from typing import Union, Dict, List, Optional
 import pandas as pd # For type hinting
 import numpy as np
@@ -13,9 +14,8 @@ from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb
 from ..utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 from .power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
-from ..wind.wind import Wind
-from math import pi
 from enum import Enum
+from vertisim.memoize import PhaseParameters
 
 class Aircraft:
     """
@@ -155,6 +155,9 @@ class Aircraft:
         self.aircraft_logger = aircraft_logger
         self.charging_strategy = charging_strategy    
 
+        
+        # CACHE ENERGY CONSUMPTION
+        self.energy_cache = {} # hashmap
 
     @property
     def soc(self):
@@ -424,7 +427,6 @@ class Aircraft:
     def guess_initial_velocity(self):
         return [self.forward_velocity, np.mean([self.vertical_velocity, self.max_vertical_velocity])]
 
-
     def descend_to_final_approach_fix(self, final_approach_fix):  
         horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, final_approach_fix)  
 
@@ -444,7 +446,13 @@ class Aircraft:
                                                                        destination=final_approach_fix,
                                                                        vertical_velocity=self.vertical_velocity)
         
-        descend_energy_consumption = round(self.descend_energy_consumption(velocity=average_speed,
+        # Update destination heading
+        self.destination_heading = self.compute_destination_heading(final_approach_fix)
+        
+        # Account for Wind
+        true_v, ground_v = self.wind.compute_aircraft_velocity(self, average_speed)
+        
+        descend_energy_consumption = round(self.descend_energy_consumption(velocity=magnitude(true_v),
                                                                            descend_end_altitude=self.get_node_altitude(final_approach_fix),
                                                                            descend_time=descend_time), 2)
         
@@ -473,8 +481,16 @@ class Aircraft:
                                                                                   destination=hover_fix_id,
                                                                                   vertical_velocity=self.vertical_velocity)
 
+        avg_speed = round(self.forward_velocity/2, 2)
+        
+        # Update destination heading
+        self.destination_heading = self.compute_destination_heading(hover_fix_id)
+
+        # Account for Wind
+        true_v, ground_v = self.wind.compute_aircraft_velocity(self, avg_speed)
+
         descend_transition_energy_consumption = round(self.descend_transition_energy_consumption(
-            velocity=round(self.forward_velocity/2),
+            velocity=magnitude(true_v),
             descend_transition_end_altitude=self.get_node_altitude(hover_fix_id),
             descend_transition_time=descend_transition_time), 2)
         
@@ -746,9 +762,7 @@ class Aircraft:
                 # If the simulation is running by an optimization algorithm, then this will
                 # trigger this event and the optimization algorithm will make a decision.
                 if self.system_manager.sim_mode == 'client_server':
-                    self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
-                                                               id=self.id) 
-
+                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
 
     def aircraft_take_off_process(self, take_off_fato_id):
         """Defines the take-off process of an aircraft."""
@@ -828,7 +842,16 @@ class Aircraft:
         self.forward_velocity = self.aircraft_params['climb_transition_end_forward_velocity']
         self.vertical_velocity = self.aircraft_params['climb_transition_vertical_velocity']
         climb_transition_time = round(vertical_distance / self.vertical_velocity)
-        climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=round(self.forward_velocity/2, 2),
+        
+        avg_speed = round(self.forward_velocity/2, 2)
+        
+        # Update destination heading
+        self.destination_heading = self.compute_destination_heading(departure_fix_id)
+
+        # Account for Wind
+        true_v, ground_v = self.wind.compute_aircraft_velocity(self, avg_speed)
+        
+        climb_transition_energy_consumption = round(self.climb_transition_energy_consumption(velocity=magnitude(true_v),
                                                                                     climb_transition_end_altitude=self.get_node_altitude(departure_fix_id),
                                                                                     climb_transition_time=climb_transition_time), 2)
         self.total_energy_consumption += climb_transition_energy_consumption
@@ -844,7 +867,15 @@ class Aircraft:
         
         self.update_aircraft_state(departure_fix_id, climb_transition_energy_consumption, 'climb_transition_end')
 
+    def compute_destination_heading(self, wp_d_id: int):
+        """Compute aircraft heading (from current location toward destination waypoint). """
 
+        latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
+        latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[wp_d_id]
+        destination_heading = lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
+        
+        return destination_heading
+        
     def climb_to_cruise_altitude(self):
         """Climbing to cruise altitude phase."""
         self.detailed_status = 'climb'
@@ -862,7 +893,13 @@ class Aircraft:
         average_climb_speed = round((self.forward_velocity + self.aircraft_params['climb_phase_end_forward_velocity']) / 2, 2)
         self.forward_velocity = self.aircraft_params['climb_phase_end_forward_velocity']
 
-        climb_energy_consumption = round(self.climb_energy_consumption(velocity=average_climb_speed,
+        # Update destination heading
+        self.destination_heading = self.compute_destination_heading(first_waypoint)
+
+        # Account for Wind
+        true_v, ground_v = self.wind.compute_aircraft_velocity(self, average_climb_speed)
+        
+        climb_energy_consumption = round(self.climb_energy_consumption(velocity=magnitude(true_v),
                                                                        climb_end_altitude=self.get_node_altitude(first_waypoint),
                                                                        climb_time=climb_time), 2)
         self.total_energy_consumption += climb_energy_consumption
@@ -921,47 +958,20 @@ class Aircraft:
                     first_waypoint = False
                 else:
                     self.forward_velocity = self.aircraft_params['cruise_speed']
-                    
-                """
-                WIND IMPLEMENTATION
                 
-                Airspeed affects power. Ground speed affects travel time, which then affects total energy consumption.
-                Therefore the effects of wind on power are decoupled from those on travel time.
-                """   
-                                        
-                latitude_o, longitude_o, altitude_o = self.system_manager.airspace.waypoint_locations[self.location]
-                latitude_f, longitude_f, altitude_f = self.system_manager.airspace.waypoint_locations[waypoint_id]
-                destination_heading = self.wind.lat_long_to_heading(latitude_o, longitude_o, latitude_f, longitude_f)
-
-                if self.wind.static_wind:
-                    v_wind: np.ndarray = self.wind.make_static_wind_vector_relative_to_the_aircraft(destination_heading)
-                    # v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(destination_heading)
-                else:
-                    wind_impact_area: str = self.closest_vertiport_to_aircraft(location=self.location, 
-                                                                        origin_vertiport_id=self.origin_vertiport_id,
-                                                                        destination_vertiport_id=self.destination_vertiport_id)
-                    wind_states: Dict = self.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(self.env.now)),
-                                                                                             location=wind_impact_area,
-                                                                                             locations=self.system_manager.vertiport_ids)
-                    v_wind: np.ndarray = self.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],
-                                                                                      wind_magnitude=wind_states['windspeed'])    
+                # Update destination heading
+                self.destination_heading = self.compute_destination_heading(waypoint_id)
                 
-                # note: |true_vector| = self.forward_velocity UNLESS wind is too strong, and a greater true_airspeed is needed
-                true_vector = self.wind.wind_adjusted_true_velocity(self.forward_velocity, destination_heading, v_wind, self.stall_speed)
-                
-                ground_vector = self.wind.ground_velocity(true_vector, v_wind)
-                
-                # Verify aircraft flight direction and speeds.
-                self.wind.verify_aircraft_heading(ground_vector, destination_heading)
-                self.wind.verify_aircraft_speeds(ground_vector, self.stall_speed, self.forward_velocity, true_vector)
+                # Account for Wind
+                true_v, ground_v = self.wind.compute_aircraft_velocity(self, self.forward_velocity)
                     
                 link_traversal_time = self.compute_travel_time_from_horizontal_velocity(origin=self.location, 
                                                                                     destination=waypoint_id, 
-                                                                                    horizontal_speed=self.wind.magnitude(ground_vector))
+                                                                                    horizontal_speed=magnitude(ground_v))
                 yield self.env.timeout(sec_to_ms(link_traversal_time))
                 
                 # Compute energy consumption
-                energy_consumption = round(self.cruise_energy_consumption(velocity=self.wind.magnitude(true_vector), 
+                energy_consumption = round(self.cruise_energy_consumption(velocity=magnitude(true_v), 
                                                                             time_cruise=link_traversal_time), 2)
                 self.total_energy_consumption += energy_consumption
 
@@ -977,7 +987,6 @@ class Aircraft:
         yield self.env.process(self.system_manager.simulate_terminal_airspace_arrival_process(
             aircraft=self, arriving_passengers=self.passengers_onboard)
         )        
-
 
     def release_fato_and_departure_fix(self):
         """Releasing FATO and departure fix."""
@@ -1238,13 +1247,20 @@ class Aircraft:
     # ================= ENERGY CONSUMPTION METHODS ====================
 
     def vertical_takeoff_landing_energy_consumption(self, fato_altitude: float, hover_altitude, hover_time: float, operation: str) -> float:
+        
         self.tom = self.compute_flight_mass() # Takeoff mass
-        vertical_takeoff_landing_power = vertical_takeoff_landing_phase_power(start_altitude=fato_altitude,
-                                                                              end_altitude=hover_altitude,
-                                                                              aircraft_params=self.aircraft_params,
-                                                                              tom=self.tom,
-                                                                              vertical_velocity=self.vertical_velocity)
-        vertical_takeoff_landing_power = watt_to_kw(vertical_takeoff_landing_power)
+        
+        parameters = PhaseParameters('vertical_takeoff_landing_phase', self.aircraft_params['aircraft_model'], fato_altitude, hover_altitude, self.tom, self.vertical_velocity)
+        vertical_takeoff_landing_power = self.energy_cache.get(parameters, None)
+        
+        if not vertical_takeoff_landing_power:
+            vertical_takeoff_landing_power = vertical_takeoff_landing_phase_power(start_altitude=fato_altitude,
+                                                                                end_altitude=hover_altitude,
+                                                                                aircraft_params=self.aircraft_params,
+                                                                                tom=self.tom,
+                                                                                vertical_velocity=self.vertical_velocity)
+            vertical_takeoff_landing_power = watt_to_kw(vertical_takeoff_landing_power)
+            self.energy_cache[parameters] = vertical_takeoff_landing_power
 
         if operation == 'takeoff':
             return sec_to_hr(vertical_takeoff_landing_power * hover_time) # kWh - time units need to be seconds
@@ -1253,17 +1269,22 @@ class Aircraft:
         else:
             raise ValueError('operation must be either takeoff or landing')
 
-
     def climb_transition_energy_consumption(self, velocity: float, 
                                             climb_transition_end_altitude: float,
                                             climb_transition_time: float) -> float:
-        climb_transition_power = climb_transition_phase_power(start_altitude=self.altitude, 
-                                                              end_altitude=climb_transition_end_altitude, 
-                                                              aircraft_params=self.aircraft_params, 
-                                                              tom=self.tom, 
-                                                              vertical_velocity=self.vertical_velocity, 
-                                                              velocity=velocity)
-        climb_transition_power = watt_to_kw(climb_transition_power)
+        
+        parameters = PhaseParameters('climb_transition_phase', self.aircraft_params['aircraft_model'], self.altitude, climb_transition_end_altitude, self.tom, self.vertical_velocity, velocity)
+        climb_transition_power = self.energy_cache.get(parameters, None)
+        
+        if not climb_transition_power:
+            climb_transition_power = climb_transition_phase_power(start_altitude=self.altitude, 
+                                                                end_altitude=climb_transition_end_altitude, 
+                                                                aircraft_params=self.aircraft_params, 
+                                                                tom=self.tom, 
+                                                                vertical_velocity=self.vertical_velocity, 
+                                                                velocity=velocity)
+            climb_transition_power = watt_to_kw(climb_transition_power)
+            self.energy_cache[parameters] = climb_transition_power
 
         return sec_to_hr(climb_transition_power * climb_transition_time)
     
@@ -1277,24 +1298,34 @@ class Aircraft:
         :param descend_transition_time: Time spent in the descend transition phase (seconds)
         :return: Energy consumption during the descend transition phase (kWh)
         """
-        descend_transition_power = descend_transition_phase_power(start_altitude=self.altitude,
-                                                                  end_altitude=descend_transition_end_altitude,
-                                                                  aircraft_params=self.aircraft_params,
-                                                                  tom=self.tom,
-                                                                  vertical_velocity=self.vertical_velocity,
-                                                                  velocity=velocity)
-        descend_transition_power = watt_to_kw(descend_transition_power)
+        parameters = PhaseParameters('descend_transition_phase', self.aircraft_params['aircraft_model'], self.altitude, descend_transition_end_altitude, self.tom, self.vertical_velocity, velocity)
+        descend_transition_power = self.energy_cache.get(parameters, None)
+        
+        if not descend_transition_power:
+            descend_transition_power = descend_transition_phase_power(start_altitude=self.altitude,
+                                                                    end_altitude=descend_transition_end_altitude,
+                                                                    aircraft_params=self.aircraft_params,
+                                                                    tom=self.tom,
+                                                                    vertical_velocity=self.vertical_velocity,
+                                                                    velocity=velocity)
+            descend_transition_power = watt_to_kw(descend_transition_power)
+            self.energy_cache[parameters] = descend_transition_power
 
         return sec_to_hr(descend_transition_power * descend_transition_time)
 
     def climb_energy_consumption(self, velocity: float, climb_end_altitude: float, climb_time: float) -> float:
-        climb_power = climb_phase_power(start_altitude=self.altitude, 
-                                        end_altitude=climb_end_altitude, 
-                                        aircraft_params=self.aircraft_params, 
-                                        tom=self.tom, 
-                                        vertical_velocity=self.vertical_velocity, 
-                                        velocity=velocity)
-        climb_power = watt_to_kw(climb_power)
+        parameters = PhaseParameters('climb_phase', self.altitude, climb_end_altitude, self.aircraft_params['aircraft_model'], self.tom, self.vertical_velocity, velocity)
+        climb_power = self.energy_cache.get(parameters, None)
+        
+        if not climb_power:
+            climb_power = climb_phase_power(start_altitude=self.altitude, 
+                                            end_altitude=climb_end_altitude, 
+                                            aircraft_params=self.aircraft_params, 
+                                            tom=self.tom, 
+                                            vertical_velocity=self.vertical_velocity, 
+                                            velocity=velocity)
+            climb_power = watt_to_kw(climb_power)
+            self.energy_cache[parameters] = climb_power
 
         return sec_to_hr(climb_power * climb_time)
     
@@ -1306,23 +1337,35 @@ class Aircraft:
         :param descend_time: The time spent in the descent phase in seconds.
         :return: The energy consumption during the descent phase of the mission in kWh.
         """
-        descend_power = descend_phase_power(start_altitude=self.altitude,
-                                            end_altitude=descend_end_altitude,
-                                            aircraft_params=self.aircraft_params,
-                                            tom=self.tom,
-                                            vertical_velocity=self.vertical_velocity,
-                                            velocity=velocity)
-        descend_power = watt_to_kw(descend_power)
+        parameters = PhaseParameters('descend_phase', self.altitude, descend_end_altitude, self.aircraft_params['aircraft_model'], self.tom, self.vertical_velocity, velocity)
+        descend_power = self.energy_cache.get(parameters, None)
+        
+        if not descend_power:
+            descend_power = descend_phase_power(start_altitude=self.altitude,
+                                                end_altitude=descend_end_altitude,
+                                                aircraft_params=self.aircraft_params,
+                                                tom=self.tom,
+                                                vertical_velocity=self.vertical_velocity,
+                                                velocity=velocity)
+            descend_power = watt_to_kw(descend_power)
+            self.energy_cache[parameters] = descend_power
 
         return sec_to_hr(descend_power * descend_time)
     
     def cruise_energy_consumption(self, velocity, time_cruise) -> float:
-        # cruise_speed = min(self.input_cruise_speed, velocity) TODO: determine original intent of this as generally self.input_cruise_speed = 0
-        cruise_speed = max(velocity, self.stall_speed)
-        cruise_power = cruise_phase_power(cruise_speed=cruise_speed,
-                                          aircraft_params=self.aircraft_params,
-                                          tom=self.tom)
-        cruise_power = watt_to_kw(cruise_power)
+        # cruise_velocity = min(self.input_cruise_speed, velocity)
+        cruise_velocity = max(velocity, self.stall_speed)
+        
+        parameters = PhaseParameters('cruise_phase', cruise_velocity, self.aircraft_params['aircraft_model'], self.tom)
+        cruise_power = self.energy_cache.get(parameters, None)
+        
+        if not cruise_power:
+            cruise_power = cruise_phase_power(cruise_speed=cruise_velocity,
+                                            aircraft_params=self.aircraft_params,
+                                            tom=self.tom)
+            cruise_power = watt_to_kw(cruise_power)
+            self.energy_cache[parameters] = cruise_power
+            
         return sec_to_hr(cruise_power * time_cruise)
     
     def update_holding_energy_consumption(self, time_holding) -> float:

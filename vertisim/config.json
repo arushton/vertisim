@@ -60,16 +60,16 @@
     },
 
     "network_and_demand_params": {
-        "vertiport_network_file_path": "input/network/network_LAX_DTLA30.csv",
-        "vertiport_layout_file_path": "input/vertiport_layouts/vertiport_layout.xls",
+        "vertiport_network_file_path": "../../../../14.Supernal/Data/vertisim_input/network_HHR_Warner.csv",
+        "vertiport_layout_file_path": "../../../../14.Supernal/Data/vertisim_input/vertiport_layout.xls",
         "charge_schedule_file_path": null,
         "flight_schedule_file_path": null,
-        "passenger_schedule_file_path": "input/passenger/passenger_arrival_process_test.csv",
+        "passenger_schedule_file_path": "../../../../14.Supernal/Data/vertisim_input/passenger_arrival_process_test.csv",
         "passenger_arrival_rates_path": null,
         "demand_probabilities": null,
         "vertiports": {
-            "LAX": {
-                "layout": "clover_1_fato_8_park_lax",
+            "HHR": {
+                "layout": "clover_1_fato_4_park_hhr",
                 "holding_unit_capacity": 20,
                 "num_security_check_servers": 10,
                 "num_chargers": 8,
@@ -88,12 +88,12 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 5,
+                    "num_initial_aircraft_in_vertiport": 3,
                     "initial_arrival_queue_state": 0
                 }
             },
-            "DTLA": {
-                "layout": "clover_1_fato_13_park_dtla",
+            "WARNER": {
+                "layout": "clover_1_fato_4_park_warner",
                 "holding_unit_capacity": 20,
                 "num_security_check_servers": 10,
                 "num_chargers": 8,
@@ -112,7 +112,7 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 6,
+                    "num_initial_aircraft_in_vertiport": 3,
                     "initial_arrival_queue_state": 0
                 }
             }
@@ -120,16 +120,16 @@
     },
 
     "airspace_params": {
-        "airspace_layout_file_path": null,
+        "airspace_layout_file_path": "../../../../14.Supernal/Data/vertisim_input/SupernalHRRWarnerRoute.csv",
         "airspace_layout_sheet_name": null,
         "airlink_capacity": 1,
         "airlink_segment_length": 1,
         "holding_unit_capacity": 20, 
         "cruise_altitude": 450,  
         "static_wind": true, 
-        "wind_magnitude": 17, 
-        "wind_angle": 3.14159, 
-        "wind_data_file_path": "input/airspace/LA_wind_data.csv"
+        "wind_magnitude": 15, 
+        "wind_angle": 0, 
+        "wind_data_file_path": "../../../../14.Supernal/Data/vertisim_input/HHR_WARNER_WIND.csv"
     },
 
     "passenger_params" : {
