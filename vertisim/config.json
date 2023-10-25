@@ -60,16 +60,16 @@
     },
 
     "network_and_demand_params": {
-        "vertiport_network_file_path": "../../../../14.Supernal/Data/vertisim_input/network_HHR_Warner.csv",
-        "vertiport_layout_file_path": "../../../../14.Supernal/Data/vertisim_input/vertiport_layout.xls",
+        "vertiport_network_file_path": "input/network/network_SFO_MV.csv",
+        "vertiport_layout_file_path": "input/vertiport_layouts/vertiport_layout.xls",
         "charge_schedule_file_path": null,
         "flight_schedule_file_path": null,
-        "passenger_schedule_file_path": "../../../../14.Supernal/Data/vertisim_input/passenger_arrival_process_test.csv",
-        "passenger_arrival_rates_path": null,
+        "passenger_schedule_file_path": null,
+        "passenger_arrival_rates_path": "input/passenger/passenger_arrival_rates_sfo_mv.csv",
         "demand_probabilities": null,
         "vertiports": {
-            "HHR": {
-                "layout": "clover_1_fato_4_park_hhr",
+            "SFO": {
+                "layout": "clover_1_fato_8_park_sfo",
                 "holding_unit_capacity": 20,
                 "num_security_check_servers": 10,
                 "num_chargers": 8,
@@ -88,12 +88,12 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 3,
+                    "num_initial_aircraft_in_vertiport": 5,
                     "initial_arrival_queue_state": 0
                 }
             },
-            "WARNER": {
-                "layout": "clover_1_fato_4_park_warner",
+            "MV": {
+                "layout": "clover_1_fato_8_park_mv",
                 "holding_unit_capacity": 20,
                 "num_security_check_servers": 10,
                 "num_chargers": 8,
@@ -112,7 +112,7 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 3,
+                    "num_initial_aircraft_in_vertiport": 8,
                     "initial_arrival_queue_state": 0
                 }
             }
@@ -120,16 +120,16 @@
     },
 
     "airspace_params": {
-        "airspace_layout_file_path": "../../../../14.Supernal/Data/vertisim_input/SupernalHRRWarnerRoute.csv",
+        "airspace_layout_file_path": null,
         "airspace_layout_sheet_name": null,
         "airlink_capacity": 1,
         "airlink_segment_length": 1,
         "holding_unit_capacity": 20, 
         "cruise_altitude": 450,  
-        "static_wind": true, 
-        "wind_magnitude": 15, 
-        "wind_angle": 0, 
-        "wind_data_file_path": "../../../../14.Supernal/Data/vertisim_input/HHR_WARNER_WIND.csv"
+        "static_wind": false, 
+        "wind_magnitude": 8, 
+        "wind_angle": 3.14159, 
+        "wind_data_file_path": "input/airspace/SFBayArea_wind_data.csv"
     },
 
     "passenger_params" : {
@@ -223,4 +223,3 @@
         "performance_metrics_output_file_name": "performance_metrics"
     }
 }
-
