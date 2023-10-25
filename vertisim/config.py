@@ -11,7 +11,7 @@ cwd = Path.cwd()
 # Simulation parameters
 # --------------------
 sim_params = {
-    'max_sim_time': 60 * 60 * 60,  # seconds
+    'max_sim_time': 3 * 60 * 60,  # seconds
     'arrival_priority': 1,  # Lower the value higher the priority
     'departure_priority': 1,  # Lower the value higher the priority
     'simultaneous_taxi_and_take_off': True,
@@ -310,7 +310,7 @@ output_params = {
 start_time = time.time()
 
 SimSetup(sim_params=sim_params,
-         network_and_demand=network_and_demand,
+         network_and_demand_params=network_and_demand_params,
          airspace_params=airspace_params,
          passenger_params=passenger_params,
          aircraft_params=aircraft_params,

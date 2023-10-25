@@ -220,8 +220,6 @@ class PerformanceMetrics:
             self.performance_metrics[flight_direction]['energy_consumption']['min'] = np.min(energy_consumptions)
             self.performance_metrics[flight_direction]['energy_consumption']['total'] = np.sum(energy_consumptions)
 
-
-
     def calculate_aircraft_holding_times_stats(self):
         df = pd.DataFrame(self.aircraft_holding_time)
         df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_holding_time.csv')
