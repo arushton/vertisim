@@ -16,10 +16,7 @@ def time_to_arrival_estimator(cruise_speed: Dict,
     if origin_vertiport_id == destination_vertiport_id:
         return 0
     # If the location is a parking pad location, then aircraft is at the vertiport. The time to arrival is zero.
-    print(f"Current waypoint ID: {current_waypoint_id}")
     for vertiport_id, vertiport in system_manager.vertiports.items():
-        print(f"Vertiport ID: {vertiport_id}")
-        print(f"Is parking pad location: {vertiport.is_parking_pad_location(current_waypoint_id)}")
         if vertiport.is_parking_pad_location(current_waypoint_id):
             return 0
         
