@@ -57,7 +57,7 @@ class PerformanceMetrics:
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(lambda: defaultdict(dict))
         # TODO: Remove this. Temporary fix
-        path = '../../output/test_only_aircraft/performance_metrics'
+        path = '../../output/performance_metrics'
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -92,7 +92,7 @@ class PerformanceMetrics:
 
         # TODO: Remove all save to csv methods from this file. save_output should be the only method that saves to csv
         df = pd.DataFrame(self.flight_and_time_tracker)
-        df.to_csv('../../output/test_only_aircraft/performance_metrics/flight_and_time_tracker.csv')                
+        df.to_csv('../../output/performance_metrics/flight_and_time_tracker.csv')                
 
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
@@ -114,7 +114,7 @@ class PerformanceMetrics:
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
         df = pd.DataFrame(self.passenger_waiting_time)
-        df.to_csv('../../output/test_only_aircraft/performance_metrics/passenger_waiting_time.csv')                
+        df.to_csv('../../output/performance_metrics/passenger_waiting_time.csv')                
         for vertiport_id, data in self.passenger_waiting_time.items():
             waiting_times = np.array(list(data.values()))
             if waiting_times.size > 0:
@@ -143,7 +143,7 @@ class PerformanceMetrics:
 
     def calculate_passenger_trip_time_stats(self):
         df = pd.DataFrame(self.passenger_trip_times)
-        df.to_csv('../../output/test_only_aircraft/performance_metrics/passenger_trip_times.csv')           
+        df.to_csv('../../output/performance_metrics/passenger_trip_times.csv')           
         # Creates a dataframe for passenger trip time statistics including mean, median, standard deviation,
         for flight_direction, data in self.passenger_trip_times.items():
             trip_times = np.array(list(data.values()))
@@ -222,7 +222,7 @@ class PerformanceMetrics:
 
     def calculate_aircraft_holding_times_stats(self):
         df = pd.DataFrame(self.aircraft_holding_time)
-        df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_holding_time.csv')
+        df.to_csv('../../output/performance_metrics/aircraft_holding_time.csv')
         for vertiport_id, data in self.aircraft_holding_time.items():
             waiting_times = np.array(list(data.values()))
             self.performance_metrics[vertiport_id]['aircraft_holding_times']['mean'] = ms_to_min(np.mean(waiting_times))
@@ -239,7 +239,7 @@ class PerformanceMetrics:
 
     def compute_aircraft_idle_time_stats(self):
         df = pd.DataFrame(self.aircraft_idle_time_tracker)
-        df.to_csv('../../output/test_only_aircraft/performance_metrics/aircraft_idle_time_tracker.csv')        
+        df.to_csv('../../output/performance_metrics/aircraft_idle_time_tracker.csv')        
         for vertiport_id, data in self.aircraft_idle_time_tracker.items():
             idle_times = list(data.values())
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['max'] = ms_to_min(np.max(idle_times))

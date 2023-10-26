@@ -219,7 +219,7 @@
         "min_reserve_soc": 40
     },
     "output_params": {
-        "output_folder_path": "../database_service/results",
+        "output_folder_path": "../output/results",
         "config_output_file_name": "config",
         "performance_metrics_output_file_name": "performance_metrics"
     }
