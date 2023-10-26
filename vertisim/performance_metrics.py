@@ -57,7 +57,7 @@ class PerformanceMetrics:
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(lambda: defaultdict(dict))
         # TODO: Remove this. Temporary fix
-        path = '../../output/test_only_aircraft/performance_metrics'
+        path = '../database_service/metrics/performance_metrics'
         if not os.path.exists(path):
             os.makedirs(path)
 

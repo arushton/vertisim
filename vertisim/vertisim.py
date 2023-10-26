@@ -32,9 +32,9 @@ class VertiSim:
                                   aircraft_params=config['aircraft_params'],
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
-                                  truncation_event=self.truncation_event)       
+                                  truncation_event=self.truncation_event)   
         # Initiate flow entities and create events
-        initiate_flow_entities(sim_setup=self.sim_setup)             
+        initiate_flow_entities(sim_setup=self.sim_setup)         
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
