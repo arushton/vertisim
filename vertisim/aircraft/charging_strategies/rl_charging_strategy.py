@@ -47,19 +47,22 @@ class RLChargingStrategy(BaseChargingStrategy):
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
-
         aircraft.status = AircraftStatus.CHARGE
-        aircraft.system_manager.trigger_stopping_event(event_name="charging_start_event", id=aircraft.id)
+        aircraft.system_manager.trigger_stopping_event(event_name="charging_start_event", id=aircraft.tail_number)
 
+        print(f"Charging aircraft 0 {aircraft.tail_number} at {aircraft.destination_vertiport_id}.")
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:
             used_charger_resource, selected_charging_request = self.handle_shared_charger(aircraft=aircraft,
                                                                                           parking_space=parking_space)
         else:
             used_charger_resource, selected_charging_request = self.request_charger(aircraft=aircraft)
+            print(f"Total requests: {len(used_charger_resource.users)}")
             yield selected_charging_request
 
+        print(f"Charging aircraft 1 {aircraft.tail_number} at {aircraft.destination_vertiport_id}.")
         self.start_charging_process(aircraft=aircraft)
+        print(f"Charging aircraft 2 {aircraft.tail_number} at {aircraft.destination_vertiport_id}.")
         if not aircraft.charged_during_turnaround:
             idle_time = aircraft.env.now - aircraft.arrival_time
         else:
@@ -68,9 +71,13 @@ class RLChargingStrategy(BaseChargingStrategy):
         aircraft.save_process_time(event='idle', process_time=idle_time)
         aircraft.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {aircraft.tail_number} at {aircraft.location}.')
 
+        print(f"Charging aircraft 3 {aircraft.tail_number} at {aircraft.destination_vertiport_id}.")
+
         aircraft.detailed_status = 'charging'
         charge_time = self.get_charging_time(aircraft=aircraft)
+
         yield aircraft.env.timeout(round(charge_time))
+        print(f"Charging time: {round(ms_to_sec(charge_time)/60,2)} mins")
         aircraft.save_process_time(event='charge', process_time=charge_time)
         aircraft.detailed_status = 'idle'
         self.end_charging_process(aircraft=aircraft)
@@ -80,7 +87,7 @@ class RLChargingStrategy(BaseChargingStrategy):
 
         # Set the aircraft status to idle
         aircraft.status = AircraftStatus.IDLE 
-        aircraft.system_manager.trigger_stopping_event(event_name="charging_end_event", id=aircraft.id)
+        aircraft.system_manager.trigger_stopping_event(event_name="charging_end_event", id=aircraft.tail_number)
 
         # Release the charger resource that is used by the aircraft and the charging request
         self.release_charger_resource(used_charger_resource, selected_charging_request)

@@ -32,9 +32,9 @@ class VertiSim:
                                   aircraft_params=config['aircraft_params'],
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
-                                  truncation_event=self.truncation_event)   
+                                  truncation_event=self.truncation_event)    
         # Initiate flow entities and create events
-        initiate_flow_entities(sim_setup=self.sim_setup)         
+        initiate_flow_entities(sim_setup=self.sim_setup)       
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
@@ -82,9 +82,10 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
-        print(f"Running step from vertisim.py. Current time: {self.env.now/1000}. Actions: {actions}")
+        print(f"Running step. Current time: {self.env.now}")
         # Apply the action
         self.env.process(self.apply_action(actions))
+        print(f"Applied action. Current time: {self.env.now}")
         # Advance to the next stopping event
         return self.advance_to_next_stopping_event()
 
@@ -101,6 +102,7 @@ class VertiSim:
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
+                # print(f"Applying action to aircraft {aircraft_id}, type: {type(aircraft_id)}, action: {action[aircraft_id]}")
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
@@ -113,6 +115,7 @@ class VertiSim:
         """
         while self._should_continue_simulation():
             self.env.step()
+            # print(f"Stepping. Current time: {self.env.now}")
             triggered = False  # Flag to check if any event was triggered
             # Check if any events in stopping_events have triggered.
             for event_name, event in self.stopping_events.items():
@@ -203,7 +206,6 @@ class VertiSim:
     
     def _reset_event(self, event_name):
         self.stopping_events[event_name] = self.env.event()
-        print(f"Resetting event: {event_name}. Current time: {self.env.now/1000}")
 
     def _handle_end_of_simulation(self):
         if self.env.peek() < self.max_sim_time:

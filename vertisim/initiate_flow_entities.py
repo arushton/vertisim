@@ -38,6 +38,7 @@ def create_aircraft_arrival_process(sim_setup: Dict):
     if sim_setup.sim_params['verbose']:
         print("Success: Aircraft arrival process is created.")
 
+
 def create_passenger_arrival_process(sim_setup: Dict):
     if sim_setup.sim_params['only_aircraft_simulation'] is False:
         # Load or generate passenger arrival schedule and start the passenger arrival process

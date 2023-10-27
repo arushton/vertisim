@@ -42,7 +42,7 @@ def get_initial_state():
 
 @app.post("/step")
 def step(actions: Actions):
-    print(f"actions: {actions.actions}")
+    # print(f"actions: {actions.actions}")
     # TODO: Action input should be list of enums
     new_state, reward, terminated, truncated = instance_manager.step(actions.actions)
     return {
