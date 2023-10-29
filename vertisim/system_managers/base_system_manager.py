@@ -814,8 +814,6 @@ class BaseSystemManager:
 
         self.update_flight_info(aircraft=aircraft)
 
-        print(f"Aircraft {aircraft.tail_number} starting cruise at {self.env.now}")
-
         yield self.env.process(aircraft.fly_in_the_airspace())
 
     def update_ground_aircraft_count(self, vertiport_id: str, update: int):
