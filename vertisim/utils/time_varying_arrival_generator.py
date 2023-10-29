@@ -20,7 +20,6 @@ def get_arrival_rates(df):
 def generate_arrival_times(arrival_rate_df, origin, target_count):
     # Get the arrival rates and time intervals
     rate_dict, time_intervals = get_arrival_rates(arrival_rate_df)
-    print(f"Generating arrival times for origin vertiport {origin}...")
 
     destinations = list(rate_dict[origin].keys())
     results = []

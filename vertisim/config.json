@@ -15,6 +15,7 @@
             "num_waiting_passengers",
             "total_passenger_waiting_time",
             "arrival_fix",
+            "aircraft_status",
             "origin_vertiport_id",
             "destination_vertiport_id",
             "soc",
@@ -24,10 +25,10 @@
             "wind_direction"
         ],
         "fleet_rebalancing": true,
-        "save_trajectories": true,
+        "save_trajectories": false,
         "only_aircraft_simulation": false,
         "network_simulation": true,
-        "verbose": true
+        "verbose": false
     },
 
     "sim_mode": {
@@ -43,7 +44,7 @@
         "flight_schedule_file_path": null, 
         "soc_adjustment": null,
 
-        "num_vertiport_state_variables": 8,
+        "num_vertiport_state_variables": 13,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
@@ -79,7 +80,7 @@
                 "shared_charger_sets": null,
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
-                    "num_passengers": 1000,
+                    "num_passengers": 300,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
@@ -89,7 +90,7 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 5,
+                    "num_initial_aircraft_in_vertiport": 3,
                     "initial_arrival_queue_state": 0
                 }
             },
@@ -103,7 +104,7 @@
                 "shared_charger_sets": null,
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
-                    "num_passengers": 1000,
+                    "num_passengers": 300,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
@@ -113,7 +114,7 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 8,
+                    "num_initial_aircraft_in_vertiport": 2,
                     "initial_arrival_queue_state": 0
                 }
             }

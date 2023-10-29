@@ -1,9 +1,10 @@
 import simpy
 import random
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, List, Optional
 from collections import defaultdict
 from .utils.helpers import flatten
 from .charger_model import ChargerModel
+from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
 from .utils.units import ms_to_min
@@ -14,16 +15,18 @@ class EntitySubState(BaseModel):
     num_jobs_in_queue: int
 
 class VertiportStates(BaseModel):
+    num_waiting_passengers: Dict[str, int]
+    fato: Optional[EntitySubState] = None
+    park: EntitySubState = None
+    taxi: EntitySubState = None
+    arrival_fix: EntitySubState
+    departure_fix: EntitySubState
     num_aircraft: int
     num_flight_requests: int
     num_available_fato: int
     num_available_parking_pad: int
-    num_waiting_passengers: Dict[str, int]
     total_passenger_waiting_time: float
-    departure_fix: EntitySubState
-    arrival_fix: EntitySubState
-    taxi: EntitySubState = None
-    park: EntitySubState = None
+    aircraft_status: Dict[int, int]
 
 class VertiportConfig:
 
@@ -57,6 +60,17 @@ class VertiportConfig:
         self.num_flight_requests = 0
         self.num_waiting_passengers = 0
 
+
+    def is_node_vertiport_location(self, location):
+        return (self.is_taxi_node_location(location) or 
+                self.is_fato_location(location) or
+                self.is_parking_pad_location(location))
+
+    def is_taxi_node_location(self, location):
+        return location in self.vertiport_layout.taxiway_node_ids
+    
+    def is_fato_location(self, location):
+        return location in self.vertiport_layout.fato_ids
 
     def is_parking_pad_location(self, location):
         return location in self.parking_pad_ids
@@ -94,13 +108,20 @@ class VertiportConfig:
             for passenger in waiting_room_store.items:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
+    
+    def get_aircraft_status(self, aircraft_agents) -> List:
+        # For each aircraft, check if it's at the current vertiport.
+        # If it is, get its status; if it's not, the status is 0.
+        return {
+            aircraft.tail_number: aircraft.status.value if self.is_parking_pad_location(aircraft.location) else 0
+            for aircraft in aircraft_agents.values()
+        }
 
-    def get_vertiport_states(self):
+    def get_vertiport_states(self, aircraft_agents):
         """
         Will be deprecated in the future.
         """
-        entity_states = {}
-        entity_states['num_waiting_passengers'] = {}
+        entity_states = {'num_waiting_passengers': {}}
 
         for fato in self.fato_store.items:
             entity_states[fato.resource_id] = {'num_jobs_in_service': fato.fato_resource.count,
@@ -129,6 +150,8 @@ class VertiportConfig:
             entity_states['num_waiting_passengers'][f'to_{destination}'] = len(waiting_room_store.items)
 
         entity_states['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
+
+        entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
         # Validate and serialize the data using Pydantic
         valid_entity_states = VertiportStates(**entity_states)

@@ -639,10 +639,11 @@ class PerformanceMetrics:
         plt.show()
 
     def calculate_total_simulated_time(self):
-        # Calculates total simulated time
-        total_simulated_time = round(self.sim_end_timestamp/self.hour, 2)
-        self.performance_metrics['total_simulated_time'] = total_simulated_time
-        return total_simulated_time
+        return round(self.sim_end_timestamp/self.hour, 2)
+    
+    def register_total_simulated_time(self):
+        # Registers total simulated time
+        self.performance_metrics['total_simulated_time'] = self.calculate_total_simulated_time()
 
     def print_total_simulated_time(self):
         print(f"{self.calculate_total_simulated_time()} hours simulated")

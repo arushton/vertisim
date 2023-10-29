@@ -484,7 +484,7 @@ def get_list_elements_from_enum(enum_object: Enum):
 
 
 import simpy
-def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_count: int, vertiport_ids: int):
+def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_count: int, vertiport_ids: int, pax_count: int):
     """
     Get stopping events.
     """
@@ -509,7 +509,7 @@ def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_
         elif event_name in [
             "passenger_arrival_event"
         ]:
-            for pax in range(50):
+            for pax in range(pax_count):
                 key = f"{event_name}_{pax}"
                 events[key] = env.event()
     return events

@@ -7,7 +7,6 @@ sys.path.append('/app')
 
 from vertisim.instance_manager import InstanceManager
 from .models import create_action_models
-import simpy
 from .config import CONFIG  # Import the loaded configuration
 
 class Actions(BaseModel):
@@ -15,11 +14,9 @@ class Actions(BaseModel):
 
 app = FastAPI()
 
-env = simpy.Environment()
 reward_function_parameters = CONFIG["external_optimization_params"]["reward_function_parameters"]
 
-instance_manager = InstanceManager(env=env,
-                                   config=CONFIG,
+instance_manager = InstanceManager(config=CONFIG,
                                    reward_function_parameters=reward_function_parameters)
 
 # Actions = create_action_models(instance_manager.sim_instance.get_vertiport_count())

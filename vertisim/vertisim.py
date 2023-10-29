@@ -50,7 +50,8 @@ class VertiSim:
         stopping_events = get_stopping_events(env=env, 
                                               stopping_events=config["external_optimization_params"]["stopping_events"],
                                               aircraft_count=self.get_aircraft_count(),
-                                              vertiport_ids=self.get_vertiport_ids())
+                                              vertiport_ids=self.get_vertiport_ids(),
+                                              pax_count=self.get_passenger_count())
         return terminal_event, truncation_event, stopping_events
 
     def run(self):
@@ -60,7 +61,8 @@ class VertiSim:
 
     def finalize_simulation(self):
         self.print_total_time_to_run()
-        performance_metrics = self.sim_setup.calculate_performance_metrics()
+        # if self.env.now > 0:
+        #     performance_metrics = self.sim_setup.calculate_performance_metrics()
         # self.sim_setup.save_results(performance_metrics)
 
     def run_uninterrupted_simulation(self):
@@ -82,10 +84,9 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
-        print(f"Running step. Current time: {self.env.now}")
+        # print(f"Running step. Current time: {self.env.now}")
         # Apply the action
         self.env.process(self.apply_action(actions))
-        print(f"Applied action. Current time: {self.env.now}")
         # Advance to the next stopping event
         return self.advance_to_next_stopping_event()
 
@@ -105,15 +106,20 @@ class VertiSim:
                 # print(f"Applying action to aircraft {aircraft_id}, type: {type(aircraft_id)}, action: {action[aircraft_id]}")
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
+                # Truncate if the aircraft is not at the vertiport
+                if not self.sim_setup.system_manager.vertiports[aircraft.origin_vertiport_id].is_parking_pad_location(aircraft.location):
+                    self.truncation_event.succeed()
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
-        yield self.env.all_of(process_list) 
-        print("Finished applying action")
+        yield self.env.all_of(process_list)
+        # print("Finished applying action")
     
     def advance_to_next_stopping_event(self):
         """
         Runs the simulation until the next defined stopping event.
         """
+        # print(f"Active process: {self.env.active_process}, Time: {self.env.now}")
         while self._should_continue_simulation():
+            # print(f"Next event scheduled at: {self.env.peek()}")
             self.env.step()
             # print(f"Stepping. Current time: {self.env.now}")
             triggered = False  # Flag to check if any event was triggered
@@ -124,9 +130,12 @@ class VertiSim:
                     self._reset_event(event_name)  
                     # Set the triggered flag to True
                     triggered = True     
-            if triggered:                    
+            if triggered: 
+                if event_name == 'aircraft_parking_pad_arrival_event':
+                    print(f"Event triggered: {event_name}. Time: {self.env.now}")                   
                 # Get the states
                 states = self.get_current_state()
+                print(f"REWARD: {self.calculate_reward()}")
                 # Return the states
                 return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
@@ -236,22 +245,23 @@ class VertiSim:
         """
         Reset the simulation.
         """
+        # print("Gettting the instance initial state")
         while self.sim_setup.system_manager.get_aircraft_count() < self.sim_setup.system_manager.num_initial_aircraft:
             self.env.step()
             for event_name, event in self.stopping_events.items():
                 if event.triggered:  
                     # Reset the event
-                    self._reset_event(event_name)             
+                    self._reset_event(event_name) 
         return self.get_current_state()
     
     def calculate_reward(self):
         """
         Calculate the reward for the current state of the simulation.
         """
-        return sum(
+        return -sum(
             vertiport.get_total_passenger_waiting_time()
             for _, vertiport in self.sim_setup.vertiports.items()
-        )        
+        )  + self.sim_setup.system_manager.trip_counter * 1000
 
     def set_action_space(self, config: Dict) -> gym.spaces.MultiDiscrete:
         """
@@ -303,6 +313,12 @@ class VertiSim:
     
     def get_additional_state_variable_count(self):
         return self.config['external_optimization_params']['num_additional_state_variables']
+    
+    def get_passenger_count(self):
+        return sum(
+            vertiport['passenger_arrival_process']['num_passengers']
+            for _, vertiport in self.config['network_and_demand_params']['vertiports'].items()
+        )
     
     def print_total_time_to_run(self):
         end_time = time.time()

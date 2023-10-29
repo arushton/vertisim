@@ -222,7 +222,7 @@ class Aircraft:
     
     @destination_vertiport_id.setter
     def destination_vertiport_id(self, value):
-        if value in self.system_manager.vertiport_ids:
+        if value is None or value in self.system_manager.vertiport_ids:
             self._destination_vertiport_id = value
         else:
             raise ValueError(f"Vertiport with id {value} does not exist in the vertiport network")
@@ -551,7 +551,7 @@ class Aircraft:
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='ready_for_taxi_in')
         self.arrival_time = self.env.now
         self.save_flight_duration()
-        self.aircraft_logger.debug(f'Post Landing Procedures: Aircraft {self.tail_number} has completed post landing procedures at {self.destination_vertiport_id} with SOC: {round(self.soc, 2)}.')
+        # self.origin_vertiport_id = self.destination_vertiport_id
 
     def update_aircraft_state(self, location, energy_consumption, event):
         self.soc_discharge_update(energy_consumption)
@@ -606,11 +606,12 @@ class Aircraft:
                                                                        queue_update=-1)     
                 self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='parked_on_fato_pad')
 
-                # If the simulation is running by an optimization algorithm, then this will
-                # trigger this event and the optimization algorithm will make a decision.
-                if self.system_manager.sim_mode == 'client_server':
-                    self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
-                                                               id=self.id)
+                # # If the simulation is running by an optimization algorithm, then this will
+                # # trigger this event and the optimization algorithm will make a decision.
+                # if self.system_manager.sim_mode == 'client_server':
+                #     self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {self.tail_number} time {self.env.now}')
+                #     self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
+                #                                                id=self.tail_number)
             return                          
 
         self.detailed_status = 'taxiing'
@@ -669,11 +670,12 @@ class Aircraft:
                 self.detailed_status = 'parked'
                 self.status = AircraftStatus.IDLE
 
-                # If the simulation is running by an optimization algorithm, then this will
-                # trigger this event and the optimization algorithm will make a decision.
-                if self.system_manager.sim_mode == 'client_server':
-                    self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
-                                                               id=self.id) 
+                # # If the simulation is running by an optimization algorithm, then this will
+                # # trigger this event and the optimization algorithm will make a decision.
+                # if self.system_manager.sim_mode == 'client_server':
+                #     self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {self.tail_number} time {self.env.now}')
+                #     self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
+                #                                                id=self.tail_number) 
         else:
             # Reserve all of the taxiway nodes
             taxiway_nodes = []
@@ -759,10 +761,12 @@ class Aircraft:
                 self.detailed_status = 'parked'
                 self.status = AircraftStatus.IDLE
 
-                # If the simulation is running by an optimization algorithm, then this will
-                # trigger this event and the optimization algorithm will make a decision.
-                if self.system_manager.sim_mode == 'client_server':
-                    self.system_manager.stopping_events['aircraft_parking_pad_arrival_event'].succeed()   
+                # # If the simulation is running by an optimization algorithm, then this will
+                # # trigger this event and the optimization algorithm will make a decision.
+                # if self.system_manager.sim_mode == 'client_server':
+                #     self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {self.tail_number} time {self.env.now}')
+                #     self.system_manager.trigger_stopping_event(event_name='aircraft_parking_pad_arrival_event',
+                #                                                id=self.tail_number)  
 
     def aircraft_take_off_process(self, take_off_fato_id):
         """Defines the take-off process of an aircraft."""
@@ -776,6 +780,7 @@ class Aircraft:
         # If the simulation is running by an optimization algorithm, then this will
         # trigger this event and the optimization algorithm will make a decision.
         if self.system_manager.sim_mode == 'client_server':
+            self.logger.debug(f'aircraft_departure_fix_departure_event is triggered for {self.tail_number} time {self.env.now}')
             self.system_manager.trigger_stopping_event(event_name='aircraft_departure_fix_departure_event',
                                                        id=self.origin_vertiport_id)            
 
@@ -1027,7 +1032,13 @@ class Aircraft:
     #     return charge_time
     
     def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
+        if self.system_manager.sim_mode == 'client_server' \
+            and self.tail_number \
+            not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.origin_vertiport_id):
+            self.system_manager.truncation_event.succeed()
+        aircraft = yield self.system_manager.retrieve_aircraft(self.origin_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
+        self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.origin_vertiport_id, aircraft=self)
       
 
     # def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
@@ -1460,12 +1471,14 @@ class Aircraft:
         """
         Returns the estimated time to arrival in minutes.
         """
-        return round(time_to_arrival_estimator(cruise_speed=self.aircraft_params['cruise_speed'],
-                                               current_waypoint_id=self.location,
-                                               origin_vertiport_id=self.origin_vertiport_id,
-                                               destination_vertiport_id=self.destination_vertiport_id,
-                                               flight_direction=self.flight_direction,
-                                               system_manager=self.system_manager)/60, 2)     
+        time_to_arrival = time_to_arrival_estimator(cruise_speed=self.aircraft_params['cruise_speed'],
+                                                    current_waypoint_id=self.location,
+                                                    origin_vertiport_id=self.origin_vertiport_id,
+                                                    destination_vertiport_id=self.destination_vertiport_id,
+                                                    flight_direction=self.flight_direction,
+                                                    system_manager=self.system_manager,
+                                                    tail_number=self.tail_number)
+        return round(time_to_arrival/60, 2)   
 
     def get_vertiport_list(self):
         return self.system_manager.vertiport_ids

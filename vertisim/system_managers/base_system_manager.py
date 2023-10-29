@@ -585,6 +585,7 @@ class BaseSystemManager:
 
         Override this method in the subclass if needed.
         """
+        # print(f'Vertiport manager: {origin_vertiport_id} is retrieving an aircraft with tail number {tail_number} at time {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}')
         return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
 
     def save_aircraft_allocation_time(self, origin_vertiport_id, aircraft, start_time):
@@ -812,6 +813,8 @@ class BaseSystemManager:
 
         self.update_flight_info(aircraft=aircraft)
 
+        print(f"Aircraft {aircraft.tail_number} starting cruise at {self.env.now}")
+
         yield self.env.process(aircraft.fly_in_the_airspace())
 
     def update_ground_aircraft_count(self, vertiport_id: str, update: int):
@@ -854,6 +857,10 @@ class BaseSystemManager:
 
     def initiate_passenger_departure(self, departing_passengers):
         yield self.env.process(self.simulate_passenger_departure(departing_passengers=departing_passengers))    
+
+    def get_available_aircraft_tail_numbers(self, vertiport_id: str) -> list:
+        return [aircraft.tail_number for aircraft in self.vertiports[vertiport_id].available_aircraft_store.items]
+    
 
 
     # PASSENGER RELATED METHODS

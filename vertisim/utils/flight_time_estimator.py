@@ -7,7 +7,8 @@ def time_to_arrival_estimator(cruise_speed: Dict,
                               origin_vertiport_id: str,
                               destination_vertiport_id: str,
                               flight_direction: str,
-                              system_manager: object) -> float:
+                              system_manager: object,
+                              tail_number: int) -> float:
     """
     Estimates the time to arrival at the destination vertiport.
     """
@@ -17,7 +18,7 @@ def time_to_arrival_estimator(cruise_speed: Dict,
         return 0
     # If the location is a parking pad location, then aircraft is at the vertiport. The time to arrival is zero.
     for vertiport_id, vertiport in system_manager.vertiports.items():
-        if vertiport.is_parking_pad_location(current_waypoint_id):
+        if vertiport.is_node_vertiport_location(current_waypoint_id):
             return 0
         
     average_flight_time = system_manager.get_average_flight_time(flight_direction)
@@ -29,6 +30,8 @@ def time_to_arrival_estimator(cruise_speed: Dict,
         system_manager.set_average_flight_time(flight_direction, average_flight_time)
         system_manager.increase_flight_count(flight_direction)
 
+    if current_waypoint_id is None:
+        print(f"Waypoint==None {flight_direction}, waypoint: {current_waypoint_id}, tail_number: {tail_number}")
     waypoint_rank = system_manager.airspace.get_waypoint_rank(current_waypoint_id, flight_direction)
     flight_length = system_manager.airspace.get_flight_length(flight_direction)
 

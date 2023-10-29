@@ -44,7 +44,7 @@ def calc_vertiport_distances(vertiport_network_file_path: str,
             fato_coords_list = get_fato_coordinates(vertiport_ids, vertiport_layouts)
             vertiport_network = create_vertiport_network_file(fato_coords_list, vertiport_ids, 
                                                               vertiport_network_file_path, network_simulation)
-        print('Success: Vertiport network imported.')
+        # print('Success: Vertiport network imported.')
     else:
         fato_coords_list = get_fato_coordinates(vertiport_ids, vertiport_layouts)
         
@@ -58,7 +58,7 @@ def calc_vertiport_distances(vertiport_network_file_path: str,
                                                           original_path=input_location, 
                                                           network_simulation=network_simulation)
         
-        print('Success: Vertiport network file created.')
+        # print('Success: Vertiport network file created.')
         
     # Compute haversine distance and add as a new column to the dataframe
     vertiport_network['distance_miles'] = vertiport_network.apply(

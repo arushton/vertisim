@@ -13,9 +13,12 @@ class SimulatorStates(BaseModel):
     environmental_states: Dict[Any, Any]
     sim_time: float
 
-def filter_and_get_states(get_states_func, keys):
+def filter_and_get_states(get_states_func, keys, **kwargs):
     """Helper function to get and filter states for given entity."""
-    states = get_states_func()
+    if kwargs:
+        states = get_states_func(**kwargs)
+    else:
+        states = get_states_func()
     return filter_nested_dict_by_given_keys(states, keys)
 
 def get_aircraft(aircraft_agents):
@@ -49,14 +52,17 @@ def get_simulator_states(
 
     system_manager = get_system_manager(aircraft_agents)
 
-    vertiport_states = {
-        vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, keys=simulation_states)
-        for vertiport_id, vertiport in vertiports.items()
+    aircraft_states = {
+        tail_number: filter_and_get_states(get_states_func=aircraft.get_aircraft_states, 
+                                           keys=simulation_states)
+        for tail_number, aircraft in aircraft_agents.items()
     }
 
-    aircraft_states = {
-        tail_number: filter_and_get_states(get_states_func=aircraft.get_aircraft_states, keys=simulation_states)
-        for tail_number, aircraft in aircraft_agents.items()
+    vertiport_states = {
+        vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, 
+                                            keys=simulation_states,
+                                            aircraft_agents=aircraft_agents)
+        for vertiport_id, vertiport in vertiports.items()
     }
 
     environmental_states = system_manager.wind.get_wind_states(locations=system_manager.vertiport_ids,
