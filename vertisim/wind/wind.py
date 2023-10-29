@@ -37,6 +37,13 @@ class Wind:
         b = swap_angle_relative_x_axis_north(vector_to_heading(v_wind))
         B_over_A = wind_mag / cruise_speed
         right_hand_side = B_over_A * sin(b - a)
+
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # THIS IS A HACK. The above equation is not solvable for all values of B_over_A. TODO: Fix this.
+        if abs(right_hand_side) > 1:
+            right_hand_side = 0.5
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           
         c = a - asin(right_hand_side) # technically, c = a - asin(rhs) - 2pi * k
         required_heading = swap_angle_relative_x_axis_north(c)
         
@@ -106,7 +113,7 @@ class Wind:
             wind_impact_area: str = aircraft.closest_vertiport_to_aircraft(location=aircraft.location, 
                                                                 origin_vertiport_id=aircraft.origin_vertiport_id,
                                                                 destination_vertiport_id=aircraft.destination_vertiport_id)
-            wind_states: Dict = aircraft.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(aircraft.env.now)),
+            wind_states: Dict = aircraft.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(aircraft.env.now)) % 24,
                                                                                              location=wind_impact_area,
                                                                                              locations=aircraft.system_manager.vertiport_ids)
             v_wind: np.ndarray = aircraft.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],

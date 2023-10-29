@@ -181,14 +181,6 @@ class OnDemandSystemManager(BaseSystemManager):
                                                     destination_vertiport_id=destination_vertiport_id)
         )        
 
-    def retrieve_aircraft(self, origin_vertiport_id) -> object:
-        """
-        Retrieves an aircraft from the available aircraft store
-        :return: object
-
-        Override this method in the subclass if needed.
-        """
-        return self.vertiports[origin_vertiport_id].available_aircraft_store.get()
     
     def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
         waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]

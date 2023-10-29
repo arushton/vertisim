@@ -14,7 +14,6 @@
             "num_available_parking_pad",
             "num_waiting_passengers",
             "total_passenger_waiting_time",
-            "arrival_fix",
             "aircraft_status",
             "origin_vertiport_id",
             "destination_vertiport_id",
@@ -44,11 +43,11 @@
         "flight_schedule_file_path": null, 
         "soc_adjustment": null,
 
-        "num_vertiport_state_variables": 13,
+        "num_vertiport_state_variables": 10,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
-        "num_actions": 3,
+        "num_actions": 81,
         "stopping_events":[
             "passenger_arrival_event",
             "aircraft_faf_arrival_event",
@@ -90,7 +89,7 @@
                     }
                 },
                 "aircraft_arrival_process": {
-                    "num_initial_aircraft_in_vertiport": 3,
+                    "num_initial_aircraft_in_vertiport": 2,
                     "initial_arrival_queue_state": 0
                 }
             },
@@ -129,7 +128,7 @@
         "holding_unit_capacity": 20, 
         "cruise_altitude": 450,  
         "static_wind": false, 
-        "wind_magnitude": 8, 
+        "wind_magnitude": 15, 
         "wind_angle": 3.14159, 
         "wind_data_file_path": "input/airspace/SFBayArea_wind_data.csv"
     },

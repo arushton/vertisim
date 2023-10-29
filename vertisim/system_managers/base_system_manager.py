@@ -585,9 +585,10 @@ class BaseSystemManager:
 
         Override this method in the subclass if needed.
         """
-        # print(f'Vertiport manager: {origin_vertiport_id} is retrieving an aircraft with tail number {tail_number} at time {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[origin_vertiport_id].available_aircraft_store.items]}')
-        return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
-
+        if tail_number is not None:
+            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
+        return self.vertiports[origin_vertiport_id].available_aircraft_store.get()
+    
     def save_aircraft_allocation_time(self, origin_vertiport_id, aircraft, start_time):
         aircraft.flight_allocation_time = self.env.now
         self.event_saver.save_aircraft_allocation_time(vertiport_id=origin_vertiport_id,

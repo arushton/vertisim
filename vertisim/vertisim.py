@@ -99,7 +99,9 @@ class VertiSim:
         1: Idle to charge
         2: Idle to service (vertiport 1)
         """
-        print(f"Applying action: {action}")
+        action = VertiSim.discrete_to_multidiscrete(action, dimensions=self.get_aircraft_count(), base=self.get_action_count())
+        # print(f"Applying action: {action}")
+
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
@@ -112,6 +114,24 @@ class VertiSim:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
         yield self.env.all_of(process_list)
         # print("Finished applying action")
+
+    @staticmethod
+    def multidiscrete_to_discrete(action):
+        """Converts a MultiDiscrete action to a Discrete action."""
+        discrete_action = 0
+        base = 3
+        for i, a in enumerate(reversed(action)):
+            discrete_action += a * (base ** i)
+        return discrete_action
+
+    @staticmethod
+    def discrete_to_multidiscrete(action, dimensions=4, base=3):
+        """Converts a Discrete action back to a MultiDiscrete action."""
+        multidiscrete_action = []
+        for _ in range(dimensions):
+            multidiscrete_action.append(action % base)
+            action = action // base
+        return list(reversed(multidiscrete_action))        
     
     def advance_to_next_stopping_event(self):
         """
@@ -130,12 +150,10 @@ class VertiSim:
                     self._reset_event(event_name)  
                     # Set the triggered flag to True
                     triggered = True     
-            if triggered: 
-                if event_name == 'aircraft_parking_pad_arrival_event':
-                    print(f"Event triggered: {event_name}. Time: {self.env.now}")                   
+            if triggered:                  
                 # Get the states
                 states = self.get_current_state()
-                print(f"REWARD: {self.calculate_reward()}")
+                # print(f"REWARD: {self.calculate_reward()}")
                 # Return the states
                 return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
@@ -263,13 +281,14 @@ class VertiSim:
             for _, vertiport in self.sim_setup.vertiports.items()
         )  + self.sim_setup.system_manager.trip_counter * 1000
 
-    def set_action_space(self, config: Dict) -> gym.spaces.MultiDiscrete:
+    def set_action_space(self, config: Dict) -> gym.spaces.Discrete:
         """
         Creates the action space for each aircraft.
         """
         n_actions = self.get_action_count()
-        n_aircraft = self.get_aircraft_count(config=config)
-        return gym.spaces.MultiDiscrete([n_actions] * n_aircraft)
+        # n_aircraft = self.get_aircraft_count(config=config)
+        # return gym.spaces.MultiDiscrete([n_actions] * n_aircraft)
+        return gym.spaces.Discrete(n_actions)
     
     def set_observation_space(self) -> gym.spaces.Box:
         # Vertiport states

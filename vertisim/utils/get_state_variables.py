@@ -72,7 +72,7 @@ def get_simulator_states(
         'vertiport_states': vertiport_states,
         'aircraft_states': aircraft_states,
         'environmental_states': environmental_states,
-        'sim_time': ms_to_min(system_manager.env.now)
+        'sim_time': round(ms_to_min(system_manager.env.now))
     }
 
     # Validate and serialize the data using Pydantic

@@ -268,28 +268,17 @@ class RLSystemManager(BaseSystemManager):
                 raise ValueError('Unknown initial process for the aircraft')        
 
     def aircraft_charging_process(self, aircraft: object):
-        if self.sim_mode == 'client_server':
-            # Charge the aircraft
-            yield self.env.process(
-                aircraft.charge_aircraft_rl()
-            )
-        else:
-            # Charge the aircraft
-            yield self.env.process(
-                aircraft.charge_aircraft(
-                    parking_space=aircraft.parking_space,
-                    shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
-                )
-            )
-
+        
         # Put aircraft into available aircraft store
         self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                         aircraft=aircraft)
-
-        if self.sim_params['only_aircraft_simulation'] and not self.sim_params['network_simulation']:
-            yield self.env.process(
-                self.simulate_aircraft_departure_process(aircraft=aircraft, origin_vertiport_id=aircraft.origin_vertiport_id, destination_vertiport_id=None)
-            )     
+        # Charge the aircraft
+        yield self.env.process(
+            aircraft.charge_aircraft(
+                parking_space=aircraft.parking_space,
+                shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
+            )
+        )          
 
 # PASSENGER RELATED METHODS
 # -------------------------

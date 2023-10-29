@@ -10,7 +10,8 @@ from .models import create_action_models
 from .config import CONFIG  # Import the loaded configuration
 
 class Actions(BaseModel):
-    actions: List[int]
+    # actions: List[int]
+    actions: int
 
 app = FastAPI()
 
