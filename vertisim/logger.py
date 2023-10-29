@@ -2,6 +2,7 @@ import logging
 import os
 from .utils.helpers import miliseconds_to_hms
 import datetime
+import time
 
 
 class CustomFormatter(logging.Formatter):
@@ -71,3 +72,13 @@ class Logger:
             raise Exception('Logger not initialized. Call create_logger first.')
         return self.logger.critical(*args, **kwargs)
 
+    def remove_logs(self, seconds=10):
+        current_time = time.time()
+        for root, dirs, files in os.walk(self.output_folder_path):
+            for file in files:
+                if file.endswith('.log'):
+                    file_path = os.path.join(root, file)
+                    file_stat = os.stat(file_path)
+                    creation_time = file_stat.st_ctime
+                    if (current_time - creation_time) >= seconds: # seconds
+                        os.remove(file_path)

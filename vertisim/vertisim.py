@@ -39,6 +39,8 @@ class VertiSim:
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
         self.status = True
+        # Remove the old logs.
+        self.sim_setup.logger.remove_logs(seconds=10)
 
 
     def set_simulation_events(self, env, config):
