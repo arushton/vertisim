@@ -64,6 +64,13 @@ class BaseSystemManager:
             vertiport.num_aircraft
             for _, vertiport in self.vertiports.items()
         )    
+    
+    def get_available_aircraft_count(self) -> int:
+        return sum(
+            len(self.get_available_aircraft_tail_numbers(vertiport_id))
+            for vertiport_id, _ in self.vertiports.items()
+        )
+
 
     def build_aircraft_battery_models(self) -> Dict[Any, pd.DataFrame]:
         """
@@ -539,6 +546,8 @@ class BaseSystemManager:
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc) 
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY
+        # Update the number of aircraft at the vertiport
+        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)
         # Update the vertiport flight request state
         self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
         # Set the real pushback time of the aircraft 
@@ -802,7 +811,6 @@ class BaseSystemManager:
         self.release_taxi_usage_request(vertiport_id=aircraft.origin_vertiport_id,
                                         taxi_usage_request=taxi_usage_request)   
 
-        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)
         self.update_flying_aircraft_count(update=1)
         
         # Take-off process

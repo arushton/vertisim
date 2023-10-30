@@ -101,8 +101,9 @@ class VertiSim:
         1: Idle to charge
         2: Idle to service (vertiport 1)
         """
-        action = VertiSim.discrete_to_multidiscrete(action, dimensions=self.get_aircraft_count(), base=self.get_action_count())
-        # print(f"Applying action: {action}")
+        print(f"Applying action: {action}")
+        action = VertiSim.discrete_to_multidiscrete(action, dimensions=self.get_aircraft_count(), base=3)
+        print(f"Converted action: {action}")
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -110,9 +111,6 @@ class VertiSim:
                 # print(f"Applying action to aircraft {aircraft_id}, type: {type(aircraft_id)}, action: {action[aircraft_id]}")
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
-                # Truncate if the aircraft is not at the vertiport
-                if not self.sim_setup.system_manager.vertiports[aircraft.origin_vertiport_id].is_parking_pad_location(aircraft.location):
-                    self.truncation_event.succeed()
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
         yield self.env.all_of(process_list)
         # print("Finished applying action")
@@ -155,76 +153,12 @@ class VertiSim:
             if triggered:                  
                 # Get the states
                 states = self.get_current_state()
-                # print(f"REWARD: {self.calculate_reward()}")
                 # Return the states
                 return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
-        self._handle_end_of_simulation()
+        # self._handle_end_of_simulation()
         self.finalize_simulation()
         return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
-    
-    # def advance_to_next_stopping_event(self):
-    #     """
-    #     Runs the simulation until the next defined stopping event.
-    #     """
-    #     while self._should_continue_simulation():
-    #         self.env.step()
-    #         triggered = False  # Flag to check if any event was triggered
-
-    #         # Process pending events before advancing the simulation
-    #         while self.sim_setup.system_manager.pending_events:
-    #             event_name = self.sim_setup.system_manager.pending_events.popleft()
-    #             self.sim_setup.system_manager.trigger_stopping_event(event_name=event_name)
-
-
-
-    #         # Check if any events in stopping_events have triggered.
-    #         for event_name, event in self.stopping_events.items():
-    #             if event.triggered:  
-    #                 # Reset the event
-    #                 self._reset_event(event_name)  
-    #                 # Set the triggered flag to True
-    #                 triggered = True     
-    #         if triggered:                    
-    #             # Get the states
-    #             states = self.get_current_state()
-    #             # Return the states
-    #             return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
-
-    #     self._handle_end_of_simulation()
-    #     self.finalize_simulation()
-    #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()    
-
-    # def advance_to_next_stopping_event(self):
-    #     """
-    #     Runs the simulation until the next defined stopping event.
-    #     """
-    #     while self._should_continue_simulation():
-    #         # Process pending events before advancing the simulation
-    #         while self.sim_setup.system_manager.pending_events:
-    #             event_name = self.sim_setup.system_manager.pending_events.popleft()
-    #             self.sim_setup.system_manager.trigger_stopping_event(event_name=event_name)
-    #             # Now wait until the simulation catches and resets this event
-    #             while not self.stopping_events[event_name].triggered:
-    #                 self.env.step()
-    #             self._reset_event(event_name)  
-
-    #         # Advance the simulation              
-    #         self.env.step()
-  
-    #         # Check if any events in stopping_events have triggered.
-    #         for event_name, event in self.stopping_events.items():
-    #             if event.triggered:  
-    #                 # Reset the event
-    #                 self._reset_event(event_name)                            
-    #                 # Get the states
-    #                 states = self.get_current_state()
-    #                 # Return the states
-    #                 return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
-
-    #     self._handle_end_of_simulation()
-    #     self.finalize_simulation()
-    #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()    
 
     def _should_continue_simulation(self):
         if self.terminal_event.triggered:
@@ -266,13 +200,14 @@ class VertiSim:
         Reset the simulation.
         """
         # print("Gettting the instance initial state")
-        while self.sim_setup.system_manager.get_aircraft_count() < self.sim_setup.system_manager.num_initial_aircraft:
+        while self.sim_setup.system_manager.get_available_aircraft_count() < self.sim_setup.system_manager.num_initial_aircraft:          
             self.env.step()
             for event_name, event in self.stopping_events.items():
                 if event.triggered:  
                     # Reset the event
                     self._reset_event(event_name) 
         return self.get_current_state()
+    
     
     def calculate_reward(self):
         """
@@ -281,32 +216,32 @@ class VertiSim:
         return -sum(
             vertiport.get_total_passenger_waiting_time()
             for _, vertiport in self.sim_setup.vertiports.items()
-        )  + self.sim_setup.system_manager.trip_counter * 1000
+        )  + self.sim_setup.system_manager.trip_counter * 1000 + self.sim_setup.system_manager.truncation_penalty
 
-    def set_action_space(self, config: Dict) -> gym.spaces.Discrete:
-        """
-        Creates the action space for each aircraft.
-        """
-        n_actions = self.get_action_count()
-        # n_aircraft = self.get_aircraft_count(config=config)
-        # return gym.spaces.MultiDiscrete([n_actions] * n_aircraft)
-        return gym.spaces.Discrete(n_actions)
+    # def set_action_space(self, config: Dict) -> gym.spaces.Discrete:
+    #     """
+    #     Creates the action space for each aircraft.
+    #     """
+    #     n_actions = self.get_action_count()
+    #     # n_aircraft = self.get_aircraft_count(config=config)
+    #     # return gym.spaces.MultiDiscrete([n_actions] * n_aircraft)
+    #     return gym.spaces.Discrete(n_actions)
     
-    def set_observation_space(self) -> gym.spaces.Box:
-        # Vertiport states
-        # Get the number of vertiports
-        num_vertiports = len(self.config['network_and_demand_params']['vertiports'])
+    # def set_observation_space(self) -> gym.spaces.Box:
+    #     # Vertiport states
+    #     # Get the number of vertiports
+    #     num_vertiports = len(self.config['network_and_demand_params']['vertiports'])
 
-        # Get number of aircraft defined in the config file
-        num_aircraft = self.get_aircraft_count()
+    #     # Get number of aircraft defined in the config file
+    #     num_aircraft = self.get_aircraft_count()
 
-        # Get the total number of state variables
-        total_state_variables = num_vertiports * self.get_vertiport_state_variable_count() +\
-                                num_aircraft * self.get_aircraft_state_variable_count() +\
-                                num_vertiports * self.get_environmental_state_variable_count()
+    #     # Get the total number of state variables
+    #     total_state_variables = num_vertiports * self.get_vertiport_state_variable_count() +\
+    #                             num_aircraft * self.get_aircraft_state_variable_count() +\
+    #                             num_vertiports * self.get_environmental_state_variable_count()
         
-        # Return the observation space
-        return gym.spaces.Box(low=0, high=np.inf, shape=(total_state_variables,), dtype=np.float32)
+    #     # Return the observation space
+    #     return gym.spaces.Box(low=0, high=np.inf, shape=(total_state_variables,), dtype=np.float32)
     
     def get_aircraft_count(self) -> int:
         return sum(

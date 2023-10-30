@@ -1035,10 +1035,14 @@ class Aircraft:
         if self.system_manager.sim_mode == 'client_server' \
             and self.tail_number \
             not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
+            print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in available the list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. ")
+            self.system_manager.truncation_penalty -= 10000
             self.system_manager.truncation_event.succeed()
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
         self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self)
+        self.system_manager.reward += 100
+        self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 
     # def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
@@ -1482,14 +1486,29 @@ class Aircraft:
 
     def get_vertiport_list(self):
         return self.system_manager.vertiport_ids
+    
+    def get_flight_direction_index(self):
+        flight_directions = list(self.system_manager.airspace.flight_directions)
+        # If aircraft is on the ground, idling or charging then the flight direction is None.
+        if self.status == AircraftStatus.IDLE or self.status == AircraftStatus.CHARGE:
+            # +1 is for the None flight direction
+            return len(flight_directions)+1
+        return flight_directions.index(self.flight_direction)
+    
+    def get_aircraft_location_for_state(self):
+        if self.system_manager.vertiports[self.destination_vertiport_id].is_parking_pad_location(self.location):
+            return self.get_vertiport_list().index(self.destination_vertiport_id)
+        else:
+            # Meaning that aircraft is is in the air. None of the locations
+            return len(self.get_vertiport_list())
 
     def get_aircraft_states(self) -> Dict:
         """
         Returns the aircraft states.
         """
         state_data = {
-            'origin_vertiport_id': self.get_vertiport_list().index(self.origin_vertiport_id),
-            'destination_vertiport_id': self.get_vertiport_list().index(self.destination_vertiport_id),
+            'flight_direction': self.get_flight_direction_index(),
+            'location': self.get_aircraft_location_for_state(),
             'soc': round(self.soc, 2),
             'time_to_arrival': self.estimate_time_to_arrival(),
             'status': self.status
@@ -1509,8 +1528,8 @@ class AircraftStatus(Enum):
 from pydantic import BaseModel
 
 class AircraftState(BaseModel):
-    origin_vertiport_id: int
-    destination_vertiport_id: int
+    flight_direction: int
+    location: int
     soc: float
     time_to_arrival: float
     status: AircraftStatus

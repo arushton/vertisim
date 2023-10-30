@@ -31,7 +31,7 @@ class Logger:
         self.output_folder_path = output_folder_path
         self.logger = None
 
-    def create_logger(self, name, env, level=logging.DEBUG):
+    def create_logger(self, name, env, level=logging.INFO):
         log_file = self.set_logfile_path(name)
         handler = logging.FileHandler(log_file)
         formatter = CustomFormatter('%(asctime)s %(levelname)s %(tail_number)s %(location)s %(event)s %(message)s', env)

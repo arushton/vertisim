@@ -3,6 +3,7 @@ import simpy
 from ..aircraft.aircraft import AircraftStatus
 from typing import Dict, List, Any
 from collections import deque
+import numpy as np
 import random
 from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
@@ -55,6 +56,8 @@ class RLSystemManager(BaseSystemManager):
         self.stopping_events = stopping_events
         self.truncation_event = truncation_event
         self.trip_counter = 0
+        self.truncation_penalty = 0
+        self.reward = 0
         self.pending_events = deque()
     
     def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
@@ -63,6 +66,23 @@ class RLSystemManager(BaseSystemManager):
             destination_vertiport_id = random_choose_exclude_element(elements_list=self.vertiport_ids,
                                                                     exclude_element=aircraft.origin_vertiport_id,
                                                                     num_selection=1)[0]
+            
+        # Truncate if the aircraft is not at the vertiport
+        if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location):
+            print(f"Applying truncation. Aircraft {aircraft.tail_number} is not at the vertiport {aircraft.destination_vertiport_id}. because location: {aircraft.location}. Current time: {self.env.now}")
+            self.truncation_penalty -= 35000
+            self.truncation_event.succeed()
+        
+        if aircraft.status == AircraftStatus.FLY:
+            print(f"Applying truncation. Aircraft {aircraft.tail_number} is already flying. Current status: {aircraft.status}. Current time: {self.env.now}")
+            self.truncation_penalty -= 25000
+            self.truncation_event.succeed()
+
+        if aircraft.status == AircraftStatus.CHARGE:
+            print(f"Applying truncation. Aircraft {aircraft.tail_number} is charging. Current status: {aircraft.status}. Current time: {self.env.now}")
+            self.truncation_penalty -= 1000
+            self.truncation_event.succeed()
+
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
         # Update the vertiport flight request state
@@ -77,6 +97,8 @@ class RLSystemManager(BaseSystemManager):
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY      
         print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}")
+        # Update the number of aircraft at the vertiport
+        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)        
         # Update the vertiport flight request state
         self.vertiports[aircraft.origin_vertiport_id].num_flight_requests -= 1    
         # Check the waiting room for additional passengers if there is still space on the aircraft
@@ -162,14 +184,14 @@ class RLSystemManager(BaseSystemManager):
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
+
+            # Put aircraft into available aircraft store
+            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                            aircraft=aircraft)             
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
-
-            # Put aircraft into available aircraft store
-            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                            aircraft=aircraft) 
             
             # Increase the passenger trip counter
             self.trip_counter += len(aircraft.passengers_onboard)

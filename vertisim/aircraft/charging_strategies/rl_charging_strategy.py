@@ -2,14 +2,15 @@ from .base_charging_strategy import BaseChargingStrategy
 from ...utils.units import ms_to_sec, sec_to_ms
 from ...utils.helpers import check_magnitude_order, miliseconds_to_hms, careful_round
 from ..aircraft import AircraftStatus
+import numpy as np
 
 class RLChargingStrategy(BaseChargingStrategy):
     def get_charging_time(self, aircraft):
         """
         Get charging time - Two options: Constant charging time or draw a number from distribution
         """
-        # charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=aircraft.soc, target_soc=aircraft.soc + 2)
-        charge_time = sec_to_ms(5*60)
+        charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=aircraft.soc, target_soc=aircraft.soc + 2)
+        # charge_time = sec_to_ms(5*60)
 
         aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.destination_vertiport_id,
                                                      charging_time=charge_time)
@@ -39,7 +40,9 @@ class RLChargingStrategy(BaseChargingStrategy):
             target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
             return sec_to_ms(target_soc_time - init_soc_time)
         else:
-            aircraft.logger.error(f"Final soc level ({target_soc}) is greater than 100).")
+            aircraft.logger.error(f"Final soc level ({target_soc}) is greater than or equal to 100).")
+            print(f"Charging truncation: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id} will not charge. Initial soc: {init_soc}. Final soc level ({target_soc}). At time {aircraft.env.now}.")
+            aircraft.system_manager.truncation_penalty -= 10000
             aircraft.system_manager.truncation_event.succeed()
 
     def charge_aircraft(self, aircraft: object, parking_space: object, shared_charger: bool = False) -> None:
@@ -81,7 +84,6 @@ class RLChargingStrategy(BaseChargingStrategy):
 
         # Set the aircraft status to idle
         aircraft.status = AircraftStatus.IDLE 
-        aircraft.system_manager.trigger_stopping_event(event_name="charging_end_event", id=aircraft.tail_number)
 
         # Release the charger resource that is used by the aircraft and the charging request
         self.release_charger_resource(used_charger_resource, selected_charging_request)

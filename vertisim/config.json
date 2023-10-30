@@ -8,15 +8,12 @@
         "random_seed": 42,
         "max_passenger_waiting_time": 600,
         "simulation_states": [
-            "num_aircraft",
-            "num_flight_requests",
-            "num_available_fato",
             "num_available_parking_pad",
             "num_waiting_passengers",
             "total_passenger_waiting_time",
             "aircraft_status",
-            "origin_vertiport_id",
-            "destination_vertiport_id",
+            "flight_direction",
+            "location",
             "soc",
             "time_to_arrival",
             "status",
@@ -43,7 +40,7 @@
         "flight_schedule_file_path": null, 
         "soc_adjustment": null,
 
-        "num_vertiport_state_variables": 10,
+        "num_vertiport_state_variables": 7,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
@@ -215,7 +212,7 @@
         },
         "aircraft_energy_consumption_data_folder_path": "input/aircraft/energy_consumption",
         "min_init_soc": 20,
-        "max_init_soc": 100,
+        "max_init_soc": 80,
         "min_reserve_soc": 40
     },
     "output_params": {
