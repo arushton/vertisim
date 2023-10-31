@@ -286,3 +286,4 @@ class VertiSim:
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
         print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')      
+        
