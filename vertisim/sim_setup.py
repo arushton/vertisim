@@ -9,7 +9,7 @@ import simpy
 from typing import Dict, List
 import pandas as pd
 from collections import defaultdict
-from .aircraft.aircraft_arrival_setup import AircraftArrivalSetup
+# from .aircraft.aircraft_arrival_setup import AircraftArrivalSetup
 from .event_saver import EventSaver
 from .system_managers.rl_system_manager import RLSystemManager
 from .system_managers.offline_opt_system_manager import OfflineOptimizationSystemManager
@@ -18,7 +18,7 @@ from .aircraft.charging_strategies.ondemand_charging_strategy import OnDemandCha
 from .aircraft.charging_strategies.rl_charging_strategy import RLChargingStrategy
 from .aircraft.charging_strategies.offline_opt_charging_strategy import OfflineOptimizationChargingStrategy
 from .module_setup import vertiport_config, create_vertiport_layouts, set_taxi_operations_config, create_airspace_layout
-from .passenger_arrival_setup import PassengerArrivalSetup
+# from .passenger_arrival_setup import PassengerArrivalSetup
 from .performance_metrics import PerformanceMetrics
 from .save_output import save_output
 from .scheduler import Scheduler
@@ -65,13 +65,14 @@ class SimSetup:
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
         self.stopping_events = stopping_events
-        self.vertiport_layouts = self.create_vertiport_layout()
+        self.vertiport_layouts = self.create_vertiport_layout()      
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids 
         self.vertiport_id_index_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)       
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
         self.check_inputs()
         self.num_destinations = self.get_num_destinations()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
+
         self.airspace = self.create_airspace()  
         self.wind = self.create_wind()    
         self.node_locations = self.build_node_locations_dict()
@@ -88,10 +89,6 @@ class SimSetup:
 
         self.scheduler = self.create_scheduler()
         self.system_manager = self.create_system_manager()
-
-        self.create_aircraft_arrival_process()
-        self.create_passenger_arrival_process()
-
 
 
     def create_loggers(self):
@@ -412,55 +409,6 @@ class SimSetup:
             return RLChargingStrategy()
         else:
             return OnDemandChargingStrategy()
-
-    def create_aircraft_arrival_process(self):
-        # Load or generate aircraft arrival schedule and start the aircraft arrival process
-        flight_schedule_file_path = self.network_and_demand_params.get('flight_schedule_file_path', None)
-        charge_schedule_file_path = self.network_and_demand_params.get('charge_schedule_file_path', None)
-
-        # Load aircraft arrival schedule
-        aircraft_arrival_process = AircraftArrivalSetup(
-            env=self.env,
-            network_simulation=self.sim_params['network_simulation'],
-            vertiport_configs=self.network_and_demand_params['vertiports'],
-            vertiport_layouts=self.vertiport_layouts,
-            flight_schedule_file_path=flight_schedule_file_path,
-            charge_schedule_file_path=charge_schedule_file_path,
-            aircraft_params=self.aircraft_params,
-            system_manager=self.system_manager,
-            scheduler=self.scheduler,
-            wind=self.wind,
-            structural_entity_groups=self.structural_entity_groups,
-            event_saver=self.event_saver,
-            logger=self.logger,
-            aircraft_logger=self.aircraft_logger,
-            vertiport_logger=self.vertiport_logger,
-            charging_strategy=self.get_charging_strategy()
-        )
-
-        aircraft_arrival_process.create_aircraft_arrival()
-
-        if self.sim_params['verbose']:
-            print("Success: Aircraft arrival process is created.")
-
-    def create_passenger_arrival_process(self):
-        if self.sim_params['only_aircraft_simulation'] is False:
-            # Load or generate passenger arrival schedule and start the passenger arrival process
-            passenger_arrival_process = PassengerArrivalSetup(
-                env=self.env,
-                network_and_demand=self.network_and_demand_params,
-                passenger_params=self.passenger_params,
-                vertiport_ids=self.vertiport_ids,
-                system_manager=self.system_manager,
-                aircraft_params=None,
-                network_simulation=self.sim_params['network_simulation'],
-                passenger_logger=self.passenger_logger
-                )
-            self.env.process(
-                passenger_arrival_process.create_passenger_arrival()
-            )
-            if self.sim_params['verbose']:
-                print("Success: Passenger arrival process is created.")
 
     def calculate_performance_metrics(self):
         # Get a random id for the simulation

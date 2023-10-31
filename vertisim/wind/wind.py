@@ -37,13 +37,15 @@ class Wind:
         b = swap_angle_relative_x_axis_north(vector_to_heading(v_wind))
         B_over_A = wind_mag / cruise_speed
         
-        if B_over_A > 1: # unsolvable
+        if B_over_A > 1: # TODO: better address unsolvable case
             return Wind.rta_velocity_wind_adjusted(ground_speed_threshold, desired_heading, v_wind)
         
         right_hand_side = B_over_A * sin(b - a)
+        
         if right_hand_side < -1 - 0.5 or right_hand_side > 1 + 0.5:
             print(a, b, wind_mag, cruise_speed, wind_mag / cruise_speed)
             raise ValueError(f"The RHS={right_hand_side} is outside (-1, 1).")
+        
         c = a - asin(min(max(right_hand_side, -1), 1)) # technically, c = a - asin(rhs) - 2pi * k, min and max prevent rounding errors
         required_heading = swap_angle_relative_x_axis_north(c)
         
@@ -113,7 +115,7 @@ class Wind:
             wind_impact_area: str = aircraft.closest_vertiport_to_aircraft(location=aircraft.location, 
                                                                 origin_vertiport_id=aircraft.origin_vertiport_id,
                                                                 destination_vertiport_id=aircraft.destination_vertiport_id)
-            wind_states: Dict = aircraft.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(aircraft.env.now)),
+            wind_states: Dict = aircraft.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(aircraft.env.now)) % 24,
                                                                                              location=wind_impact_area,
                                                                                              locations=aircraft.system_manager.vertiport_ids)
             v_wind: np.ndarray = aircraft.wind.make_wind_vector_relative_to_north(wind_origin_heading=wind_states['winddir'],

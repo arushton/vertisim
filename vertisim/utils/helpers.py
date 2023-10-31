@@ -28,9 +28,7 @@ def set_seed(seed=None, how='instant'):
 
 
 def get_absolute_path(resource_path: str) -> str:
-    path = pkg_resources.resource_filename('vertisim', resource_path)
-    print(f"Path: {path}")
-    return path
+    return pkg_resources.resource_filename('vertisim', resource_path)
 
 def compute_interarrival_times_from_schedule(schedule):
     """
@@ -413,11 +411,11 @@ def check_magnitude_order(value1, value2, max_val=100):
     """
     Check whether the magnitude of value1 is greater than the magnitude of value2.
     """
-    if value1 > value2:
+    if value1 >= value2:
         raise ValueError(
-            f'The magnitude of value1 ({value1}) is greater than the magnitude of value2 ({value2}).'
+            f'The magnitude of value1 ({value1}) is greater than or equal to the magnitude of value2 ({value2}).'
         )
-    return value2 <= max_val
+    return value2 < max_val
     
 def miliseconds_to_hms(milliseconds):
     seconds = milliseconds // 1000
@@ -484,7 +482,7 @@ def get_list_elements_from_enum(enum_object: Enum):
 
 
 import simpy
-def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_count: int, vertiport_ids: int):
+def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_count: int, vertiport_ids: int, pax_count: int):
     """
     Get stopping events.
     """
@@ -509,7 +507,7 @@ def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_
         elif event_name in [
             "passenger_arrival_event"
         ]:
-            for pax in range(50):
+            for pax in range(pax_count):
                 key = f"{event_name}_{pax}"
                 events[key] = env.event()
     return events

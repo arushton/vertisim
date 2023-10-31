@@ -3,6 +3,7 @@ import simpy
 from ..aircraft.aircraft import AircraftStatus
 from typing import Dict, List, Any
 from collections import deque
+import numpy as np
 import random
 from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
@@ -54,6 +55,10 @@ class RLSystemManager(BaseSystemManager):
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.stopping_events = stopping_events
         self.truncation_event = truncation_event
+        self.trip_counter = 0
+        self.trip_time_counter = 0
+        self.truncation_penalty = 0
+        self.reward = 0
         self.pending_events = deque()
     
     def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
@@ -62,6 +67,14 @@ class RLSystemManager(BaseSystemManager):
             destination_vertiport_id = random_choose_exclude_element(elements_list=self.vertiport_ids,
                                                                     exclude_element=aircraft.origin_vertiport_id,
                                                                     num_selection=1)[0]
+            
+        # Truncate if the aircraft is not at the vertiport
+        if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location) or \
+            aircraft.status != AircraftStatus.IDLE:
+            print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
+            self.truncation_penalty -= 5000
+            self.truncation_event.succeed()
+
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
         # Update the vertiport flight request state
@@ -75,6 +88,9 @@ class RLSystemManager(BaseSystemManager):
         aircraft = yield self.retrieve_aircraft(aircraft.origin_vertiport_id, aircraft.tail_number) 
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY      
+        print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}")
+        # Update the number of aircraft at the vertiport
+        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)        
         # Update the vertiport flight request state
         self.vertiports[aircraft.origin_vertiport_id].num_flight_requests -= 1    
         # Check the waiting room for additional passengers if there is still space on the aircraft
@@ -92,7 +108,7 @@ class RLSystemManager(BaseSystemManager):
         self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {aircraft.origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
         # Save aircraft allocation and idle times
-        self.save_aircraft_times(aircraft)
+        self.save_aircraft_times(origin_vertiport_id=aircraft.origin_vertiport_id, aircraft=aircraft)
 
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers
@@ -115,6 +131,7 @@ class RLSystemManager(BaseSystemManager):
         )        
 
     def simulate_terminal_airspace_arrival_process(self, aircraft: object, arriving_passengers: list):
+        print(f"Terminal airspace arrival process for {aircraft.tail_number} at {aircraft.location}. Origin: {aircraft.origin_vertiport_id}. Destination: {aircraft.destination_vertiport_id} Time: {self.env.now}")
         holding_start = self.env.now
         
         # Increase aircraft arrival queue counter
@@ -127,6 +144,7 @@ class RLSystemManager(BaseSystemManager):
                          f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
                          f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
         # Trigger the stopping event
+        self.logger.debug(f'aircraft_faf_arrival_event is triggered at {aircraft.destination_vertiport_id} time {self.env.now}')
         self.trigger_stopping_event(event_name="aircraft_faf_arrival_event", id=aircraft.destination_vertiport_id)
 
         # Wait until getting the arrival fix usage request
@@ -158,17 +176,26 @@ class RLSystemManager(BaseSystemManager):
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
+
+            # Put aircraft into available aircraft store
+            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                            aircraft=aircraft)             
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
+            
+            # Increase the passenger trip counter
+            self.trip_counter += len(aircraft.passengers_onboard)
+            self.trip_time_counter += aircraft.flight_duration
 
-            # Put aircraft into available aircraft store
-            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                            aircraft=aircraft) 
+
+            print(f"Put aircraft into available aircraft store: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
-            aircraft.status = AircraftStatus.IDLE            
+            aircraft.status = AircraftStatus.IDLE    
+                    
             # Trigger the stopping event
+            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
 
         # Only FATO case and starting point is not a FATO
@@ -190,6 +217,7 @@ class RLSystemManager(BaseSystemManager):
                                                             aircraft=aircraft)   
 
             # Trigger the stopping event
+            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)         
 
         # If the aircraft is not assigned to a parking pad but its starting location is a FATO
@@ -205,13 +233,14 @@ class RLSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
+            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft) 
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')         
             # Trigger the stopping event
+            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
         
         # Only FATO case and the starting location is a FATO
@@ -219,7 +248,7 @@ class RLSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
+            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Get FATO
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival', fato_id=aircraft.assigned_fato_id))
@@ -229,6 +258,7 @@ class RLSystemManager(BaseSystemManager):
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
             aircraft.status = AircraftStatus.IDLE            
             # Trigger the stopping event
+            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)        
             
         # If the aircraft is assigned to a parking pad
@@ -236,7 +266,7 @@ class RLSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
+            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
@@ -247,33 +277,23 @@ class RLSystemManager(BaseSystemManager):
                 # Put aircraft into available aircraft store
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)
+                self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
                 self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
             else:
                 raise ValueError('Unknown initial process for the aircraft')        
 
     def aircraft_charging_process(self, aircraft: object):
-        if self.sim_mode == 'client_server':
-            # Charge the aircraft
-            yield self.env.process(
-                aircraft.charge_aircraft_rl()
-            )
-        else:
-            # Charge the aircraft
-            yield self.env.process(
-                aircraft.charge_aircraft(
-                    parking_space=aircraft.parking_space,
-                    shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
-                )
-            )
-
+        
         # Put aircraft into available aircraft store
         self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                         aircraft=aircraft)
-
-        if self.sim_params['only_aircraft_simulation'] and not self.sim_params['network_simulation']:
-            yield self.env.process(
-                self.simulate_aircraft_departure_process(aircraft=aircraft, origin_vertiport_id=aircraft.origin_vertiport_id, destination_vertiport_id=None)
-            )     
+        # Charge the aircraft
+        yield self.env.process(
+            aircraft.charge_aircraft(
+                parking_space=aircraft.parking_space,
+                shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
+            )
+        )          
 
 # PASSENGER RELATED METHODS
 # -------------------------
@@ -306,12 +326,11 @@ class RLSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
-        # Trigger the stopping event
-        random_event_number = random.randint(0, 49)
-        print(f"Triggering passenger arrival event: {random_event_number}. Current time: {self.env.now/1000}")
-        event_name=f"passenger_arrival_event_{random_event_number}"
+        # print(f"Triggering passenger arrival event: {random_event_number}. Current time: {self.env.now/1000}")
+        event_name=f"passenger_arrival_event_{passenger.passenger_id}"
         self.pending_events.append(event_name)
-        # self.trigger_stopping_event(event_name=f"passenger_arrival_event_{random_event_number}")
+        self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time {self.env.now}')
+        self.trigger_stopping_event(event_name=event_name)
 
         yield self.env.timeout(0)
 

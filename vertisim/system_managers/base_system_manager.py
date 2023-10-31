@@ -64,6 +64,13 @@ class BaseSystemManager:
             vertiport.num_aircraft
             for _, vertiport in self.vertiports.items()
         )    
+    
+    def get_available_aircraft_count(self) -> int:
+        return sum(
+            len(self.get_available_aircraft_tail_numbers(vertiport_id))
+            for vertiport_id, _ in self.vertiports.items()
+        )
+
 
     def build_aircraft_battery_models(self) -> Dict[Any, pd.DataFrame]:
         """
@@ -539,6 +546,8 @@ class BaseSystemManager:
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id, tail_number, soc) 
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY
+        # Update the number of aircraft at the vertiport
+        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)
         # Update the vertiport flight request state
         self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
         # Set the real pushback time of the aircraft 
@@ -585,8 +594,10 @@ class BaseSystemManager:
 
         Override this method in the subclass if needed.
         """
-        return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
-
+        if tail_number is not None:
+            return self.vertiports[origin_vertiport_id].available_aircraft_store.get(lambda aircraft: aircraft.tail_number == tail_number)
+        return self.vertiports[origin_vertiport_id].available_aircraft_store.get()
+    
     def save_aircraft_allocation_time(self, origin_vertiport_id, aircraft, start_time):
         aircraft.flight_allocation_time = self.env.now
         self.event_saver.save_aircraft_allocation_time(vertiport_id=origin_vertiport_id,
@@ -800,7 +811,6 @@ class BaseSystemManager:
         self.release_taxi_usage_request(vertiport_id=aircraft.origin_vertiport_id,
                                         taxi_usage_request=taxi_usage_request)   
 
-        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)
         self.update_flying_aircraft_count(update=1)
         
         # Take-off process
@@ -855,6 +865,10 @@ class BaseSystemManager:
     def initiate_passenger_departure(self, departing_passengers):
         yield self.env.process(self.simulate_passenger_departure(departing_passengers=departing_passengers))    
 
+    def get_available_aircraft_tail_numbers(self, vertiport_id: str) -> list:
+        return [aircraft.tail_number for aircraft in self.vertiports[vertiport_id].available_aircraft_store.items]
+    
+
 
     # PASSENGER RELATED METHODS
     # -------------------------
@@ -871,4 +885,7 @@ class BaseSystemManager:
         yield self.env.process(departing_passengers[0].waiting_room_to_boarding_gate())
         for passenger in departing_passengers:
             passenger.location = f'{passenger.origin_vertiport_id}_GATE'
-            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')        
+            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')  
+
+    def get_total_passenger_count(self):
+        return sum(vertiport.num_passengers for vertiport in self.vertiports.values())

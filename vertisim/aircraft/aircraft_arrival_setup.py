@@ -169,7 +169,7 @@ class AircraftArrivalSetup:
             vertiport_layouts=self.vertiport_layouts,
             aircraft_params=self.aircraft_params,
             network_simulation=self.network_simulation)
-    
+            
         # Get the number of aircraft
         self.num_aircraft = len(schedule)
         return schedule
@@ -382,6 +382,7 @@ class AircraftArrivalSetup:
                                                logger=self.logger,
                                                aircraft_logger=self.aircraft_logger)
             )
+            print(f"aircraft {idx} is initiated.")
 
     def initiate_aircraft_arrival(self,
                                   departure_time: int = None,

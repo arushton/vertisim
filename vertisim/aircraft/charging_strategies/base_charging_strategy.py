@@ -21,7 +21,7 @@ class BaseChargingStrategy(ABC):
         This method is used when the charger configuration is normal (any parking pads can use any chargers).
         Returns the charger resource that is used by the aircraft and the charging request.
         """
-        used_charger_resource = aircraft.system_manager.vertiports[aircraft.destination_vertiport_id].charger_resource
+        used_charger_resource = aircraft.system_manager.vertiports[aircraft.origin_vertiport_id].charger_resource
         return used_charger_resource, used_charger_resource.request()
 
     def handle_shared_charger(self, aircraft: object, parking_space: object):

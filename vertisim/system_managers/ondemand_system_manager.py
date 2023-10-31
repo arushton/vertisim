@@ -181,14 +181,6 @@ class OnDemandSystemManager(BaseSystemManager):
                                                     destination_vertiport_id=destination_vertiport_id)
         )        
 
-    def retrieve_aircraft(self, origin_vertiport_id) -> object:
-        """
-        Retrieves an aircraft from the available aircraft store
-        :return: object
-
-        Override this method in the subclass if needed.
-        """
-        return self.vertiports[origin_vertiport_id].available_aircraft_store.get()
     
     def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
         waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
@@ -370,7 +362,7 @@ class OnDemandSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
+            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Charging process
             yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
@@ -381,7 +373,7 @@ class OnDemandSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
+            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Get FATO
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival', fato_id=aircraft.assigned_fato_id))
@@ -402,7 +394,7 @@ class OnDemandSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}')
+            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
