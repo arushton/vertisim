@@ -36,8 +36,15 @@ class Wind:
         a = swap_angle_relative_x_axis_north(desired_heading)
         b = swap_angle_relative_x_axis_north(vector_to_heading(v_wind))
         B_over_A = wind_mag / cruise_speed
+        
+        if B_over_A > 1: # unsolvable
+            return Wind.rta_velocity_wind_adjusted(ground_speed_threshold, desired_heading, v_wind)
+        
         right_hand_side = B_over_A * sin(b - a)
-        c = a - asin(right_hand_side) # technically, c = a - asin(rhs) - 2pi * k
+        if right_hand_side < -1 - 0.5 or right_hand_side > 1 + 0.5:
+            print(a, b, wind_mag, cruise_speed, wind_mag / cruise_speed)
+            raise ValueError(f"The RHS={right_hand_side} is outside (-1, 1).")
+        c = a - asin(min(max(right_hand_side, -1), 1)) # technically, c = a - asin(rhs) - 2pi * k, min and max prevent rounding errors
         required_heading = swap_angle_relative_x_axis_north(c)
         
         # new velocities

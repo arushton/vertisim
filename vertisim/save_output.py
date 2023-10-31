@@ -1,26 +1,26 @@
-import mysql.connector
+import sqlite3
 import datetime
-from vertisim.utils.helpers import flatten
 from collections import defaultdict
 from json import dumps
+import os
+
+def create_connection(db_file: str):
+    try:
+        with sqlite3.connect(db_file) as conn:
+            return conn
+    except sqlite3.Error as e:
+        print(e)
+        return None
 
 def save_output(simulation_params: dict, 
                 performance_metrics: defaultdict, 
                 simulationID: str, 
-                flight_directions: list, 
-                sql_host: str, 
-                sql_user: str, 
-                sql_pass: str, 
-                sql_database: str) -> None:
+                flight_directions: list,
+                output_path : str = 'sqlite/db/vertisimDatabase.sqlite') -> str:
     
-    db = mysql.connector.connect(
-        host=sql_host,
-        user=sql_user,
-        passwd=sql_pass,
-        database=sql_database
-    )
-
-    cursor = db.cursor()
+    conn = create_connection(output_path)
+    assert conn, 'Could not establish database connection.'
+    cursor = conn.cursor()
     
     # --- SIMULATION TABLE ---
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -34,22 +34,18 @@ def save_output(simulation_params: dict,
                 Timestamp DATETIME
             );
         """)
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
-    
-    try:
-        cursor.execute("""
-            INSERT INTO Simulation (SimulationID, Config, Timestamp)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
-                Timestamp = VALUES(Timestamp), 
-                Config = VALUES(Config);
-        """, (simulationID, config, timestamp))
-    except mysql.connector.Error as err:
+        
+        cursor.execute("SELECT SimulationID FROM Simulation WHERE SimulationID = ?", (simulationID,))
+        data=cursor.fetchone()
+        if data is None:
+            cursor.execute("INSERT INTO Simulation (SimulationID, Config, Timestamp) VALUES (?, ?, ?)", (simulationID, config, timestamp))
+        else:
+            cursor.execute("UPDATE Simulation SET Timestamp = ?, Config = ? WHERE SimulationID = ?", (timestamp, config, simulationID))
+            
+    except sqlite3.Error as err:
         print(f"Error: {err}")
     
     # --- PERFORMANCE METRICS TABLE --- 
-    
     metric_names = []
     metric_values = []
     
@@ -82,15 +78,15 @@ def save_output(simulation_params: dict,
     try:
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS PerformanceMetrics (
-            ID INT AUTO_INCREMENT PRIMARY KEY,
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
             SimulationID VARCHAR(8),
             {metric_name_str},
             FOREIGN KEY (SimulationID) REFERENCES Simulation(SimulationID));
             """)
-    except mysql.connector.Error as err:
+    except sqlite3.Error as err:
         print(f"Error: {err}")
 
-    placeholder = ', '.join(['%s'] * (len(metric_values) + 1))
+    placeholder = ', '.join(['?'] * (len(metric_values) + 1))
     
     sql_insert_query = f"""
         INSERT INTO PerformanceMetrics (SimulationID, {', '.join(metric_names)})
@@ -99,10 +95,11 @@ def save_output(simulation_params: dict,
 
     try:
         cursor.execute(sql_insert_query, [simulationID] + metric_values)
-    except mysql.connector.Error as err:
+    except sqlite3.Error as err:
         print(f"Error: {err}")
 
-    db.commit()
-
+    conn.commit()
     cursor.close()
-    db.close()
+    conn.close()
+    
+    return os.getcwd() + output_path

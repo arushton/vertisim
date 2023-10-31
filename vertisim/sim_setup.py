@@ -480,24 +480,20 @@ class SimSetup:
 
     def save_results(self, performance_metrics):
         # Save the results
-        save_output(
-            simulation_params={
-                'sim_params': self.sim_params,
-                'network_and_demand': self.network_and_demand_params,
-                'passenger_params': self.passenger_params,
-                'aircraft_params': self.aircraft_params,
-                'airspace_params': self.airspace_params,
-                'output_params': self.output_params
-            },
-            performance_metrics=performance_metrics,
-            simulationID=self.sim_id,
-            flight_directions=self.airspace.flight_directions,
-            sql_host="localhost",
-            sql_user="root",
-            sql_pass="*()&*!@&*382",
-            sql_database="vertisimdatabase"
-        )
-        print(f"Success: Results are saved in {self.output_folder_path}.")
+        output_path = save_output(
+                        simulation_params={
+                            'sim_params': self.sim_params,
+                            'network_and_demand': self.network_and_demand_params,
+                            'passenger_params': self.passenger_params,
+                            'aircraft_params': self.aircraft_params,
+                            'airspace_params': self.airspace_params,
+                            'output_params': self.output_params
+                        },
+                        performance_metrics=performance_metrics,
+                        simulationID=self.sim_id,
+                        flight_directions=self.airspace.flight_directions
+                    )
+        print(f"Success: Results are saved in {output_path}.")
 
 
 

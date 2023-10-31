@@ -29,25 +29,22 @@
         "network_simulation": true,
         "verbose": true
     },
-
     "sim_mode": {
         "ondemand": true,
         "offline_optimization": false,
         "client_server": false
     },
-
-    "external_optimization_params":{
+    "external_optimization_params": {
         "flight_duration_constant": null,
-        "charge_assignment_sensitivity": null,   
+        "charge_assignment_sensitivity": null,
         "charge_schedule_file_path": null,
-        "flight_schedule_file_path": null, 
+        "flight_schedule_file_path": null,
         "soc_adjustment": null,
-
         "num_vertiport_state_variables": 8,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_actions": 3,
-        "stopping_events":[
+        "stopping_events": [
             "passenger_arrival_event",
             "aircraft_faf_arrival_event",
             "aircraft_parking_pad_arrival_event",
@@ -56,15 +53,18 @@
             "charging_end_event"
         ],
         "truncation": true,
-        "reward_function_parameters": [10, 20, 30]
+        "reward_function_parameters": [
+            10,
+            20,
+            30
+        ]
     },
-
     "network_and_demand_params": {
-        "vertiport_network_file_path": "../../../../14.Supernal/Data/vertisim_input/network_HHR_Warner.csv",
-        "vertiport_layout_file_path": "../../../../14.Supernal/Data/vertisim_input/vertiport_layout.xls",
+        "vertiport_network_file_path": "vertisim_input/network_HHR_Warner.csv",
+        "vertiport_layout_file_path": "vertisim_input/vertiport_layout.xls",
         "charge_schedule_file_path": null,
         "flight_schedule_file_path": null,
-        "passenger_schedule_file_path": "../../../../14.Supernal/Data/vertisim_input/passenger_arrival_process_test.csv",
+        "passenger_schedule_file_path": "vertisim_input/passenger_arrival_process_test.csv",
         "passenger_arrival_rates_path": null,
         "demand_probabilities": null,
         "vertiports": {
@@ -118,22 +118,20 @@
             }
         }
     },
-
     "airspace_params": {
-        "airspace_layout_file_path": "../../../../14.Supernal/Data/vertisim_input/SupernalHRRWarnerRoute.csv",
+        "airspace_layout_file_path": "vertisim_input/SupernalHRRWarnerRoute.csv",
         "airspace_layout_sheet_name": null,
         "airlink_capacity": 1,
         "airlink_segment_length": 1,
-        "holding_unit_capacity": 20, 
-        "cruise_altitude": 450,  
-        "static_wind": true, 
-        "wind_magnitude": 15, 
-        "wind_angle": 0, 
-        "wind_data_file_path": "../../../../14.Supernal/Data/vertisim_input/HHR_WARNER_WIND.csv"
+        "holding_unit_capacity": 20,
+        "cruise_altitude": 450,
+        "static_wind": true,
+        "wind_magnitude": 10,
+        "wind_angle": 1.22173,
+        "wind_data_file_path": "vertisim_input/HHR_WARNER_WIND.csv"
     },
-
-    "passenger_params" : {
-        "randomize_constants": false, 
+    "passenger_params": {
+        "randomize_constants": false,
         "car_to_entrance_walking_time_constant": 0,
         "car_to_entrance_walking_time_dist": null,
         "security_check_time_constant": 0,
@@ -145,7 +143,6 @@
         "deboard_aircraft_and_walk_to_exit_constant": 0,
         "deboard_aircraft_and_walk_to_exit_dist": null
     },
-
     "aircraft_params": {
         "aircraft_model": "jobyS4",
         "pax": 4,
@@ -153,7 +150,6 @@
         "soc": 100,
         "battery_capacity": 160,
         "pax_mass": 100,
-
         "vertical_takeoff_velocity": 1.5,
         "vertical_landing_velocity": 1.5,
         "climb_transition_end_forward_velocity": 18,
@@ -170,7 +166,6 @@
         "ground_altitude": 0,
         "hover_altitude": 15,
         "cruise_altitude": 450,
-
         "time_tug_connection": 0,
         "time_tug_disconnection": 0,
         "time_pre_take_off_check_list": 0,
@@ -188,7 +183,6 @@
         "time_pre_charging_processes": 180,
         "time_charging_plug_disconnection": 0,
         "time_post_charging_processes": 180,
-
         "mtom": 2182,
         "wing_area": 13,
         "disk_load": 45.9,
@@ -200,9 +194,8 @@
         "eta_hover": 0.85,
         "eta_climb": 0.85,
         "eta_descend": 0.85,
-        "eta_cruise": 0.90,
+        "eta_cruise": 0.9,
         "atmosphere_condition": "good",
-
         "time_charging": null,
         "target_soc_constant": 60,
         "charging_time_dist": {
@@ -223,4 +216,3 @@
         "performance_metrics_output_file_name": "performance_metrics"
     }
 }
-
