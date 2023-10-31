@@ -885,4 +885,7 @@ class BaseSystemManager:
         yield self.env.process(departing_passengers[0].waiting_room_to_boarding_gate())
         for passenger in departing_passengers:
             passenger.location = f'{passenger.origin_vertiport_id}_GATE'
-            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')        
+            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')  
+
+    def get_total_passenger_count(self):
+        return sum(vertiport.num_passengers for vertiport in self.vertiports.values())

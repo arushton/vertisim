@@ -44,7 +44,7 @@
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
-        "num_actions": 81,
+        "num_actions": 3,
         "stopping_events":[
             "passenger_arrival_event",
             "aircraft_faf_arrival_event",
@@ -212,7 +212,7 @@
         },
         "aircraft_energy_consumption_data_folder_path": "input/aircraft/energy_consumption",
         "min_init_soc": 20,
-        "max_init_soc": 80,
+        "max_init_soc": 100,
         "min_reserve_soc": 40
     },
     "output_params": {

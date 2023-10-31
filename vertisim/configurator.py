@@ -109,6 +109,9 @@ class VertiportConfig:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
     
+    def get_passenger_count(self):
+        return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values())
+    
     def get_aircraft_status(self, aircraft_agents) -> List:
         # For each aircraft, check if it's at the current vertiport.
         # If it is, get its status; if it's not, the status is 0.

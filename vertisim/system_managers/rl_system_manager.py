@@ -56,6 +56,7 @@ class RLSystemManager(BaseSystemManager):
         self.stopping_events = stopping_events
         self.truncation_event = truncation_event
         self.trip_counter = 0
+        self.trip_time_counter = 0
         self.truncation_penalty = 0
         self.reward = 0
         self.pending_events = deque()
@@ -68,19 +69,10 @@ class RLSystemManager(BaseSystemManager):
                                                                     num_selection=1)[0]
             
         # Truncate if the aircraft is not at the vertiport
-        if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location):
-            print(f"Applying truncation. Aircraft {aircraft.tail_number} is not at the vertiport {aircraft.destination_vertiport_id}. because location: {aircraft.location}. Current time: {self.env.now}")
-            self.truncation_penalty -= 35000
-            self.truncation_event.succeed()
-        
-        if aircraft.status == AircraftStatus.FLY:
-            print(f"Applying truncation. Aircraft {aircraft.tail_number} is already flying. Current status: {aircraft.status}. Current time: {self.env.now}")
-            self.truncation_penalty -= 25000
-            self.truncation_event.succeed()
-
-        if aircraft.status == AircraftStatus.CHARGE:
-            print(f"Applying truncation. Aircraft {aircraft.tail_number} is charging. Current status: {aircraft.status}. Current time: {self.env.now}")
-            self.truncation_penalty -= 1000
+        if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location) or \
+            aircraft.status != AircraftStatus.IDLE:
+            print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
+            self.truncation_penalty -= 5000
             self.truncation_event.succeed()
 
         # Start tracking aircraft allocation time
@@ -195,6 +187,7 @@ class RLSystemManager(BaseSystemManager):
             
             # Increase the passenger trip counter
             self.trip_counter += len(aircraft.passengers_onboard)
+            self.trip_time_counter += aircraft.flight_duration
 
 
             print(f"Put aircraft into available aircraft store: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")

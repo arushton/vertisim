@@ -1,6 +1,7 @@
 import simpy
 from typing import Any, Dict
 from .sim_setup import SimSetup
+from .aircraft.aircraft import AircraftStatus
 from .utils.helpers import get_stopping_events
 import time
 import numpy as np
@@ -102,12 +103,14 @@ class VertiSim:
         2: Idle to service (vertiport 1)
         """
         print(f"Applying action: {action}")
-        action = VertiSim.discrete_to_multidiscrete(action, dimensions=self.get_aircraft_count(), base=3)
-        print(f"Converted action: {action}")
+        # action = VertiSim.discrete_to_multidiscrete(action, dimensions=self.get_aircraft_count(), base=3)
+        # print(f"Converted action: {action}")
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-            if action[aircraft_id] == 1:
+            if action[aircraft_id] == 0 and aircraft.status == AircraftStatus.IDLE:
+                self.sim_setup.system_manager.reward += 200
+            elif action[aircraft_id] == 1:
                 # print(f"Applying action to aircraft {aircraft_id}, type: {type(aircraft_id)}, action: {action[aircraft_id]}")
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
@@ -213,10 +216,13 @@ class VertiSim:
         """
         Calculate the reward for the current state of the simulation.
         """
-        return -sum(
+        return -10 * sum(
             vertiport.get_total_passenger_waiting_time()
             for _, vertiport in self.sim_setup.vertiports.items()
-        )  + self.sim_setup.system_manager.trip_counter * 1000 + self.sim_setup.system_manager.truncation_penalty
+        )  + self.sim_setup.system_manager.trip_counter * 1000 - \
+            self.sim_setup.system_manager.trip_time_counter * 10 + \
+            self.sim_setup.system_manager.truncation_penalty + \
+                self.sim_setup.system_manager.reward
 
     # def set_action_space(self, config: Dict) -> gym.spaces.Discrete:
     #     """
