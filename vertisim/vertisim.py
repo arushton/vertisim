@@ -64,9 +64,9 @@ class VertiSim:
 
     def finalize_simulation(self):
         self.print_total_time_to_run()
-        # if self.env.now > 0:
-        #     performance_metrics = self.sim_setup.calculate_performance_metrics()
-        # self.sim_setup.save_results(performance_metrics)
+        if self.env.now > 0:
+            performance_metrics = self.sim_setup.calculate_performance_metrics()
+        self.sim_setup.save_results(performance_metrics)
 
     def run_uninterrupted_simulation(self):
         """
