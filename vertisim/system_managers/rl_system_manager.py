@@ -72,7 +72,7 @@ class RLSystemManager(BaseSystemManager):
         if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location) or \
             aircraft.status != AircraftStatus.IDLE:
             print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
-            self.truncation_penalty -= 5000
+            self.truncation_penalty -= 10000
             self.truncation_event.succeed()
 
         # Start tracking aircraft allocation time
@@ -326,11 +326,12 @@ class RLSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
-        # print(f"Triggering passenger arrival event: {random_event_number}. Current time: {self.env.now/1000}")
-        event_name=f"passenger_arrival_event_{passenger.passenger_id}"
-        self.pending_events.append(event_name)
-        self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time {self.env.now}')
-        self.trigger_stopping_event(event_name=event_name)
+        if len(passengers_waiting_room.items) > 2:
+            print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")
+            event_name=f"passenger_arrival_event_{passenger.passenger_id}"
+            self.pending_events.append(event_name)
+            self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
+            self.trigger_stopping_event(event_name=event_name)
 
         yield self.env.timeout(0)
 

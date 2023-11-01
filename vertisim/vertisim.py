@@ -81,7 +81,8 @@ class VertiSim:
         """
         Reset the simulation.
         """
-        return self.terminal_event.succeed()
+        if not self.terminal_event.triggered:
+            return self.terminal_event.succeed()
     
     def step(self, actions):
         """
@@ -108,9 +109,9 @@ class VertiSim:
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-            if action[aircraft_id] == 0 and aircraft.status == AircraftStatus.IDLE:
-                self.sim_setup.system_manager.reward += 200
-            elif action[aircraft_id] == 1:
+            # if action[aircraft_id] == 0 and aircraft.status == AircraftStatus.IDLE:
+            #     self.sim_setup.system_manager.reward += 200
+            if action[aircraft_id] == 1:
                 # print(f"Applying action to aircraft {aircraft_id}, type: {type(aircraft_id)}, action: {action[aircraft_id]}")
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
@@ -159,7 +160,7 @@ class VertiSim:
                 # Return the states
                 return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
-        # self._handle_end_of_simulation()
+        self._handle_end_of_simulation()
         self.finalize_simulation()
         return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
@@ -216,10 +217,10 @@ class VertiSim:
         """
         Calculate the reward for the current state of the simulation.
         """
-        return -10 * sum(
+        return -1000 * sum(
             vertiport.get_total_passenger_waiting_time()
             for _, vertiport in self.sim_setup.vertiports.items()
-        )  + self.sim_setup.system_manager.trip_counter * 1000 - \
+        )  + self.sim_setup.system_manager.trip_counter * 10000 - \
             self.sim_setup.system_manager.trip_time_counter * 10 + \
             self.sim_setup.system_manager.truncation_penalty + \
                 self.sim_setup.system_manager.reward

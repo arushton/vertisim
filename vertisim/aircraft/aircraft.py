@@ -1033,8 +1033,7 @@ class Aircraft:
     
     def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
         if self.system_manager.sim_mode == 'client_server' \
-            and self.tail_number \
-            not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
+            and self.status != AircraftStatus.IDLE:
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in available the list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. ")
             self.system_manager.truncation_penalty -= 10000
             self.system_manager.truncation_event.succeed()
@@ -1475,13 +1474,7 @@ class Aircraft:
         """
         Returns the estimated time to arrival in minutes.
         """
-        time_to_arrival = time_to_arrival_estimator(cruise_speed=self.aircraft_params['cruise_speed'],
-                                                    current_waypoint_id=self.location,
-                                                    origin_vertiport_id=self.origin_vertiport_id,
-                                                    destination_vertiport_id=self.destination_vertiport_id,
-                                                    flight_direction=self.flight_direction,
-                                                    system_manager=self.system_manager,
-                                                    tail_number=self.tail_number)
+        time_to_arrival = time_to_arrival_estimator(aircraft=self)
         return round(time_to_arrival/60, 2)   
 
     def get_vertiport_list(self):

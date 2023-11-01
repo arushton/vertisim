@@ -1,6 +1,6 @@
 {
     "sim_params": {
-        "max_sim_time": 216000,
+        "max_sim_time": 108000,
         "arrival_priority": 1,
         "departure_priority": 1,
         "simultaneous_taxi_and_take_off": true,
@@ -11,7 +11,6 @@
             "num_available_parking_pad",
             "num_waiting_passengers",
             "total_passenger_waiting_time",
-            "aircraft_status",
             "flight_direction",
             "location",
             "soc",
@@ -40,7 +39,7 @@
         "flight_schedule_file_path": null, 
         "soc_adjustment": null,
 
-        "num_vertiport_state_variables": 7,
+        "num_vertiport_state_variables": 3,
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,

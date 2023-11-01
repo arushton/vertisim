@@ -7,7 +7,7 @@ from .charger_model import ChargerModel
 from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
-from .utils.units import ms_to_min
+from .utils.units import ms_to_min, ms_to_sec
 from pydantic import BaseModel
 
 class EntitySubState(BaseModel):
@@ -106,7 +106,7 @@ class VertiportConfig:
         total_waiting_time_min = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                total_waiting_time_min += ms_to_sec(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
     
     def get_passenger_count(self):
