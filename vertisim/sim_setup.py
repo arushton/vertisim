@@ -48,7 +48,7 @@ class SimSetup:
                  aircraft_params: Dict,
                  output_params: Dict,
                  stopping_events: Dict = None,
-                 truncation_event: simpy.Event = None):
+                 truncation_events: simpy.Event = None):
         self.sim_params = sim_params
         self.sim_mode = sim_mode
         self.external_optimization_params = external_optimization_params
@@ -57,7 +57,7 @@ class SimSetup:
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
-        self.truncation_event = truncation_event
+        self.truncation_events = truncation_events
 
         self.sim_start_timestamp = 0 #sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
@@ -374,7 +374,7 @@ class SimSetup:
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
                 'stopping_events': self.stopping_events,
-                'truncation_event': self.truncation_event,
+                'truncation_events': self.truncation_events,
                 'sim_mode': system_manager_type
             },
             'offline_optimization': {

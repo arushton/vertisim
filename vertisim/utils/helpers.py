@@ -499,7 +499,7 @@ def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_
         elif event_name in [
             "aircraft_parking_pad_arrival_event",
             "charging_start_event",
-            "charging_end_event",
+            "charging_end_event"
         ]:
             for aircraft_id in range(aircraft_count):
                 key = f"{event_name}_{aircraft_id}"
@@ -511,6 +511,20 @@ def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_
                 key = f"{event_name}_{pax}"
                 events[key] = env.event()
     return events
+
+
+def get_truncation_events(env: simpy.Environment, truncation_events: List, aircraft_count: int):
+    """
+    Get truncation events.
+    """
+    # return {event_name: env.event() for event_name in truncation_events}
+    events = {}
+    for event_name in truncation_events:
+        for aircraft_id in range(aircraft_count):
+            key = f"{event_name}_{aircraft_id}"
+            events[key] = env.event()
+    return events
+
 
 
 # def create_aircraft_events(env: simpy.Environment, aircraft_count: int):

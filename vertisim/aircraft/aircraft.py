@@ -98,6 +98,8 @@ class Aircraft:
         self.aircraft_fato_usage_request = None
         self.parking_space_usage_request = None
 
+        self.soc_at_zero_event_triggered = False
+
         self.aircraft_model = self.aircraft_params['aircraft_model']
         self.passenger_capacity = self.aircraft_params['pax']
         self.max_range = self.aircraft_params['range']
@@ -777,12 +779,12 @@ class Aircraft:
         # Release the FATO pad and departure fix resource after reaching to the nextNode
         self.release_fato_and_departure_fix()
 
-        # If the simulation is running by an optimization algorithm, then this will
-        # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_mode == 'client_server':
-            self.logger.debug(f'aircraft_departure_fix_departure_event is triggered for {self.tail_number} time {self.env.now}')
-            self.system_manager.trigger_stopping_event(event_name='aircraft_departure_fix_departure_event',
-                                                       id=self.origin_vertiport_id)            
+        # # If the simulation is running by an optimization algorithm, then this will
+        # # trigger this event and the optimization algorithm will make a decision.
+        # if self.system_manager.sim_mode == 'client_server':
+        #     self.logger.debug(f'aircraft_departure_fix_departure_event is triggered for {self.tail_number} time {self.env.now}')
+        #     self.system_manager.trigger_stopping_event(event_name='aircraft_departure_fix_departure_event',
+        #                                                id=self.origin_vertiport_id)            
 
         yield self.env.process(self.climb_to_cruise_altitude())
 
@@ -1036,7 +1038,7 @@ class Aircraft:
             and self.status != AircraftStatus.IDLE:
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in available the list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. ")
             self.system_manager.truncation_penalty -= 10000
-            self.system_manager.truncation_event.succeed()
+            self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
         self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self)
@@ -1242,7 +1244,13 @@ class Aircraft:
                                   f" during {self.detailed_status}, SOC: {round(self.soc, 2)}")
         if self.soc-self.convert_kwh_soc(kwh) < 0:
             soc_update = self.soc
-            print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
+            if self.system_manager.sim_mode == 'client_server' and self.soc_at_zero_event_triggered == False:
+                print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
+                self.soc_at_zero_event_triggered = True
+                self.system_manager.truncation_penalty -= 10000
+                self.logger.debug(f'soc_at_zero_event is triggered for {self.tail_number} time {self.env.now}')
+                self.system_manager.trigger_truncation_event(event_name='soc_at_zero_event',
+                                                             id=self.tail_number)
         else:
             soc_update = self.convert_kwh_soc(kwh)
         self.update_soc(-soc_update)
@@ -1392,8 +1400,8 @@ class Aircraft:
         self.save_flight_phase_energy(flight_phase='holding', energy=holding_energy)
     
     def check_reserve_energy(self) -> float:
-        if self.soc <= 2 and self.detailed_status in ['landing', 'cruise', 'takeoff']:
-            print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.detailed_status} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
+        # if self.soc <= 2 and self.detailed_status in ['landing', 'cruise', 'takeoff']:
+        #     print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.detailed_status} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
         if self.soc <= 20 and self.detailed_status in ['landing', 'cruise', 'takeoff']:
             self.priority = 0
 

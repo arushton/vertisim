@@ -1,8 +1,8 @@
 import simpy
-from typing import Any, Dict
+from typing import Any, Dict, List
 from .sim_setup import SimSetup
 from .aircraft.aircraft import AircraftStatus
-from .utils.helpers import get_stopping_events
+from .utils.helpers import get_stopping_events, get_truncation_events
 import time
 import numpy as np
 import gymnasium as gym
@@ -20,7 +20,7 @@ class VertiSim:
         self.env = env
         self.config = config
         self.reward_function_parameters = reward_function_parameters
-        self.terminal_event, self.truncation_event, self.stopping_events = self.set_simulation_events(env=self.env, config=self.config)
+        self.terminal_event, self.truncation_event, self.truncation_events, self.stopping_events = self.set_simulation_events(env=self.env, config=self.config)
 
         self.sim_start_time = time.time()
         self.sim_setup = SimSetup(env=self.env,
@@ -33,7 +33,7 @@ class VertiSim:
                                   aircraft_params=config['aircraft_params'],
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
-                                  truncation_event=self.truncation_event)    
+                                  truncation_events=self.truncation_events)    
         # Initiate flow entities and create events
         initiate_flow_entities(sim_setup=self.sim_setup)       
         # Set the max simulation time
@@ -43,19 +43,21 @@ class VertiSim:
         # Remove the old logs.
         self.sim_setup.logger.remove_logs(seconds=10)
 
-
     def set_simulation_events(self, env, config):
         """
         Set the simulation events.
         """
         terminal_event = env.event()
         truncation_event = env.event()
+        truncation_events = get_truncation_events(env=env,
+                                                  truncation_events=config["external_optimization_params"]["truncation_events"],
+                                                  aircraft_count=self.get_aircraft_count())
         stopping_events = get_stopping_events(env=env, 
                                               stopping_events=config["external_optimization_params"]["stopping_events"],
                                               aircraft_count=self.get_aircraft_count(),
                                               vertiport_ids=self.get_vertiport_ids(),
                                               pax_count=self.get_passenger_count())
-        return terminal_event, truncation_event, stopping_events
+        return terminal_event, truncation_event, truncation_events, stopping_events
 
     def run(self):
         # This only runs uninterrupted simulation. No distinction for online optimization
@@ -88,11 +90,11 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
-        # print(f"Running step. Current time: {self.env.now}")
+        total_triggers = sum(action != 0 for action in actions)
         # Apply the action
         self.env.process(self.apply_action(actions))
         # Advance to the next stopping event
-        return self.advance_to_next_stopping_event()
+        return self.advance_to_next_stopping_event(total_triggers)
 
     def apply_action(self, action: np.array):
         """
@@ -112,61 +114,72 @@ class VertiSim:
             # if action[aircraft_id] == 0 and aircraft.status == AircraftStatus.IDLE:
             #     self.sim_setup.system_manager.reward += 200
             if action[aircraft_id] == 1:
-                # print(f"Applying action to aircraft {aircraft_id}, type: {type(aircraft_id)}, action: {action[aircraft_id]}")
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
         yield self.env.all_of(process_list)
-        # print("Finished applying action")
-
-    @staticmethod
-    def multidiscrete_to_discrete(action):
-        """Converts a MultiDiscrete action to a Discrete action."""
-        discrete_action = 0
-        base = 3
-        for i, a in enumerate(reversed(action)):
-            discrete_action += a * (base ** i)
-        return discrete_action
-
-    @staticmethod
-    def discrete_to_multidiscrete(action, dimensions=4, base=3):
-        """Converts a Discrete action back to a MultiDiscrete action."""
-        multidiscrete_action = []
-        for _ in range(dimensions):
-            multidiscrete_action.append(action % base)
-            action = action // base
-        return list(reversed(multidiscrete_action))        
     
-    def advance_to_next_stopping_event(self):
+    def advance_to_next_stopping_event(self, total_triggers: int):
         """
         Runs the simulation until the next defined stopping event.
         """
-        # print(f"Active process: {self.env.active_process}, Time: {self.env.now}")
+        # print(f"Total triggers: {total_triggers}")
+        trigger_count = 0
+        # Flag to check if any event was triggered
+        stopping_event_triggered = False   
+        # Flag to check if any truncation event was triggered
+        truncation_triggered = False   
+        
+        stopped_events = set()
+        truncated_events = set()
+
         while self._should_continue_simulation():
-            # print(f"Next event scheduled at: {self.env.peek()}")
+            # Step the simulation
             self.env.step()
-            # print(f"Stepping. Current time: {self.env.now}")
-            triggered = False  # Flag to check if any event was triggered
+          
             # Check if any events in stopping_events have triggered.
             for event_name, event in self.stopping_events.items():
-                if event.triggered:  
-                    # Reset the event
-                    self._reset_event(event_name)  
+                if event.triggered:   
+                    # Increase the trigger count
+                    if not event_name.startswith("passenger_arrival") and event_name not in stopped_events:
+                        trigger_count += 1
+                         # Set the triggered flag to True
+                        stopping_event_triggered = True 
+                        # Add the event to the list of stopped events
+                        stopped_events.add(event_name)                          
+                        # print(f"Trigger count increased: {trigger_count}. Event {event_name}")
+            
+            for event_name, event in self.truncation_events.items():
+                if event.triggered:
                     # Set the triggered flag to True
-                    triggered = True     
-            if triggered:                  
-                # Get the states
-                states = self.get_current_state()
+                    truncation_triggered = True
+                    # Increase the trigger count
+                    if event_name not in truncated_events:
+                        trigger_count += 1
+                        # Add the event to the list of truncated events
+                        truncated_events.add(event_name)                        
+                        # print(f"Trigger count increased: {trigger_count}. Event {event_name}")
+            
+            # If the truncation is triggered and the trigger count is equal to the total triggers, succeed the truncation event
+            if trigger_count == total_triggers and truncation_triggered:
+                # print("Truncation triggered")
+                self.truncation_event.succeed()
+
+            # If any event was triggered and there is the list is cleared, return the states
+            if trigger_count == total_triggers and stopping_event_triggered:
+                # Reset the triggered stopping events
+                for event_name, event in self.stopping_events.items():
+                    if event.triggered:
+                        # Reset the event
+                        self._reset_event(event_name)                
                 # Return the states
-                return states, self.calculate_reward(), self.check_terminated(), self.check_truncated()
+                return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
         self._handle_end_of_simulation()
         self.finalize_simulation()
         return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
 
     def _should_continue_simulation(self):
-        if self.terminal_event.triggered:
-            print("Terminal event triggered")
         return (self.env.peek() < self.max_sim_time and 
                 not self.terminal_event.triggered and 
                 not self.truncation_event.triggered)
@@ -188,7 +201,7 @@ class VertiSim:
         """
         Check if the simulation has truncated.
         """
-        return self.truncation_event.triggered        
+        return self.truncation_event.triggered            
 
     def get_current_state(self):
         """
@@ -224,6 +237,24 @@ class VertiSim:
             self.sim_setup.system_manager.trip_time_counter * 10 + \
             self.sim_setup.system_manager.truncation_penalty + \
                 self.sim_setup.system_manager.reward
+
+    @staticmethod
+    def multidiscrete_to_discrete(action, n_actions=3):
+        """Converts a MultiDiscrete action to a Discrete action."""
+        discrete_action = 0
+        for i, a in enumerate(reversed(action)):
+            discrete_action += a * (n_actions ** i)
+        return discrete_action
+
+    @staticmethod
+    def discrete_to_multidiscrete(action, dimensions=4, n_actions=3):
+        """Converts a Discrete action back to a MultiDiscrete action."""
+        multidiscrete_action = []
+        for _ in range(dimensions):
+            multidiscrete_action.append(action % n_actions)
+            action = action // n_actions
+        return list(reversed(multidiscrete_action))   
+    
 
     # def set_action_space(self, config: Dict) -> gym.spaces.Discrete:
     #     """
