@@ -17,10 +17,40 @@ class WindDataProcessor:
     @staticmethod
     def _load_wind_data(file_path):
         data = read_input_file(file_path)
-        data['datetime'] = pd.to_datetime(data['datetime'])
-        data['windspeed'] = data['windspeed'].apply(mph_to_metersec)
-        data['winddir'] = data['winddir'].apply(lambda x: round(x * pi / 180, 4))
-        return data[['locationname', 'datetime', 'windspeed', 'winddir']]        
+        data = data[['locationname', 'datetime', 'windspeed', 'winddir']]  
+        data = WindDataProcessor.exclude_days_with_missing_hours(data)
+        return WindDataProcessor.convert_winddata_units(data)
+    
+    @staticmethod
+    def exclude_days_with_missing_hours(wind_data):
+        # Convert 'datetime' to datetime object if it's not already
+        if not pd.api.types.is_datetime64_any_dtype(wind_data['datetime']):
+            wind_data['datetime'] = pd.to_datetime(wind_data['datetime'])
+        
+        # Group by date and location, and filter out groups with less than 24 records (hours)
+        grouped = wind_data.groupby([wind_data['datetime'].dt.date, 'locationname'])
+        full_days = grouped.filter(lambda x: len(x) == 24)
+
+        # Get unique dates for each location
+        full_days_dates = full_days.groupby('locationname')['datetime'].apply(lambda x: x.dt.date.unique())
+
+        # Find intersection of dates (dates that are complete for all locations)
+        complete_dates = set(full_days_dates.iloc[0])
+        for dates in full_days_dates.iloc[1:]:
+            complete_dates.intersection_update(dates)
+
+        # Filter original data to exclude days with missing data
+        mask = (wind_data['datetime'].dt.date.isin(complete_dates)) & (wind_data['locationname'].isin(full_days_dates.index))
+        cleaned_data = wind_data[mask]
+
+        return cleaned_data.reset_index(drop=True)
+    
+    @staticmethod
+    def convert_winddata_units(wind_data):
+        wind_data['windspeed'] = wind_data['windspeed'].apply(mph_to_metersec)
+        wind_data['winddir'] = wind_data['winddir'].apply(lambda x: round(x * pi / 180, 4))
+        return wind_data
+
 
     def pick_random_day(self, max_wind_speed_threshold=None) -> dt.date:
         """

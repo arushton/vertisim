@@ -90,6 +90,8 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
+        actions = VertiSim.discrete_to_multidiscrete(actions, dimensions=self.get_aircraft_count(), n_actions=3)
+
         total_triggers = sum(action != 0 for action in actions)
         # Apply the action
         self.env.process(self.apply_action(actions))
@@ -105,9 +107,8 @@ class VertiSim:
         1: Idle to charge
         2: Idle to service (vertiport 1)
         """
-        print(f"Applying action: {action}")
-        # action = VertiSim.discrete_to_multidiscrete(action, dimensions=self.get_aircraft_count(), base=3)
-        # print(f"Converted action: {action}")
+        # print(f"Applying action: {action}")
+        print(f"Converted action: {action}")
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():

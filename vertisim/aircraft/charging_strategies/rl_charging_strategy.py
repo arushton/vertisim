@@ -20,7 +20,7 @@ class RLChargingStrategy(BaseChargingStrategy):
         
         return charge_time
     
-    def get_charge_time_from_soc(self, aircraft: object, init_soc:int, target_soc: int) -> float:
+    def get_charge_time_from_soc(self, aircraft: object, init_soc:int, target_soc: int) -> (float, float) :
         """
         Calculates the charge time required to reach the target soc level.
 
@@ -46,6 +46,7 @@ class RLChargingStrategy(BaseChargingStrategy):
             print(f"Charging truncation: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id} will not charge. Initial soc: {init_soc}. Final soc level ({target_soc}). At time {aircraft.env.now}.")
             aircraft.system_manager.truncation_penalty -= 10000
             aircraft.system_manager.trigger_truncation_event(event_name="overcharge_truncation_event", id=aircraft.tail_number)
+            return 0
 
     def charge_aircraft(self, aircraft: object, parking_space: object, shared_charger: bool = False) -> None:
         """

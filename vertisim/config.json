@@ -43,7 +43,7 @@
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
-        "num_actions": 3,
+        "num_actions": 81,
         "stopping_events":[
             "passenger_arrival_event",
             "aircraft_faf_arrival_event",

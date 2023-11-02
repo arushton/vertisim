@@ -415,7 +415,7 @@ def check_magnitude_order(value1, value2, max_val=100):
         raise ValueError(
             f'The magnitude of value1 ({value1}) is greater than or equal to the magnitude of value2 ({value2}).'
         )
-    return value2 < max_val
+    return value2 <= max_val
     
 def miliseconds_to_hms(milliseconds):
     seconds = milliseconds // 1000

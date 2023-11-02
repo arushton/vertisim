@@ -113,6 +113,11 @@ class RLSystemManager(BaseSystemManager):
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers
 
+        if len(departing_passengers) == 0:
+            self.reward -= 1000
+        elif len(departing_passengers) > 0:
+            self.reward += 1000 * len(departing_passengers)
+
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.destination_vertiport_id, passengers=aircraft.passengers_onboard) 
         self.passenger_logger.debug(f"Passenger waiting times for flight from {aircraft.destination_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
