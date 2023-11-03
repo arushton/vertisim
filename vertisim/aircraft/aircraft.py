@@ -1043,7 +1043,8 @@ class Aircraft:
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
         self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self)
         # self.system_manager.reward += 100
-        self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
+        if self.system_manager.sim_mode == 'client_server':
+            self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 
     # def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:

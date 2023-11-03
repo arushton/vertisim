@@ -547,7 +547,7 @@ class BaseSystemManager:
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY
         # Update the number of aircraft at the vertiport
-        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)
+        self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)
         # Update the vertiport flight request state
         self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
         # Set the real pushback time of the aircraft 

@@ -325,6 +325,9 @@ class OnDemandSystemManager(BaseSystemManager):
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
+            # Put aircraft into available aircraft store
+            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+                                                            aircraft=aircraft)              
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
@@ -419,10 +422,6 @@ class OnDemandSystemManager(BaseSystemManager):
                 shared_charger=self.vertiports[aircraft.destination_vertiport_id].shared_charger_sets
             )
         )
-
-        # Put aircraft into available aircraft store
-        self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                        aircraft=aircraft)
 
         if self.sim_params['only_aircraft_simulation']:
             yield self.env.process(
