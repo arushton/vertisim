@@ -187,7 +187,7 @@ class VertiSim:
     
     def _check_demand_satisfied(self):
         # If system_manager.passenger_arrival_complete == True and if there is no passenger left in the waiting rooms of the vertiports, succeed the terminal event
-        print(f"Total waiting passengers: {self.sim_setup.system_manager.get_total_passenger_count()} at time sec: {round(self.env.now/1000)}")
+        # print(f"Total waiting passengers: {self.sim_setup.system_manager.get_total_passenger_count()} at time sec: {round(self.env.now/1000)}")
         if bool(
             self.sim_setup.system_manager.passenger_arrival_complete
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
