@@ -44,7 +44,7 @@ class RLChargingStrategy(BaseChargingStrategy):
         else:
             aircraft.logger.error(f"Final soc level ({target_soc}) is greater than or equal to 100).")
             print(f"Charging truncation: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id} will not charge. Initial soc: {init_soc}. Final soc level ({target_soc}). At time {aircraft.env.now}.")
-            aircraft.system_manager.truncation_penalty -= 10000
+            aircraft.system_manager.truncation_penalty += 1
             aircraft.system_manager.trigger_truncation_event(event_name="overcharge_truncation_event", id=aircraft.tail_number)
             return 0
 

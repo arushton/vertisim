@@ -57,6 +57,7 @@ class BaseSystemManager:
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.taxi_resource = simpy.Resource(self.env, 1)
         self.aircraft_battery_models = self.build_aircraft_battery_models()
+        self.passenger_arrival_complete = False
 
 
     def get_aircraft_count(self) -> int:
@@ -70,7 +71,6 @@ class BaseSystemManager:
             len(self.get_available_aircraft_tail_numbers(vertiport_id))
             for vertiport_id, _ in self.vertiports.items()
         )
-
 
     def build_aircraft_battery_models(self) -> Dict[Any, pd.DataFrame]:
         """
@@ -888,4 +888,7 @@ class BaseSystemManager:
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')  
 
     def get_total_passenger_count(self):
-        return sum(vertiport.num_passengers for vertiport in self.vertiports.values())
+        return sum(vertiport.get_passenger_count() for vertiport in self.vertiports.values())
+    
+    def check_all_waiting_rooms_empty(self):
+        return all(vertiport.is_waiting_room_empty() for vertiport in self.vertiports.values())

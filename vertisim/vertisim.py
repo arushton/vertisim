@@ -90,8 +90,6 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
-        # actions = VertiSim.discrete_to_multidiscrete(actions, dimensions=self.get_aircraft_count(), n_actions=3)
-
         # Reset the rewards
         self.reset_rewards()
         # Get the number of triggers for this step
@@ -184,13 +182,28 @@ class VertiSim:
     def _should_continue_simulation(self):
         return (self.env.peek() < self.max_sim_time and 
                 not self.terminal_event.triggered and 
-                not self.truncation_event.triggered)
+                not self.truncation_event.triggered and
+                not self._check_demand_satisfied())
+    
+    def _check_demand_satisfied(self):
+        # If system_manager.passenger_arrival_complete == True and if there is no passenger left in the waiting rooms of the vertiports, succeed the terminal event
+        print(f"Total waiting passengers: {self.sim_setup.system_manager.get_total_passenger_count()} at time sec: {round(self.env.now/1000)}")
+        if bool(
+            self.sim_setup.system_manager.passenger_arrival_complete
+            and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
+            ):
+            print("Demand satisfied")
+            self.sim_setup.system_manager.reward += \
+                self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
+            self.terminal_event.succeed()
+            return True
+        return False
     
     def _reset_event(self, event_name):
         self.stopping_events[event_name] = self.env.event()
 
     def _handle_end_of_simulation(self):
-        if self.env.peek() < self.max_sim_time:
+        if self.env.peek() < self.max_sim_time and not self.terminal_event.triggered:
             self.terminal_event.succeed()
 
     def check_terminated(self):
@@ -232,12 +245,12 @@ class VertiSim:
         """
         Calculate the reward for the current state of the simulation.
         """
-        return -sum(
+        return sum(
             vertiport.get_total_passenger_waiting_time()
             for _, vertiport in self.sim_setup.vertiports.items()) * \
-                self.config['external_optimization_params']['reward_function_parameters']['waiting_time_penalty'] \
-                    + self.sim_setup.system_manager.trip_counter * \
-                        self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] - \
+                self.config['external_optimization_params']['reward_function_parameters']['waiting_time_penalty'] + \
+                    self.sim_setup.system_manager.trip_counter * \
+                        self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] + \
             self.sim_setup.system_manager.trip_time_counter * \
                 self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
             self.sim_setup.system_manager.truncation_penalty * \

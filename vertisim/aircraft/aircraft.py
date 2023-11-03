@@ -1037,7 +1037,7 @@ class Aircraft:
         if self.system_manager.sim_mode == 'client_server' \
             and self.status != AircraftStatus.IDLE:
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in available the list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. ")
-            self.system_manager.truncation_penalty -= 1
+            self.system_manager.truncation_penalty += 1
             self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
@@ -1247,7 +1247,7 @@ class Aircraft:
             if self.system_manager.sim_mode == 'client_server' and self.soc_at_zero_event_triggered == False:
                 print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
                 self.soc_at_zero_event_triggered = True
-                self.system_manager.truncation_penalty -= 1
+                self.system_manager.truncation_penalty += 1
                 self.logger.debug(f'soc_at_zero_event is triggered for {self.tail_number} time {self.env.now}')
                 self.system_manager.trigger_truncation_event(event_name='soc_at_zero_event',
                                                              id=self.tail_number)

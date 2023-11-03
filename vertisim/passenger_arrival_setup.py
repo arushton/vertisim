@@ -117,6 +117,9 @@ class PassengerArrivalSetup:
                     origin_vertiport_id=origin_vertiport_id,
                     destination_vertiport_id=destination_vertiport_id
             )
+        
+        print(f"All {len(passenger_arrival_schedule)} passengers have arrived.")
+        self.system_manager.passenger_arrival_complete = True
 
     def initiate_passenger_arrival(self, 
                                    passenger_id: int,

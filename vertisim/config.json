@@ -58,10 +58,11 @@
         ],
         "truncation": true,
         "reward_function_parameters": {
-            "waiting_time_penalty": 1,
+            "waiting_time_penalty": -1,
             "trip_reward": 40,
-            "flight_cost": 1,
-            "truncation_penalty": 10000
+            "flight_cost": -1,
+            "truncation_penalty": -10000,
+            "completion_reward": 10000
         }
     },
 

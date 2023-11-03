@@ -71,7 +71,7 @@ class RLSystemManager(BaseSystemManager):
         if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location) or \
             aircraft.status != AircraftStatus.IDLE:
             print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
-            self.truncation_penalty -= 1
+            self.truncation_penalty += 1
             self.trigger_truncation_event(event_name="not_at_vertiport_truncation_event", id=aircraft.tail_number)
 
         # Start tracking aircraft allocation time

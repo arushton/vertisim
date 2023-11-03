@@ -109,6 +109,9 @@ class VertiportConfig:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
     
+    def is_waiting_room_empty(self):
+        return all(len(waiting_room_store.items) == 0 for waiting_room_store in self.waiting_room_stores.values())
+    
     def get_passenger_count(self):
         return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values())
     
