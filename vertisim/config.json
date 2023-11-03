@@ -43,9 +43,8 @@
         "num_aircraft_state_variables": 5,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
-        "num_actions": 81,
+        "num_actions": 3,
         "stopping_events":[
-            "passenger_arrival_event",
             "aircraft_faf_arrival_event",
             "aircraft_parking_pad_arrival_event",
             "aircraft_departure_fix_departure_event",
@@ -58,7 +57,12 @@
             "not_at_vertiport_truncation_event"
         ],
         "truncation": true,
-        "reward_function_parameters": [10, 20, 30]
+        "reward_function_parameters": {
+            "waiting_time_penalty": 1,
+            "trip_reward": 40,
+            "flight_cost": 1,
+            "truncation_penalty": 10000
+        }
     },
 
     "network_and_demand_params": {

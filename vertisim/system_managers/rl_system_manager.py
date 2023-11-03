@@ -59,7 +59,6 @@ class RLSystemManager(BaseSystemManager):
         self.trip_time_counter = 0
         self.truncation_penalty = 0
         self.reward = 0
-        self.pending_events = deque()
     
     def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -72,7 +71,7 @@ class RLSystemManager(BaseSystemManager):
         if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location) or \
             aircraft.status != AircraftStatus.IDLE:
             print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
-            self.truncation_penalty -= 10000
+            self.truncation_penalty -= 1
             self.trigger_truncation_event(event_name="not_at_vertiport_truncation_event", id=aircraft.tail_number)
 
         # Start tracking aircraft allocation time
@@ -114,9 +113,9 @@ class RLSystemManager(BaseSystemManager):
         aircraft.passengers_onboard = departing_passengers
 
         if len(departing_passengers) == 0:
-            self.reward -= 1000
+            self.reward -= 10
         elif len(departing_passengers) > 0:
-            self.reward += 1000 * len(departing_passengers)
+            self.reward += 10 * len(departing_passengers)
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.destination_vertiport_id, passengers=aircraft.passengers_onboard) 
@@ -194,6 +193,7 @@ class RLSystemManager(BaseSystemManager):
             self.trip_counter += len(aircraft.passengers_onboard)
             self.trip_time_counter += aircraft.flight_duration
 
+            # print(f"Aircraft {aircraft.tail_number} landed with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time (sec): {round(self.env.now/1000)}")
 
             # print(f"Put aircraft into available aircraft store: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
@@ -331,12 +331,11 @@ class RLSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
-        if len(passengers_waiting_room.items) > 2:
-            # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")
-            event_name=f"passenger_arrival_event_{passenger.passenger_id}"
-            self.pending_events.append(event_name)
-            self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
-            self.trigger_stopping_event(event_name=event_name)
+        # if len(passengers_waiting_room.items) > 2:
+        #     # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")
+        #     event_name=f"passenger_arrival_event_{passenger.passenger_id}"
+        #     self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
+        #     self.trigger_stopping_event(event_name=event_name)
 
         yield self.env.timeout(0)
 

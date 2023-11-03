@@ -90,8 +90,11 @@ class VertiSim:
         """
         Run the simulation for one timestep.
         """
-        actions = VertiSim.discrete_to_multidiscrete(actions, dimensions=self.get_aircraft_count(), n_actions=3)
+        # actions = VertiSim.discrete_to_multidiscrete(actions, dimensions=self.get_aircraft_count(), n_actions=3)
 
+        # Reset the rewards
+        self.reset_rewards()
+        # Get the number of triggers for this step
         total_triggers = sum(action != 0 for action in actions)
         # Apply the action
         self.env.process(self.apply_action(actions))
@@ -124,7 +127,6 @@ class VertiSim:
         """
         Runs the simulation until the next defined stopping event.
         """
-        # print(f"Total triggers: {total_triggers}")
         trigger_count = 0
         # Flag to check if any event was triggered
         stopping_event_triggered = False   
@@ -140,15 +142,12 @@ class VertiSim:
           
             # Check if any events in stopping_events have triggered.
             for event_name, event in self.stopping_events.items():
-                if event.triggered:   
-                    # Increase the trigger count
-                    if not event_name.startswith("passenger_arrival") and event_name not in stopped_events:
-                        trigger_count += 1
-                         # Set the triggered flag to True
-                        stopping_event_triggered = True 
-                        # Add the event to the list of stopped events
-                        stopped_events.add(event_name)                          
-                        # print(f"Trigger count increased: {trigger_count}. Event {event_name}")
+                if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
+                    trigger_count += 1
+                     # Set the triggered flag to True
+                    stopping_event_triggered = True 
+                    # Add the event to the list of stopped events
+                    stopped_events.add(event_name)
             
             for event_name, event in self.truncation_events.items():
                 if event.triggered:
@@ -165,6 +164,8 @@ class VertiSim:
             if trigger_count == total_triggers and truncation_triggered:
                 # print("Truncation triggered")
                 self.truncation_event.succeed()
+                self.finalize_simulation()
+                return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()                
 
             # If any event was triggered and there is the list is cleared, return the states
             if trigger_count == total_triggers and stopping_event_triggered:
@@ -231,13 +232,26 @@ class VertiSim:
         """
         Calculate the reward for the current state of the simulation.
         """
-        return -1000 * sum(
+        return -sum(
             vertiport.get_total_passenger_waiting_time()
-            for _, vertiport in self.sim_setup.vertiports.items()
-        )  + self.sim_setup.system_manager.trip_counter * 10000 - \
-            self.sim_setup.system_manager.trip_time_counter * 10 + \
-            self.sim_setup.system_manager.truncation_penalty + \
+            for _, vertiport in self.sim_setup.vertiports.items()) * \
+                self.config['external_optimization_params']['reward_function_parameters']['waiting_time_penalty'] \
+                    + self.sim_setup.system_manager.trip_counter * \
+                        self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] - \
+            self.sim_setup.system_manager.trip_time_counter * \
+                self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
+            self.sim_setup.system_manager.truncation_penalty * \
+                 self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty'] + \
                 self.sim_setup.system_manager.reward
+    
+    def reset_rewards(self):
+        """
+        Reset the rewards for the current state of the simulation.
+        """
+        self.sim_setup.system_manager.trip_counter = 0
+        self.sim_setup.system_manager.trip_time_counter = 0
+        self.sim_setup.system_manager.truncation_penalty = 0
+        self.sim_setup.system_manager.reward = 0
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):
