@@ -85,9 +85,6 @@ class RLChargingStrategy(BaseChargingStrategy):
         old_soc = aircraft.soc
         self.soc_charge_update(aircraft=aircraft, charge_time=charge_time)
 
-        # Set the aircraft status to idle
-        aircraft.status = AircraftStatus.IDLE 
-
         # Release the charger resource that is used by the aircraft and the charging request
         self.release_charger_resource(used_charger_resource, selected_charging_request)
         # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround

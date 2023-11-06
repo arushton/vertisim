@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from collections import deque
 import numpy as np
 import random
-from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
+from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 
@@ -29,7 +29,8 @@ class RLSystemManager(BaseSystemManager):
                  aircraft_logger: object,
                  passenger_logger: object,
                  stopping_events: Dict,
-                 truncation_events: simpy.Event,
+                 truncation_events: Dict,
+                 truncation_event: simpy.Event,
                  sim_mode: str = 'client_server'
                  ):
         super().__init__(env=env,
@@ -55,21 +56,28 @@ class RLSystemManager(BaseSystemManager):
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.stopping_events = stopping_events
         self.truncation_events = truncation_events
+        self.truncation_event = truncation_event
         self.trip_counter = 0
+        self.trip_counter_tracker = 0
+        self.total_demand = 0
         self.trip_time_counter = 0
         self.truncation_penalty = 0
         self.reward = 0
+        self.triggered_stopping_event_queue = deque()
     
-    def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
+    def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
+        
+        return random_choose_exclude_element(elements_list=self.vertiport_ids,
+                                             exclude_element=aircraft.destination_vertiport_id,
+                                             num_selection=1)[0]
+
+    def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
         if destination_vertiport_id is None:
-            destination_vertiport_id = random_choose_exclude_element(elements_list=self.vertiport_ids,
-                                                                    exclude_element=aircraft.destination_vertiport_id,
-                                                                    num_selection=1)[0]
+            destination_vertiport_id = self.get_random_destination(aircraft=aircraft)
             
         # Truncate if the aircraft is not at the vertiport
-        if not self.vertiports[aircraft.destination_vertiport_id].is_parking_pad_location(aircraft.location) or \
-            aircraft.status != AircraftStatus.IDLE:
+        if aircraft.tail_number not in self.get_available_aircraft_tail_numbers(vertiport_id=aircraft.destination_vertiport_id):
             print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
             self.truncation_penalty += 1
             self.trigger_truncation_event(event_name="not_at_vertiport_truncation_event", id=aircraft.tail_number)
@@ -86,7 +94,9 @@ class RLSystemManager(BaseSystemManager):
         # Retrieve aircraft from the store
         aircraft = yield self.retrieve_aircraft(aircraft.destination_vertiport_id, aircraft.tail_number) 
         # Set the status of the aircraft
-        aircraft.status = AircraftStatus.FLY      
+        aircraft.status = AircraftStatus.FLY    
+        # Set the assignment process True
+        aircraft.is_process_completed = True 
         # print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}")
         # Update the number of aircraft at the vertiport
         self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)        
@@ -112,10 +122,17 @@ class RLSystemManager(BaseSystemManager):
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers
 
-        if len(departing_passengers) == 0:
-            self.reward -= 10
-        elif len(departing_passengers) > 0:
-            self.reward += 10 * len(departing_passengers)
+        # Increase the passenger trip counter
+        self.trip_counter += len(aircraft.passengers_onboard)         
+
+        # if len(departing_passengers) == 0:
+        #     self.reward -= 100
+        # elif len(departing_passengers) > 0:
+        #     self.reward += 100 * len(departing_passengers)
+
+        self.trip_time_counter += sec_to_min(self.initial_flight_duration_estimate(origin_id=aircraft.destination_vertiport_id,
+                                                                        destination_id=destination_vertiport_id,
+                                                                        cruise_speed=aircraft.aircraft_params['cruise_speed']))
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.destination_vertiport_id, passengers=aircraft.passengers_onboard) 
@@ -183,21 +200,20 @@ class RLSystemManager(BaseSystemManager):
 
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                            aircraft=aircraft)             
+                                                            aircraft=aircraft)  
+                       
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
-            
-            # Increase the passenger trip counter
-            self.trip_counter += len(aircraft.passengers_onboard)
-            self.trip_time_counter += aircraft.flight_duration
 
-            # print(f"Aircraft {aircraft.tail_number} landed with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time (sec): {round(self.env.now/1000)}")
+            print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
 
             # print(f"Put aircraft into available aircraft store: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
-            aircraft.status = AircraftStatus.IDLE    
+            aircraft.status = AircraftStatus.IDLE   
+
+            self.trip_counter_tracker += len(aircraft.passengers_onboard) 
                     
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
@@ -220,6 +236,7 @@ class RLSystemManager(BaseSystemManager):
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft)   
+            aircraft.status = AircraftStatus.IDLE
 
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
@@ -243,6 +260,7 @@ class RLSystemManager(BaseSystemManager):
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft) 
+            aircraft.status = AircraftStatus.IDLE
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')         
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
@@ -282,6 +300,7 @@ class RLSystemManager(BaseSystemManager):
                 # Put aircraft into available aircraft store
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)
+                aircraft.status = AircraftStatus.IDLE
                 self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
                 self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
             else:
@@ -331,11 +350,12 @@ class RLSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
-        # if len(passengers_waiting_room.items) > 2:
-        #     # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")
-        #     event_name=f"passenger_arrival_event_{passenger.passenger_id}"
-        #     self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
-        #     self.trigger_stopping_event(event_name=event_name)
+        # if len(passengers_waiting_room.items) > 1:
+        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time: {self.env.now}")
+        event_name=f"passenger_arrival_event_{passenger.passenger_id}"
+        self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
+        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")        
+        self.trigger_stopping_event(event_name=event_name)
 
         yield self.env.timeout(0)
 
@@ -345,28 +365,17 @@ class RLSystemManager(BaseSystemManager):
         """
         if id is not None:
             event_name = f"{event_name}_{id}"
+        self.triggered_stopping_event_queue.append(event_name)
         self.stopping_events[event_name].succeed()
 
     def trigger_truncation_event(self, event_name: str, id: int = None):
         """
         Trigger the truncation event.
         """
-        if id is not None:
-            event_name = f"{event_name}_{id}"
-        self.truncation_events[event_name].succeed() 
+        # if id is not None:
+        #     event_name = f"{event_name}_{id}"
+        # self.truncation_events[event_name].succeed() 
+        self.truncation_event.succeed()
 
-
-import queue
-
-class EventManager:
-    def __init__(self):
-        # Initialize an empty FIFO queue
-        self.event_queue = queue.Queue()
-
-    def trigger_event(self, event_key):
-        """
-        Simulates triggering an event. 
-        When an event is triggered, its key is added to the queue.
-        """
-        self.event_queue.put(event_key)
-
+    def is_all_passenger_travelled(self):
+        return self.trip_counter_tracker == self.total_demand

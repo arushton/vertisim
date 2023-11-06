@@ -8,7 +8,7 @@ import numpy as np
 import gymnasium as gym
 from .utils.get_state_variables import get_simulator_states
 from .initiate_flow_entities import initiate_flow_entities
-from .utils.units import sec_to_ms
+from .utils.units import sec_to_ms, ms_to_hr
 from .run_step_by_step_simulation import run_step_by_step_simulation, run_steps_until_specific_events
 
 
@@ -33,7 +33,8 @@ class VertiSim:
                                   aircraft_params=config['aircraft_params'],
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
-                                  truncation_events=self.truncation_events)    
+                                  truncation_events=self.truncation_events,
+                                  truncation_event=self.truncation_event)    
         # Initiate flow entities and create events
         initiate_flow_entities(sim_setup=self.sim_setup)       
         # Set the max simulation time
@@ -66,6 +67,8 @@ class VertiSim:
 
     def finalize_simulation(self):
         self.print_total_time_to_run()
+        if self.is_terminated():
+            print("Simulation terminated")
         # if self.env.now > 0:
         #     performance_metrics = self.sim_setup.calculate_performance_metrics()
         # self.sim_setup.save_results(performance_metrics)
@@ -91,14 +94,14 @@ class VertiSim:
         Run the simulation for one timestep.
         """
         # Reset the rewards
-        self.reset_rewards()
-        # Get the number of triggers for this step
-        total_triggers = sum(action != 0 for action in actions)
+        # self.reset_rewards()
+        # # Get the number of triggers for this step
+        # total_triggers = sum(action != 0 for action in actions)
         # Apply the action
         self.env.process(self.apply_action(actions))
         # Advance to the next stopping event
-        return self.advance_to_next_stopping_event(total_triggers)
-
+        return self.advance_to_next_stopping_event()
+       
     def apply_action(self, action: np.array):
         """
         Apply action to the simulation.
@@ -109,19 +112,50 @@ class VertiSim:
         2: Idle to service (vertiport 1)
         """
         # print(f"Applying action: {action}")
-        print(f"Converted action: {action}")
+        # print(f"Converted action: {action}")
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-            # if action[aircraft_id] == 0 and aircraft.status == AircraftStatus.IDLE:
-            #     self.sim_setup.system_manager.reward += 200
+            if action[aircraft_id] == 0:
+                aircraft.is_process_completed = True
+            if action[aircraft_id] == 1:
+                if aircraft.status == AircraftStatus.IDLE:
+                    aircraft.status = AircraftStatus.CHARGE
+                    aircraft.is_process_completed = False
+            elif action[aircraft_id] == 2:
+                if aircraft.status == AircraftStatus.IDLE:
+                    aircraft.status = AircraftStatus.FLY  
+                    aircraft.is_process_completed = False    
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif action[aircraft_id] == 2:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
         yield self.env.all_of(process_list)
-    
-    def advance_to_next_stopping_event(self, total_triggers: int):
+
+    def action_mask(self):
+        """
+        Create the action mask for the current state of the simulation.
+        """
+        mask = []
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if aircraft.status == AircraftStatus.IDLE \
+                and aircraft.soc != 100 \
+                    and aircraft.soc > self.config['aircraft_params']['min_reserve_soc']:
+                mask.append([1, 1, 1])
+            elif aircraft.status == AircraftStatus.IDLE \
+                    and aircraft.soc <= self.config['aircraft_params']['min_reserve_soc']:
+                mask.append([1, 1, 0])
+            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc == 100:
+                mask.append([1, 0, 1])
+            elif aircraft.status == AircraftStatus.CHARGE:
+                mask.append([1, 0, 0])
+            elif aircraft.status == AircraftStatus.FLY:
+                mask.append([1, 0, 0])
+        # Flatten the mask
+        return np.array(mask).flatten().tolist()
+
+    def advance_to_next_stopping_event(self):
         """
         Runs the simulation until the next defined stopping event.
         """
@@ -135,64 +169,84 @@ class VertiSim:
         truncated_events = set()
 
         while self._should_continue_simulation():
+            # Print the next event
+            # print(f"Next event: {self.env.peek()}")
             # Step the simulation
             self.env.step()
           
-            # Check if any events in stopping_events have triggered.
-            for event_name, event in self.stopping_events.items():
-                if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
-                    trigger_count += 1
-                     # Set the triggered flag to True
-                    stopping_event_triggered = True 
-                    # Add the event to the list of stopped events
-                    stopped_events.add(event_name)
-            
-            for event_name, event in self.truncation_events.items():
-                if event.triggered:
-                    # Set the triggered flag to True
-                    truncation_triggered = True
-                    # Increase the trigger count
-                    if event_name not in truncated_events:
-                        trigger_count += 1
-                        # Add the event to the list of truncated events
-                        truncated_events.add(event_name)                        
-                        # print(f"Trigger count increased: {trigger_count}. Event {event_name}")
-            
-            # If the truncation is triggered and the trigger count is equal to the total triggers, succeed the truncation event
-            if trigger_count == total_triggers and truncation_triggered:
-                # print("Truncation triggered")
-                self.truncation_event.succeed()
-                self.finalize_simulation()
-                return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()                
-
-            # If any event was triggered and there is the list is cleared, return the states
-            if trigger_count == total_triggers and stopping_event_triggered:
-                # Reset the triggered stopping events
-                for event_name, event in self.stopping_events.items():
-                    if event.triggered:
-                        # Reset the event
-                        self._reset_event(event_name)                
+            # If there are any triggered stopping event, pop it out, reset it and return the states
+            if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
+                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
+                # print(f"Triggered event: {event_name}. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. State: {self.get_current_state()['aircraft_states']}")
+                # Reset the event
+                self._reset_event(event_name)
                 # Return the states
-                return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
+                # print(f"Aircraft status and location: {[(aircraft.status, aircraft.location) for _, aircraft in self.sim_setup.system_manager.aircraft_agents.items()]}")
+                # print(f"Action mask: {self.action_mask()}")
+                # print(f"REWARD: {self.calculate_reward()}")
+                return self.get_current_state(), self.calculate_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
 
-        self._handle_end_of_simulation()
-        self.finalize_simulation()
-        return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
+
+
+
+            # # Check if any events in stopping_events have triggered.
+            # for event_name, event in self.stopping_events.items():
+            #     if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
+            #         trigger_count += 1
+            #          # Set the triggered flag to True
+            #         stopping_event_triggered = True 
+            #         # Add the event to the list of stopped events
+            #         stopped_events.add(event_name)
+            
+            # for event_name, event in self.truncation_events.items():
+            #     if event.triggered:
+            #         # Set the triggered flag to True
+            #         truncation_triggered = True
+            #         # Increase the trigger count
+            #         if event_name not in truncated_events:
+            #             trigger_count += 1
+            #             # Add the event to the list of truncated events
+            #             truncated_events.add(event_name)                        
+            #             # print(f"Trigger count increased: {trigger_count}. Event {event_name}")
+            
+            # # If the truncation is triggered and the trigger count is equal to the total triggers, succeed the truncation event
+            # if trigger_count == total_triggers and truncation_triggered:
+            #     # print("Truncation triggered")
+            #     self.truncation_event.succeed()
+            #     self.finalize_simulation()
+            #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()                
+
+            # # If any event was triggered and there is the list is cleared, return the states
+            # if trigger_count == total_triggers and stopping_event_triggered:
+            #     # Reset the triggered stopping events
+            #     for event_name, event in self.stopping_events.items():
+            #         if event.triggered:
+            #             # Reset the event
+            #             self._reset_event(event_name)                
+            #     # Return the states
+            #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
+
+        # self._handle_end_of_simulation()
+        # self.finalize_simulation()
+        # print(f"FINAL REWARD: {self.calculate_reward()}")
+        # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
+        return self.get_current_state(), self.calculate_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
 
     def _should_continue_simulation(self):
         return (self.env.peek() < self.max_sim_time and 
-                not self.terminal_event.triggered and 
+                (not self.terminal_event.triggered and 
                 not self.truncation_event.triggered and
-                not self._check_demand_satisfied())
+                not self._check_demand_satisfied()))
     
     def _check_demand_satisfied(self):
         # If system_manager.passenger_arrival_complete == True and if there is no passenger left in the waiting rooms of the vertiports, succeed the terminal event
-        print(f"Total waiting passengers: {self.sim_setup.system_manager.get_total_passenger_count()} at time sec: {round(self.env.now/1000)}")
+        # print(f"Total waiting passengers: {self.sim_setup.system_manager.get_total_waiting_passenger_count()} at time sec: {round(self.env.now/1000)}")
         if bool(
             self.sim_setup.system_manager.passenger_arrival_complete
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
-            ):
+            and self.sim_setup.system_manager.is_all_passenger_travelled()):
             print("Demand satisfied")
+            self.sim_setup.print_passenger_trip_time_stats()
             self.sim_setup.system_manager.reward += \
                 self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
             self.terminal_event.succeed()
@@ -206,13 +260,13 @@ class VertiSim:
         if self.env.peek() < self.max_sim_time and not self.terminal_event.triggered:
             self.terminal_event.succeed()
 
-    def check_terminated(self):
+    def is_terminated(self):
         """
         Check if the simulation has terminated.
         """
         return self.terminal_event.triggered
     
-    def check_truncated(self):
+    def is_truncated(self):
         """
         Check if the simulation has truncated.
         """
@@ -238,6 +292,8 @@ class VertiSim:
                 if event.triggered:  
                     # Reset the event
                     self._reset_event(event_name) 
+                    # Pop them out from the triggered event queue
+                    self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
         return self.get_current_state()
     
     
@@ -246,7 +302,7 @@ class VertiSim:
         Calculate the reward for the current state of the simulation.
         """
         return sum(
-            vertiport.get_total_passenger_waiting_time()
+            vertiport.get_exponential_waiting_cost()
             for _, vertiport in self.sim_setup.vertiports.items()) * \
                 self.config['external_optimization_params']['reward_function_parameters']['waiting_time_penalty'] + \
                     self.sim_setup.system_manager.trip_counter * \
@@ -345,4 +401,4 @@ class VertiSim:
     def print_total_time_to_run(self):
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')      
+        # print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')      

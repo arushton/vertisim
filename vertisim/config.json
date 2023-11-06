@@ -16,6 +16,7 @@
             "soc",
             "time_to_arrival",
             "status",
+            "is_process_completed",
             "wind_speed",
             "wind_direction"
         ],
@@ -40,14 +41,13 @@
         "soc_adjustment": null,
 
         "num_vertiport_state_variables": 3,
-        "num_aircraft_state_variables": 5,
+        "num_aircraft_state_variables": 6,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
         "num_actions": 3,
         "stopping_events":[
-            "aircraft_faf_arrival_event",
+            "passenger_arrival_event",
             "aircraft_parking_pad_arrival_event",
-            "aircraft_departure_fix_departure_event",
             "charging_end_event"
         ],
         "truncation_events":[
@@ -59,10 +59,10 @@
         "truncation": true,
         "reward_function_parameters": {
             "waiting_time_penalty": -1,
-            "trip_reward": 40,
-            "flight_cost": -1,
-            "truncation_penalty": -10000,
-            "completion_reward": 10000
+            "trip_reward": 200,
+            "flight_cost": -10,
+            "truncation_penalty": -100000,
+            "completion_reward": 0
         }
     },
 
@@ -85,7 +85,7 @@
                 "shared_charger_sets": null,
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
-                    "num_passengers": 300,
+                    "num_passengers": 50,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
@@ -109,7 +109,7 @@
                 "shared_charger_sets": null,
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
-                    "num_passengers": 300,
+                    "num_passengers": 50,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {

@@ -147,7 +147,7 @@ class BaseSystemManager:
 
     def initial_flight_duration_estimate(self, origin_id: str, destination_id: str, cruise_speed: float) -> float:
         """
-        Compute the average flight time based on distance and aircraft speed.
+        Compute the average flight time (in seconds) based on distance and aircraft speed.
         """
         flight_distance = miles_to_m(self.get_mission_length(origin_id, destination_id))
         return flight_distance / cruise_speed * 1.25        
@@ -868,7 +868,12 @@ class BaseSystemManager:
     def get_available_aircraft_tail_numbers(self, vertiport_id: str) -> list:
         return [aircraft.tail_number for aircraft in self.vertiports[vertiport_id].available_aircraft_store.items]
     
-
+    def is_all_aircraft_idle(self):
+        return all(
+            aircraft.status == AircraftStatus.IDLE
+            for aircraft in self.aircraft_agents.values()
+        )
+    
 
     # PASSENGER RELATED METHODS
     # -------------------------
@@ -887,7 +892,7 @@ class BaseSystemManager:
             passenger.location = f'{passenger.origin_vertiport_id}_GATE'
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')  
 
-    def get_total_passenger_count(self):
+    def get_total_waiting_passenger_count(self):
         return sum(vertiport.get_passenger_count() for vertiport in self.vertiports.values())
     
     def check_all_waiting_rooms_empty(self):

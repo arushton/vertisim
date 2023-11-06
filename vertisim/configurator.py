@@ -59,6 +59,7 @@ class VertiportConfig:
         self.aircraft_departure_queue_count = 0
         self.num_flight_requests = 0
         self.num_waiting_passengers = 0
+        self.cum_waiting_cost = 0
 
 
     def is_node_vertiport_location(self, location):
@@ -108,6 +109,17 @@ class VertiportConfig:
             for passenger in waiting_room_store.items:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
+    
+    def get_exponential_waiting_cost(self):
+        total_weighted_waiting_time = 0
+        for waiting_room_store in self.waiting_room_stores.values():
+            for passenger in waiting_room_store.items:
+                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                if waiting_time > 10:
+                    total_weighted_waiting_time += 10 + (waiting_time - 10)**2
+                else:
+                    total_weighted_waiting_time += waiting_time
+        return round(total_weighted_waiting_time/4)
     
     def is_waiting_room_empty(self):
         return all(len(waiting_room_store.items) == 0 for waiting_room_store in self.waiting_room_stores.values())
