@@ -125,10 +125,10 @@ class RLSystemManager(BaseSystemManager):
         # Increase the passenger trip counter
         self.trip_counter += len(aircraft.passengers_onboard)         
 
-        # if len(departing_passengers) == 0:
-        #     self.reward -= 100
-        # elif len(departing_passengers) > 0:
-        #     self.reward += 100 * len(departing_passengers)
+        if len(departing_passengers) == 0:
+            self.reward -= 1000
+        elif len(departing_passengers) > 2:
+            self.reward += 1000 * len(departing_passengers)
 
         self.trip_time_counter += sec_to_min(self.initial_flight_duration_estimate(origin_id=aircraft.destination_vertiport_id,
                                                                         destination_id=destination_vertiport_id,
@@ -214,6 +214,7 @@ class RLSystemManager(BaseSystemManager):
             aircraft.status = AircraftStatus.IDLE   
 
             self.trip_counter_tracker += len(aircraft.passengers_onboard) 
+            aircraft.passengers_onboard = []
                     
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')

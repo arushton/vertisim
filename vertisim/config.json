@@ -15,6 +15,7 @@
             "location",
             "soc",
             "time_to_arrival",
+            "num_passengers",
             "status",
             "is_process_completed",
             "wind_speed",
@@ -41,7 +42,7 @@
         "soc_adjustment": null,
 
         "num_vertiport_state_variables": 3,
-        "num_aircraft_state_variables": 6,
+        "num_aircraft_state_variables": 7,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
         "num_actions": 3,

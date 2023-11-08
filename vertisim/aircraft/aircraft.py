@@ -1526,6 +1526,7 @@ class Aircraft:
             'location': self.get_aircraft_location_for_state(),
             'soc': round(self.soc, 2),
             'time_to_arrival': self.estimate_time_to_arrival(),
+            'num_passengers': len(self.passengers_onboard),
             'status': self.status,
             'is_process_completed': int(self.is_process_completed)
         }
@@ -1548,6 +1549,7 @@ class AircraftState(BaseModel):
     location: int
     soc: float
     time_to_arrival: float
+    num_passengers: int
     status: AircraftStatus
     is_process_completed: int
 

@@ -96,11 +96,11 @@ class VertiSim:
         # Reset the rewards
         # self.reset_rewards()
         # # Get the number of triggers for this step
-        # total_triggers = sum(action != 0 for action in actions)
+        total_triggers = sum(action != 0 for action in actions)
         # Apply the action
         self.env.process(self.apply_action(actions))
         # Advance to the next stopping event
-        return self.advance_to_next_stopping_event()
+        return self.advance_to_next_stopping_event(total_triggers)
        
     def apply_action(self, action: np.array):
         """
@@ -111,7 +111,7 @@ class VertiSim:
         1: Idle to charge
         2: Idle to service (vertiport 1)
         """
-        # print(f"Applying action: {action}")
+        print(f"Applying action: {action}")
         # print(f"Converted action: {action}")
 
         process_list = []
@@ -155,7 +155,7 @@ class VertiSim:
         # Flatten the mask
         return np.array(mask).flatten().tolist()
 
-    def advance_to_next_stopping_event(self):
+    def advance_to_next_stopping_event(self, total_triggers):
         """
         Runs the simulation until the next defined stopping event.
         """
@@ -173,6 +173,16 @@ class VertiSim:
             # print(f"Next event: {self.env.peek()}")
             # Step the simulation
             self.env.step()
+
+            # Check if any events in stopping_events have triggered.
+            for event_name, event in self.stopping_events.items():
+                if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
+                    trigger_count += 1
+                     # Set the triggered flag to True
+                    stopping_event_triggered = True 
+                    # Add the event to the list of stopped events
+                    stopped_events.add(event_name)
+
           
             # If there are any triggered stopping event, pop it out, reset it and return the states
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
@@ -184,39 +194,16 @@ class VertiSim:
                 # print(f"Aircraft status and location: {[(aircraft.status, aircraft.location) for _, aircraft in self.sim_setup.system_manager.aircraft_agents.items()]}")
                 # print(f"Action mask: {self.action_mask()}")
                 # print(f"REWARD: {self.calculate_reward()}")
-                return self.get_current_state(), self.calculate_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
+                if trigger_count == total_triggers:
+                    reward = round(self.calculate_reward())
+                    self.reset_rewards()
+                    # print(f"Reward: {reward}")
+                else:
+                    reward = 0
+                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
 
-
-
-            # # Check if any events in stopping_events have triggered.
-            # for event_name, event in self.stopping_events.items():
-            #     if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
-            #         trigger_count += 1
-            #          # Set the triggered flag to True
-            #         stopping_event_triggered = True 
-            #         # Add the event to the list of stopped events
-            #         stopped_events.add(event_name)
-            
-            # for event_name, event in self.truncation_events.items():
-            #     if event.triggered:
-            #         # Set the triggered flag to True
-            #         truncation_triggered = True
-            #         # Increase the trigger count
-            #         if event_name not in truncated_events:
-            #             trigger_count += 1
-            #             # Add the event to the list of truncated events
-            #             truncated_events.add(event_name)                        
-            #             # print(f"Trigger count increased: {trigger_count}. Event {event_name}")
-            
-            # # If the truncation is triggered and the trigger count is equal to the total triggers, succeed the truncation event
-            # if trigger_count == total_triggers and truncation_triggered:
-            #     # print("Truncation triggered")
-            #     self.truncation_event.succeed()
-            #     self.finalize_simulation()
-            #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()                
-
-            # # If any event was triggered and there is the list is cleared, return the states
+            # # # If any event was triggered and there is the list is cleared, return the states
             # if trigger_count == total_triggers and stopping_event_triggered:
             #     # Reset the triggered stopping events
             #     for event_name, event in self.stopping_events.items():
@@ -224,7 +211,10 @@ class VertiSim:
             #             # Reset the event
             #             self._reset_event(event_name)                
             #     # Return the states
-            #     return self.get_current_state(), self.calculate_reward(), self.check_terminated(), self.check_truncated()
+            #     reward = round(self.calculate_reward())
+            #     self.reset_rewards()
+            #     print(f"Reward: {reward}")
+            #     return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         # self._handle_end_of_simulation()
         # self.finalize_simulation()
