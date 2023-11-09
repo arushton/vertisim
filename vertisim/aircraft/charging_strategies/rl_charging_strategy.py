@@ -9,7 +9,9 @@ class RLChargingStrategy(BaseChargingStrategy):
         """
         Get charging time - Two options: Constant charging time or draw a number from distribution
         """
-        charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=aircraft.soc, target_soc=aircraft.soc + 2)
+        init_soc = round(aircraft.soc)
+        target_soc = init_soc + 1
+        charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=init_soc, target_soc=target_soc)
         # charge_time = sec_to_ms(5*60)
 
         aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.destination_vertiport_id,
@@ -18,7 +20,7 @@ class RLChargingStrategy(BaseChargingStrategy):
         
         return charge_time
     
-    def get_charge_time_from_soc(self, aircraft: object, init_soc:int, target_soc: int) -> float:
+    def get_charge_time_from_soc(self, aircraft: object, init_soc:int, target_soc: int) -> (float, float) :
         """
         Calculates the charge time required to reach the target soc level.
 
@@ -36,14 +38,15 @@ class RLChargingStrategy(BaseChargingStrategy):
         """
         if check_magnitude_order(init_soc, target_soc):
             df = aircraft.system_manager.aircraft_battery_models[aircraft.destination_vertiport_id]
-            init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
+            init_soc_time = df[df.soc == init_soc]['time_sec'].values[0]
             target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
             return sec_to_ms(target_soc_time - init_soc_time)
         else:
             aircraft.logger.error(f"Final soc level ({target_soc}) is greater than or equal to 100).")
             print(f"Charging truncation: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id} will not charge. Initial soc: {init_soc}. Final soc level ({target_soc}). At time {aircraft.env.now}.")
-            aircraft.system_manager.truncation_penalty -= 10000
-            aircraft.system_manager.truncation_event.succeed()
+            aircraft.system_manager.truncation_penalty += 1
+            aircraft.system_manager.trigger_truncation_event(event_name="overcharge_truncation_event", id=aircraft.tail_number)
+            return 0
 
     def charge_aircraft(self, aircraft: object, parking_space: object, shared_charger: bool = False) -> None:
         """
@@ -81,9 +84,6 @@ class RLChargingStrategy(BaseChargingStrategy):
 
         old_soc = aircraft.soc
         self.soc_charge_update(aircraft=aircraft, charge_time=charge_time)
-
-        # Set the aircraft status to idle
-        aircraft.status = AircraftStatus.IDLE 
 
         # Release the charger resource that is used by the aircraft and the charging request
         self.release_charger_resource(used_charger_resource, selected_charging_request)

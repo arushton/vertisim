@@ -1,6 +1,6 @@
 {
     "sim_params": {
-        "max_sim_time": 216000,
+        "max_sim_time": 108000,
         "arrival_priority": 1,
         "departure_priority": 1,
         "simultaneous_taxi_and_take_off": true,
@@ -11,12 +11,13 @@
             "num_available_parking_pad",
             "num_waiting_passengers",
             "total_passenger_waiting_time",
-            "aircraft_status",
             "flight_direction",
             "location",
             "soc",
             "time_to_arrival",
+            "num_passengers",
             "status",
+            "is_process_completed",
             "wind_speed",
             "wind_direction"
         ],
@@ -37,25 +38,30 @@
         "charge_schedule_file_path": null,
         "flight_schedule_file_path": null,
         "soc_adjustment": null,
-        "num_vertiport_state_variables": 7,
-        "num_aircraft_state_variables": 5,
+        "num_vertiport_state_variables": 3,
+        "num_aircraft_state_variables": 7,
         "num_environmental_state_variables": 2,
         "num_additional_state_variables": 1,
         "num_actions": 3,
         "stopping_events": [
             "passenger_arrival_event",
-            "aircraft_faf_arrival_event",
             "aircraft_parking_pad_arrival_event",
-            "aircraft_departure_fix_departure_event",
-            "charging_start_event",
             "charging_end_event"
         ],
+        "truncation_events":[
+            "soc_at_zero_event",
+            "infeasible_charge_truncation_event",
+            "overcharge_truncation_event",
+            "not_at_vertiport_truncation_event"
+        ],
         "truncation": true,
-        "reward_function_parameters": [
-            10,
-            20,
-            30
-        ]
+        "reward_function_parameters": {
+            "waiting_time_penalty": -1,
+            "trip_reward": 200,
+            "flight_cost": -10,
+            "truncation_penalty": -100000,
+            "completion_reward": 0
+        }
     },
     "network_and_demand_params": {
         "vertiport_network_file_path": "input/network/network_SFO_MV.csv",
@@ -76,7 +82,7 @@
                 "shared_charger_sets": null,
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
-                    "num_passengers": 300,
+                    "num_passengers": 50,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
@@ -100,7 +106,7 @@
                 "shared_charger_sets": null,
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
-                    "num_passengers": 300,
+                    "num_passengers": 50,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
@@ -205,7 +211,7 @@
         },
         "aircraft_energy_consumption_data_folder_path": "input/aircraft/energy_consumption",
         "min_init_soc": 20,
-        "max_init_soc": 100,
+        "max_init_soc": 80,
         "min_reserve_soc": 40
     },
     "output_params": {

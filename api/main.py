@@ -40,14 +40,15 @@ def get_initial_state():
 
 @app.post("/step")
 def step(actions: Actions):
-    # print(f"actions: {actions.actions}")
+    # print(f"actions from vertisim api: {actions.actions}")
     # TODO: Action input should be list of enums
-    new_state, reward, terminated, truncated = instance_manager.step(actions.actions)
+    new_state, reward, terminated, truncated, action_mask = instance_manager.step(actions.actions)
     return {
         "new_state": new_state,
         "reward": reward,
         "terminated": terminated,
-        "truncated": truncated
+        "truncated": truncated,
+        "action_mask": action_mask
     }
 
 @app.get("/get_space_params")

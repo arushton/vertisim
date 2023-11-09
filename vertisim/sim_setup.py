@@ -8,6 +8,7 @@ import time
 import simpy
 from typing import Dict, List
 import pandas as pd
+import numpy as np
 from collections import defaultdict
 # from .aircraft.aircraft_arrival_setup import AircraftArrivalSetup
 from .event_saver import EventSaver
@@ -27,12 +28,13 @@ from .logger import Logger
 from .run_step_by_step_simulation import run_step_by_step_simulation
 from .utils.create_output_folders import create_output_folders
 from .utils.get_aircraft_count import get_aircraft_count
+from .utils.calc_performance_metrics import calculate_passenger_trip_time_stats
 from .utils.bundle_passenger_related_distributions import bundle_distributions
 from .utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes
 from .utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from .utils.setup_distributions import setup_passenger_distributions
-from .utils.units import sec_to_ms
+from .utils.units import sec_to_ms, ms_to_min
 
 
 
@@ -48,6 +50,7 @@ class SimSetup:
                  aircraft_params: Dict,
                  output_params: Dict,
                  stopping_events: Dict = None,
+                 truncation_events: Dict = None,
                  truncation_event: simpy.Event = None):
         self.sim_params = sim_params
         self.sim_mode = sim_mode
@@ -57,6 +60,7 @@ class SimSetup:
         self.passenger_params = passenger_params
         self.aircraft_params = aircraft_params
         self.output_params = output_params
+        self.truncation_events = truncation_events
         self.truncation_event = truncation_event
 
         self.sim_start_timestamp = 0 #sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
@@ -374,6 +378,7 @@ class SimSetup:
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
                 'stopping_events': self.stopping_events,
+                'truncation_events': self.truncation_events,
                 'truncation_event': self.truncation_event,
                 'sim_mode': system_manager_type
             },
@@ -425,6 +430,11 @@ class SimSetup:
                                   sim_id=self.sim_id,
                                   sim_end_timestamp=self.env.now,
                                   verbose=self.sim_params['verbose']).performance_metrics
+    
+    def print_passenger_trip_time_stats(self):
+        calculate_passenger_trip_time_stats(passenger_trip_time_tracker=self.event_saver.performance_metrics()['passenger_trip_time_tracker'],
+                                            flight_directions=self.airspace.flight_directions) 
+                    
 
     def save_results(self, performance_metrics):
         # Save the results

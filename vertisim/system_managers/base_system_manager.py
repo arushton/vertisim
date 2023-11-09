@@ -57,6 +57,7 @@ class BaseSystemManager:
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.taxi_resource = simpy.Resource(self.env, 1)
         self.aircraft_battery_models = self.build_aircraft_battery_models()
+        self.passenger_arrival_complete = False
 
 
     def get_aircraft_count(self) -> int:
@@ -70,7 +71,6 @@ class BaseSystemManager:
             len(self.get_available_aircraft_tail_numbers(vertiport_id))
             for vertiport_id, _ in self.vertiports.items()
         )
-
 
     def build_aircraft_battery_models(self) -> Dict[Any, pd.DataFrame]:
         """
@@ -147,7 +147,7 @@ class BaseSystemManager:
 
     def initial_flight_duration_estimate(self, origin_id: str, destination_id: str, cruise_speed: float) -> float:
         """
-        Compute the average flight time based on distance and aircraft speed.
+        Compute the average flight time (in seconds) based on distance and aircraft speed.
         """
         flight_distance = miles_to_m(self.get_mission_length(origin_id, destination_id))
         return flight_distance / cruise_speed * 1.25        
@@ -547,7 +547,7 @@ class BaseSystemManager:
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY
         # Update the number of aircraft at the vertiport
-        self.update_ground_aircraft_count(vertiport_id=aircraft.origin_vertiport_id, update=-1)
+        self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)
         # Update the vertiport flight request state
         self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
         # Set the real pushback time of the aircraft 
@@ -868,7 +868,12 @@ class BaseSystemManager:
     def get_available_aircraft_tail_numbers(self, vertiport_id: str) -> list:
         return [aircraft.tail_number for aircraft in self.vertiports[vertiport_id].available_aircraft_store.items]
     
-
+    def is_all_aircraft_idle(self):
+        return all(
+            aircraft.status == AircraftStatus.IDLE
+            for aircraft in self.aircraft_agents.values()
+        )
+    
 
     # PASSENGER RELATED METHODS
     # -------------------------
@@ -887,5 +892,8 @@ class BaseSystemManager:
             passenger.location = f'{passenger.origin_vertiport_id}_GATE'
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_gate')  
 
-    def get_total_passenger_count(self):
-        return sum(vertiport.num_passengers for vertiport in self.vertiports.values())
+    def get_total_waiting_passenger_count(self):
+        return sum(vertiport.get_passenger_count() for vertiport in self.vertiports.values())
+    
+    def check_all_waiting_rooms_empty(self):
+        return all(vertiport.is_waiting_room_empty() for vertiport in self.vertiports.values())

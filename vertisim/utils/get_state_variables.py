@@ -2,7 +2,7 @@ from typing import Dict, List, Any
 from collections import defaultdict
 import json
 import subprocess
-from .units import ms_to_min
+from .units import ms_to_min, ms_to_hr
 from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
 from pydantic import BaseModel
@@ -72,7 +72,7 @@ def get_simulator_states(
         'vertiport_states': vertiport_states,
         'aircraft_states': aircraft_states,
         'environmental_states': environmental_states,
-        'sim_time': round(ms_to_min(system_manager.env.now))
+        'sim_time': round(ms_to_hr(system_manager.env.now))
     }
 
     # Validate and serialize the data using Pydantic
