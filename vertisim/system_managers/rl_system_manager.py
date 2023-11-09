@@ -65,7 +65,7 @@ class RLSystemManager(BaseSystemManager):
         self.truncation_penalty = 0
         self.reward = 0
         self.triggered_stopping_event_queue = deque()
-        self.env.process(self.check_passenger_max_waiting_time_threshold())
+        # self.env.process(self.check_passenger_max_waiting_time_threshold())
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -381,7 +381,7 @@ class RLSystemManager(BaseSystemManager):
                                 wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
                                 # Penalize for passenger spill
                                 self.spill_counter += 1
-                                # print(f"Passenger spill: passenger {waiting_passenger.passenger_id} at time: {miliseconds_to_hms(self.env.now)}")
+                                print(f"Passenger spill: passenger {waiting_passenger.passenger_id} at time: {miliseconds_to_hms(self.env.now)}")
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """
