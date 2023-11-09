@@ -16,7 +16,7 @@ from ..utils.compute_location_from_distance_and_bearing import compute_location_
 from .power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
 from enum import Enum
-from vertisim.memoize import PhaseParameters
+from ..memoize import PhaseParameters
 
 class Aircraft:
     """

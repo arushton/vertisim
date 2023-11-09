@@ -64,6 +64,8 @@ class VertiSim:
         # This only runs uninterrupted simulation. No distinction for online optimization
         self.run_uninterrupted_simulation()          
         self.finalize_simulation()
+        performance_metrics = self.sim_setup.calculate_performance_metrics()
+        self.sim_setup.save_results(performance_metrics)
 
     def finalize_simulation(self):
         self.print_total_time_to_run()
@@ -109,7 +111,7 @@ class VertiSim:
         1: Idle to charge
         2: Idle to service (vertiport 1)
         """
-        print(f"Applying action: {action}")
+        # print(f"Applying action: {action}")
         # print(f"Converted action: {action}")
 
         process_list = []

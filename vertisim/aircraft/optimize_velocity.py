@@ -3,7 +3,7 @@ import sys
 from scipy.optimize import minimize
 from .flight_helpers import rho, weight, lift_induced_drag_coef
 from .power_model import transition_power, climb_descend_power
-from vertisim.memoize import PhaseParameters
+from ..memoize import PhaseParameters
 
 class VelocityOptimizer:
     def __init__(self, aircraft_params):

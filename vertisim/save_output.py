@@ -18,6 +18,10 @@ def save_output(simulation_params: dict,
                 flight_directions: list,
                 output_path : str = 'sqlite/db/vertisimDatabase.sqlite') -> str:
     
+    # If path doesn't exist, create it
+    if not os.path.exists('../../sqlite/db'):
+        os.makedirs('../../sqlite/db')
+
     conn = create_connection(output_path)
     assert conn, 'Could not establish database connection.'
     cursor = conn.cursor()
