@@ -314,6 +314,7 @@ class VertiSim:
         self.sim_setup.system_manager.trip_time_counter = 0
         self.sim_setup.system_manager.truncation_penalty = 0
         self.sim_setup.system_manager.reward = 0
+        self.sim_setup.system_manager.spill_counter = 0
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):

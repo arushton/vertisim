@@ -381,6 +381,7 @@ class RLSystemManager(BaseSystemManager):
                                 wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
                                 # Penalize for passenger spill
                                 self.spill_counter += 1
+                                # print(f"Passenger spill: passenger {waiting_passenger.passenger_id} at time: {miliseconds_to_hms(self.env.now)}")
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """

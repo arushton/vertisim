@@ -59,7 +59,7 @@
             "waiting_time_penalty": -1,
             "trip_reward": 200,
             "flight_cost": -10,
-            "spill_cost": -100,
+            "spill_cost": -1000,
             "truncation_penalty": -100000,
             "completion_reward": 0
         }
