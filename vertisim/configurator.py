@@ -299,7 +299,7 @@ class VertiportConfig:
         # Create a store for waiting rooms
         exclude_origin = [dest for dest in self.vertiport_ids if dest != self.vertiport_id]
         for dest in exclude_origin:
-            waiting_room_stores[dest] = simpy.Store(self.env)
+            waiting_room_stores[dest] = simpy.FilterStore(self.env)
         return waiting_room_stores
 
 

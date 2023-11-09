@@ -96,6 +96,7 @@ class WindDataProcessor:
         return {time: {'windspeed': ws, 'winddir': wd} for time, ws, wd in zip(data['datetime'], data['windspeed'], data['winddir'])}
 
     def get_time_and_location_specific_wind_states(self, time_of_day: int, location: str, locations: List[str]) -> Dict:
+        time_of_day %= 24
         data = self._get_filtered_data(time_of_day, location)
         if data.empty:
             raise ValueError(f'No wind data for {location} at {time_of_day}:00.')

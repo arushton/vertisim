@@ -59,11 +59,13 @@ class RLSystemManager(BaseSystemManager):
         self.truncation_event = truncation_event
         self.trip_counter = 0
         self.trip_counter_tracker = 0
+        self.spill_counter = 0
         self.total_demand = 0
         self.trip_time_counter = 0
         self.truncation_penalty = 0
         self.reward = 0
         self.triggered_stopping_event_queue = deque()
+        self.env.process(self.check_passenger_max_waiting_time_threshold())
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -359,6 +361,26 @@ class RLSystemManager(BaseSystemManager):
         self.trigger_stopping_event(event_name=event_name)
 
         yield self.env.timeout(0)
+
+    def check_passenger_max_waiting_time_threshold(self):
+        """
+        Checks all of the waiting rooms. If there are passengers who are waiting
+        more than self.sim_params['max_passenger_waiting_time'], it creates a flight for those passengers immediately.
+        """
+        max_waiting_time = sec_to_ms(self.sim_params['max_passenger_waiting_time'])
+        while True:
+            yield self.env.timeout(max_waiting_time / 2)
+
+            for origin, vertiport in self.vertiports.items():
+                for destination, wr_store in vertiport.waiting_room_stores.items():
+                    num_agents_in_the_wr = len(wr_store.items)
+                    if num_agents_in_the_wr > 0:
+                        for waiting_passenger in wr_store.items:
+                            if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_waiting_time:
+                                # Get the passenger from the waiting room store
+                                wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
+                                # Penalize for passenger spill
+                                self.spill_counter += 1
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """

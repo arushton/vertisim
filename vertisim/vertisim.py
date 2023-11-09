@@ -197,9 +197,10 @@ class VertiSim:
                 if trigger_count == total_triggers:
                     reward = round(self.calculate_reward())
                     self.reset_rewards()
-                    # print(f"Reward: {reward}")
+                    print(f"Reward: {reward}")
                 else:
                     reward = 0
+                # print(f"Reward: {reward}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
 
@@ -301,7 +302,9 @@ class VertiSim:
                 self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
             self.sim_setup.system_manager.truncation_penalty * \
                  self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty'] + \
-                self.sim_setup.system_manager.reward
+                self.sim_setup.system_manager.reward + \
+                self.sim_setup.system_manager.spill_counter * \
+                self.config['external_optimization_params']['reward_function_parameters']['spill_cost']
     
     def reset_rewards(self):
         """
