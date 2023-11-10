@@ -65,6 +65,10 @@ def get_space_params():
         "n_additional_state_variables": instance_manager.sim_instance.get_additional_state_variable_count()
     }
 
+@app.get("/performance_metrics")
+def get_performance_metrics():
+    return instance_manager.sim_instance.get_performance_metrics()
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001) 
 

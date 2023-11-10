@@ -1,4 +1,4 @@
-# Use an official Python runtime as a parent image
+# Use an official Python 3.11 runtime as a parent image. Use the slim version to reduce the image size.
 FROM python:3.11-slim
 
 # Set environment variables

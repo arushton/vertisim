@@ -89,7 +89,7 @@
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
                     "auto_regressive_coef": null,
-                    "num_passengers": 1000,
+                    "num_passengers": 60,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {
@@ -114,7 +114,7 @@
                 "passenger_arrival_process": {
                     "passenger_interarrival_constant": null,
                     "auto_regressive_coef": null,
-                    "num_passengers": 1000,
+                    "num_passengers": 60,
                     "passenger_arrival_distribution": {
                         "distribution_name": "expon",
                         "parameters": {

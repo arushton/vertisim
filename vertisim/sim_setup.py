@@ -419,7 +419,7 @@ class SimSetup:
         # Get a random id for the simulation
         self.sim_id = get_random_id()
         # Print and save performance metrics
-        print("Calculating performance metrics... \n")
+        # print("Calculating performance metrics... \n")
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
                                   aircraft_params=self.aircraft_params,
                                   only_aircraft_simulation=self.sim_params['only_aircraft_simulation'],
@@ -451,7 +451,7 @@ class SimSetup:
                         simulationID=self.sim_id,
                         flight_directions=self.airspace.flight_directions
                     )
-        print(f"Success: Results are saved in {output_path}.")
+        # print(f"Success: Results are saved in {output_path}.")
 
 
 

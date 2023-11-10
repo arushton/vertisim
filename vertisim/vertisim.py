@@ -7,6 +7,7 @@ import time
 import numpy as np
 import gymnasium as gym
 from .utils.get_state_variables import get_simulator_states
+from .utils.fetch_data_from_db import fetch_latest_data_from_db
 from .initiate_flow_entities import initiate_flow_entities
 from .utils.units import sec_to_ms, ms_to_hr
 from .run_step_by_step_simulation import run_step_by_step_simulation, run_steps_until_specific_events
@@ -71,7 +72,7 @@ class VertiSim:
         self.print_total_time_to_run()
         if self.env.now > 0:
             performance_metrics = self.sim_setup.calculate_performance_metrics()
-        self.sim_setup.save_results(performance_metrics)
+            self.sim_setup.save_results(performance_metrics)
 
     def run_uninterrupted_simulation(self):
         """
@@ -218,7 +219,7 @@ class VertiSim:
             #     return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         # self._handle_end_of_simulation()
-        # self.finalize_simulation()
+        self.finalize_simulation()
         # print(f"FINAL REWARD: {self.calculate_reward()}")
         # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
         return self.get_current_state(), self.calculate_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
@@ -395,4 +396,7 @@ class VertiSim:
     def print_total_time_to_run(self):
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        # print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')      
+        # print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')   
+    
+    def get_performance_metrics(self):
+        return fetch_latest_data_from_db(db_path='sqlite/db/vertisimDatabase.sqlite')
