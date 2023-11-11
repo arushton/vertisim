@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from .helpers import set_seed
 
 def get_arrival_rates(df):
     # Initialize an empty dictionary to hold the rates
@@ -30,8 +31,12 @@ def generate_arrival_times(arrival_rate_df, origin, target_count):
         arrival_times = []
 
         rates = rate_dict[origin][destination]
+        total_rate = sum(rates)
+
         for rate in rates:
-            num_to_generate = int(rate * target_count / sum(rates))
+            set_seed(how='instant')
+            # num_to_generate = int(rate * target_count / sum(rates))
+            num_to_generate = np.random.poisson(rate / total_rate * target_count)
 
             for _ in range(num_to_generate):
                 # Generate a time for this arrival using the exponential distribution
