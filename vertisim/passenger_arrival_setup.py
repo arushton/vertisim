@@ -73,6 +73,7 @@ class PassengerArrivalSetup:
         # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
         self.system_manager.total_demand = len(passenger_arrival_schedule)
+        print(f"Total number of passengers: {self.system_manager.total_demand}")
 
         if not self.network_simulation:
             if self.aircraft_params['time_charging']:

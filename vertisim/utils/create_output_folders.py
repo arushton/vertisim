@@ -16,7 +16,7 @@ def create_output_folders(output_folder_path):
     #     os.makedirs(output_folder_path)
     
     # Create a log folder
-    if not os.path.exists(get_absolute_path(f'{output_folder_path}/logs')):
-        os.makedirs(get_absolute_path(f'{output_folder_path}/logs'))
+    if not os.path.exists(f'{output_folder_path}/logs'):
+        os.makedirs(f'{output_folder_path}/logs')
 
     return output_folder_path

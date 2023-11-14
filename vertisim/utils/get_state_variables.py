@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class SimulatorStates(BaseModel):
     vertiport_states: Dict[str, Any]
     aircraft_states: Dict[int, Any]
-    environmental_states: Dict[Any, Any]
+    # environmental_states: Dict[Any, Any]
     sim_time: float
 
 def filter_and_get_states(get_states_func, keys, **kwargs):
@@ -71,8 +71,8 @@ def get_simulator_states(
     simulator_states = {
         'vertiport_states': vertiport_states,
         'aircraft_states': aircraft_states,
-        'environmental_states': environmental_states,
-        'sim_time': round(ms_to_hr(system_manager.env.now))
+        # 'environmental_states': environmental_states,
+        'sim_time': round(ms_to_hr(system_manager.env.now)) % 24
     }
 
     # Validate and serialize the data using Pydantic

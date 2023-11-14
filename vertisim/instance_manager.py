@@ -1,4 +1,4 @@
-from vertisim import VertiSim
+from vertisim.vertisim import VertiSim
 import simpy
 
 class InstanceManager:

@@ -15,7 +15,7 @@ def read_input_file(file_path: str, sheet_name: str = 'Sheet1') -> Union[pd.Data
     :return: pd.DataFrame
     """
     file_type = detect_file_type(file_path)
-    file_path = get_absolute_path(file_path)
+    # file_path = get_absolute_path(file_path)
     if file_type is None:
         return None
     if file_type == 'csv':

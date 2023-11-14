@@ -355,7 +355,7 @@ class RLSystemManager(BaseSystemManager):
 
         # if len(passengers_waiting_room.items) > 1:
         # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time: {self.env.now}")
-        event_name=f"passenger_arrival_event_{passenger.passenger_id}"
+        event_name=f"passenger_arrival_event_{passenger.passenger_id % 100}"
         self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
         # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")        
         self.trigger_stopping_event(event_name=event_name)

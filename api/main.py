@@ -5,7 +5,7 @@ from typing import List
 import sys
 sys.path.append('/app')
 
-from vertisim.instance_manager import InstanceManager
+from vertisim.vertisim.instance_manager import InstanceManager
 from .models import create_action_models
 from .config import CONFIG  # Import the loaded configuration
 

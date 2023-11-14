@@ -177,6 +177,8 @@ class VertiSim:
 
             # Check if any events in stopping_events have triggered.
             for event_name, event in self.stopping_events.items():
+                if event.triggered and (event_name.startswith("passenger_arrival") and event_name not in stopped_events):
+                    self._reset_event(event_name)
                 if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
                     trigger_count += 1
                      # Set the triggered flag to True
