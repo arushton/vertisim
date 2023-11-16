@@ -21,6 +21,7 @@ class PerformanceMetrics:
                 flight_directions,
                 sim_id, 
                 sim_end_timestamp,
+                sim_params,
                 output_params,
                 client_server_mode,
                 verbose=False):
@@ -29,6 +30,7 @@ class PerformanceMetrics:
         self.only_aircraft_simulation = only_aircraft_simulation
         self.is_network_simulation = is_network_simulation
         self.client_server_mode = client_server_mode
+        self.sim_params = sim_params
         self.output_params = output_params
         self.performance_metric_trackers = performance_metric_trackers
         self.passenger_consolidation_time = performance_metric_trackers['passenger_consolidation_time']
@@ -81,7 +83,8 @@ class PerformanceMetrics:
         # self.calculate_aircraft_arrival_queue_count_stats()
         # self.calculate_aircraft_departure_queue_count_stats()
         self.compute_average_and_total_aircraft_throughput()
-        self.save_waiting_times_to_db()
+        if self.sim_params['training_data_collection']:
+            self.save_waiting_times_to_db()
         # self.compute_fato_utilization()
         # self.calculate_aircraft_holding_times_stats()
         self.compute_flight_duration_stats()
@@ -726,7 +729,7 @@ class PerformanceMetrics:
             # self.print_passenger_consolidation_time_stats()
             self.print_passenger_waiting_time_stats()
             # self.print_passenger_transfer_time_stats()
-            # self.print_passenger_trip_time_stats()
+            self.print_passenger_trip_time_stats()
             # self.print_passenger_departure_queue_count_stats()
         #     self.print_avg_load_factor()
         #     self.print_aircraft_idle_time_stats()

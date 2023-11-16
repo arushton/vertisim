@@ -66,7 +66,8 @@ class RLSystemManager(BaseSystemManager):
         self.total_demand = 0
         self.trip_time_counter = 0
         self.truncation_penalty = 0
-        self.reward = 0
+        self.charge_reward = 0
+        self.occupancy_reward = 0
         self.triggered_stopping_event_queue = deque()
         # self.env.process(self.check_passenger_max_waiting_time_threshold())
     
@@ -130,10 +131,10 @@ class RLSystemManager(BaseSystemManager):
         # Increase the passenger trip counter
         self.trip_counter += len(aircraft.passengers_onboard)         
 
-        if len(departing_passengers) == 0:
-            self.reward -= 1000
-        elif len(departing_passengers) > 2:
-            self.reward += 1000 * len(departing_passengers)
+        # if len(departing_passengers) == 0:
+        #     self.occupancy_reward -= 1
+        # elif len(departing_passengers) > 0:
+        #     self.occupancy_reward += 1 * len(departing_passengers)
 
         self.trip_time_counter += sec_to_min(self.initial_flight_duration_estimate(origin_id=aircraft.destination_vertiport_id,
                                                                         destination_id=destination_vertiport_id,

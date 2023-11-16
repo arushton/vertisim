@@ -441,6 +441,7 @@ class SimSetup:
                                   sim_id=self.sim_id,
                                   sim_end_timestamp=self.env.now,
                                   client_server_mode=self.sim_mode['client_server'],
+                                  sim_params=self.sim_params,
                                   output_params=self.output_params,
                                   verbose=self.sim_params['verbose']).performance_metrics
     
