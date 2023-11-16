@@ -19,7 +19,7 @@ class WindDataProcessor:
         data = read_input_file(file_path)
         data['datetime'] = pd.to_datetime(data['datetime'])
         data['windspeed'] = data['windspeed'].apply(mph_to_metersec)
-        data['winddir'] = data['winddir'].apply(lambda x: round(x * pi / 180, 4))
+        data['winddir'] = data['winddir'].apply(lambda x: round(x * pi / 180, 4)) # radians
         return data[['locationname', 'datetime', 'windspeed', 'winddir']]        
 
     def pick_random_day(self, max_wind_speed_threshold=None) -> dt.date:

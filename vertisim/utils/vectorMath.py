@@ -28,7 +28,7 @@ def lat_long_to_heading(latitude_1: float, longitude_1: float, latitude_2: float
     return atan2(sin(longitude_difference) * cos(latitude_2), cos(latitude_1) * sin(latitude_2) - sin(latitude_1) * cos(latitude_2) * cos(longitude_difference))
 
 def heading_to_vector(heading: float, magnitude: float = 1.0) -> np.ndarray:
-    """Converts a heading to a unit vector. Optional argument of vector magnitude.
+    """Converts a heading (radians) to a unit vector. Optional argument of vector magnitude.
     Heading is N=0, (+) direction = clockwise [i.e. aircraft_heading = 10° means 80° in polar where pos X = 0 and (+) direction = counterclockwise]."""
 
     # note that the vertical (y axis) component corresponds to cos(heading)
