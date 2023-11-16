@@ -3,7 +3,7 @@ import pandas as pd
 from collections import defaultdict
 from .utils.units import ms_to_min, sec_to_min, hr_to_ms
 from .utils.helpers import nested_dict_all_values, remove_larger_keys, get_values_from_nested_dict, \
-    get_length_of_longest_list, get_length_of_shortest_list
+    get_length_of_longest_list, get_length_of_shortest_list, add_and_update_db_from_dict
 import matplotlib.pyplot as plt
 from typing import List
 import os
@@ -21,6 +21,7 @@ class PerformanceMetrics:
                 flight_directions,
                 sim_id, 
                 sim_end_timestamp,
+                output_params,
                 client_server_mode,
                 verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
@@ -28,6 +29,7 @@ class PerformanceMetrics:
         self.only_aircraft_simulation = only_aircraft_simulation
         self.is_network_simulation = is_network_simulation
         self.client_server_mode = client_server_mode
+        self.output_params = output_params
         self.performance_metric_trackers = performance_metric_trackers
         self.passenger_consolidation_time = performance_metric_trackers['passenger_consolidation_time']
         self.passenger_departure_queue_count = performance_metric_trackers['passenger_departure_queue_count']
@@ -52,6 +54,7 @@ class PerformanceMetrics:
         self.passenger_trip_times = performance_metric_trackers['passenger_trip_time_tracker']
         self.repositioning_counter = performance_metric_trackers['repositioning_counter']
         self.total_charge_time_counter = performance_metric_trackers['total_charge_time_counter']
+        self.output_folder_path = self.get_save_path()
         self.vertiport_ids = vertiport_ids
         self.flight_directions = flight_directions
         self.sim_id = sim_id
@@ -78,6 +81,7 @@ class PerformanceMetrics:
         # self.calculate_aircraft_arrival_queue_count_stats()
         # self.calculate_aircraft_departure_queue_count_stats()
         self.compute_average_and_total_aircraft_throughput()
+        self.save_waiting_times_to_db()
         # self.compute_fato_utilization()
         # self.calculate_aircraft_holding_times_stats()
         self.compute_flight_duration_stats()
@@ -94,7 +98,37 @@ class PerformanceMetrics:
 
         # TODO: Remove all save to csv methods from this file. save_output should be the only method that saves to csv
         # df = pd.DataFrame(self.flight_and_time_tracker)
-        # df.to_csv('../../output/performance_metrics/flight_and_time_tracker.csv')                
+        # df.to_csv('../../output/performance_metrics/flight_and_time_tracker.csv')  
+        # 
+    def get_save_path(self):
+        path = f'{self.output_params["output_folder_path"]}/{self.output_params["performance_metrics_output_file_name"]}'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return path
+    
+    def save_waiting_times_to_db(self):
+        df = pd.DataFrame(self.passenger_waiting_time)
+        # Merge the columns into one. This requires all columns to be NaN except one of them
+        df = df.bfill(axis=1).iloc[:, 0]
+        # Sorting by index
+        df.sort_index(inplace=True)
+        # Convert the unit of time from ms to min
+        df = df.apply(ms_to_min)
+        # Rename the column
+        df = df.rename('waiting_time_min')
+        # Convert it to a dict
+        # df = df.reset_index().rename(columns={'index': 'passenger_id'})
+        df = df.to_dict()
+        # Write to the database
+        add_and_update_db_from_dict(db_path=self.output_params['state_trajectory_db_path'],
+                                    table_name=self.output_params['state_trajectory_db_tablename'],
+                                    new_column_name='waiting_time_min',
+                                    new_column_type='REAL',
+                                    data_dict=df)
+
+        # df.to_csv(f'{self.output_folder_path}/passenger_waiting_time.csv')   
+
+
 
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
@@ -115,8 +149,6 @@ class PerformanceMetrics:
 
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
-        df = pd.DataFrame(self.passenger_waiting_time)
-        # df.to_csv('../../output/performance_metrics/passenger_waiting_time.csv')                
         for vertiport_id, data in self.passenger_waiting_time.items():
             waiting_times = np.array(list(data.values()))
             if waiting_times.size > 0:

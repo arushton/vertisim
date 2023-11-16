@@ -25,6 +25,7 @@ class BaseSystemManager:
                  airspace: object,
                  taxi_config: object,
                  sim_params: Dict,
+                 output_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: Dict,
                  passenger_distributions: Dict,                 
@@ -43,6 +44,7 @@ class BaseSystemManager:
         self.airspace = airspace
         self.taxi_config = taxi_config
         self.sim_params = sim_params
+        self.output_params = output_params
         self.aircraft_params = aircraft_params
         self.vertiport_distances = vertiport_distances
         self.passenger_distributions = passenger_distributions

@@ -538,9 +538,13 @@ def get_truncation_events(env: simpy.Environment, truncation_events: List, aircr
     return events
 
 
-def write_to_db(db_path, dic, table_name):
+def write_to_db(db_path, table_name, dic):
     """
     Write a dictionary to a database.
+
+    :param db_path: Path to the SQLite database file.
+    :param dic: Dictionary containing data to write.
+    :param table_name: Name of the table to write to.    
     """
     import sqlite3
     # Connect to SQLite database
@@ -557,6 +561,38 @@ def write_to_db(db_path, dic, table_name):
     conn.commit()
     # Close the connection
     conn.close()
+
+
+def add_and_update_db_from_dict(db_path, table_name, new_column_name, new_column_type, data_dict):
+    """
+    Add a new column to an existing table in a SQLite database and update its values based on a dictionary.
+
+    :param db_path: Path to the SQLite database file.
+    :param table_name: Name of the table to modify.
+    :param new_column_name: Name of the new column to add.
+    :param new_column_type: Data type of the new column.
+    :param data_dict: Dictionary with passenger_id as keys and the new column's values.
+    """
+    import sqlite3
+    # Connect to SQLite database
+    conn = sqlite3.connect(db_path)
+    # Create a cursor object
+    cursor = conn.cursor()
+
+    # Add a new column to the table
+    cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {new_column_name} {new_column_type}")
+
+    # Prepare data for batch update
+    update_data = [(value, key) for key, value in data_dict.items()]
+
+    # Use executemany for more efficient batch updates
+    cursor.executemany(f"UPDATE {table_name} SET {new_column_name} = ? WHERE passenger_id = ?", update_data)
+
+    # Save (commit) the changes
+    conn.commit()
+    # Close the connection
+    conn.close()
+
 
 
 

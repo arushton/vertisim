@@ -119,9 +119,9 @@ class SimSetup:
         
     def create_training_db_path(self):
         if self.sim_params['training_data_collection']:
-            self.sim_params['training_db_path'] = os.path.join(self.output_folder_path, 'wait_time_prediction_training.db')
+            self.output_params['state_trajectory_db_path'] = os.path.join(self.output_folder_path, self.output_params['state_trajectory_db_name'])
         else:
-            self.sim_params['training_db_path'] = None
+            self.output_params['state_trajectory_db_path'] = None
 
     def create_vertiport_layout(self):
         """
@@ -359,6 +359,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
                 'passenger_distributions': self.passenger_distributions,
@@ -379,6 +380,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
                 'passenger_distributions': self.passenger_distributions,
@@ -402,6 +404,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
                 'passenger_distributions': self.passenger_distributions,
@@ -438,6 +441,7 @@ class SimSetup:
                                   sim_id=self.sim_id,
                                   sim_end_timestamp=self.env.now,
                                   client_server_mode=self.sim_mode['client_server'],
+                                  output_params=self.output_params,
                                   verbose=self.sim_params['verbose']).performance_metrics
     
     def print_passenger_trip_time_stats(self):

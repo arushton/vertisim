@@ -27,6 +27,7 @@ class OnDemandSystemManager(BaseSystemManager):
                  airspace: object,
                  taxi_config: object,
                  sim_params: Dict,
+                 output_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: Dict,
                  passenger_distributions: Dict,                 
@@ -46,6 +47,7 @@ class OnDemandSystemManager(BaseSystemManager):
                         airspace=airspace,
                         taxi_config=taxi_config,
                         sim_params=sim_params,
+                        output_params=output_params,
                         aircraft_params=aircraft_params,
                         vertiport_distances=vertiport_distances,
                         passenger_distributions=passenger_distributions,
@@ -273,7 +275,9 @@ class OnDemandSystemManager(BaseSystemManager):
         states['passenger_id'] = passenger_id
         states['sim_id'] = self.sim_params['sim_id']
         states = flatten_dict(states)
-        write_to_db(db_path=self.sim_params['training_db_path'], dic=states, table_name='training_data_collection')
+        write_to_db(db_path=self.output_params['state_trajectory_db_path'], 
+                    table_name=self.output_params['state_trajectory_db_tablename'],
+                    dic=states)
         
     def check_holding_aircraft(self, flight_direction: str, origin_vertiport_id: Any, destination_vertiport_id: Any):
         arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction).airnode_resource
