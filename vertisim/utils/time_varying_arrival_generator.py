@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from .helpers import set_seed
 
 def get_arrival_rates(df):
     # Initialize an empty dictionary to hold the rates
@@ -17,7 +18,7 @@ def get_arrival_rates(df):
     return rate_dict, time_intervals
 
 
-def generate_arrival_times(arrival_rate_df, origin, target_count):
+def generate_time_varying_arrival_times(arrival_rate_df, origin):
     # Get the arrival rates and time intervals
     rate_dict, time_intervals = get_arrival_rates(arrival_rate_df)
 
@@ -25,29 +26,34 @@ def generate_arrival_times(arrival_rate_df, origin, target_count):
     results = []
 
     for destination in destinations:
-        current_time = 0
-        total_generated = 0
         arrival_times = []
+        previous_time = 0
 
         rates = rate_dict[origin][destination]
-        for rate in rates:
-            num_to_generate = int(rate * target_count / sum(rates))
+
+        for idx, rate in enumerate(rates):
+            set_seed(how='instant')
+            # Get the current and next time interval (or the end of the last interval)
+            current_time = time_intervals[idx]
+            next_time = time_intervals[idx + 1] if idx + 1 < len(time_intervals) else time_intervals[idx]
+
+            # Calculate expected arrivals for this interval
+            interval_duration = (next_time - current_time) / 3600  # convert to hours
+            expected_arrivals = rate * interval_duration
+
+            # Generate arrivals using Poisson distribution
+            num_to_generate = np.random.poisson(expected_arrivals)
 
             for _ in range(num_to_generate):
-                # Generate a time for this arrival using the exponential distribution
-                time_to_next = np.random.exponential(1 / rate) * 3600  # in seconds
-
-                # Add this time to the current time to get the arrival time
-                current_time += time_to_next
+                # Generate a random time within the current interval
+                time_within_interval = np.random.uniform(current_time, next_time)
 
                 # Append this time to the list of arrival times
                 arrival_times.append({
-                    'passenger_arrival_time': current_time,
+                    'passenger_arrival_time': time_within_interval,
                     'origin_vertiport_id': origin,
                     'destination_vertiport_id': destination
                 })
-
-                total_generated += 1
 
         # Add generated data for this destination to results
         results.extend(arrival_times)

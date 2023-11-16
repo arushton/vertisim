@@ -57,42 +57,42 @@ class PerformanceMetrics:
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(lambda: defaultdict(dict))
         # TODO: Remove this. Temporary fix
-        path = '../../output/performance_metrics'
-        if not os.path.exists(path):
-            os.makedirs(path)
+        # path = '../../output/performance_metrics'
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
 
         if not self.only_aircraft_simulation:
-            self.calculate_passenger_consolidation_time_stats()
-            self.calculate_passenger_waiting_time_stats()
-            self.calculate_passenger_transfer_time_stats()
-            self.calculate_passenger_departure_queue_count_stats()
+            # self.calculate_passenger_consolidation_time_stats()
+            # self.calculate_passenger_waiting_time_stats()
+            # self.calculate_passenger_transfer_time_stats()
+            # self.calculate_passenger_departure_queue_count_stats()
             self.calculate_passenger_trip_time_stats()
-            self.compute_total_passenger_throughput()
-            self.compute_average_passenger_throughput()
-            self.compute_load_factor_stats()
-            self.compute_empty_flights()
-            self.compute_aircraft_idle_time_stats()
-            self.calculate_passenger_departure_queue_waiting_times_stats()
-        self.calculate_aircraft_arrival_queue_count_stats()
-        self.calculate_aircraft_departure_queue_count_stats()
-        self.compute_average_and_total_aircraft_throughput()
-        self.compute_fato_utilization()
-        self.calculate_aircraft_holding_times_stats()
+            # self.compute_total_passenger_throughput()
+            # self.compute_average_passenger_throughput()
+            # self.compute_load_factor_stats()
+            # self.compute_empty_flights()
+            # self.compute_aircraft_idle_time_stats()
+            # self.calculate_passenger_departure_queue_waiting_times_stats()
+        # self.calculate_aircraft_arrival_queue_count_stats()
+        # self.calculate_aircraft_departure_queue_count_stats()
+        # self.compute_average_and_total_aircraft_throughput()
+        # self.compute_fato_utilization()
+        # self.calculate_aircraft_holding_times_stats()
         self.compute_flight_duration_stats()
         self.compute_energy_consumption_stats()
-        self.compute_charge_time_stats()
-        self.compute_average_taxi_time()
-        self.compute_turnaround_duration()
-        self.compute_tlof_reservation_duration()
+        # self.compute_charge_time_stats()
+        # self.compute_average_taxi_time()
+        # self.compute_turnaround_duration()
+        # self.compute_tlof_reservation_duration()
 
-        if verbose:
-            self.print_verbose_performance_metrics()
+        # if verbose:
+        #     self.print_verbose_performance_metrics()
         # else:
         #     self.print_performance_metrics()
 
         # TODO: Remove all save to csv methods from this file. save_output should be the only method that saves to csv
-        df = pd.DataFrame(self.flight_and_time_tracker)
-        df.to_csv('../../output/performance_metrics/flight_and_time_tracker.csv')                
+        # df = pd.DataFrame(self.flight_and_time_tracker)
+        # df.to_csv('../../output/performance_metrics/flight_and_time_tracker.csv')                
 
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
@@ -142,8 +142,8 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['passenger_transfer_time']['min'] = ms_to_min(np.min(transfer_times))
 
     def calculate_passenger_trip_time_stats(self):
-        df = pd.DataFrame(self.passenger_trip_times)
-        df.to_csv('../../output/performance_metrics/passenger_trip_times.csv')           
+        # df = pd.DataFrame(self.passenger_trip_times)
+        # df.to_csv('../../output/performance_metrics/passenger_trip_times.csv')           
         # Creates a dataframe for passenger trip time statistics including mean, median, standard deviation,
         for flight_direction, data in self.passenger_trip_times.items():
             trip_times = np.array(list(data.values()))

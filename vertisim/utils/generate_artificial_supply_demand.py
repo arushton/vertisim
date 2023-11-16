@@ -8,7 +8,7 @@ from .distribution_generator import DistributionGenerator
 from .units import sec_to_ms
 from .helpers import cumulative_sum_array, nested_dict_filter_keys, compute_interarrival_times_from_schedule, set_seed
 from .weighted_random_chooser import weighted_random_choose_exclude_element, random_choose_exclude_element
-from .time_varying_arrival_generator import generate_arrival_times
+from .time_varying_arrival_generator import generate_time_varying_arrival_times
 from typing import Dict
 from ..aircraft.aircraft import AircraftStatus
 
@@ -176,7 +176,7 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
         interarrival_times = [passenger_arrival_process['passenger_interarrival_constant']] * num_passengers
     else:
         if passenger_arrival_rates is not None:
-            return generate_arrival_times(passenger_arrival_rates, origin_vertiport_id, num_passengers)
+            return generate_time_varying_arrival_times(passenger_arrival_rates, origin_vertiport_id)
         
         distribution = DistributionGenerator(distribution_params=passenger_arrival_process['passenger_arrival_distribution'])
         interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_passengers)]

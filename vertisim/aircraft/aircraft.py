@@ -9,13 +9,14 @@ import numpy as np
 from collections import defaultdict
 from .optimize_velocity import VelocityOptimizer
 from ..utils.distance import distance_3d
+from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import set_seed
 from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
 from ..utils.compute_location_from_distance_and_bearing import compute_location_from_distance_and_bearing
 from .power_model import vertical_takeoff_landing_phase_power, climb_transition_phase_power, climb_phase_power, descend_phase_power, \
     cruise_phase_power, descend_transition_phase_power
 from enum import Enum
-from vertisim.memoize import PhaseParameters
+from ..memoize import PhaseParameters
 
 class Aircraft:
     """
@@ -83,7 +84,7 @@ class Aircraft:
         self.holding_time = None
         self.idle_time = 0
         self.ground_holding_end_time = arrival_time
-        self.flight_direction = None
+        self.flight_direction = self.set_initial_flight_direction()
         self.flight_duration = None
         self.turnaround_time = None
         self.pushback_time = None
@@ -97,6 +98,9 @@ class Aircraft:
         self.departure_fix_resource = None
         self.aircraft_fato_usage_request = None
         self.parking_space_usage_request = None
+
+        self.soc_at_zero_event_triggered = False
+        self.is_process_completed = False
 
         self.aircraft_model = self.aircraft_params['aircraft_model']
         self.passenger_capacity = self.aircraft_params['pax']
@@ -288,6 +292,15 @@ class Aircraft:
             f"  - Departure Time: {self.departure_time}\n" \
             f"  - Location: {self.location}\n" \
             f"  - Serviced Time at Location: {self.serviced_time_at_the_location}\n"
+    
+    def set_initial_flight_direction(self):
+        """
+        Sets the initial flight direction of the aircraft.
+        """
+        origin_vertiport_id = random_choose_exclude_element(elements_list=self.system_manager.vertiport_ids,
+                                                            exclude_element=self.destination_vertiport_id,
+                                                            num_selection=1)[0]
+        return f'{origin_vertiport_id}_{self.destination_vertiport_id}'
     
     def compute_stall_speed(self):
             return stall_speed(atmosphere_condition=self.atmosphere_condition,
@@ -660,7 +673,7 @@ class Aircraft:
             yield self.env.timeout(node_to_node_move_time)
 
             self.forward_velocity = 0
-            self.location = self.parking_space_id
+            self.location = last_node
 
             # Save park time
             if operation_type == 'arrival':
@@ -668,7 +681,6 @@ class Aircraft:
 
                 # Updated the status of the aircraft
                 self.detailed_status = 'parked'
-                self.status = AircraftStatus.IDLE
 
                 # # If the simulation is running by an optimization algorithm, then this will
                 # # trigger this event and the optimization algorithm will make a decision.
@@ -759,7 +771,6 @@ class Aircraft:
 
                 # Updated the status of the aircraft
                 self.detailed_status = 'parked'
-                self.status = AircraftStatus.IDLE
 
                 # # If the simulation is running by an optimization algorithm, then this will
                 # # trigger this event and the optimization algorithm will make a decision.
@@ -777,12 +788,12 @@ class Aircraft:
         # Release the FATO pad and departure fix resource after reaching to the nextNode
         self.release_fato_and_departure_fix()
 
-        # If the simulation is running by an optimization algorithm, then this will
-        # trigger this event and the optimization algorithm will make a decision.
-        if self.system_manager.sim_mode == 'client_server':
-            self.logger.debug(f'aircraft_departure_fix_departure_event is triggered for {self.tail_number} time {self.env.now}')
-            self.system_manager.trigger_stopping_event(event_name='aircraft_departure_fix_departure_event',
-                                                       id=self.origin_vertiport_id)            
+        # # If the simulation is running by an optimization algorithm, then this will
+        # # trigger this event and the optimization algorithm will make a decision.
+        # if self.system_manager.sim_mode == 'client_server':
+        #     self.logger.debug(f'aircraft_departure_fix_departure_event is triggered for {self.tail_number} time {self.env.now}')
+        #     self.system_manager.trigger_stopping_event(event_name='aircraft_departure_fix_departure_event',
+        #                                                id=self.origin_vertiport_id)            
 
         yield self.env.process(self.climb_to_cruise_altitude())
 
@@ -1033,16 +1044,20 @@ class Aircraft:
     
     def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
         if self.system_manager.sim_mode == 'client_server' \
-            and self.tail_number \
-            not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
-            print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in available the list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. ")
-            self.system_manager.truncation_penalty -= 10000
-            self.system_manager.truncation_event.succeed()
+            and self.tail_number not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
+            print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. Status: {self.status}")
+            self.system_manager.truncation_penalty += 1
+            self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
         self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self)
-        self.system_manager.reward += 100
-        self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
+        # Set the aircraft status to idle
+        aircraft.status = AircraftStatus.IDLE 
+        self.is_process_completed = True
+        # self.system_manager.reward += 100
+        # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")
+        if self.system_manager.sim_mode == 'client_server':
+            self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 
     # def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
@@ -1243,7 +1258,13 @@ class Aircraft:
                                   f" during {self.detailed_status}, SOC: {round(self.soc, 2)}")
         if self.soc-self.convert_kwh_soc(kwh) < 0:
             soc_update = self.soc
-            print(f"Warning: Aircraft {self.tail_number}'s SOC is less than 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
+            if self.system_manager.sim_mode == 'client_server' and self.soc_at_zero_event_triggered == False:
+                print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
+                self.soc_at_zero_event_triggered = True
+                self.system_manager.truncation_penalty += 1
+                self.logger.debug(f'soc_at_zero_event is triggered for {self.tail_number} time {self.env.now}')
+                self.system_manager.trigger_truncation_event(event_name='soc_at_zero_event',
+                                                             id=self.tail_number)
         else:
             soc_update = self.convert_kwh_soc(kwh)
         self.update_soc(-soc_update)
@@ -1393,8 +1414,8 @@ class Aircraft:
         self.save_flight_phase_energy(flight_phase='holding', energy=holding_energy)
     
     def check_reserve_energy(self) -> float:
-        if self.soc <= 2 and self.detailed_status in ['landing', 'cruise', 'takeoff']:
-            print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.detailed_status} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
+        # if self.soc <= 2 and self.detailed_status in ['landing', 'cruise', 'takeoff']:
+        #     print(f"Aircraft {self.tail_number} is out of energy at time {self.env.now} while in {self.detailed_status} phase. The flight direction is {self.flight_direction} and it's location is {self.location}.")
         if self.soc <= 20 and self.detailed_status in ['landing', 'cruise', 'takeoff']:
             self.priority = 0
 
@@ -1475,13 +1496,7 @@ class Aircraft:
         """
         Returns the estimated time to arrival in minutes.
         """
-        time_to_arrival = time_to_arrival_estimator(cruise_speed=self.aircraft_params['cruise_speed'],
-                                                    current_waypoint_id=self.location,
-                                                    origin_vertiport_id=self.origin_vertiport_id,
-                                                    destination_vertiport_id=self.destination_vertiport_id,
-                                                    flight_direction=self.flight_direction,
-                                                    system_manager=self.system_manager,
-                                                    tail_number=self.tail_number)
+        time_to_arrival = time_to_arrival_estimator(aircraft=self)
         return round(time_to_arrival/60, 2)   
 
     def get_vertiport_list(self):
@@ -1511,7 +1526,9 @@ class Aircraft:
             'location': self.get_aircraft_location_for_state(),
             'soc': round(self.soc, 2),
             'time_to_arrival': self.estimate_time_to_arrival(),
-            'status': self.status
+            'num_passengers': len(self.passengers_onboard),
+            'status': self.status,
+            'is_process_completed': int(self.is_process_completed)
         }
         
         # Validate and serialize the state data
@@ -1532,7 +1549,9 @@ class AircraftState(BaseModel):
     location: int
     soc: float
     time_to_arrival: float
+    num_passengers: int
     status: AircraftStatus
+    is_process_completed: int
 
     # def fly_in_the_airspace(self, user_modification=False):
     #     """

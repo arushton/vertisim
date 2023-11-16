@@ -149,6 +149,14 @@ class Scheduler:
         # Get the waiting room for the destination
         waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
         return self.collect_departing_passengers(waiting_room, self.aircraft_capacity)
+    
+    def get_departing_passenger_count(self, origin_vertiport_id, destination_vertiport_id):
+        """
+        Returns the number of departing passengers from the waiting room
+        """
+        # Get the waiting room for the destination
+        waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
+        return len(waiting_room.items)
 
 
     def get_aircraft_with_closest_init_soc(self, vertiport_id, init_soc, target_soc):

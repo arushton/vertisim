@@ -1,4 +1,4 @@
-from vertisim import VertiSim
+from vertisim.vertisim import VertiSim
 import simpy
 
 class InstanceManager:
@@ -27,3 +27,6 @@ class InstanceManager:
     
     def step(self, actions):
         return self.sim_instance.step(actions)
+    
+    def get_performance_metrics(self):
+        return self.sim_instance.get_performance_metrics()

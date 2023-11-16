@@ -5,7 +5,7 @@ from typing import List
 import sys
 sys.path.append('/app')
 
-from vertisim.instance_manager import InstanceManager
+from vertisim.vertisim.instance_manager import InstanceManager
 from .models import create_action_models
 from .config import CONFIG  # Import the loaded configuration
 
@@ -40,14 +40,15 @@ def get_initial_state():
 
 @app.post("/step")
 def step(actions: Actions):
-    # print(f"actions: {actions.actions}")
+    # print(f"actions from vertisim api: {actions.actions}")
     # TODO: Action input should be list of enums
-    new_state, reward, terminated, truncated = instance_manager.step(actions.actions)
+    new_state, reward, terminated, truncated, action_mask = instance_manager.step(actions.actions)
     return {
         "new_state": new_state,
         "reward": reward,
         "terminated": terminated,
-        "truncated": truncated
+        "truncated": truncated,
+        "action_mask": action_mask
     }
 
 @app.get("/get_space_params")
@@ -63,6 +64,10 @@ def get_space_params():
         "n_environmental_state_variables": instance_manager.sim_instance.get_environmental_state_variable_count(),
         "n_additional_state_variables": instance_manager.sim_instance.get_additional_state_variable_count()
     }
+
+@app.get("/performance_metrics")
+def get_performance_metrics():
+    return instance_manager.sim_instance.get_performance_metrics()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001) 
