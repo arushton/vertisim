@@ -112,7 +112,7 @@ class VertiportConfig:
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
-        return total_waiting_time_min
+        return round(total_waiting_time_min, 2)
     
     def get_exponential_waiting_cost(self):
         total_weighted_waiting_time = 0
@@ -169,9 +169,13 @@ class VertiportConfig:
         entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
         entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
+        waiting_passenger_count = 0
         for destination, waiting_room_store in self.waiting_room_stores.items():
-            entity_states['num_waiting_passengers'][f'to_{destination}'] = len(waiting_room_store.items) +\
-                                                                            len(self.flight_request_stores[destination].items)
+            waiting_passenger_count += len(waiting_room_store.items)
+        
+        for destination, flight_request_store in self.flight_request_stores.items():
+            waiting_passenger_count += len(flight_request_store.items)
+        entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
 
         entity_states['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
 

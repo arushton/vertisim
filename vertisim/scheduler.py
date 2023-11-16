@@ -149,7 +149,8 @@ class Scheduler:
         if len(passengers) > 0:
             flight_queue_store = passengers[0].flight_queue_store
             # Remove the passenger from the waiting room
-            flight_queue_store.get(lambda passenger: passenger.passenger_id in passengers)
+            for passenger in passengers:
+                flight_queue_store.get(lambda p: p.passenger_id == passenger.passenger_id)
 
     
     def collect_any_departing_passengers(self, origin_vertiport_id, waiting_room):

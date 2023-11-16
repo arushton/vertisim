@@ -259,7 +259,7 @@ class OnDemandSystemManager(BaseSystemManager):
         if self.sim_params['training_data_collection']:
             self.save_state_variables_for_training(passenger_id=passenger.passenger_id)
 
-
+        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Flight queue: {[p.passenger_id for p in self.vertiports[passenger.origin_vertiport_id].flight_request_stores[passenger.destination_vertiport_id].items]}")
         # Trigger scheduler
         yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
                                                     destination_vertiport_id=passenger.destination_vertiport_id, 
@@ -353,7 +353,10 @@ class OnDemandSystemManager(BaseSystemManager):
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                            aircraft=aircraft)              
+                                                            aircraft=aircraft)    
+
+            # print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
+
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
