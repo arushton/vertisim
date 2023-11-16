@@ -113,6 +113,21 @@ class Scheduler:
                                                       self.aircraft_capacity - num_departing_passengers
                                                       )
 
+    def count_departing_passengers(self, current_waiting_room, num_departing_passengers):
+        """
+        Counts the departing passengers from the waiting room
+        """
+        departing_passengers = []
+        for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
+            # Collect agents from the waiting room as FIFO
+            departing_passengers.append(current_waiting_room.items[0])
+
+        self.passenger_logger.debug(f"Departing passengers are counted by the Scheduler: {[p.passenger_id for p in departing_passengers]}."
+                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in departing_passengers]}."
+                                    f" Remaining passengers in the waiting room: {[p.passenger_id for p in current_waiting_room.items]}."
+                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in current_waiting_room.items]}.")
+        return departing_passengers
+
     def collect_departing_passengers(self, current_waiting_room, num_departing_passengers) -> Union[None, List]:
         departing_passengers = []
         for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
@@ -125,6 +140,17 @@ class Scheduler:
                                     f" Remaining passengers in the waiting room: {[p.passenger_id for p in current_waiting_room.items]}."
                                     f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in current_waiting_room.items]}.")
         return departing_passengers
+    
+    def pop_passengers_from_flight_queue_by_id(self, passengers):
+        """
+        Removes passengers from the waiting room by their ids
+        """
+        # Get the waiting room from passenger
+        if len(passengers) > 0:
+            flight_queue_store = passengers[0].flight_queue_store
+            # Remove the passenger from the waiting room
+            flight_queue_store.get(lambda passenger: passenger.passenger_id in passengers)
+
     
     def collect_any_departing_passengers(self, origin_vertiport_id, waiting_room):
         """

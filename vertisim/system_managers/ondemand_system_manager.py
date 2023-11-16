@@ -94,6 +94,11 @@ class OnDemandSystemManager(BaseSystemManager):
 
             self.logger.debug(f"Passengers {[passenger.passenger_id for passenger in departing_passengers]} are ready to depart from {origin_vertiport_id} to {destination_vertiport_id}")
 
+            # Put passengers into the flight request queue
+            for passenger in departing_passengers:
+                self.vertiports[origin_vertiport_id].flight_request_stores[destination_vertiport_id].put(passenger)
+                passenger.flight_queue_store = self.vertiports[origin_vertiport_id].flight_request_stores[destination_vertiport_id]
+
             # Increase passenger queue count
             self.event_saver.update_passenger_departure_queue_counter(vertiport_id=origin_vertiport_id, queue_update=1)
 
@@ -106,7 +111,7 @@ class OnDemandSystemManager(BaseSystemManager):
         if self.sim_params['fleet_rebalancing']:
             num_available_aircraft_at_origin = self.check_num_available_aircraft(origin_vertiport_id)
             num_available_aircraft_at_dest = self.check_num_available_aircraft(destination_vertiport_id)
-            num_pax_groups = int(self.get_num_waiting_passengers(passengers_waiting_room) / self.aircraft_params['pax'])
+            num_pax_groups = int(self.get_num_waiting_passengers(origin_vertiport_id) / self.aircraft_params['pax'])
             required_aircraft = max(num_pax_groups - num_available_aircraft_at_origin, 0)
             self.logger.debug(f"# of available aircraft at {origin_vertiport_id}: {num_available_aircraft_at_origin}/{self.vertiports[origin_vertiport_id].num_aircraft}, # of available aircraft at {destination_vertiport_id}: {num_available_aircraft_at_dest}/{self.vertiports[destination_vertiport_id].num_aircraft}")
             self.logger.debug(f"Required aircraft for rebalancing: {required_aircraft}. # of pax groups: {num_pax_groups}")
@@ -119,11 +124,11 @@ class OnDemandSystemManager(BaseSystemManager):
                                                             destination_vertiport_id=origin_vertiport_id,
                                                             departing_passengers=[]))                
 
-    def get_num_waiting_passengers(self, passengers_waiting_room: simpy.Store):
+    def get_num_waiting_passengers(self, origin_vertiport_id: str):
         """
         Checks the demand for the given vertiport
         """
-        return len(passengers_waiting_room.items)    
+        return self.vertiports[origin_vertiport_id].get_passenger_count()
 
     def reserve_aircraft(self, 
                          origin_vertiport_id: Any, 
@@ -153,6 +158,9 @@ class OnDemandSystemManager(BaseSystemManager):
         aircraft.flight_id = flight_id
         # Measure and save the aircraft allocation time
         self.save_aircraft_allocation_time(origin_vertiport_id, aircraft, aircraft_allocation_start_time)
+
+        # Remove passengers from the flight queue
+        self.scheduler.pop_passengers_from_flight_queue_by_id(passengers=departing_passengers)
 
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.add_additional_passengers_if_needed(origin_vertiport_id, destination_vertiport_id, departing_passengers)
@@ -213,7 +221,10 @@ class OnDemandSystemManager(BaseSystemManager):
                     for destination in departing_passenger_groups[origin]:
                         departing_passengers = departing_passenger_groups[origin][destination]
                         for passenger in departing_passengers:
-                            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_waiting_room_departure')   
+                            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_waiting_room_departure') 
+                            # Put passengers into the flight request queue
+                            self.vertiports[origin].flight_request_stores[destination].put(passenger)
+                            passenger.flight_queue_store = self.vertiports[origin].flight_request_stores[destination]  
                         # Increase passenger queue count
                         self.event_saver.update_passenger_departure_queue_counter(vertiport_id=origin, 
                                                                                 queue_update=len(departing_passenger_groups))   

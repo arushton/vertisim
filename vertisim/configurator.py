@@ -51,6 +51,7 @@ class VertiportConfig:
         self.edge_store = self.add_edges_to_store()
         self.charger_resource = simpy.Resource(self.env, capacity=self.vertiport_data['num_chargers'])
         self.waiting_room_stores = self.create_waiting_room_stores()
+        self.flight_request_stores = self.create_flight_request_stores()
         self.available_aircraft_store = simpy.FilterStore(self.env)
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
@@ -108,6 +109,9 @@ class VertiportConfig:
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
                 total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+        for flight_request_store in self.flight_request_stores.values():
+            for passenger in flight_request_store.items:
+                total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
         return total_waiting_time_min
     
     def get_exponential_waiting_cost(self):
@@ -125,7 +129,8 @@ class VertiportConfig:
         return all(len(waiting_room_store.items) == 0 for waiting_room_store in self.waiting_room_stores.values())
     
     def get_passenger_count(self):
-        return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values())
+        return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values()) +\
+                sum(len(flight_request_store.items) for flight_request_store in self.flight_request_stores.values())
     
     def get_aircraft_status(self, aircraft_agents) -> List:
         # For each aircraft, check if it's at the current vertiport.
@@ -165,7 +170,8 @@ class VertiportConfig:
         entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
         for destination, waiting_room_store in self.waiting_room_stores.items():
-            entity_states['num_waiting_passengers'][f'to_{destination}'] = len(waiting_room_store.items)
+            entity_states['num_waiting_passengers'][f'to_{destination}'] = len(waiting_room_store.items) +\
+                                                                            len(self.flight_request_stores[destination].items)
 
         entity_states['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
 
@@ -301,6 +307,14 @@ class VertiportConfig:
         for dest in exclude_origin:
             waiting_room_stores[dest] = simpy.FilterStore(self.env)
         return waiting_room_stores
+    
+    def create_flight_request_stores(self):
+        flight_request_stores = defaultdict(dict)
+        # Create a store for flight requests
+        exclude_origin = [dest for dest in self.vertiport_ids if dest != self.vertiport_id]
+        for dest in exclude_origin:
+            flight_request_stores[dest] = simpy.FilterStore(self.env)
+        return flight_request_stores
 
 
 class TaxiOperationsConfig:

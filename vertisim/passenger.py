@@ -33,6 +33,7 @@ class Passenger:
         self.vertiport_arrival_time = None
         self.waiting_room_arrival_time = None
         self.waiting_room_store = None
+        self.flight_queue_store = None
         self.flight_assignment_time = None
         self.departure_time = None
 
