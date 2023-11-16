@@ -21,11 +21,13 @@ class PerformanceMetrics:
                 flight_directions,
                 sim_id, 
                 sim_end_timestamp,
+                client_server_mode,
                 verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
         self.aircraft_params = aircraft_params
         self.only_aircraft_simulation = only_aircraft_simulation
         self.is_network_simulation = is_network_simulation
+        self.client_server_mode = client_server_mode
         self.performance_metric_trackers = performance_metric_trackers
         self.passenger_consolidation_time = performance_metric_trackers['passenger_consolidation_time']
         self.passenger_departure_queue_count = performance_metric_trackers['passenger_departure_queue_count']
@@ -63,7 +65,7 @@ class PerformanceMetrics:
 
         if not self.only_aircraft_simulation:
             # self.calculate_passenger_consolidation_time_stats()
-            # self.calculate_passenger_waiting_time_stats()
+            self.calculate_passenger_waiting_time_stats()
             # self.calculate_passenger_transfer_time_stats()
             # self.calculate_passenger_departure_queue_count_stats()
             self.calculate_passenger_trip_time_stats()
@@ -85,10 +87,10 @@ class PerformanceMetrics:
         # self.compute_turnaround_duration()
         # self.compute_tlof_reservation_duration()
 
-        # if verbose:
-        #     self.print_verbose_performance_metrics()
-        # else:
-        #     self.print_performance_metrics()
+        if verbose and not self.client_server_mode:
+            self.print_verbose_performance_metrics()
+        elif not self.client_server_mode:
+            self.print_performance_metrics()
 
         # TODO: Remove all save to csv methods from this file. save_output should be the only method that saves to csv
         # df = pd.DataFrame(self.flight_and_time_tracker)
@@ -114,7 +116,7 @@ class PerformanceMetrics:
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
         df = pd.DataFrame(self.passenger_waiting_time)
-        df.to_csv('../../output/performance_metrics/passenger_waiting_time.csv')                
+        # df.to_csv('../../output/performance_metrics/passenger_waiting_time.csv')                
         for vertiport_id, data in self.passenger_waiting_time.items():
             waiting_times = np.array(list(data.values()))
             if waiting_times.size > 0:
@@ -689,27 +691,27 @@ class PerformanceMetrics:
 
     def print_verbose_performance_metrics(self):
         if not self.only_aircraft_simulation:
-            self.print_passenger_consolidation_time_stats()
+            # self.print_passenger_consolidation_time_stats()
             self.print_passenger_waiting_time_stats()
-            self.print_passenger_transfer_time_stats()
-            self.print_passenger_trip_time_stats()
+            # self.print_passenger_transfer_time_stats()
+            # self.print_passenger_trip_time_stats()
             # self.print_passenger_departure_queue_count_stats()
-            self.print_avg_load_factor()
-            self.print_aircraft_idle_time_stats()
-            self.print_total_passenger_throughput()
-            self.print_average_passenger_throughput()
-        self.print_aircraft_arrival_queue_count_stats()
-        self.print_aircraft_departure_queue_count_stats()
-        self.print_aircraft_holding_times_stats()
-        self.print_average_charge_time()
-        self.print_total_simulated_time()
-        self.print_total_aircraft_throughput()
+        #     self.print_avg_load_factor()
+        #     self.print_aircraft_idle_time_stats()
+        #     self.print_total_passenger_throughput()
+        #     self.print_average_passenger_throughput()
+        # self.print_aircraft_arrival_queue_count_stats()
+        # self.print_aircraft_departure_queue_count_stats()
+        # self.print_aircraft_holding_times_stats()
+        # self.print_average_charge_time()
+        # self.print_total_simulated_time()
+        # self.print_total_aircraft_throughput()
         self.print_flight_duration_stats()
-        self.print_energy_consumption_stats()
-        self.print_aircraft_throughput_stats_for_each_hr_verbose()
-        self.print_average_aircraft_throughput()
-        self.print_fato_utilization()
-        self.print_total_empty_flights()
+        # self.print_energy_consumption_stats()
+        # self.print_aircraft_throughput_stats_for_each_hr_verbose()
+        # self.print_average_aircraft_throughput()
+        # self.print_fato_utilization()
+        # self.print_total_empty_flights()
         # self.plot_aircraft_arrival_queue_count()
 
     def print_performance_metrics(self):

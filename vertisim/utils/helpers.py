@@ -1,6 +1,7 @@
 import random
 import math
 import numpy as np
+import os
 from enum import Enum
 from ..utils.units import sec_to_ms
 from typing import List, Union, Dict, Any, Optional
@@ -65,6 +66,17 @@ def get_key_from_value(dictionary, search_val):
     :return:
     """
     return [key for key, value in dictionary.items() if search_val == value][0]
+
+
+def flatten_dict(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = f'{parent_key}{sep}{k}' if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
 
 def get_key(my_dict, key):
@@ -524,6 +536,27 @@ def get_truncation_events(env: simpy.Environment, truncation_events: List, aircr
             key = f"{event_name}_{aircraft_id}"
             events[key] = env.event()
     return events
+
+
+def write_to_db(db_path, dic, table_name):
+    """
+    Write a dictionary to a database.
+    """
+    import sqlite3
+    # Connect to SQLite database
+    conn = sqlite3.connect(db_path)
+    # Create a cursor object
+    cursor = conn.cursor()
+    # Create a table with REAL data type for all columns
+    columns = ', '.join([f"{key} REAL" for key in dic.keys()])
+    cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns})")    
+    # Insert a row of data
+    placeholders = ', '.join(['?'] * len(dic))
+    cursor.execute(f"INSERT INTO {table_name} ({', '.join(dic.keys())}) VALUES ({placeholders})", list(dic.values()))
+    # Save (commit) the changes
+    conn.commit()
+    # Close the connection
+    conn.close()
 
 
 

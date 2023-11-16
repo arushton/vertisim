@@ -36,10 +36,9 @@ class AirspaceCreator:
 
     
     @staticmethod
-    def generate_waypoints(start_end_points, 
-                           num_waypoints, 
-                           cruise_altitude):
+    def generate_waypoints(start_end_points, num_waypoints, cruise_altitude, origin_destination_vertiport_locs, origin_altitude, destination_altitude):
         lat1, lon1, lat2, lon2 = start_end_points # Approach departures fixes
+        o_vert_lat, o_vert_lon, d_vert_lat, d_vert_lon = origin_destination_vertiport_locs
 
         # Calculate haversine distance between the two points
         distance_miles = haversine_dist(lat1, lon1, lat2, lon2, unit='mile')
@@ -63,12 +62,8 @@ class AirspaceCreator:
             lon_rad = np.arctan2(y, x)
             lat, lon = np.degrees(lat_rad), np.degrees(lon_rad)
             waypoints.append((lat, lon, cruise_altitude))
-        return waypoints
-    
-    def add_departure_arrival_fixes(self, waypoints, origin_altitude, destination_altitude, start_end_points, origin_destination_vertiport_locs):
-        lat1, lon1, lat2, lon2 = start_end_points # Approach departures fixes
-        o_vert_lat, o_vert_lon, d_vert_lat, d_vert_lon = origin_destination_vertiport_locs
         return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+60)] + waypoints + [(lat2, lon2, destination_altitude+60)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 60 is the altitude of the approach departure fix. This is according to one model. Needs to change.
+
     
     def determine_num_waypoints(self) -> Dict: # vertiport_distances: pd.DataFrame
         """
@@ -82,14 +77,6 @@ class AirspaceCreator:
             num_waypoints = int(airlink_length / self.airspace_params['airlink_segment_length']) - 1
             num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints # + 4 # Add 2 for the origin and destination vertiports and 2 for the departure and arrival fix
         return num_waypoints_per_airlink
-    
-    def determine_num_waypoints_from_two_points(self, lat1, lon1, lat2, lon2) -> int:
-        """
-        Computes the required number of waypoints for each airlink in the vertiport_distances DataFrame.
-        """
-        airlink_length = haversine_dist(lat1, lon1, lat2, lon2, unit='mile')
-        num_waypoints = int(airlink_length / self.airspace_params['airlink_segment_length']) - 1
-        return num_waypoints
 
     def get_airlinks_start_end_points(self):
         airlinks_start_end_endpoints = defaultdict(dict)
@@ -153,12 +140,11 @@ class AirspaceCreator:
             destination_altitude = self.vertiports[destination].vertiport_layout.vertiport_height
             waypoints[flight_direction] = AirspaceCreator.generate_waypoints(start_end_points, 
                                                                             num_waypoints,
-                                                                            self.cruise_altitude)
-        return self.add_departure_arrival_fixes(waypoints, 
-                                                origin_altitude,
-                                                destination_altitude, 
-                                                start_end_points, 
-                                                origin_destination_vertiport_locs)
+                                                                            self.cruise_altitude,
+                                                                            origin_destination_vertiport_locs[flight_direction],
+                                                                            origin_altitude,
+                                                                            destination_altitude)
+        return waypoints
 
     def match_waypoint_names_locations(self):
         waypoint_locations = defaultdict(dict)

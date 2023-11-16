@@ -6,9 +6,10 @@ from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from ..utils.distribution_generator import DistributionGenerator
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
-    get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
+    get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round, flatten_dict, write_to_db
 from ..aircraft.battery_model import BatteryModel
 from ..aircraft.aircraft import Aircraft, AircraftStatus
+from ..utils.get_state_variables import get_simulator_states
 import pandas as pd
 from enum import Enum
 from collections import defaultdict
@@ -244,10 +245,24 @@ class OnDemandSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
+        if self.sim_params['training_data_collection']:
+            self.save_state_variables_for_training(passenger_id=passenger.passenger_id)
+
+
         # Trigger scheduler
         yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
                                                     destination_vertiport_id=passenger.destination_vertiport_id, 
-                                                    passengers_waiting_room=passengers_waiting_room))                    
+                                                    passengers_waiting_room=passengers_waiting_room))  
+
+    def save_state_variables_for_training(self, passenger_id):
+        states = get_simulator_states(vertiports=self.vertiports,
+                                      aircraft_agents=self.aircraft_agents,
+                                      num_initial_aircraft=self.num_initial_aircraft,
+                                      simulation_states=self.sim_params['simulation_states'])
+        states['passenger_id'] = passenger_id
+        states['sim_id'] = self.sim_params['sim_id']
+        states = flatten_dict(states)
+        write_to_db(db_path=self.sim_params['training_db_path'], dic=states, table_name='training_data_collection')
         
     def check_holding_aircraft(self, flight_direction: str, origin_vertiport_id: Any, destination_vertiport_id: Any):
         arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction).airnode_resource

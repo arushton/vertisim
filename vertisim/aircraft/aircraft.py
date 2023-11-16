@@ -1527,7 +1527,7 @@ class Aircraft:
             'soc': round(self.soc, 2),
             'time_to_arrival': self.estimate_time_to_arrival(),
             'num_passengers': len(self.passengers_onboard),
-            'status': self.status,
+            'status': self.status.value,
             'is_process_completed': int(self.is_process_completed)
         }
         
@@ -1550,7 +1550,7 @@ class AircraftState(BaseModel):
     soc: float
     time_to_arrival: float
     num_passengers: int
-    status: AircraftStatus
+    status: int
     is_process_completed: int
 
     # def fly_in_the_airspace(self, user_modification=False):

@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 from collections import deque
 import numpy as np
 import random
+from ..utils.get_state_variables import get_simulator_states
 from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
 from ..utils.weighted_random_chooser import random_choose_exclude_element
