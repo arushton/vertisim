@@ -10,7 +10,7 @@ import matplotlib.colors as mcolors
 
 # --- MEAN, MIN, MAX, STD for each day of SF Bay Area Wind Data
 # 09/01/2022 - 08/22/2023, 366 days, September to August
-wdp = WindDataProcessor('input/airspace/SFO_SJC_wind_data.csv')
+wdp = WindDataProcessor('vertisim/input/airspace/SJC_SFO_wind_data.csv')
 data = wdp.wind_data
 data['date'] = data['datetime'].dt.date
 
