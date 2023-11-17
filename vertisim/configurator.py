@@ -123,6 +123,14 @@ class VertiportConfig:
                     total_weighted_waiting_time += 10 + (waiting_time - 10)**2
                 else:
                     total_weighted_waiting_time += waiting_time
+            
+        for flight_request_store in self.flight_request_stores.values():
+            for passenger in flight_request_store.items:
+                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                if waiting_time > 10:
+                    total_weighted_waiting_time += 10 + (waiting_time - 10)**2
+                else:
+                    total_weighted_waiting_time += waiting_time
         return round(total_weighted_waiting_time/4)
     
     def is_waiting_room_empty(self):
