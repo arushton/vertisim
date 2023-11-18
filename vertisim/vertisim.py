@@ -142,7 +142,7 @@ class VertiSim:
         mask = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if aircraft.status == AircraftStatus.IDLE \
-                and aircraft.soc != 100 \
+                and aircraft.soc <= 98 \
                     and aircraft.soc > self.config['aircraft_params']['min_reserve_soc']:
                 mask.append([1, 1, 1])
             elif aircraft.status == AircraftStatus.IDLE \
