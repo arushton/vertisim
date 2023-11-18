@@ -424,7 +424,7 @@ class SimSetup:
         if self.sim_mode['offline_optimization']:
             return OfflineOptimizationChargingStrategy()
         elif self.sim_mode['client_server']:
-            return RLChargingStrategy()
+            return RLChargingStrategy(soc_increment=self.external_optimization_params['soc_increment'])
         else:
             return OnDemandChargingStrategy()
 

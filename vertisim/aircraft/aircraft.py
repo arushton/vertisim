@@ -1048,8 +1048,11 @@ class Aircraft:
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. Status: {self.status}")
             self.system_manager.truncation_penalty += 1
             self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
+        old_soc = round(self.soc)
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
-        yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, parking_space=parking_space, shared_charger=shared_charger))
+        yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
+                                                                      parking_space=parking_space, 
+                                                                      shared_charger=shared_charger))
         self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self)    
         # Set the aircraft status to idle
         aircraft.status = AircraftStatus.IDLE 
@@ -1058,7 +1061,10 @@ class Aircraft:
         # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")
         if self.system_manager.sim_mode == 'client_server':
             # Reward for charging
-            self.system_manager.charge_reward += 1    
+            if old_soc <= 70:
+                self.system_manager.charge_reward += 1
+            else:
+                self.system_manager.charge_reward -= 1
             self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 
