@@ -1062,7 +1062,7 @@ class Aircraft:
         if self.system_manager.sim_mode == 'client_server':
             # Reward for charging
             if old_soc <= 70:
-                self.system_manager.charge_reward += 1
+                self.system_manager.charge_reward += 1*round(old_soc/100, 2)
             else:
                 self.system_manager.charge_reward -= 1
             self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)

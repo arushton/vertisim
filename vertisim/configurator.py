@@ -87,6 +87,12 @@ class VertiportConfig:
         """
         Returns the number of available parking pads.
         """
+        return self.vertiport_layout.num_parking_pad - self.get_parking_pad_occupancy()
+    
+    def get_parking_pad_occupancy(self):
+        """
+        Returns the number of occupied parking pads.
+        """
         return len(self.parking_space_store.items)
     
     def get_parking_pad_queue_length(self):
@@ -159,7 +165,7 @@ class VertiportConfig:
                                             'num_jobs_in_queue': len(fato.fato_resource.queue)}
 
         if self.parking_space_store is not None:
-            entity_states['park'] = {'num_jobs_in_service': self.get_parking_pad_availability(),
+            entity_states['park'] = {'num_jobs_in_service': self.get_parking_pad_occupancy(),
                                     'num_jobs_in_queue': self.get_parking_pad_queue_length()}
 
         if self.taxiway_node_store is not None:
@@ -185,7 +191,7 @@ class VertiportConfig:
             waiting_passenger_count += len(flight_request_store.items)
         entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
 
-        entity_states['total_passenger_waiting_time'] = self.get_total_passenger_waiting_time()
+        entity_states['total_passenger_waiting_time'] = self.get_exponential_waiting_cost()
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
