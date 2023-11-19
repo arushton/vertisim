@@ -5,12 +5,15 @@ from ..aircraft import AircraftStatus
 import numpy as np
 
 class RLChargingStrategy(BaseChargingStrategy):
+    def __init__(self, soc_increment=10):
+        self.soc_increment = soc_increment
+
     def get_charging_time(self, aircraft):
         """
         Get charging time - Two options: Constant charging time or draw a number from distribution
         """
         init_soc = round(aircraft.soc)
-        target_soc = init_soc + 1
+        target_soc = init_soc + self.soc_increment
         charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=init_soc, target_soc=target_soc)
         # charge_time = sec_to_ms(5*60)
 

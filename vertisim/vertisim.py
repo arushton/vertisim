@@ -65,14 +65,15 @@ class VertiSim:
         # This only runs uninterrupted simulation. No distinction for online optimization
         self.run_uninterrupted_simulation()          
         self.finalize_simulation()
-        performance_metrics = self.sim_setup.calculate_performance_metrics()
-        self.sim_setup.save_results(performance_metrics)
+        # performance_metrics = self.sim_setup.calculate_performance_metrics()
+        # self.sim_setup.save_results(performance_metrics)
 
     def finalize_simulation(self):
-        self.print_total_time_to_run()
-        if self.env.now > 0:
-            performance_metrics = self.sim_setup.calculate_performance_metrics()
-            self.sim_setup.save_results(performance_metrics)
+        if not self.sim_setup.sim_mode['client_server']:
+            self.print_total_time_to_run()
+            if self.env.now > 0:
+                performance_metrics = self.sim_setup.calculate_performance_metrics()
+                self.sim_setup.save_results(performance_metrics)
 
     def run_uninterrupted_simulation(self):
         """
@@ -141,13 +142,13 @@ class VertiSim:
         mask = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if aircraft.status == AircraftStatus.IDLE \
-                and aircraft.soc != 100 \
+                and aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment'] \
                     and aircraft.soc > self.config['aircraft_params']['min_reserve_soc']:
                 mask.append([1, 1, 1])
             elif aircraft.status == AircraftStatus.IDLE \
                     and aircraft.soc <= self.config['aircraft_params']['min_reserve_soc']:
                 mask.append([1, 1, 0])
-            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc == 100:
+            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc >= 100-self.config['external_optimization_params']['soc_increment']+1:
                 mask.append([1, 0, 1])
             elif aircraft.status == AircraftStatus.CHARGE:
                 mask.append([1, 0, 0])
@@ -241,8 +242,8 @@ class VertiSim:
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
             print("Demand satisfied")
             self.sim_setup.print_passenger_trip_time_stats()
-            self.sim_setup.system_manager.reward += \
-                self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
+            # self.sim_setup.system_manager.reward += \
+            #     self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
             self.terminal_event.succeed()
             return True
         return False
@@ -305,9 +306,11 @@ class VertiSim:
                 self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
             self.sim_setup.system_manager.truncation_penalty * \
                  self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty'] + \
-                self.sim_setup.system_manager.reward + \
+                self.sim_setup.system_manager.occupancy_reward + \
                 self.sim_setup.system_manager.spill_counter * \
-                self.config['external_optimization_params']['reward_function_parameters']['spill_cost']
+                self.config['external_optimization_params']['reward_function_parameters']['spill_cost'] +\
+                self.sim_setup.system_manager.charge_reward * \
+                self.config['external_optimization_params']['reward_function_parameters']['charge_reward']
     
     def reset_rewards(self):
         """
@@ -316,8 +319,9 @@ class VertiSim:
         self.sim_setup.system_manager.trip_counter = 0
         self.sim_setup.system_manager.trip_time_counter = 0
         self.sim_setup.system_manager.truncation_penalty = 0
-        self.sim_setup.system_manager.reward = 0
+        self.sim_setup.system_manager.occupancy_reward = 0
         self.sim_setup.system_manager.spill_counter = 0
+        self.sim_setup.system_manager.charge_reward = 0
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):
@@ -398,7 +402,7 @@ class VertiSim:
     def print_total_time_to_run(self):
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        # print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')   
+        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')   
     
     def get_performance_metrics(self):
         return fetch_latest_data_from_db(db_path='sqlite/db/vertisimDatabase.sqlite')

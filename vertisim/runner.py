@@ -5,7 +5,7 @@ import simpy
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run VertiSim with a configuration file')
-    parser.add_argument('--config', type=str, help='Path to the config.json file')
+    parser.add_argument('-i', '--config', type=str, help='Path to the config.json file')
     return parser.parse_args()
 
 def runner():

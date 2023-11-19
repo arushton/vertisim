@@ -1,6 +1,7 @@
 import random
 import math
 import numpy as np
+import os
 from enum import Enum
 from ..utils.units import sec_to_ms
 from typing import List, Union, Dict, Any, Optional
@@ -65,6 +66,17 @@ def get_key_from_value(dictionary, search_val):
     :return:
     """
     return [key for key, value in dictionary.items() if search_val == value][0]
+
+
+def flatten_dict(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = f'{parent_key}{sep}{k}' if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
 
 def get_key(my_dict, key):
@@ -524,6 +536,63 @@ def get_truncation_events(env: simpy.Environment, truncation_events: List, aircr
             key = f"{event_name}_{aircraft_id}"
             events[key] = env.event()
     return events
+
+
+def write_to_db(db_path, table_name, dic):
+    """
+    Write a dictionary to a database.
+
+    :param db_path: Path to the SQLite database file.
+    :param dic: Dictionary containing data to write.
+    :param table_name: Name of the table to write to.    
+    """
+    import sqlite3
+    # Connect to SQLite database
+    conn = sqlite3.connect(db_path)
+    # Create a cursor object
+    cursor = conn.cursor()
+    # Create a table with REAL data type for all columns
+    columns = ', '.join([f"{key} REAL" for key in dic.keys()])
+    cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns})")    
+    # Insert a row of data
+    placeholders = ', '.join(['?'] * len(dic))
+    cursor.execute(f"INSERT INTO {table_name} ({', '.join(dic.keys())}) VALUES ({placeholders})", list(dic.values()))
+    # Save (commit) the changes
+    conn.commit()
+    # Close the connection
+    conn.close()
+
+
+def add_and_update_db_from_dict(db_path, table_name, new_column_name, new_column_type, data_dict):
+    """
+    Add a new column to an existing table in a SQLite database and update its values based on a dictionary.
+
+    :param db_path: Path to the SQLite database file.
+    :param table_name: Name of the table to modify.
+    :param new_column_name: Name of the new column to add.
+    :param new_column_type: Data type of the new column.
+    :param data_dict: Dictionary with passenger_id as keys and the new column's values.
+    """
+    import sqlite3
+    # Connect to SQLite database
+    conn = sqlite3.connect(db_path)
+    # Create a cursor object
+    cursor = conn.cursor()
+
+    # Add a new column to the table
+    cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {new_column_name} {new_column_type}")
+
+    # Prepare data for batch update
+    update_data = [(value, key) for key, value in data_dict.items()]
+
+    # Use executemany for more efficient batch updates
+    cursor.executemany(f"UPDATE {table_name} SET {new_column_name} = ? WHERE passenger_id = ?", update_data)
+
+    # Save (commit) the changes
+    conn.commit()
+    # Close the connection
+    conn.close()
+
 
 
 

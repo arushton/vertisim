@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 from collections import deque
 import numpy as np
 import random
+from ..utils.get_state_variables import get_simulator_states
 from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
 from ..utils.weighted_random_chooser import random_choose_exclude_element
@@ -20,6 +21,7 @@ class RLSystemManager(BaseSystemManager):
                  airspace: object,
                  taxi_config: object,
                  sim_params: Dict,
+                 output_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: Dict,
                  passenger_distributions: Dict,                 
@@ -42,6 +44,7 @@ class RLSystemManager(BaseSystemManager):
                         airspace=airspace,
                         taxi_config=taxi_config,
                         sim_params=sim_params,
+                        output_params=output_params,
                         aircraft_params=aircraft_params,
                         vertiport_distances=vertiport_distances,
                         passenger_distributions=passenger_distributions,
@@ -63,7 +66,8 @@ class RLSystemManager(BaseSystemManager):
         self.total_demand = 0
         self.trip_time_counter = 0
         self.truncation_penalty = 0
-        self.reward = 0
+        self.charge_reward = 0
+        self.occupancy_reward = 0
         self.triggered_stopping_event_queue = deque()
         # self.env.process(self.check_passenger_max_waiting_time_threshold())
     
@@ -127,10 +131,10 @@ class RLSystemManager(BaseSystemManager):
         # Increase the passenger trip counter
         self.trip_counter += len(aircraft.passengers_onboard)         
 
-        if len(departing_passengers) == 0:
-            self.reward -= 1000
-        elif len(departing_passengers) > 2:
-            self.reward += 1000 * len(departing_passengers)
+        # if len(departing_passengers) == 0:
+        #     self.occupancy_reward -= 1
+        # elif len(departing_passengers) > 0:
+        #     self.occupancy_reward += 1 * len(departing_passengers)
 
         self.trip_time_counter += sec_to_min(self.initial_flight_duration_estimate(origin_id=aircraft.destination_vertiport_id,
                                                                         destination_id=destination_vertiport_id,

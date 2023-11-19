@@ -24,6 +24,7 @@ from .performance_metrics import PerformanceMetrics
 from .save_output import save_output
 from .scheduler import Scheduler
 from .wind.wind import Wind
+from .utils.units import mph_to_metersec, degrees_to_radians
 from .logger import Logger
 from .run_step_by_step_simulation import run_step_by_step_simulation
 from .utils.create_output_folders import create_output_folders
@@ -65,6 +66,9 @@ class SimSetup:
 
         self.sim_start_timestamp = 0 #sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
+        # Get a random id for the simulation
+        self.sim_id = get_random_id()
+        self.sim_params['sim_id'] = self.sim_id        
         self.env = env
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
@@ -90,7 +94,8 @@ class SimSetup:
             self.fixed_schedule = True
         else:
             self.fixed_schedule = False
-
+        
+        self.create_training_db_path()
         self.scheduler = self.create_scheduler()
         self.system_manager = self.create_system_manager()
 
@@ -112,6 +117,12 @@ class SimSetup:
         vertiport_logger.create_logger(name='vertiport', env=self.env)
 
         return logger, aircraft_logger, passenger_logger, vertiport_logger
+        
+    def create_training_db_path(self):
+        if self.sim_params['training_data_collection']:
+            self.output_params['state_trajectory_db_path'] = os.path.join(self.output_folder_path, self.output_params['state_trajectory_db_name'])
+        else:
+            self.output_params['state_trajectory_db_path'] = None
 
     def create_vertiport_layout(self):
         """
@@ -142,8 +153,8 @@ class SimSetup:
         Creates the wind module
         """
         return Wind(static_wind=self.airspace_params['static_wind'],
-                    wind_magnitude=self.airspace_params['wind_magnitude'],
-                    wind_angle=self.airspace_params['wind_angle'],
+                    wind_magnitude=mph_to_metersec(self.airspace_params['wind_magnitude_mph']),
+                    wind_angle=degrees_to_radians(self.airspace_params['wind_angle_degrees']),
                     wind_data_file_path=self.airspace_params['wind_data_file_path'])
     
     def compute_vertiport_distances(self) -> pd.DataFrame:
@@ -349,6 +360,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
                 'passenger_distributions': self.passenger_distributions,
@@ -369,6 +381,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
                 'passenger_distributions': self.passenger_distributions,
@@ -392,6 +405,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
                 'passenger_distributions': self.passenger_distributions,
@@ -411,13 +425,11 @@ class SimSetup:
         if self.sim_mode['offline_optimization']:
             return OfflineOptimizationChargingStrategy()
         elif self.sim_mode['client_server']:
-            return RLChargingStrategy()
+            return RLChargingStrategy(soc_increment=self.external_optimization_params['soc_increment'])
         else:
             return OnDemandChargingStrategy()
 
     def calculate_performance_metrics(self):
-        # Get a random id for the simulation
-        self.sim_id = get_random_id()
         # Print and save performance metrics
         # print("Calculating performance metrics... \n")
         return PerformanceMetrics(sim_start_timestamp=self.sim_start_timestamp,
@@ -429,6 +441,9 @@ class SimSetup:
                                   flight_directions=self.airspace.flight_directions,
                                   sim_id=self.sim_id,
                                   sim_end_timestamp=self.env.now,
+                                  client_server_mode=self.sim_mode['client_server'],
+                                  sim_params=self.sim_params,
+                                  output_params=self.output_params,
                                   verbose=self.sim_params['verbose']).performance_metrics
     
     def print_passenger_trip_time_stats(self):
@@ -438,19 +453,18 @@ class SimSetup:
 
     def save_results(self, performance_metrics):
         # Save the results
-        output_path = save_output(
-                        simulation_params={
-                            'sim_params': self.sim_params,
-                            'network_and_demand': self.network_and_demand_params,
-                            'passenger_params': self.passenger_params,
-                            'aircraft_params': self.aircraft_params,
-                            'airspace_params': self.airspace_params,
-                            'output_params': self.output_params
-                        },
-                        performance_metrics=performance_metrics,
-                        simulationID=self.sim_id,
-                        flight_directions=self.airspace.flight_directions
-                    )
+        save_output(simulation_params={
+                        'sim_params': self.sim_params,
+                        'network_and_demand': self.network_and_demand_params,
+                        'passenger_params': self.passenger_params,
+                        'aircraft_params': self.aircraft_params,
+                        'airspace_params': self.airspace_params,
+                        'output_params': self.output_params
+                    },
+                    performance_metrics=performance_metrics,
+                    simulationID=self.sim_id,
+                    flight_directions=self.airspace.flight_directions
+                )
         # print(f"Success: Results are saved in {output_path}.")
 
 

@@ -6,9 +6,10 @@ from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
 from ..utils.distribution_generator import DistributionGenerator
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
-    get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
+    get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round, flatten_dict, write_to_db
 from ..aircraft.battery_model import BatteryModel
 from ..aircraft.aircraft import Aircraft, AircraftStatus
+from ..utils.get_state_variables import get_simulator_states
 import pandas as pd
 from enum import Enum
 from collections import defaultdict
@@ -26,6 +27,7 @@ class OnDemandSystemManager(BaseSystemManager):
                  airspace: object,
                  taxi_config: object,
                  sim_params: Dict,
+                 output_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: Dict,
                  passenger_distributions: Dict,                 
@@ -45,6 +47,7 @@ class OnDemandSystemManager(BaseSystemManager):
                         airspace=airspace,
                         taxi_config=taxi_config,
                         sim_params=sim_params,
+                        output_params=output_params,
                         aircraft_params=aircraft_params,
                         vertiport_distances=vertiport_distances,
                         passenger_distributions=passenger_distributions,
@@ -93,6 +96,11 @@ class OnDemandSystemManager(BaseSystemManager):
 
             self.logger.debug(f"Passengers {[passenger.passenger_id for passenger in departing_passengers]} are ready to depart from {origin_vertiport_id} to {destination_vertiport_id}")
 
+            # Put passengers into the flight request queue
+            for passenger in departing_passengers:
+                self.vertiports[origin_vertiport_id].flight_request_stores[destination_vertiport_id].put(passenger)
+                passenger.flight_queue_store = self.vertiports[origin_vertiport_id].flight_request_stores[destination_vertiport_id]
+
             # Increase passenger queue count
             self.event_saver.update_passenger_departure_queue_counter(vertiport_id=origin_vertiport_id, queue_update=1)
 
@@ -105,7 +113,7 @@ class OnDemandSystemManager(BaseSystemManager):
         if self.sim_params['fleet_rebalancing']:
             num_available_aircraft_at_origin = self.check_num_available_aircraft(origin_vertiport_id)
             num_available_aircraft_at_dest = self.check_num_available_aircraft(destination_vertiport_id)
-            num_pax_groups = int(self.get_num_waiting_passengers(passengers_waiting_room) / self.aircraft_params['pax'])
+            num_pax_groups = int(self.get_num_waiting_passengers(origin_vertiport_id) / self.aircraft_params['pax'])
             required_aircraft = max(num_pax_groups - num_available_aircraft_at_origin, 0)
             self.logger.debug(f"# of available aircraft at {origin_vertiport_id}: {num_available_aircraft_at_origin}/{self.vertiports[origin_vertiport_id].num_aircraft}, # of available aircraft at {destination_vertiport_id}: {num_available_aircraft_at_dest}/{self.vertiports[destination_vertiport_id].num_aircraft}")
             self.logger.debug(f"Required aircraft for rebalancing: {required_aircraft}. # of pax groups: {num_pax_groups}")
@@ -118,11 +126,11 @@ class OnDemandSystemManager(BaseSystemManager):
                                                             destination_vertiport_id=origin_vertiport_id,
                                                             departing_passengers=[]))                
 
-    def get_num_waiting_passengers(self, passengers_waiting_room: simpy.Store):
+    def get_num_waiting_passengers(self, origin_vertiport_id: str):
         """
         Checks the demand for the given vertiport
         """
-        return len(passengers_waiting_room.items)    
+        return self.vertiports[origin_vertiport_id].get_passenger_count()
 
     def reserve_aircraft(self, 
                          origin_vertiport_id: Any, 
@@ -152,6 +160,9 @@ class OnDemandSystemManager(BaseSystemManager):
         aircraft.flight_id = flight_id
         # Measure and save the aircraft allocation time
         self.save_aircraft_allocation_time(origin_vertiport_id, aircraft, aircraft_allocation_start_time)
+
+        # Remove passengers from the flight queue
+        self.scheduler.pop_passengers_from_flight_queue_by_id(passengers=departing_passengers)
 
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.add_additional_passengers_if_needed(origin_vertiport_id, destination_vertiport_id, departing_passengers)
@@ -212,7 +223,10 @@ class OnDemandSystemManager(BaseSystemManager):
                     for destination in departing_passenger_groups[origin]:
                         departing_passengers = departing_passenger_groups[origin][destination]
                         for passenger in departing_passengers:
-                            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_waiting_room_departure')   
+                            self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_waiting_room_departure') 
+                            # Put passengers into the flight request queue
+                            self.vertiports[origin].flight_request_stores[destination].put(passenger)
+                            passenger.flight_queue_store = self.vertiports[origin].flight_request_stores[destination]  
                         # Increase passenger queue count
                         self.event_saver.update_passenger_departure_queue_counter(vertiport_id=origin, 
                                                                                 queue_update=len(departing_passenger_groups))   
@@ -244,10 +258,26 @@ class OnDemandSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
+        if self.sim_params['training_data_collection']:
+            self.save_state_variables_for_training(passenger_id=passenger.passenger_id)
+
+        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Flight queue: {[p.passenger_id for p in self.vertiports[passenger.origin_vertiport_id].flight_request_stores[passenger.destination_vertiport_id].items]}")
         # Trigger scheduler
         yield self.env.process(self.trigger_scheduler(origin_vertiport_id=passenger.origin_vertiport_id,
                                                     destination_vertiport_id=passenger.destination_vertiport_id, 
-                                                    passengers_waiting_room=passengers_waiting_room))                    
+                                                    passengers_waiting_room=passengers_waiting_room))  
+
+    def save_state_variables_for_training(self, passenger_id):
+        states = get_simulator_states(vertiports=self.vertiports,
+                                      aircraft_agents=self.aircraft_agents,
+                                      num_initial_aircraft=self.num_initial_aircraft,
+                                      simulation_states=self.sim_params['simulation_states'])
+        states['passenger_id'] = passenger_id
+        states['sim_id'] = self.sim_params['sim_id']
+        states = flatten_dict(states)
+        write_to_db(db_path=self.output_params['state_trajectory_db_path'], 
+                    table_name=self.output_params['state_trajectory_db_tablename'],
+                    dic=states)
         
     def check_holding_aircraft(self, flight_direction: str, origin_vertiport_id: Any, destination_vertiport_id: Any):
         arrival_fix_resource = self.get_second_to_last_airlink_resource(flight_direction=flight_direction).airnode_resource
@@ -327,7 +357,10 @@ class OnDemandSystemManager(BaseSystemManager):
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                            aircraft=aircraft)              
+                                                            aircraft=aircraft)    
+
+            # print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
+
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
