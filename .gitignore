@@ -126,3 +126,6 @@ dmypy.json
 
 # Database
 *.sqlite
+
+# MacOS Random Files
+._*
