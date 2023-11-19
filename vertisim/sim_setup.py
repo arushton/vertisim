@@ -24,6 +24,7 @@ from .performance_metrics import PerformanceMetrics
 from .save_output import save_output
 from .scheduler import Scheduler
 from .wind.wind import Wind
+from .utils.units import mph_to_metersec, degrees_to_radians
 from .logger import Logger
 from .run_step_by_step_simulation import run_step_by_step_simulation
 from .utils.create_output_folders import create_output_folders
@@ -152,8 +153,8 @@ class SimSetup:
         Creates the wind module
         """
         return Wind(static_wind=self.airspace_params['static_wind'],
-                    wind_magnitude=self.airspace_params['wind_magnitude'],
-                    wind_angle=self.airspace_params['wind_angle'],
+                    wind_magnitude=mph_to_metersec(self.airspace_params['wind_magnitude_mph']),
+                    wind_angle=degrees_to_radians(self.airspace_params['wind_angle_degrees']),
                     wind_data_file_path=self.airspace_params['wind_data_file_path'])
     
     def compute_vertiport_distances(self) -> pd.DataFrame:

@@ -742,7 +742,7 @@ class PerformanceMetrics:
         # self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
         self.print_flight_duration_stats()
-        # self.print_energy_consumption_stats()
+        self.print_energy_consumption_stats()
         # self.print_aircraft_throughput_stats_for_each_hr_verbose()
         # self.print_average_aircraft_throughput()
         # self.print_fato_utilization()

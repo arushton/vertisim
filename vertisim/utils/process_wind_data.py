@@ -48,7 +48,7 @@ class WindDataProcessor:
     @staticmethod
     def convert_winddata_units(wind_data):
         wind_data['windspeed'] = wind_data['windspeed'].apply(mph_to_metersec)
-        wind_data['winddir'] = wind_data['winddir'].apply(lambda x: round(x * pi / 180, 4))
+        wind_data['winddir'] = wind_data['winddir'].apply(degrees_to_radians)
         return wind_data
 
 

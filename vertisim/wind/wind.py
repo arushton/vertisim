@@ -95,8 +95,7 @@ class Wind:
         
         return heading_to_vector(wind_origin_heading + pi, magnitude=wind_magnitude)        
     
-    @staticmethod
-    def compute_aircraft_velocity(aircraft: Aircraft, true_airspeed_desired: float) -> (np.ndarray, np.ndarray):
+    def compute_aircraft_velocity(self, aircraft: Aircraft, true_airspeed_desired: float) -> (np.ndarray, np.ndarray):
         """ Computes the true velocity vector of the aircraft such that the aircraft flies toward its 
         destination with respect to the ground in the presence of cross wind, while only applying the 
         desired (power optimal) true airspeed.
@@ -109,12 +108,14 @@ class Wind:
         aircraft flies in the right direction relative to the ground in the presence of crosswind."""
         
         # compute wind vector in the context of the aircraft
-        if aircraft.wind.static_wind:
-            v_wind: np.ndarray = Wind.make_static_wind_vector_relative_to_the_aircraft(aircraft.wind.wind_angle, aircraft.destination_heading, aircraft.wind.wind_magnitude)
+        if self.static_wind == 'relative_to_aircraft':
+            v_wind: np.ndarray = Wind.make_static_wind_vector_relative_to_the_aircraft(self.wind_angle, aircraft.destination_heading, self.wind_magnitude)
+        elif self.static_wind == 'relative_to_north':
+            v_wind: np.ndarray = Wind.make_wind_vector_relative_to_north(self.wind_angle, self.wind_magnitude)
         else:
             wind_impact_area: str = aircraft.closest_vertiport_to_aircraft(location=aircraft.location, 
-                                                                origin_vertiport_id=aircraft.origin_vertiport_id,
-                                                                destination_vertiport_id=aircraft.destination_vertiport_id)
+                                                                           origin_vertiport_id=aircraft.origin_vertiport_id,
+                                                                           destination_vertiport_id=aircraft.destination_vertiport_id)
             wind_states: Dict = aircraft.wind.get_time_and_location_specific_wind_states(time_of_day=int(ms_to_hr(aircraft.env.now)) % 24,
                                                                                              location=wind_impact_area,
                                                                                              locations=aircraft.system_manager.vertiport_ids)
