@@ -2,7 +2,12 @@ import sqlite3
 import datetime
 from collections import defaultdict
 from json import dumps
+import json
+from typing import Dict, List
+import pandas as pd
 import os
+from .utils.json_formatter import create_trajectory_json
+from .utils.helpers import get_str_before_first_occurrence_of_char
 
 def create_connection(db_file: str):
     try:
@@ -13,14 +18,32 @@ def create_connection(db_file: str):
         return None
     
 def save_output(simulation_params: dict, 
+                trajectories: dict,
                 performance_metrics: defaultdict, 
                 simulationID: str, 
-                flight_directions: list,
-                output_path : str = 'sqlite/db/vertisimDatabase.sqlite') -> str:
+                flight_directions: list) -> str:
+
+    # Save trajectories
+    if simulation_params['sim_params']['save_trajectories']:
+        save_trajectories(trajectories=trajectories,
+                          simulation_params=simulation_params,
+                          output_dir=simulation_params['output_params']['output_folder_path'])                
     
+    # Save performance metrics
+    save_performance_metrics(simulation_params=simulation_params,
+                                performance_metrics=performance_metrics,
+                                simulationID=simulationID,
+                                flight_directions=flight_directions)
+    
+def save_performance_metrics(simulation_params: dict,
+                             performance_metrics: defaultdict,
+                             simulationID: str,
+                             flight_directions: list) -> str:
+
+    output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/db/vertisimDatabase.sqlite"
     # If path doesn't exist, create it
-    if not os.path.exists('sqlite/db'):
-        os.makedirs('sqlite/db')
+    if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db"):
+        os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db")
 
     conn = create_connection(output_path)
     assert conn, 'Could not establish database connection.'
@@ -103,3 +126,34 @@ def save_output(simulation_params: dict,
     conn.close()
     
     return os.getcwd() + output_path
+
+
+def save_trajectories(trajectories: Dict,
+                      simulation_params: Dict,
+                      output_dir: str) -> None:
+    # Save agent trajectories
+    for key, value in trajectories.items():
+        df = convert_dict_to_dataframe(dic=value, orient='index')
+        trajectory_output_file_name = get_output_filename(output_dir=output_dir, file_name=key)
+        save_df_to_csv(df=df, output_file_name=trajectory_output_file_name)
+
+        # Convert trajectory df to geoJSON and save
+        agent_type = get_str_before_first_occurrence_of_char(key, '_')
+        if json_trajectory := create_trajectory_json(
+                df=df, agent_type=agent_type,
+                only_aircraft_simulation=simulation_params['sim_params']['only_aircraft_simulation']
+        ):
+            with open(trajectory_output_file_name + '.geojson', 'w') as f:
+                json.dump(json_trajectory, f)
+
+def convert_dict_to_dataframe(dic: Dict, orient: str = 'columns') -> pd.DataFrame:
+    df = pd.DataFrame.from_dict(dic, orient=orient)
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'time'}, inplace=True)
+    return df
+
+def get_output_filename(output_dir: str, file_name: str) -> str:
+    return os.path.join(output_dir, file_name)
+
+def save_df_to_csv(df: pd.DataFrame, output_file_name: str) -> None:
+    df.to_csv(f'{output_file_name}.csv')

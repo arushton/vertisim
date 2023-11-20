@@ -64,7 +64,7 @@ class SimSetup:
         self.truncation_events = truncation_events
         self.truncation_event = truncation_event
 
-        self.sim_start_timestamp = 0 #sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
+        self.sim_start_timestamp = sec_to_ms(1686873600)  # Friday, June 16, 2023 12:00:00 AM
         set_seed(sim_params['random_seed'])
         # Get a random id for the simulation
         self.sim_id = get_random_id()
@@ -460,6 +460,10 @@ class SimSetup:
                         'aircraft_params': self.aircraft_params,
                         'airspace_params': self.airspace_params,
                         'output_params': self.output_params
+                    },
+                    trajectories={
+                        'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
+                        'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory                        
                     },
                     performance_metrics=performance_metrics,
                     simulationID=self.sim_id,
