@@ -251,9 +251,9 @@ class EventSaver:
         :param event:
         """          
         if self.sim_params['save_trajectories']:
-            time = round(time)
             time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                         sim_time=self.env.now)
+            time = round(time)
             time = self.is_time_overlapping(time=time, agent_type=agent_type)
             if agent_type == 'aircraft':
                 self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent.tail_number}'
