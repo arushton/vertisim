@@ -82,6 +82,7 @@ class RLSystemManager(BaseSystemManager):
         if destination_vertiport_id is None:
             destination_vertiport_id = self.get_random_destination(aircraft=aircraft)
             
+        # print(f"Will reserve aircraft: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {miliseconds_to_hms(self.env.now)}")
         # Truncate if the aircraft is not at the vertiport
         if aircraft.tail_number not in self.get_available_aircraft_tail_numbers(vertiport_id=aircraft.destination_vertiport_id):
             print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
@@ -103,14 +104,14 @@ class RLSystemManager(BaseSystemManager):
         aircraft.status = AircraftStatus.FLY    
         # Set the assignment process True
         aircraft.is_process_completed = True 
-        # print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}")
         # Update the number of aircraft at the vertiport
         self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)        
         # Update the vertiport flight request state
         self.vertiports[aircraft.destination_vertiport_id].num_flight_requests -= 1    
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.scheduler.collect_departing_passengers_by_od_vertiport(
-            origin_vertiport_id=aircraft.destination_vertiport_id, destination_vertiport_id=destination_vertiport_id)                  
+            origin_vertiport_id=aircraft.destination_vertiport_id, destination_vertiport_id=destination_vertiport_id)   
+        # print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location} with passengers: {[p.passenger_id for p in departing_passengers]}. Time: {miliseconds_to_hms(self.env.now)}")                       
         # Set the real pushback time of the aircraft 
         aircraft.pushback_time = pushback_time
         # Set the flight direction of the aircraft
@@ -358,7 +359,7 @@ class RLSystemManager(BaseSystemManager):
         self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
         # if len(passengers_waiting_room.items) > 1:
-        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time: {self.env.now}")
+        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time: {miliseconds_to_hms(self.env.now)}")
         event_name=f"passenger_arrival_event_{passenger.passenger_id % 100}"
         self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
         # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")        

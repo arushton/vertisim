@@ -1049,6 +1049,14 @@ class Aircraft:
             self.system_manager.truncation_penalty += 1
             self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
         old_soc = round(self.soc)
+        
+        if self.system_manager.sim_mode == 'client_server':     
+            # Reward for charging
+            if old_soc <= 70:
+                self.system_manager.charge_reward += 1*round(old_soc/100, 2)
+            else:
+                self.system_manager.charge_reward -= 1  
+
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                       parking_space=parking_space, 
@@ -1060,11 +1068,6 @@ class Aircraft:
         # self.system_manager.reward += 100
         # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")
         if self.system_manager.sim_mode == 'client_server':
-            # Reward for charging
-            if old_soc <= 70:
-                self.system_manager.charge_reward += 1*round(old_soc/100, 2)
-            else:
-                self.system_manager.charge_reward -= 1
             self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 
