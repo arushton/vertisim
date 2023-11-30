@@ -47,6 +47,7 @@ def fetch_latest_data_from_db(db_path):
     try:
         # Connect to the SQLite database
         conn = sqlite3.connect(db_path)
+
         # Formulate the SQL query to join the tables on 'SimulationID' and select the required columns
         # Orders by Timestamp descending and limits the result to the latest entry
         query = """
@@ -70,5 +71,5 @@ def fetch_latest_data_from_db(db_path):
     
     except sqlite3.Error as e:
         # If an error occurs, return the error message
-        return {'status': 'Database is not ready. Wait...', 'error': str(e)}
+        return {'status': f'Database is not ready. Wait... {db_path}', 'error': str(e), }
 

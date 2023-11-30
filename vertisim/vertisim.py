@@ -65,8 +65,8 @@ class VertiSim:
         # This only runs uninterrupted simulation. No distinction for online optimization
         self.run_uninterrupted_simulation()          
         self.finalize_simulation()
-        # performance_metrics = self.sim_setup.calculate_performance_metrics()
-        # self.sim_setup.save_results(performance_metrics)
+        performance_metrics = self.sim_setup.calculate_performance_metrics()
+        self.sim_setup.save_results(performance_metrics)
 
     def finalize_simulation(self):
         if not self.sim_setup.sim_mode['client_server']:
@@ -453,4 +453,4 @@ class VertiSim:
         print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')   
     
     def get_performance_metrics(self):
-        return fetch_latest_data_from_db(db_path='sqlite/db/vertisimDatabase.sqlite')
+        return fetch_latest_data_from_db(db_path=f"{self.config['output_params']['output_folder_path']}/sqlite/db/vertisimDatabase.sqlite")

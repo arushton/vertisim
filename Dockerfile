@@ -8,11 +8,21 @@ ENV PYTHONUNBUFFERED 1
 # Set the working directory in the container to /app
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app/
+# Copy the entire vertisim directory
+COPY ./vertisim /app/vertisim
+COPY ./config.json /app/config.json
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Add /app to the PYTHONPATH
+ENV PYTHONPATH /app
+
+# Update pip and install packages individually
+RUN pip install --no-cache-dir numpy && \
+    pip install --no-cache-dir matplotlib && \
+    pip install --no-cache-dir networkx && \
+    pip install --no-cache-dir geog && \
+    pip install --no-cache-dir pandas
+
+RUN pip install --no-cache-dir -r /app/vertisim/requirements.txt
 
 # Expose the port the app runs on
 EXPOSE 5001

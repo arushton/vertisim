@@ -19,7 +19,7 @@ def haversine_dist(lat1: float, lon1: float, lat2: float, lon2: float, unit: str
     a = np.sin(d_lat / 2) ** 2 + np.cos(lat1_rad) * np.cos(lat2_rad) * np.sin(d_lon / 2) ** 2
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
-    return round(r * c)
+    return round(r * c, 2)
 
 
 # Compute 3D distance between two points
