@@ -453,4 +453,4 @@ class VertiSim:
         print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')   
     
     def get_performance_metrics(self):
-        return fetch_latest_data_from_db(db_path=f"{self.config['output_params']['output_folder_path']}/sqlite/db/vertisimDatabase.sqlite")
+        return fetch_latest_data_from_db(db_path="sqlite/db/vertisimDatabase.sqlite")

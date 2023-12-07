@@ -71,5 +71,5 @@ def fetch_latest_data_from_db(db_path):
     
     except sqlite3.Error as e:
         # If an error occurs, return the error message
-        return {'status': f'Database is not ready. Wait... {db_path}', 'error': str(e), }
+        return {'status': f'Database is not ready. Wait...', 'error': str(e), }
 
