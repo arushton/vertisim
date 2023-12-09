@@ -1053,7 +1053,7 @@ class Aircraft:
         if self.system_manager.sim_mode == 'client_server':     
             # Reward for charging
             if old_soc <= 70:
-                self.system_manager.charge_reward += 1*round(old_soc/100, 2)
+                self.system_manager.charge_reward += 1*round(1-(old_soc/100), 2)
             else:
                 self.system_manager.charge_reward -= 1  
 

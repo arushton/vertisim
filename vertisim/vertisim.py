@@ -99,14 +99,17 @@ class VertiSim:
         # self.reset_rewards()
         # # Get the number of triggers for this step
         total_triggers = sum(action != 0 for action in actions)
-        # Apply the action
+        # Apply the actions 
         self.env.process(self.apply_action(actions))
-        # Advance to the next stopping event
+        # Advance to the next stopping event. The returned state and rewward pair should be
+        # the state and reward after all the actions are applied.
         return self.advance_to_next_stopping_event_setting_2(total_triggers)
        
     def apply_action(self, action: np.array):
         """
         Apply action to the simulation.
+        We change the state of the aircrafts based on the action before we step the simulation
+        to be able to calculate the reward at the same time for the given action list.
 
         Actions:
         0: Do nothing
@@ -121,11 +124,11 @@ class VertiSim:
             if action[aircraft_id] == 0:
                 aircraft.is_process_completed = True
             if action[aircraft_id] == 1:
-                if aircraft.status == AircraftStatus.IDLE:
+                if aircraft.status == AircraftStatus.IDLE: #TODO: Check if this is necessary
                     aircraft.status = AircraftStatus.CHARGE
                     aircraft.is_process_completed = False
             elif action[aircraft_id] == 2:
-                if aircraft.status == AircraftStatus.IDLE:
+                if aircraft.status == AircraftStatus.IDLE: #TODO: Check if this is necessary
                     aircraft.status = AircraftStatus.FLY  
                     aircraft.is_process_completed = False    
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -245,6 +248,7 @@ class VertiSim:
 
             # Check if any events in stopping_events have triggered.
             for event_name, event in self.stopping_events.items():
+                # We don't 
                 if event.triggered and (event_name.startswith("passenger_arrival") and event_name not in stopped_events):
                     self._reset_event(event_name)
                 if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
@@ -254,7 +258,8 @@ class VertiSim:
           
             # If there are any triggered stopping event, pop it out, reset it and return the states
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
-                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
+                # Pop the event on top of the queue
+                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop(0)
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
@@ -291,6 +296,9 @@ class VertiSim:
         return False
     
     def _reset_event(self, event_name):
+        """
+        Reset the event by creating a new event.
+        """
         self.stopping_events[event_name] = self.env.event()
 
     def _handle_end_of_simulation(self):
