@@ -14,6 +14,18 @@ def sec_to_ms(sec):
         raise TypeError(f"Can't convert sec to ms. Duration (sec) format is not correct. The type you inputted is {type(sec)}")
     else:
         return round(sec * 1000, 2)
+    
+def min_to_ms(min):
+    if min is None:
+        return None
+    elif type(min) in [np.ndarray, pd.core.series.Series]:
+        return round(min * 60000, 2)
+    elif type(min) == list:
+        return [round(i * 60000, 2) for i in min]
+    elif type(min) not in [int, float, np.float64, np.float32, np.int_]:
+        raise TypeError(f"Can't convert min to ms. Duration (min) format is not correct. The type you inputted is {type(min)}")
+    else:
+        return round(min * 60000, 2)
 
 
 def min_to_sec(min):

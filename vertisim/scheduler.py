@@ -113,19 +113,15 @@ class Scheduler:
                                                       self.aircraft_capacity - num_departing_passengers
                                                       )
 
-    def count_departing_passengers(self, current_waiting_room, num_departing_passengers):
+    def count_departing_passengers(self, current_waiting_room, seat_capacity):
         """
-        Counts the departing passengers from the waiting room
+        Counts the departing passengers in the given waiting room
         """
         departing_passengers = []
-        for _ in range(min(num_departing_passengers, len(current_waiting_room.items))):
+        for _ in range(min(seat_capacity, len(current_waiting_room.items))):
             # Collect agents from the waiting room as FIFO
             departing_passengers.append(current_waiting_room.items[0])
 
-        self.passenger_logger.debug(f"Departing passengers are counted by the Scheduler: {[p.passenger_id for p in departing_passengers]}."
-                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in departing_passengers]}."
-                                    f" Remaining passengers in the waiting room: {[p.passenger_id for p in current_waiting_room.items]}."
-                                    f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in current_waiting_room.items]}.")
         return departing_passengers
 
     def collect_departing_passengers(self, current_waiting_room, num_departing_passengers) -> Union[None, List]:

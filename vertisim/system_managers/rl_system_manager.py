@@ -67,13 +67,11 @@ class RLSystemManager(BaseSystemManager):
         self.trip_time_counter = 0
         self.truncation_penalty = 0
         self.charge_reward = 0
-        self.occupancy_reward = 0
         self.triggered_stopping_event_queue = deque()
         # self.env.process(self.check_passenger_max_waiting_time_threshold())
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
-        
         return random_choose_exclude_element(elements_list=self.vertiport_ids,
                                              exclude_element=aircraft.destination_vertiport_id,
                                              num_selection=1)[0]
@@ -100,9 +98,7 @@ class RLSystemManager(BaseSystemManager):
         # Retrieve aircraft from the store
         aircraft = yield self.retrieve_aircraft(aircraft.destination_vertiport_id, aircraft.tail_number) 
         # Set the status of the aircraft
-        aircraft.status = AircraftStatus.FLY    
-        # Set the assignment process True
-        aircraft.is_process_completed = True 
+        aircraft.status = AircraftStatus.FLY     
         # print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}")
         # Update the number of aircraft at the vertiport
         self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)        
@@ -136,9 +132,7 @@ class RLSystemManager(BaseSystemManager):
         # elif len(departing_passengers) > 0:
         #     self.occupancy_reward += 1 * len(departing_passengers)
 
-        self.trip_time_counter += sec_to_min(self.initial_flight_duration_estimate(origin_id=aircraft.destination_vertiport_id,
-                                                                        destination_id=destination_vertiport_id,
-                                                                        cruise_speed=aircraft.aircraft_params['cruise_speed']))
+        self.trip_time_counter += sec_to_min(self.get_average_flight_time(flight_direction=aircraft.flight_direction))
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.destination_vertiport_id, passengers=aircraft.passengers_onboard) 
@@ -213,11 +207,14 @@ class RLSystemManager(BaseSystemManager):
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
 
-            print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
+            # print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
 
             # print(f"Put aircraft into available aircraft store: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
-            aircraft.status = AircraftStatus.IDLE   
+            aircraft.status = AircraftStatus.IDLE  
+
+            # Set the FLY process complition True
+            aircraft.is_process_completed = True 
 
             self.trip_counter_tracker += len(aircraft.passengers_onboard) 
             aircraft.passengers_onboard = []

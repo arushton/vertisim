@@ -10,19 +10,20 @@ WORKDIR /app
 
 # Copy the entire vertisim directory
 COPY ./vertisim /app/vertisim
-COPY ./config.json /app/config.json
+# Copy the config file
+COPY ./configs/config_rl.json /app/config.json
 
 # Add /app to the PYTHONPATH
 ENV PYTHONPATH /app
 
 # Update pip and install packages individually
-RUN pip install --no-cache-dir numpy && \
-    pip install --no-cache-dir matplotlib && \
-    pip install --no-cache-dir networkx && \
-    pip install --no-cache-dir geog && \
-    pip install --no-cache-dir pandas
+RUN pip install numpy && \
+    pip install matplotlib && \
+    pip install networkx && \
+    pip install geog && \
+    pip install pandas
 
-RUN pip install --no-cache-dir -r /app/vertisim/requirements.txt
+RUN pip install -r /app/vertisim/requirements.txt
 
 # Expose the port the app runs on
 EXPOSE 5001

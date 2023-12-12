@@ -6,7 +6,9 @@ from .utils.helpers import get_stopping_events, get_truncation_events, milisecon
 import time
 import numpy as np
 import gymnasium as gym
+import pprint
 from .utils.get_state_variables import get_simulator_states
+from .utils import rl_utils
 from .utils.fetch_data_from_db import fetch_latest_data_from_db
 from .initiate_flow_entities import initiate_flow_entities
 from .utils.units import sec_to_ms, ms_to_hr
@@ -67,6 +69,7 @@ class VertiSim:
         self.finalize_simulation()
         performance_metrics = self.sim_setup.calculate_performance_metrics()
         self.sim_setup.save_results(performance_metrics)
+        self.sim_setup.print_passenger_trip_time_stats()
 
     def finalize_simulation(self):
         if not self.sim_setup.sim_mode['client_server']:
@@ -99,15 +102,15 @@ class VertiSim:
         # self.reset_rewards()
         # # Get the number of triggers for this step
         total_triggers = sum(action != 0 for action in actions)
-        # Apply the actions 
-        self.env.process(self.apply_action(actions))
+        # Apply the actions and rewards at the same time to keep the Markov property
+        self.env.process(self.apply_action_reward(actions))
         # Advance to the next stopping event. The returned state and rewward pair should be
         # the state and reward after all the actions are applied.
-        return self.advance_to_next_stopping_event_setting_2(total_triggers)
+        return self.advance_to_next_stopping_event_setting_3(total_triggers)
        
-    def apply_action(self, action: np.array):
+    def apply_action_reward(self, action: np.array):
         """
-        Apply action to the simulation.
+        Apply action to the simulation and compute the reward before execution.
         We change the state of the aircrafts based on the action before we step the simulation
         to be able to calculate the reward at the same time for the given action list.
 
@@ -123,14 +126,19 @@ class VertiSim:
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 0:
                 aircraft.is_process_completed = True
-            if action[aircraft_id] == 1:
-                if aircraft.status == AircraftStatus.IDLE: #TODO: Check if this is necessary
-                    aircraft.status = AircraftStatus.CHARGE
-                    aircraft.is_process_completed = False
+            elif action[aircraft_id] == 1:
+                aircraft.status = AircraftStatus.CHARGE
+                aircraft.is_process_completed = False
             elif action[aircraft_id] == 2:
-                if aircraft.status == AircraftStatus.IDLE: #TODO: Check if this is necessary
-                    aircraft.status = AircraftStatus.FLY  
-                    aircraft.is_process_completed = False    
+                aircraft.status = AircraftStatus.FLY  
+                aircraft.is_process_completed = False    
+            # else:
+            #     raise ValueError(f"Invalid action: {action[aircraft_id]}")
+            
+        # Compute the reward
+        # self.reward = self.calculate_reward(action)
+
+        # Apply the actions
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if action[aircraft_id] == 1:
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
@@ -140,6 +148,50 @@ class VertiSim:
                 # print(f"Flight assigned to aircraft {aircraft.tail_number} at time {miliseconds_to_hms(self.env.now)}")
         yield self.env.all_of(process_list)
 
+    def calculate_reward(self, action):
+        total_reward = 0
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if action[aircraft_id] == 1:
+                charge_reward = rl_utils.charge_reward(current_soc=aircraft.soc,
+                                                       soc_reward_threshold=self.config['external_optimization_params']
+                                                       ['reward_function_parameters']
+                                                       ['soc_reward_threshold'])
+                total_reward += charge_reward * self.config['external_optimization_params']['reward_function_parameters']['charge_reward']
+            elif action[aircraft_id] == 2:
+                flight_duration = rl_utils.get_flight_duration_estimation(
+                    aircraft=aircraft,
+                    system_manager=self.sim_setup.system_manager
+                    )
+                if flight_duration == 0:
+                    raise ValueError(f"Flight duration is zero. Aircraft: {aircraft.tail_number}. Aircraft status: {aircraft.status}. Aircraft location: {aircraft.location}. Aircraft destination: {aircraft.destination_vertiport_id}")
+                # Get the waiting passenger count at the vertiport of the aircraft
+                vertiport = self.sim_setup.system_manager.vertiports[aircraft.destination_vertiport_id]
+                pax_count = min(self.config['aircraft_params']['pax'], vertiport.get_waiting_room_count())
+                print(f"Flight duration: {flight_duration}. Pax count: {pax_count} for aircraft {aircraft.tail_number} at time {miliseconds_to_hms(self.env.now)}")
+                total_reward += flight_duration * self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
+                    pax_count * self.config['external_optimization_params']['reward_function_parameters']['trip_reward']
+
+        return total_reward + self.waiting_time_penalty(how='linear', unit='hour')
+    
+    def calculate_weighted_reward(self):
+        """
+        Calculate the reward for the current state of the simulation.
+        """
+        waiting_time_cost_type = self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost_type']
+        waiting_time_cost_unit = self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost_unit']
+
+        return self.waiting_time_penalty(how=waiting_time_cost_type, unit=waiting_time_cost_unit) + \
+                    self.sim_setup.system_manager.trip_counter * \
+                        self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] + \
+            self.sim_setup.system_manager.trip_time_counter * \
+                self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
+            self.sim_setup.system_manager.truncation_penalty * \
+                 self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty'] + \
+                self.sim_setup.system_manager.spill_counter * \
+                self.config['external_optimization_params']['reward_function_parameters']['spill_cost'] +\
+                self.sim_setup.system_manager.charge_reward * \
+                self.config['external_optimization_params']['reward_function_parameters']['charge_reward']    
+
     def action_mask(self):
         """
         Create the action mask for the current state of the simulation.
@@ -147,13 +199,13 @@ class VertiSim:
         mask = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if aircraft.status == AircraftStatus.IDLE \
-                and aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment'] \
+                and aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment_per_charge_event'] \
                     and aircraft.soc > self.config['aircraft_params']['min_reserve_soc']:
                 mask.append([1, 1, 1])
             elif aircraft.status == AircraftStatus.IDLE \
                     and aircraft.soc <= self.config['aircraft_params']['min_reserve_soc']:
                 mask.append([1, 1, 0])
-            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc >= 100-self.config['external_optimization_params']['soc_increment']+1:
+            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc >= 100-self.config['external_optimization_params']['soc_increment_per_charge_event']+1:
                 mask.append([1, 0, 1])
             elif aircraft.status == AircraftStatus.CHARGE:
                 mask.append([1, 0, 0])
@@ -205,7 +257,7 @@ class VertiSim:
                 # print(f"Action mask: {self.action_mask()}")
                 # print(f"REWARD: {self.calculate_reward()}")
                 if trigger_count == total_triggers:
-                    reward = round(self.calculate_reward(), 2)
+                    reward = round(self.calculate_weighted_reward(), 2)
                     self.reset_rewards()
                     # print(f"Reward: {reward}")
                 else:
@@ -231,7 +283,7 @@ class VertiSim:
         self.finalize_simulation()
         # print(f"FINAL REWARD: {self.calculate_reward()}")
         # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
-        return self.get_current_state(), self.calculate_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
+        return self.get_current_state(), self.calculate_weighted_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
     
     def advance_to_next_stopping_event_setting_2(self, total_triggers):
         """
@@ -259,11 +311,11 @@ class VertiSim:
             # If there are any triggered stopping event, pop it out, reset it and return the states
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
-                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop(0)
+                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
-                reward = round(self.calculate_reward(), 2)
+                reward = round(self.calculate_weighted_reward(), 2)
                 self.reset_rewards()
                 # print(f"Reward: {reward}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
@@ -272,7 +324,38 @@ class VertiSim:
         self.finalize_simulation()
         # print(f"FINAL REWARD: {self.calculate_reward()}")
         # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
-        return self.get_current_state(), self.calculate_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()    
+        return self.get_current_state(), self.calculate_weighted_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()    
+
+    def advance_to_next_stopping_event_setting_3(self, total_triggers):
+        """
+        Runs the simulation until the next defined stopping event.
+        Rewards the agent right after the each action is completed.
+        Rewards the agent separately for each action.
+        """
+
+        while self._should_continue_simulation():
+            # Step the simulation
+            self.env.step()
+          
+            # If there are any triggered stopping event queue, pop it out, reset it and return the states
+            if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
+                # Pop the event on top of the queue
+                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
+                # print(f"Triggered event: {event_name}")
+                # Reset the event
+                self._reset_event(event_name)
+                # Return the states
+                reward = round(self.calculate_weighted_reward(), 2)
+                self.reset_rewards()
+                # print(f"Reward: {reward}")
+                # pprint.pprint(f"Currrent state: {self.get_current_state()}")
+                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+
+        # self._handle_end_of_simulation()
+        self.finalize_simulation()
+        # print(f"FINAL REWARD: {self.calculate_reward()}")
+        # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
+        return self.get_current_state(), self.reward, self.is_terminated(), self.is_truncated(), self.action_mask()    
 
     def _should_continue_simulation(self):
         return (self.env.peek() < self.max_sim_time and 
@@ -324,7 +407,8 @@ class VertiSim:
         return get_simulator_states(vertiports=self.sim_setup.vertiports,
                                     aircraft_agents=self.sim_setup.system_manager.aircraft_agents,
                                     num_initial_aircraft=self.sim_setup.system_manager.num_initial_aircraft,
-                                    simulation_states=self.sim_setup.sim_params['simulation_states'])
+                                    simulation_states=self.sim_setup.sim_params['simulation_states'],
+                                    reward_function_parameters=self.config['external_optimization_params']['reward_function_parameters'])
     
     def get_initial_state(self):
         """
@@ -341,32 +425,25 @@ class VertiSim:
                     self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
         return self.get_current_state()
     
-    
-    def calculate_reward(self):
-        """
-        Calculate the reward for the current state of the simulation.
-        """
-        return self.waiting_time_penalty() + \
-                    self.sim_setup.system_manager.trip_counter * \
-                        self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] + \
-            self.sim_setup.system_manager.trip_time_counter * \
-                self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
-            self.sim_setup.system_manager.truncation_penalty * \
-                 self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty'] + \
-                self.sim_setup.system_manager.occupancy_reward + \
-                self.sim_setup.system_manager.spill_counter * \
-                self.config['external_optimization_params']['reward_function_parameters']['spill_cost'] +\
-                self.sim_setup.system_manager.charge_reward * \
-                self.config['external_optimization_params']['reward_function_parameters']['charge_reward']
-    
-    def waiting_time_penalty(self):
+    def waiting_time_penalty(self, how='linear', unit='hour'):
         """
         Calculate the waiting time penalty for the current state of the simulation.
+
+        Parameters
+        ----------
+        how: str
+            The type of the waiting time penalty. Either linear or exponential.
         """
-        return sum(
-            vertiport.get_exponential_waiting_cost()
-            for _, vertiport in self.sim_setup.vertiports.items()) * \
-                self.config['external_optimization_params']['reward_function_parameters']['waiting_time_penalty']
+        if how == 'linear':
+            return sum(
+                vertiport.get_linear_waiting_cost(unit=unit)
+                for _, vertiport in self.sim_setup.vertiports.items()) * \
+                    self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost']
+        elif how == 'exponential':
+            return sum(
+                vertiport.get_exponential_waiting_cost(unit=unit)
+                for _, vertiport in self.sim_setup.vertiports.items()) * \
+                    self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost']
     
     def reset_rewards(self):
         """
@@ -378,6 +455,7 @@ class VertiSim:
         self.sim_setup.system_manager.occupancy_reward = 0
         self.sim_setup.system_manager.spill_counter = 0
         self.sim_setup.system_manager.charge_reward = 0
+        self.reward = 0
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):

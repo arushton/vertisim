@@ -7,7 +7,7 @@ from .charger_model import ChargerModel
 from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
-from .utils.units import ms_to_min, ms_to_sec
+from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms
 from pydantic import BaseModel
 
 class EntitySubState(BaseModel):
@@ -87,13 +87,13 @@ class VertiportConfig:
         """
         Returns the number of available parking pads.
         """
-        return self.vertiport_layout.num_parking_pad - self.get_parking_pad_occupancy()
+        return len(self.parking_space_store.items)
     
     def get_parking_pad_occupancy(self):
         """
         Returns the number of occupied parking pads.
         """
-        return len(self.parking_space_store.items)
+        return self.vertiport_layout.num_parking_pad - self.get_parking_pad_availability()
     
     def get_parking_pad_queue_length(self):
         """
@@ -110,41 +110,70 @@ class VertiportConfig:
     def get_fato_queue_length(self):
         return sum(len(fato.fato_resource.queue) for fato in self.fato_store.items)
     
-    def get_total_passenger_waiting_time(self):
-        total_waiting_time_min = 0
+    def get_linear_waiting_cost(self, unit='hour') -> float:
+        """
+        Returns the total waiting time of all passengers in the vertiport in the given unit.
+        """
+        total_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
-                total_waiting_time_min += ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
-        return round(total_waiting_time_min, 2)
+                total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+
+        return VertiportConfig.unit_helper(unit=unit, value=total_waiting_time)
     
-    def get_exponential_waiting_cost(self):
+    def get_exponential_waiting_cost(self, unit='hour'):
         total_weighted_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
-                if waiting_time > 10:
-                    total_weighted_waiting_time += 10 + (waiting_time - 10)**2
+                waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                if waiting_time > min_to_ms(10):
+                    total_weighted_waiting_time += min_to_ms(10) + (waiting_time - 10)**1.2
                 else:
                     total_weighted_waiting_time += waiting_time
             
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
-                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
-                if waiting_time > 10:
-                    total_weighted_waiting_time += 10 + (waiting_time - 10)**2
+                waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                if waiting_time > min_to_ms(10):
+                    total_weighted_waiting_time += min_to_ms(10) + (waiting_time - 10)**1.2
                 else:
                     total_weighted_waiting_time += waiting_time
-        return round(total_weighted_waiting_time/4)
+        return VertiportConfig.unit_helper(unit=unit, value=total_weighted_waiting_time)
+
+    @staticmethod
+    def unit_helper(unit, value):
+        if unit == 'hour':
+            return round(ms_to_hr(value), 2)        
+        elif unit == 'minute':
+            return round(ms_to_min(value), 2)
+        elif unit == 'second':
+            return round(ms_to_sec(value), 2)
+        elif unit == 'millisecond':
+            return round(value, 2)
+        else:
+            raise ValueError("Invalid unit. Please input one of the following: 'minute', 'second', 'millisecond', 'hour'.")
     
     def is_waiting_room_empty(self):
         return all(len(waiting_room_store.items) == 0 for waiting_room_store in self.waiting_room_stores.values())
     
     def get_passenger_count(self):
+        """
+        Returns the total number of passengers in the vertiport including the passengers in the waiting rooms and 
+        the passengers in the flight request stores. Passengers are added to the flight request stores when they
+        there are seat_capacity number of passengers in the waiting room or one of the passengers in the waiting room
+        has been waiting for more than the waiting time threshold.
+        """
         return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values()) +\
                 sum(len(flight_request_store.items) for flight_request_store in self.flight_request_stores.values())
+    
+    def get_waiting_room_count(self):
+        """
+        Returns the total number of passengers in the waiting rooms.
+        """
+        return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values())
     
     def get_aircraft_status(self, aircraft_agents) -> List:
         # For each aircraft, check if it's at the current vertiport.
@@ -154,7 +183,7 @@ class VertiportConfig:
             for aircraft in aircraft_agents.values()
         }
 
-    def get_vertiport_states(self, aircraft_agents):
+    def get_vertiport_states(self, aircraft_agents, reward_function_parameters):
         """
         Will be deprecated in the future.
         """
@@ -183,15 +212,11 @@ class VertiportConfig:
         entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
         entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
-        waiting_passenger_count = 0
-        for destination, waiting_room_store in self.waiting_room_stores.items():
-            waiting_passenger_count += len(waiting_room_store.items)
-        
-        for destination, flight_request_store in self.flight_request_stores.items():
-            waiting_passenger_count += len(flight_request_store.items)
-        entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
+        waiting_passenger_counts = self.get_waiting_passenger_count()
+        for destination, waiting_passenger_count in waiting_passenger_counts.items():
+            entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
 
-        entity_states['total_passenger_waiting_time'] = self.get_exponential_waiting_cost()
+        entity_states['total_passenger_waiting_time'] = self.get_waiting_time_cost(reward_function_parameters)
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
@@ -199,7 +224,28 @@ class VertiportConfig:
         valid_entity_states = VertiportStates(**entity_states)
 
         # Return the validated data
-        return valid_entity_states.dict()    
+        return valid_entity_states.dict()  
+
+    def get_waiting_time_cost(self, reward_function_parameters):
+        """
+        Returns the waiting time cost of the vertiport.
+        """
+        if reward_function_parameters['waiting_time_cost_type'] == 'linear':
+            return self.get_linear_waiting_cost(unit=reward_function_parameters['waiting_time_cost_unit'])
+        elif reward_function_parameters['waiting_time_cost_type'] == 'exponential':
+            return self.get_exponential_waiting_cost(unit=reward_function_parameters['waiting_time_cost_unit'])
+        else:
+            raise ValueError("Invalid waiting time cost type. Please input one of the following: 'linear', 'exponential'.")
+    
+    def get_waiting_passenger_count(self):
+        waiting_passenger_count = {destination: 0 for destination in self.waiting_room_stores.keys()}
+        for destination, waiting_room_store in self.waiting_room_stores.items():
+            waiting_passenger_count[destination] += len(waiting_room_store.items)
+        
+        for destination, flight_request_store in self.flight_request_stores.items():
+            waiting_passenger_count[destination] += len(flight_request_store.items)
+
+        return waiting_passenger_count  
 
 
     def check_charger_resource_type(self):

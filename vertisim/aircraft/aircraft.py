@@ -9,6 +9,7 @@ import numpy as np
 from collections import defaultdict
 from .optimize_velocity import VelocityOptimizer
 from ..utils.distance import distance_3d
+from ..utils import rl_utils
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import set_seed
 from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
@@ -1041,21 +1042,35 @@ class Aircraft:
     #     self.logger.debug(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
         
     #     return charge_time
-    
-    def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
+
+    def check_for_state_action_violation(self) -> None:
+        """
+        Checks whether the aircraft is in a state that it can perform the action.
+        If not penalizes the agent and triggers a truncation event.
+        """
         if self.system_manager.sim_mode == 'client_server' \
             and self.tail_number not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. Status: {self.status}")
             self.system_manager.truncation_penalty += 1
             self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
-        old_soc = round(self.soc)
         
-        if self.system_manager.sim_mode == 'client_server':     
-            # Reward for charging
-            if old_soc <= 70:
-                self.system_manager.charge_reward += 1*round(1-(old_soc/100), 2)
-            else:
-                self.system_manager.charge_reward -= 1  
+    def get_charge_reward(self) -> None:
+        """
+        Reward for charging
+        """
+        if self.system_manager.sim_mode == 'client_server':
+            self.system_manager.charge_reward += rl_utils.charge_reward(
+                current_soc=self.soc,
+                soc_reward_threshold=self.charging_strategy.soc_reward_threshold
+                )
+    
+    def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
+
+        # Check whether the aircraft is in a state that it can perform the action.
+        self.check_for_state_action_violation()
+
+        # Reward for charging
+        self.get_charge_reward()
 
         aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 

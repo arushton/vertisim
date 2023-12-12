@@ -31,7 +31,8 @@ def get_simulator_states(
     vertiports: Dict[str, Any],
     aircraft_agents: Dict[int, Any],
     num_initial_aircraft: int,
-    simulation_states: List[str]
+    simulation_states: List[str],
+    reward_function_parameters: Dict[str, Any],
 ) -> Dict:
     """
     Get the states for simulation entities.
@@ -61,7 +62,8 @@ def get_simulator_states(
     vertiport_states = {
         vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, 
                                             keys=simulation_states,
-                                            aircraft_agents=aircraft_agents)
+                                            aircraft_agents=aircraft_agents,
+                                            reward_function_parameters=reward_function_parameters)
         for vertiport_id, vertiport in vertiports.items()
     }
 
