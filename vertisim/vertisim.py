@@ -452,7 +452,7 @@ class VertiSim:
         self.sim_setup.system_manager.trip_counter = 0
         self.sim_setup.system_manager.trip_time_counter = 0
         self.sim_setup.system_manager.truncation_penalty = 0
-        self.sim_setup.system_manager.occupancy_reward = 0
+        # self.sim_setup.system_manager.occupancy_reward = 0
         self.sim_setup.system_manager.spill_counter = 0
         self.sim_setup.system_manager.charge_reward = 0
         self.reward = 0

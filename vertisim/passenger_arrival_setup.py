@@ -1,7 +1,7 @@
 from typing import Dict, Union, List, Any
 import pandas as pd
 from .utils.read_files import read_input_file
-from .utils.helpers import compute_interarrival_times_from_schedule
+from .utils.helpers import compute_interarrival_times_from_schedule, miliseconds_to_hms
 from .utils.generate_artificial_supply_demand import generate_passenger_network_demand
 from .utils.units import sec_to_ms
 from .passenger import Passenger
@@ -120,7 +120,7 @@ class PassengerArrivalSetup:
                     destination_vertiport_id=destination_vertiport_id
             )
         
-        print(f"All {len(passenger_arrival_schedule)} passengers have arrived at time (sec) {round(self.env.now/1000)}.")
+        print(f"All {len(passenger_arrival_schedule)} passengers have arrived at time (sec) {miliseconds_to_hms(self.env.now)}.")
         self.system_manager.passenger_arrival_complete = True
         # print(f"Total number of waiting passengers: {self.system_manager.get_total_waiting_passenger_count()}")
 

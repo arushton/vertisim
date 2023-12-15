@@ -36,7 +36,8 @@ def reset():
 @app.get("/get_initial_state")
 def get_initial_state():
     initial_state = instance_manager.get_initial_state()
-    return {"initial_state": initial_state}
+    action_mask = instance_manager.sim_instance.action_mask()
+    return {"initial_state": initial_state, "action_mask": action_mask}
 
 @app.post("/step")
 def step(actions: Actions):
