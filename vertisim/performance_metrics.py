@@ -69,30 +69,30 @@ class PerformanceMetrics:
         #     os.makedirs(path)
 
         if not self.only_aircraft_simulation:
-            # self.calculate_passenger_consolidation_time_stats()
+            self.calculate_passenger_consolidation_time_stats()
             self.calculate_passenger_waiting_time_stats()
-            # self.calculate_passenger_transfer_time_stats()
-            # self.calculate_passenger_departure_queue_count_stats()
+            self.calculate_passenger_transfer_time_stats()
+            self.calculate_passenger_departure_queue_count_stats()
             self.calculate_passenger_trip_time_stats()
             self.compute_total_passenger_throughput()
-            # self.compute_average_passenger_throughput()
-            # self.compute_load_factor_stats()
-            # self.compute_empty_flights()
-            # self.compute_aircraft_idle_time_stats()
-            # self.calculate_passenger_departure_queue_waiting_times_stats()
-        # self.calculate_aircraft_arrival_queue_count_stats()
-        # self.calculate_aircraft_departure_queue_count_stats()
+            self.compute_average_passenger_throughput()
+            self.compute_load_factor_stats()
+            self.compute_empty_flights()
+            self.compute_aircraft_idle_time_stats()
+            self.calculate_passenger_departure_queue_waiting_times_stats()
+        self.calculate_aircraft_arrival_queue_count_stats()
+        self.calculate_aircraft_departure_queue_count_stats()
         self.compute_average_and_total_aircraft_throughput()
         if self.sim_params['training_data_collection']:
             self.save_waiting_times_to_db()
-        # self.compute_fato_utilization()
-        # self.calculate_aircraft_holding_times_stats()
+        self.compute_fato_utilization()
+        self.calculate_aircraft_holding_times_stats()
         self.compute_flight_duration_stats()
         self.compute_energy_consumption_stats()
-        # self.compute_charge_time_stats()
-        # self.compute_average_taxi_time()
-        # self.compute_turnaround_duration()
-        # self.compute_tlof_reservation_duration()
+        self.compute_charge_time_stats()
+        self.compute_average_taxi_time()
+        self.compute_turnaround_duration()
+        self.compute_tlof_reservation_duration()
 
         if verbose and not self.client_server_mode:
             self.print_verbose_performance_metrics()
@@ -259,7 +259,6 @@ class PerformanceMetrics:
 
     def calculate_aircraft_holding_times_stats(self):
         df = pd.DataFrame(self.aircraft_holding_time)
-        df.to_csv('../../output/performance_metrics/aircraft_holding_time.csv')
         for vertiport_id, data in self.aircraft_holding_time.items():
             waiting_times = np.array(list(data.values()))
             self.performance_metrics[vertiport_id]['aircraft_holding_times']['mean'] = ms_to_min(np.mean(waiting_times))
@@ -276,7 +275,6 @@ class PerformanceMetrics:
 
     def compute_aircraft_idle_time_stats(self):
         df = pd.DataFrame(self.aircraft_idle_time_tracker)
-        df.to_csv('../../output/performance_metrics/aircraft_idle_time_tracker.csv')        
         for vertiport_id, data in self.aircraft_idle_time_tracker.items():
             idle_times = list(data.values())
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['max'] = ms_to_min(np.max(idle_times))

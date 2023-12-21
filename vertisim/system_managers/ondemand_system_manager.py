@@ -193,19 +193,19 @@ class OnDemandSystemManager(BaseSystemManager):
         )        
 
     
-    def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
-        waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
-        self.passenger_logger.debug(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
-                                    f" Passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}"
-                                    f" Their waiting room arrival times: {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}"
-                                    f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in waiting_room.items]}") 
+    # def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
+    #     waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
+    #     self.passenger_logger.debug(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
+    #                                 f" Passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}"
+    #                                 f" Their waiting room arrival times: {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}"
+    #                                 f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in waiting_room.items]}") 
                
-        if len(departing_passengers) < self.aircraft_params['pax'] and len(waiting_room.items) > 0:
-            departing_passengers.extend(self.scheduler.last_call_check(
-                current_waiting_room=waiting_room,
-                num_departing_passengers=len(departing_passengers))) 
-        self.passenger_logger.debug(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
-        return departing_passengers
+    #     if len(departing_passengers) < self.aircraft_params['pax'] and len(waiting_room.items) > 0:
+    #         departing_passengers.extend(self.scheduler.last_call_check(
+    #             current_waiting_room=waiting_room,
+    #             num_departing_passengers=len(departing_passengers))) 
+    #     self.passenger_logger.debug(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
+    #     return departing_passengers
     
     def check_passenger_max_waiting_time_threshold(self):
         """

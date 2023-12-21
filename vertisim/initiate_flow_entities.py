@@ -10,8 +10,8 @@ def initiate_flow_entities(sim_setup: Dict) -> None:
 
 def create_aircraft_arrival_process(sim_setup: Dict):
     # Load or generate aircraft arrival schedule and start the aircraft arrival process
-    flight_schedule_file_path = sim_setup.network_and_demand_params.get('flight_schedule_file_path', None)
-    charge_schedule_file_path = sim_setup.network_and_demand_params.get('charge_schedule_file_path', None)
+    flight_schedule_file_path = sim_setup.external_optimization_params.get('flight_schedule_file_path', None)
+    charge_schedule_file_path = sim_setup.external_optimization_params.get('charge_schedule_file_path', None)
 
     # Load aircraft arrival schedule
     aircraft_arrival_process = AircraftArrivalSetup(

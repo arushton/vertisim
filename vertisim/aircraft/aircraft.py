@@ -1072,13 +1072,20 @@ class Aircraft:
         # Reward for charging
         self.get_charge_reward()
 
-        aircraft = yield self.system_manager.retrieve_aircraft(self.destination_vertiport_id, self.tail_number)
+        if not self.system_manager.sim_mode == 'offline_optimization':
+            aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.destination_vertiport_id,
+                                                                     tail_number=self.tail_number)
+            
+            yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
+                                                                        parking_space=parking_space, 
+                                                                        shared_charger=shared_charger))
+            self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self) 
+
         yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
-                                                                      parking_space=parking_space, 
-                                                                      shared_charger=shared_charger))
-        self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self)    
+                                                                    parking_space=parking_space, 
+                                                                    shared_charger=shared_charger))               
         # Set the aircraft status to idle
-        aircraft.status = AircraftStatus.IDLE 
+        self.status = AircraftStatus.IDLE 
         self.is_process_completed = True
         # self.system_manager.reward += 100
         # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")

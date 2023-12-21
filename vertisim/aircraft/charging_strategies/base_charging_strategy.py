@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from ...utils.helpers import get_key_from_value
 from ...utils.units import ms_to_sec
 
+
 class BaseChargingStrategy(ABC):
     
     @abstractmethod
@@ -9,7 +10,7 @@ class BaseChargingStrategy(ABC):
         pass
     
     @abstractmethod
-    def charge_aircraft(self, aircraft, parking_space: object, shared_charger: bool = False):
+    def charge_aircraft(self, aircraft: object, parking_space: object, shared_charger: bool = False) -> None:
         pass
 
     @abstractmethod

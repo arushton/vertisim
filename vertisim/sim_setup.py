@@ -89,11 +89,6 @@ class SimSetup:
         self.taxi_config = self.set_taxi_operations_config()
         # self.aircraft_energy_consumption_data = self.set_aircraft_energy_consumption_data() # Dictionary of aircraft energy consumption data
         self.passenger_distributions = self.create_passenger_distributions()
-
-        if self.network_and_demand_params['flight_schedule_file_path'] is not None:
-            self.fixed_schedule = True
-        else:
-            self.fixed_schedule = False
         
         self.create_training_db_path()
         self.scheduler = self.create_scheduler()
@@ -190,10 +185,10 @@ class SimSetup:
         if self.sim_mode['offline_optimization'] == False and self.sim_mode['client_server'] == False and self.sim_mode['ondemand'] == False:
             raise ValueError('At least one of offline optimization, online optimization or ondemand must be True. Check sim_mode.')
         
-        if self.sim_mode['offline_optimization'] == True and self.network_and_demand_params['flight_schedule_file_path'] is None:
+        if self.sim_mode['offline_optimization'] == True and self.external_optimization_params['flight_schedule_file_path'] is None:
             raise ValueError('Offline optimization cannot be run without a flight schedule. Check network_and_demand_params.')
         
-        if self.external_optimization_params['charge_assignment_sensitivity'] and self.network_and_demand_params['charge_schedule_file_path'] is None:
+        if self.external_optimization_params['charge_assignment_sensitivity'] and self.external_optimization_params['charge_schedule_file_path'] is None:
             raise ValueError('Charge assignment sensitivity is needed to run charge schedule. Check network_and_demand_params and external_optimization_params.')
 
     def get_num_destinations(self) -> int:
@@ -287,7 +282,7 @@ class SimSetup:
                             vertiports=self.vertiports,
                             system_manager=None,
                             aircraft_capacity=self.aircraft_params['pax'],
-                            is_fixed_schedule=self.sim_mode['offline_optimization'],
+                            is_fixed_schedule=bool(self.external_optimization_params['flight_schedule_file_path']),
                             charge_assignment_sensitivity=self.external_optimization_params['charge_assignment_sensitivity'],
                             logger=self.logger,
                             aircraft_logger=self.aircraft_logger,
@@ -414,7 +409,8 @@ class SimSetup:
                 'logger': self.logger,
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
-                'sim_mode': system_manager_type
+                'sim_mode': system_manager_type,
+                'external_optimization_params': self.external_optimization_params
             },
         }
 

@@ -361,6 +361,13 @@ class AircraftArrivalSetup:
         for idx, row in charge_schedule.iterrows():
             yield self.env.timeout(row['charge_interarrival_time'])
 
+            if lower_str(row['process']) == 'charging':
+                initial_process = AircraftStatus.CHARGE
+            elif lower_str(row['process']) == 'parking':
+                initial_process = AircraftStatus.IDLE
+            else:
+                raise ValueError(f"Initial process {row['process']} is not supported. Input only CHARGING or PARKING.")
+            
             self.logger.debug(f"Aircraft {idx} is arrived at the vertiport {row['vertiport_id']}." 
                              f" init_soc: {row['init_soc']}, target_soc: {row['target_soc']},"
                              f" process: {row['process']}")   
@@ -378,7 +385,7 @@ class AircraftArrivalSetup:
                                                location=row['location'],
                                                serviced_time_at_the_location=0,
                                                priority=1,
-                                               initial_process=lower_str(row['process']),
+                                               initial_process=initial_process,
                                                logger=self.logger,
                                                aircraft_logger=self.aircraft_logger)
             )
