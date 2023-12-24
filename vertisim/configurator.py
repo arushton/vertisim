@@ -216,7 +216,7 @@ class VertiportConfig:
         for destination, waiting_passenger_count in waiting_passenger_counts.items():
             entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
 
-        entity_states['total_passenger_waiting_time'] = self.get_waiting_time_cost(reward_function_parameters)
+        entity_states['total_passenger_waiting_time'] = min(int(self.get_waiting_time_cost(reward_function_parameters)), 100)
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
