@@ -44,7 +44,7 @@ def save_performance_metrics(simulation_params: dict,
     print(f"Saving performance metrics to {output_path}")
     # If path doesn't exist, create it
     if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db"):
-        os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db")
+        os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db", exist_ok=True)
 
     conn = create_connection(output_path)
     assert conn, 'Could not establish database connection.'

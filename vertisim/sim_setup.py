@@ -29,7 +29,7 @@ from .logger import Logger
 from .run_step_by_step_simulation import run_step_by_step_simulation
 from .utils.create_output_folders import create_output_folders
 from .utils.get_aircraft_count import get_aircraft_count
-from .utils.calc_performance_metrics import calculate_passenger_trip_time_stats
+from .utils.calc_performance_metrics import calculate_passenger_trip_time_stats, calculate_passenger_waiting_time_stats
 from .utils.bundle_passenger_related_distributions import bundle_distributions
 from .utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes
@@ -182,7 +182,10 @@ class SimSetup:
         if self.sim_mode['client_server'] == True and self.sim_mode['ondemand'] == True:
             raise ValueError('Both online optimization and ondemand cannot be True at the same time. Check sim_mode.')
         
-        if self.sim_mode['offline_optimization'] == False and self.sim_mode['client_server'] == False and self.sim_mode['ondemand'] == False:
+        if self.sim_mode['offline_optimization'] == False and \
+            self.sim_mode['client_server'] == False and \
+                self.sim_mode['ondemand'] == False and \
+                    self.sim_mode['rl'] == False:
             raise ValueError('At least one of offline optimization, online optimization or ondemand must be True. Check sim_mode.')
         
         if self.sim_mode['offline_optimization'] == True and self.external_optimization_params['flight_schedule_file_path'] is None:
@@ -203,7 +206,8 @@ class SimSetup:
             env=self.env,
             vertiport_layouts=self.vertiport_layouts,
             vertiports=self.network_and_demand_params['vertiports'],
-            vertiport_ids=self.vertiport_ids
+            vertiport_ids=self.vertiport_ids,
+            pax_waiting_time_threshold=self.sim_params['max_passenger_waiting_time']
         )
     
     def create_event_saver(self):
@@ -328,8 +332,8 @@ class SimSetup:
         # Return system manager type
         if self.sim_mode['offline_optimization']:
             return 'offline_optimization'
-        elif self.sim_mode['client_server']:
-            return 'client_server'
+        elif self.sim_mode['client_server'] or self.sim_mode['rl']:
+            return 'rl'
         else:
             return 'ondemand'
         
@@ -337,7 +341,7 @@ class SimSetup:
     def set_system_manager_type(system_manager_type, **kwargs):
         if system_manager_type == 'offline_optimization':
             return OfflineOptimizationSystemManager(**kwargs)
-        elif system_manager_type == 'client_server':
+        elif system_manager_type == 'rl':
             return RLSystemManager(**kwargs)
         else:
             return OnDemandSystemManager(**kwargs) 
@@ -366,7 +370,7 @@ class SimSetup:
                 'passenger_logger': self.passenger_logger,
                 'sim_mode': system_manager_type
             },
-            'client_server': {
+            'rl': {
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
@@ -376,6 +380,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'external_optimization_params': self.external_optimization_params,
                 'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
@@ -420,7 +425,7 @@ class SimSetup:
     def get_charging_strategy(self):
         if self.sim_mode['offline_optimization']:
             return OfflineOptimizationChargingStrategy()
-        elif self.sim_mode['client_server']:
+        elif self.sim_mode['rl']:
             return RLChargingStrategy(soc_increment_per_charge_event=self.external_optimization_params['soc_increment_per_charge_event'],
                                       soc_reward_threshold=self.external_optimization_params['reward_function_parameters']['soc_reward_threshold'])
         else:
@@ -438,14 +443,16 @@ class SimSetup:
                                   flight_directions=self.airspace.flight_directions,
                                   sim_id=self.sim_id,
                                   sim_end_timestamp=self.env.now,
-                                  client_server_mode=self.sim_mode['client_server'],
+                                  client_server_mode=self.sim_mode['rl'],
                                   sim_params=self.sim_params,
                                   output_params=self.output_params,
                                   verbose=self.sim_params['verbose']).performance_metrics
     
-    def print_passenger_trip_time_stats(self):
+    def print_brief_metrics(self):
         calculate_passenger_trip_time_stats(passenger_trip_time_tracker=self.event_saver.performance_metrics()['passenger_trip_time_tracker'],
                                             flight_directions=self.airspace.flight_directions) 
+        calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker=self.event_saver.performance_metrics()['passenger_waiting_time'])
+
                     
 
     def save_results(self, performance_metrics):

@@ -12,7 +12,6 @@ setup(
     install_requires=[
         "geog==0.0.2",
         "geopandas>=0.9.0",
-        "matplotlib>=3.4.3",
         "networkx>=2.6.2",
         "numpy>=1.21.2",
         "pandas>=1.3.2",

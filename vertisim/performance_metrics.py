@@ -4,7 +4,7 @@ from collections import defaultdict
 from .utils.units import ms_to_min, sec_to_min, hr_to_ms
 from .utils.helpers import nested_dict_all_values, remove_larger_keys, get_values_from_nested_dict, \
     get_length_of_longest_list, get_length_of_shortest_list, add_and_update_db_from_dict
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from typing import List
 import os
 
@@ -106,7 +106,7 @@ class PerformanceMetrics:
     def get_save_path(self):
         path = f'{self.output_params["output_folder_path"]}/{self.output_params["performance_metrics_output_file_name"]}'
         if not os.path.exists(path):
-            os.makedirs(path)
+            os.makedirs(path, exist_ok=True)
         return path
     
     def save_waiting_times_to_db(self):
@@ -661,17 +661,17 @@ class PerformanceMetrics:
             print(f'Min number of departures during any 1-hr interval at {vertiport_id}: {round(np.min(total_aircraft), 2)}')
             print(f'Std of departures during 1 hr interval: {round(np.std(total_aircraft), 2)}')
 
-    def plot_aircraft_arrival_queue_count(self):
-        # TODO: Fix this
-        # Plots aircraft arrival queue count
-        plt.plot(
-            np.round((np.array(list(self.aircraft_arrival_queue_count.keys())) - self.sim_start_timestamp) / 60000),
-            list(self.aircraft_arrival_queue_count.values()),
-            alpha=0.4)
-        plt.xlabel('Time (min)')
-        plt.ylabel('Aircraft Arrival Queue Count')
-        plt.title('Aircraft Arrival Queue Count Over Time')
-        plt.show()
+    # def plot_aircraft_arrival_queue_count(self):
+    #     # TODO: Fix this
+    #     # Plots aircraft arrival queue count
+    #     plt.plot(
+    #         np.round((np.array(list(self.aircraft_arrival_queue_count.keys())) - self.sim_start_timestamp) / 60000),
+    #         list(self.aircraft_arrival_queue_count.values()),
+    #         alpha=0.4)
+    #     plt.xlabel('Time (min)')
+    #     plt.ylabel('Aircraft Arrival Queue Count')
+    #     plt.title('Aircraft Arrival Queue Count Over Time')
+    #     plt.show()
 
     def calculate_total_simulated_time(self):
         return round(self.sim_end_timestamp/self.hour, 2)
@@ -745,7 +745,6 @@ class PerformanceMetrics:
         # self.print_average_aircraft_throughput()
         # self.print_fato_utilization()
         # self.print_total_empty_flights()
-        # self.plot_aircraft_arrival_queue_count()
 
     def print_performance_metrics(self):
         if not self.only_aircraft_simulation:
@@ -758,4 +757,4 @@ class PerformanceMetrics:
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
         self.print_total_empty_flights()
-        # self.plot_aircraft_arrival_queue_count()
+        

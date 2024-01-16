@@ -18,7 +18,6 @@ ENV PYTHONPATH /app
 
 # Update pip and install packages individually
 RUN pip install numpy && \
-    pip install matplotlib && \
     pip install networkx && \
     pip install geog && \
     pip install pandas

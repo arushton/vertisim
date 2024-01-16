@@ -7,7 +7,7 @@ from .charger_model import ChargerModel
 from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
-from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms
+from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms, sec_to_ms
 from pydantic import BaseModel
 
 class EntitySubState(BaseModel):
@@ -35,13 +35,15 @@ class VertiportConfig:
                  vertiport_id: Any,
                  vertiport_data: dict,
                  vertiport_layout: dict,
-                 vertiport_ids: list):
+                 vertiport_ids: list,
+                 pax_waiting_time_threshold: int = 600):
         self.env = env
         self.vertiport_id = vertiport_id
         self.vertiport_data = vertiport_data
         self.vertiport_layout = vertiport_layout
         self.parking_pad_ids = vertiport_layout.parking_pad_ids
         self.vertiport_ids = vertiport_ids
+        self.pax_waiting_time_threshold = pax_waiting_time_threshold
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
         self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
         self.charger_model = self.set_charger_model()
@@ -129,30 +131,32 @@ class VertiportConfig:
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
                 waiting_time = self.env.now - passenger.waiting_room_arrival_time
-                if waiting_time > min_to_ms(10):
-                    total_weighted_waiting_time += min_to_ms(10) + (waiting_time - 10)**1.2
+                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                    total_weighted_waiting_time += sec_to_ms(self.pax_waiting_time_threshold) \
+                        + (waiting_time - sec_to_ms(self.pax_waiting_time_threshold))**1.1
                 else:
                     total_weighted_waiting_time += waiting_time
             
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
                 waiting_time = self.env.now - passenger.waiting_room_arrival_time
-                if waiting_time > min_to_ms(10):
-                    total_weighted_waiting_time += min_to_ms(10) + (waiting_time - 10)**1.2
+                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                    total_weighted_waiting_time += sec_to_ms(self.pax_waiting_time_threshold) \
+                        + (waiting_time - sec_to_ms(self.pax_waiting_time_threshold))**1.1
                 else:
                     total_weighted_waiting_time += waiting_time
         return VertiportConfig.unit_helper(unit=unit, value=total_weighted_waiting_time)
 
     @staticmethod
-    def unit_helper(unit, value):
+    def unit_helper(unit, value) -> float:
         if unit == 'hour':
-            return round(ms_to_hr(value), 2)        
+            return ms_to_hr(value)
         elif unit == 'minute':
-            return round(ms_to_min(value), 2)
+            return ms_to_min(value)
         elif unit == 'second':
-            return round(ms_to_sec(value), 2)
+            return ms_to_sec(value)
         elif unit == 'millisecond':
-            return round(value, 2)
+            return value
         else:
             raise ValueError("Invalid unit. Please input one of the following: 'minute', 'second', 'millisecond', 'hour'.")
     
@@ -216,7 +220,7 @@ class VertiportConfig:
         for destination, waiting_passenger_count in waiting_passenger_counts.items():
             entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
 
-        entity_states['total_passenger_waiting_time'] = min(int(self.get_waiting_time_cost(reward_function_parameters)), 100)
+        entity_states['total_passenger_waiting_time'] = int(self.get_waiting_time_cost(reward_function_parameters))
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 

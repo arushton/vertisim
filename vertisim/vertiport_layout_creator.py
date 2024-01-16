@@ -1,7 +1,7 @@
 import pandas as pd
 import networkx as nx
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from .utils.layout_layer_for_unfolded import save_vertiport_layout_layer_for_unfolded
 from .utils.read_files import read_input_file
 from .utils.helpers import check_if_dataframe_is_empty, convert_to_list
@@ -199,10 +199,10 @@ class VertiportLayout:
                     continue
         return node_distances
 
-    def plot_vertiport_layout(self):
-        fig, ax = plt.subplots(figsize=(20, 6))
-        nx.draw_networkx(self.G, pos=self.node_pos, node_size=self.node_sizes, node_color=self.color_map, ax=ax)
-        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
-        plt.grid('on')
-        plt.axis('on')
-        plt.show()
+    # def plot_vertiport_layout(self):
+    #     fig, ax = plt.subplots(figsize=(20, 6))
+    #     nx.draw_networkx(self.G, pos=self.node_pos, node_size=self.node_sizes, node_color=self.color_map, ax=ax)
+    #     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+    #     plt.grid('on')
+    #     plt.axis('on')
+    #     plt.show()

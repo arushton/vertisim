@@ -73,7 +73,7 @@ class PassengerArrivalSetup:
         # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
         self.system_manager.total_demand = len(passenger_arrival_schedule)
-        print(f"Total number of passengers: {self.system_manager.total_demand}")
+        # print(f"Total number of passengers: {self.system_manager.total_demand}")
 
         if not self.network_simulation:
             if self.aircraft_params['time_charging']:
@@ -120,7 +120,7 @@ class PassengerArrivalSetup:
                     destination_vertiport_id=destination_vertiport_id
             )
         
-        print(f"All {len(passenger_arrival_schedule)} passengers have arrived at time (sec) {miliseconds_to_hms(self.env.now)}.")
+        # print(f"All {len(passenger_arrival_schedule)} passengers have arrived at time (sec) {miliseconds_to_hms(self.env.now)}.")
         self.system_manager.passenger_arrival_complete = True
         # print(f"Total number of waiting passengers: {self.system_manager.get_total_waiting_passenger_count()}")
 

@@ -15,10 +15,7 @@ class Actions(BaseModel):
 
 app = FastAPI()
 
-reward_function_parameters = CONFIG["external_optimization_params"]["reward_function_parameters"]
-
-instance_manager = InstanceManager(config=CONFIG,
-                                   reward_function_parameters=reward_function_parameters)
+instance_manager = InstanceManager(config=CONFIG)
 
 # Actions = create_action_models(instance_manager.sim_instance.get_vertiport_count())
 
@@ -35,9 +32,7 @@ def reset():
 
 @app.get("/get_initial_state")
 def get_initial_state():
-    initial_state = instance_manager.get_initial_state()
-    action_mask = instance_manager.sim_instance.action_mask()
-    return {"initial_state": initial_state, "action_mask": action_mask}
+    return instance_manager.get_initial_state()
 
 @app.post("/step")
 def step(actions: Actions):

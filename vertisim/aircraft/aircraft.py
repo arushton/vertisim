@@ -1015,40 +1015,13 @@ class Aircraft:
         self.system_manager.release_fix_resource(aircraft=self, operation='departure')        
 
     # ==================== CHARGING METHODS ====================
-    # def request_charger(self):
-    #     """
-    #     This method is used when the charger configuration is normal (any parking pads can use any chargers).
-    #     Returns the charger resource that is used by the aircraft and the charging request.
-    #     """
-    #     used_charger_resource = self.system_manager.vertiports[self.destination_vertiport_id].charger_resource
-    #     return used_charger_resource, used_charger_resource.request()
-
-    # def get_charging_time(self):
-    #     """
-    #     Get charging time - Two options: Constant charging time or draw a number from distribution
-    #     """
-    #     if self.time_charging is not None:
-    #         return max(self.time_passenger_embark_disembark, self.time_charging)
-    #     elif self.target_soc:
-    #         charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc)
-    #     elif self.target_soc_constant:
-    #         charge_time = self.get_charge_time_from_soc(init_soc=self.soc, target_soc=self.target_soc_constant)
-    #     else:
-    #         charge_time = sec_to_ms(self.system_manager.charging_time_distribution.pick_number_from_distribution())
-    #         charge_time = max(self.time_passenger_embark_disembark, charge_time)
-
-    #     self.event_saver.save_aircraft_charging_time(vertiport_id=self.destination_vertiport_id,
-    #                                                  charging_time=charge_time)
-    #     self.logger.debug(f"Started Charging: Aircraft {self.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {self.destination_vertiport_id}. init_soc: {round(self.soc, 2)}, target_soc: {self.target_soc}")
-        
-    #     return charge_time
 
     def check_for_state_action_violation(self) -> None:
         """
         Checks whether the aircraft is in a state that it can perform the action.
         If not penalizes the agent and triggers a truncation event.
         """
-        if self.system_manager.sim_mode == 'client_server' \
+        if self.system_manager.sim_mode == 'rl' \
             and self.tail_number not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. Status: {self.status}")
             self.system_manager.truncation_penalty += 1
@@ -1058,7 +1031,7 @@ class Aircraft:
         """
         Reward for charging
         """
-        if self.system_manager.sim_mode == 'client_server':
+        if self.system_manager.sim_mode == 'rl':
             self.system_manager.charge_reward += rl_utils.charge_reward(
                 current_soc=self.soc,
                 soc_reward_threshold=self.charging_strategy.soc_reward_threshold
@@ -1080,16 +1053,18 @@ class Aircraft:
                                                                         parking_space=parking_space, 
                                                                         shared_charger=shared_charger))
             self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self) 
+        
+        else:
 
-        yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
-                                                                    parking_space=parking_space, 
-                                                                    shared_charger=shared_charger))               
+            yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
+                                                                        parking_space=parking_space, 
+                                                                        shared_charger=shared_charger))               
         # Set the aircraft status to idle
         self.status = AircraftStatus.IDLE 
         self.is_process_completed = True
         # self.system_manager.reward += 100
         # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")
-        if self.system_manager.sim_mode == 'client_server':
+        if self.system_manager.sim_mode == 'rl':
             self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 
@@ -1107,7 +1082,7 @@ class Aircraft:
                                   f" during {self.detailed_status}, SOC: {round(self.soc, 2)}")
         if self.soc-self.convert_kwh_soc(kwh) < 0:
             soc_update = self.soc
-            if self.system_manager.sim_mode == 'client_server' and self.soc_at_zero_event_triggered == False:
+            if self.system_manager.sim_mode == 'rl' and self.soc_at_zero_event_triggered == False:
                 print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(self.soc, 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
                 self.soc_at_zero_event_triggered = True
                 self.system_manager.truncation_penalty += 1
@@ -1396,8 +1371,8 @@ from pydantic import BaseModel
 class AircraftState(BaseModel):
     flight_direction: int
     location: int
-    soc: float
-    time_to_arrival: float
+    soc: int
+    time_to_arrival: int
     num_passengers: int
     status: int
     is_process_completed: int

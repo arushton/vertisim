@@ -21,6 +21,7 @@ class RLSystemManager(BaseSystemManager):
                  airspace: object,
                  taxi_config: object,
                  sim_params: Dict,
+                 external_optimization_params: Dict,
                  output_params: Dict,
                  aircraft_params: Dict,
                  vertiport_distances: Dict,
@@ -33,7 +34,7 @@ class RLSystemManager(BaseSystemManager):
                  stopping_events: Dict,
                  truncation_events: Dict,
                  truncation_event: simpy.Event,
-                 sim_mode: str = 'client_server'
+                 sim_mode: str = 'rl'
                  ):
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -57,6 +58,7 @@ class RLSystemManager(BaseSystemManager):
                         )
         
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
+        self.external_optimization_params = external_optimization_params
         self.stopping_events = stopping_events
         self.truncation_events = truncation_events
         self.truncation_event = truncation_event
@@ -65,6 +67,7 @@ class RLSystemManager(BaseSystemManager):
         self.spill_counter = 0
         self.total_demand = 0
         self.trip_time_counter = 0
+        self.holding_time_counter = 0
         self.truncation_penalty = 0
         self.charge_reward = 0
         self.triggered_stopping_event_queue = deque()
@@ -122,15 +125,15 @@ class RLSystemManager(BaseSystemManager):
         self.save_aircraft_times(origin_vertiport_id=aircraft.destination_vertiport_id, aircraft=aircraft)
 
         # Assign passengers to the aircraft
-        aircraft.passengers_onboard = departing_passengers
+        aircraft.passengers_onboard = departing_passengers     
+
+        if len(departing_passengers) == 0:
+            occupancy = self.external_optimization_params['reward_function_parameters']['empty_flight_penalty']
+        elif len(departing_passengers) > 0:
+            occupancy = len(departing_passengers)
 
         # Increase the passenger trip counter
-        self.trip_counter += len(aircraft.passengers_onboard)         
-
-        # if len(departing_passengers) == 0:
-        #     self.occupancy_reward -= 1
-        # elif len(departing_passengers) > 0:
-        #     self.occupancy_reward += 1 * len(departing_passengers)
+        self.trip_counter += occupancy             
 
         self.trip_time_counter += sec_to_min(self.get_average_flight_time(flight_direction=aircraft.flight_direction))
 
@@ -174,6 +177,9 @@ class RLSystemManager(BaseSystemManager):
 
         holding_end = self.env.now
         aircraft.holding_time = holding_end - holding_start
+
+        self.holding_time_counter += ms_to_min(aircraft.holding_time)
+
         aircraft.update_holding_energy_consumption(aircraft.holding_time)
         aircraft.save_process_time(event='holding', process_time=aircraft.holding_time)
 

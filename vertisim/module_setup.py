@@ -39,13 +39,15 @@ def create_airspace_layout(env: object,
 def vertiport_config(env: object,
                      vertiports: dict,
                      vertiport_layouts: dict,
-                     vertiport_ids: list) -> dict:
+                     vertiport_ids: list,
+                     pax_waiting_time_threshold: int) -> dict:
     
     return {vertiport_id: VertiportConfig(env=env,
                                           vertiport_id=vertiport_id,
                                           vertiport_data=vertiport_data,
                                           vertiport_layout=vertiport_layouts[vertiport_id],
-                                          vertiport_ids=vertiport_ids)
+                                          vertiport_ids=vertiport_ids,
+                                          pax_waiting_time_threshold=pax_waiting_time_threshold)
                 for vertiport_id, vertiport_data in vertiports.items()
             }
 
