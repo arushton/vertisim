@@ -92,6 +92,7 @@ class Aircraft:
         self.charged_during_turnaround = False
         self.total_energy_consumption = 0
         self.target_soc = target_soc
+        self.is_first_time_charge = True
 
         self.arrival_fix_usage_request = None
         self.arrival_fix_resource = None
@@ -801,6 +802,7 @@ class Aircraft:
     def initial_takeoff_procedure(self, take_off_fato_id):
         """Initial takeoff procedures, including updating location, departure time and passenger records."""
         self.location = take_off_fato_id
+        self.is_first_time_charge = True
         self.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='fato_arrival')
 
         for passenger in self.passengers_onboard:
@@ -1049,16 +1051,20 @@ class Aircraft:
             aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.destination_vertiport_id,
                                                                      tail_number=self.tail_number)
             
+            # If it is the first charging process, then add the pre-charging process time (fixed charging cost).
+            if self.is_first_time_charge:
+                self.env.timeout(sec_to_ms(self.aircraft_params['time_pre_charging_processes']))
+                            
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
                                                                         shared_charger=shared_charger))
             self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self) 
         
         else:
-
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
-                                                                        shared_charger=shared_charger))               
+                                                                        shared_charger=shared_charger))   
+        self.is_first_time_charge = False            
         # Set the aircraft status to idle
         self.status = AircraftStatus.IDLE 
         self.is_process_completed = True
@@ -1352,7 +1358,8 @@ class Aircraft:
             'time_to_arrival': int(self.estimate_time_to_arrival()),
             'num_passengers': len(self.passengers_onboard),
             'status': self.status.value,
-            'is_process_completed': int(self.is_process_completed)
+            'is_process_completed': int(self.is_process_completed),
+            'is_first_time_charge': int(self.is_first_time_charge)
         }
         
         # Validate and serialize the state data
@@ -1376,6 +1383,7 @@ class AircraftState(BaseModel):
     num_passengers: int
     status: int
     is_process_completed: int
+    is_first_time_charge: int
 
     # def fly_in_the_airspace(self, user_modification=False):
     #     """
