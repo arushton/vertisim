@@ -8,6 +8,7 @@ from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
 from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms, sec_to_ms
+from .utils.helpers import miliseconds_to_hms
 from pydantic import BaseModel
 
 class EntitySubState(BaseModel):
@@ -112,7 +113,88 @@ class VertiportConfig:
     def get_fato_queue_length(self):
         return sum(len(fato.fato_resource.queue) for fato in self.fato_store.items)
     
-    def get_linear_waiting_cost(self, unit='hour') -> float:
+    def get_waiting_time_cost(self, unit:str, last_decision_time: float, type:str):
+        """
+        Returns the waiting cost of the vertiport.
+
+        Parameters
+        ----------
+        unit : str
+            The unit of the waiting time cost. One of the following: 'minute', 'second', 'millisecond', 'hour'.
+        last_decision_time : float 
+            The time of the last decision. If True, the waiting time cost is computed using per time step, 
+            NOT total waiting time from passenger waiting room arrival time.
+        type : str
+            The type of the waiting time cost. One of the following: 'linear', 'exponential'.
+        """
+        if last_decision_time:
+            if type == 'linear':
+                return self.get_linear_per_step_waiting_cost(last_decision_time, unit=unit)
+            elif type == 'exponential':
+                return self.get_exponential_per_step_waiting_cost(last_decision_time, unit=unit)
+            else:
+                raise ValueError("Invalid waiting time cost type. Please input one of the following: 'linear', 'exponential'.")
+        else:
+            if type == 'linear':
+                return self.get_total_linear_waiting_cost(unit=unit)
+            elif type == 'exponential':
+                return self.get_total_exponential_waiting_cost(unit=unit)
+            else:
+                raise ValueError("Invalid waiting time cost type. Please input one of the following: 'linear', 'exponential'.")
+
+    def get_linear_per_step_waiting_cost(self, last_decision_time: float, unit: str='hour') -> float:
+        """
+        Returns the total waiting time of all passengers in the vertiport in the given unit.
+        Waiting time is computed using per time step, NOT total waiting time from 
+        passenger waiting room arrival time.
+        """
+        total_waiting_time = 0
+        for waiting_room_store in self.waiting_room_stores.values():
+            for passenger in waiting_room_store.items:
+                if self.env.now - passenger.waiting_room_arrival_time != 0:
+                    total_waiting_time += self.env.now - last_decision_time
+                else:
+                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+        for flight_request_store in self.flight_request_stores.values():
+            for passenger in flight_request_store.items:
+                if self.env.now - passenger.waiting_room_arrival_time != 0:
+                    total_waiting_time += self.env.now - last_decision_time
+                else:
+                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+
+        return VertiportConfig.unit_helper(unit=unit, value=total_waiting_time)
+    
+    def get_exponential_per_step_waiting_cost(self, last_decision_time: float, unit: str='hour') -> float:
+        """
+        Returns the total waiting time of all passengers in the vertiport in the given unit.
+        Waiting time is computed using per time step, NOT total waiting time from
+        passenger waiting room arrival time.
+        """
+        total_weighted_waiting_time = 0
+        for waiting_room_store in self.waiting_room_stores.values():
+            for passenger in waiting_room_store.items:
+                waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                    total_weighted_waiting_time += (self.env.now - last_decision_time)**1.1
+                else:
+                    if self.env.now - passenger.waiting_room_arrival_time != 0:
+                        total_weighted_waiting_time += self.env.now - last_decision_time
+                    else:
+                        total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+        
+        for flight_request_store in self.flight_request_stores.values():
+            for passenger in flight_request_store.items:
+                waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                    total_weighted_waiting_time += (self.env.now - last_decision_time)**1.1
+                else:
+                    if self.env.now - passenger.waiting_room_arrival_time != 0:
+                        total_weighted_waiting_time += self.env.now - last_decision_time
+                    else:
+                        total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+        return VertiportConfig.unit_helper(unit=unit, value=total_weighted_waiting_time)
+    
+    def get_total_linear_waiting_cost(self, unit='hour') -> float:
         """
         Returns the total waiting time of all passengers in the vertiport in the given unit.
         """
@@ -126,7 +208,10 @@ class VertiportConfig:
 
         return VertiportConfig.unit_helper(unit=unit, value=total_waiting_time)
     
-    def get_exponential_waiting_cost(self, unit='hour'):
+    def get_total_exponential_waiting_cost(self, unit='hour'):
+        """
+        Returns the total waiting time of all passengers in the vertiport in the given unit.
+        """
         total_weighted_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
@@ -220,7 +305,7 @@ class VertiportConfig:
         for destination, waiting_passenger_count in waiting_passenger_counts.items():
             entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
 
-        entity_states['total_passenger_waiting_time'] = int(self.get_waiting_time_cost(reward_function_parameters))
+        entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
@@ -230,17 +315,14 @@ class VertiportConfig:
         # Return the validated data
         return valid_entity_states.dict()  
 
-    def get_waiting_time_cost(self, reward_function_parameters):
+    def get_total_waiting_time(self, reward_function_parameters):
         """
         Returns the waiting time cost of the vertiport.
         """
-        if reward_function_parameters['waiting_time_cost_type'] == 'linear':
-            return self.get_linear_waiting_cost(unit=reward_function_parameters['waiting_time_cost_unit'])
-        elif reward_function_parameters['waiting_time_cost_type'] == 'exponential':
-            return self.get_exponential_waiting_cost(unit=reward_function_parameters['waiting_time_cost_unit'])
-        else:
-            raise ValueError("Invalid waiting time cost type. Please input one of the following: 'linear', 'exponential'.")
-    
+        return self.get_waiting_time_cost(unit=reward_function_parameters['waiting_time_cost_unit'],
+                                          last_decision_time=None,
+                                          type=reward_function_parameters['waiting_time_cost_type'])
+
     def get_waiting_passenger_count(self):
         waiting_passenger_count = {destination: 0 for destination in self.waiting_room_stores.keys()}
         for destination, waiting_room_store in self.waiting_room_stores.items():
@@ -250,7 +332,6 @@ class VertiportConfig:
             waiting_passenger_count[destination] += len(flight_request_store.items)
 
         return waiting_passenger_count  
-
 
     def check_charger_resource_type(self):
         # Based on the charger resource specification, this method changes the structure of the parking pads.

@@ -44,7 +44,11 @@ class VertiSim:
         self.status = True
         # Remove the old logs.
         # self.sim_setup.logger.remove_logs(seconds=10)
-        self.partial_reward = 0
+        self.rl_vars = {
+            "partial_reward": 0,
+            "last_decision_time": 0
+        }
+
 
     def set_simulation_events(self, env, config):
         """
@@ -136,7 +140,7 @@ class VertiSim:
                 
             # Compute the partial reward
             pax_count = self.get_num_waiting_passengers(aircraft.destination_vertiport_id)
-            self.partial_reward += self.compute_action_reward_wrt_pax_count(num_waiting_pax=pax_count, action=action[aircraft_id], soc=aircraft.soc)
+            self.rl_vars['partial_reward'] += self.compute_action_reward_wrt_pax_count(num_waiting_pax=pax_count, action=action[aircraft_id], soc=aircraft.soc)
             
         # Compute the reward
         # self.reward = self.calculate_reward(action)
@@ -158,7 +162,7 @@ class VertiSim:
         waiting_time_cost_type = self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost_type']
         waiting_time_cost_unit = self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost_unit']
 
-        return self.waiting_time_penalty(how=waiting_time_cost_type, unit=waiting_time_cost_unit) + \
+        reward = self.waiting_time_penalty(how=waiting_time_cost_type, unit=waiting_time_cost_unit) + \
                     self.sim_setup.system_manager.trip_counter * \
                         self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] + \
             self.sim_setup.system_manager.trip_time_counter * \
@@ -171,7 +175,11 @@ class VertiSim:
                 self.config['external_optimization_params']['reward_function_parameters']['charge_reward'] +\
                 self.sim_setup.system_manager.holding_time_counter *\
                 self.config['external_optimization_params']['reward_function_parameters']['holding_penalty'] +\
-                self.partial_reward
+                self.rl_vars['partial_reward']
+        
+        self.rl_vars['last_decision_time'] = self.env.now
+
+        return reward
 
     def action_mask(self):
         """
@@ -322,14 +330,14 @@ class VertiSim:
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
                 event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-                # print(f"Triggered event: {event_name}")
+                print(f"Triggered event: {event_name}")
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
                 reward = round(self.calculate_weighted_reward(), 2)
                 self.reset_rewards()
-                # print(f"Reward: {reward}")
-                # pprint.pprint(f"Currrent state: {self.get_current_state()}")
+                print(f"Reward: {reward}")
+                pprint.pprint(f"Currrent state: {self.get_current_state()}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         self.finalize_simulation()
@@ -412,16 +420,10 @@ class VertiSim:
         how: str
             The type of the waiting time penalty. Either linear or exponential.
         """
-        if how == 'linear':
-            return sum(
-                vertiport.get_linear_waiting_cost(unit=unit)
-                for _, vertiport in self.sim_setup.vertiports.items()) * \
-                    self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost']
-        elif how == 'exponential':
-            return sum(
-                vertiport.get_exponential_waiting_cost(unit=unit)
-                for _, vertiport in self.sim_setup.vertiports.items()) * \
-                    self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost']
+        return sum(
+            vertiport.get_waiting_time_cost(last_decision_time=self.rl_vars['last_decision_time'], unit=unit, type=how)
+            for _, vertiport in self.sim_setup.vertiports.items()) * \
+                self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost']
     
     def compute_action_reward_wrt_pax_count(self, num_waiting_pax, action, soc):
         """
@@ -450,7 +452,7 @@ class VertiSim:
         self.sim_setup.system_manager.charge_reward = 0
         self.sim_setup.system_manager.holding_time_counter = 0
         self.reward = 0
-        self.partial_reward = 0
+        self.rl_vars['partial_reward'] = 0
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):
