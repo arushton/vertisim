@@ -109,7 +109,7 @@ class VertiSim:
         self.env.process(self.apply_action_reward(actions))
         # Advance to the next stopping event. The returned state and rewward pair should be
         # the state and reward after all the actions are applied.
-        return self.advance_to_next_stopping_event_setting_3(total_triggers)
+        return self.advance_to_next_stopping_event_setting(total_triggers)
        
     def apply_action_reward(self, action: np.array):
         """
@@ -203,119 +203,7 @@ class VertiSim:
         # Flatten the mask
         return np.array(mask).flatten().tolist()
 
-    # def advance_to_next_stopping_event_setting_1(self, total_triggers):
-    #     """
-    #     Runs the simulation until the next defined stopping event.
-    #     Rewards the agent once all the actions are completed.
-    #     """
-    #     trigger_count = 0
-    #     # Flag to check if any event was triggered
-    #     stopping_event_triggered = False   
-    #     # Flag to check if any truncation event was triggered
-    #     truncation_triggered = False   
-        
-    #     stopped_events = set()
-    #     truncated_events = set()
-
-    #     while self._should_continue_simulation():
-    #         # Print the next event
-    #         # print(f"Next event: {self.env.peek()}")
-    #         # Step the simulation
-    #         self.env.step()
-
-    #         # Check if any events in stopping_events have triggered.
-    #         for event_name, event in self.stopping_events.items():
-    #             if event.triggered and (event_name.startswith("passenger_arrival") and event_name not in stopped_events):
-    #                 self._reset_event(event_name)
-    #             if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
-    #                 trigger_count += 1
-    #                  # Set the triggered flag to True
-    #                 stopping_event_triggered = True 
-    #                 # Add the event to the list of stopped events
-    #                 stopped_events.add(event_name)
-
-          
-    #         # If there are any triggered stopping event, pop it out, reset it and return the states
-    #         if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
-    #             event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-    #             # print(f"Triggered event: {event_name}. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. State: {self.get_current_state()['aircraft_states']}")
-    #             # Reset the event
-    #             self._reset_event(event_name)
-    #             # Return the states
-    #             # print(f"Aircraft status and location: {[(aircraft.status, aircraft.location) for _, aircraft in self.sim_setup.system_manager.aircraft_agents.items()]}")
-    #             # print(f"Action mask: {self.action_mask()}")
-    #             # print(f"REWARD: {self.calculate_reward()}")
-    #             if trigger_count == total_triggers:
-    #                 reward = round(self.calculate_weighted_reward(), 2)
-    #                 self.reset_rewards()
-    #                 # print(f"Reward: {reward}")
-    #             else:
-    #                 reward = self.waiting_time_penalty()
-    #             # print(f"Reward: {reward}")
-    #             return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
-
-
-            # # # If any event was triggered and there is the list is cleared, return the states
-            # if trigger_count == total_triggers and stopping_event_triggered:
-            #     # Reset the triggered stopping events
-            #     for event_name, event in self.stopping_events.items():
-            #         if event.triggered:
-            #             # Reset the event
-            #             self._reset_event(event_name)                
-            #     # Return the states
-            #     reward = round(self.calculate_reward())
-            #     self.reset_rewards()
-            #     print(f"Reward: {reward}")
-            #     return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
-
-        # self._handle_end_of_simulation()
-        # self.finalize_simulation()
-        # # print(f"FINAL REWARD: {self.calculate_reward()}")
-        # # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
-        # return self.get_current_state(), self.calculate_weighted_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()
-    
-    # def advance_to_next_stopping_event_setting_2(self, total_triggers):
-    #     """
-    #     Runs the simulation until the next defined stopping event.
-    #     Rewards the agent right after the each action is completed.
-    #     Rewards the agent separately for each action.
-    #     """
-    #     stopped_events = set()
-    #     truncated_events = set()
-
-    #     while self._should_continue_simulation():
-    #         # Step the simulation
-    #         self.env.step()
-
-    #         # Check if any events in stopping_events have triggered.
-    #         for event_name, event in self.stopping_events.items():
-    #             # We don't 
-    #             if event.triggered and (event_name.startswith("passenger_arrival") and event_name not in stopped_events):
-    #                 self._reset_event(event_name)
-    #             if event.triggered and (not event_name.startswith("passenger_arrival") and event_name not in stopped_events):
-    #                 # Add the event to the list of stopped events
-    #                 stopped_events.add(event_name)
-
-          
-    #         # If there are any triggered stopping event, pop it out, reset it and return the states
-    #         if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
-    #             # Pop the event on top of the queue
-    #             event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-    #             # Reset the event
-    #             self._reset_event(event_name)
-    #             # Return the states
-    #             reward = round(self.calculate_weighted_reward(), 2)
-    #             self.reset_rewards()
-    #             # print(f"Reward: {reward}")
-    #             return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
-
-    #     # self._handle_end_of_simulation()
-    #     self.finalize_simulation()
-    #     # print(f"FINAL REWARD: {self.calculate_reward()}")
-    #     # print(f"Simulation ended. Time sec: {round(self.env.now/1000)}. Reward: {self.calculate_reward()}. Returned state: {self.get_current_state()}")
-    #     return self.get_current_state(), self.calculate_weighted_reward(), self.is_terminated(), self.is_truncated(), self.action_mask()    
-
-    def advance_to_next_stopping_event_setting_3(self, total_triggers):
+    def advance_to_next_stopping_event_setting(self, total_triggers):
         """
         Runs the simulation until the next defined stopping event.
         Rewards the agent right after the each action is completed.
@@ -330,14 +218,14 @@ class VertiSim:
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
                 event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-                print(f"Triggered event: {event_name}")
+                # print(f"Triggered event: {event_name}")
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
                 reward = round(self.calculate_weighted_reward(), 2)
                 self.reset_rewards()
-                print(f"Reward: {reward}")
-                pprint.pprint(f"Currrent state: {self.get_current_state()}")
+                # print(f"Reward: {reward}")
+                # pprint.pprint(f"Currrent state: {self.get_current_state()}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         self.finalize_simulation()
