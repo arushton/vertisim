@@ -11,7 +11,7 @@ class SimulatorStates(BaseModel):
     vertiport_states: Dict[str, Any]
     aircraft_states: Dict[int, Any]
     # environmental_states: Dict[Any, Any]
-    # sim_time: float
+    sim_time: float
 
 def filter_and_get_states(get_states_func, keys, **kwargs):
     """Helper function to get and filter states for given entity."""
@@ -72,9 +72,9 @@ def get_simulator_states(
 
     simulator_states = {
         'vertiport_states': vertiport_states,
-        'aircraft_states': aircraft_states
+        'aircraft_states': aircraft_states,
         # 'environmental_states': environmental_states,
-        # 'sim_time': round(ms_to_min(system_manager.env.now))
+        'sim_time': round(ms_to_min(system_manager.env.now), 2)
     }
 
     # Validate and serialize the data using Pydantic

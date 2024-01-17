@@ -37,7 +37,7 @@ class VertiSim:
                                   truncation_events=self.truncation_events,
                                   truncation_event=self.truncation_event)    
         # Initiate flow entities and create events
-        initiate_flow_entities(sim_setup=self.sim_setup)       
+        # initiate_flow_entities(sim_setup=self.sim_setup)       
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
@@ -70,8 +70,8 @@ class VertiSim:
         # This only runs uninterrupted simulation. No distinction for online optimization
         self.run_uninterrupted_simulation()          
         self.finalize_simulation()
-        performance_metrics = self.sim_setup.calculate_performance_metrics()
-        self.sim_setup.save_results(performance_metrics)
+        # performance_metrics = self.sim_setup.calculate_performance_metrics()
+        # self.sim_setup.save_results(performance_metrics)
         # self.sim_setup.print_passenger_trip_time_stats()
 
     def finalize_simulation(self):
@@ -168,14 +168,14 @@ class VertiSim:
             self.sim_setup.system_manager.trip_time_counter * \
                 self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] + \
             self.sim_setup.system_manager.truncation_penalty * \
-                 self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty'] + \
-                self.sim_setup.system_manager.spill_counter * \
-                self.config['external_optimization_params']['reward_function_parameters']['spill_cost'] +\
-                self.sim_setup.system_manager.charge_reward * \
-                self.config['external_optimization_params']['reward_function_parameters']['charge_reward'] +\
-                self.sim_setup.system_manager.holding_time_counter *\
-                self.config['external_optimization_params']['reward_function_parameters']['holding_penalty'] +\
-                self.rl_vars['partial_reward']
+                 self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty']
+                # self.sim_setup.system_manager.spill_counter * \
+                # self.config['external_optimization_params']['reward_function_parameters']['spill_cost'] +\
+                # self.sim_setup.system_manager.charge_reward * \
+                # self.config['external_optimization_params']['reward_function_parameters']['charge_reward'] +\
+                # self.sim_setup.system_manager.holding_time_counter *\
+                # self.config['external_optimization_params']['reward_function_parameters']['holding_penalty'] +\
+                # self.rl_vars['partial_reward']
         
         self.rl_vars['last_decision_time'] = self.env.now
 
@@ -245,7 +245,7 @@ class VertiSim:
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
             # print("Demand satisfied")
-            self.sim_setup.print_brief_metrics()
+            # self.sim_setup.print_brief_metrics()
             # self.sim_setup.system_manager.reward += \
             #     self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
             self.terminal_event.succeed()

@@ -8,7 +8,8 @@ from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
 from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms, sec_to_ms
-from .utils.helpers import miliseconds_to_hms
+from .utils.read_files import read_input_file
+from .utils.helpers import miliseconds_to_hms, expected_pax_arrivals_for_route
 from pydantic import BaseModel
 
 class EntitySubState(BaseModel):
@@ -27,6 +28,7 @@ class VertiportStates(BaseModel):
     num_available_fato: int
     num_available_parking_pad: int
     total_passenger_waiting_time: float
+    expected_pax: Dict[str, float]
     aircraft_status: Dict[int, int]
 
 class VertiportConfig:
@@ -37,6 +39,7 @@ class VertiportConfig:
                  vertiport_data: dict,
                  vertiport_layout: dict,
                  vertiport_ids: list,
+                 network_and_demand: dict,
                  pax_waiting_time_threshold: int = 600):
         self.env = env
         self.vertiport_id = vertiport_id
@@ -44,7 +47,9 @@ class VertiportConfig:
         self.vertiport_layout = vertiport_layout
         self.parking_pad_ids = vertiport_layout.parking_pad_ids
         self.vertiport_ids = vertiport_ids
+        self.network_and_demand = network_and_demand
         self.pax_waiting_time_threshold = pax_waiting_time_threshold
+        self.pax_arrival_rates_df = read_input_file(self.network_and_demand['passenger_arrival_rates_path'])
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
         self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
         self.charger_model = self.set_charger_model()
@@ -276,7 +281,7 @@ class VertiportConfig:
         """
         Will be deprecated in the future.
         """
-        entity_states = {'num_waiting_passengers': {}}
+        entity_states = {'num_waiting_passengers': {}, 'expected_pax': {}}
 
         for fato in self.fato_store.items:
             entity_states[fato.resource_id] = {'num_jobs_in_service': fato.fato_resource.count,
@@ -304,6 +309,10 @@ class VertiportConfig:
         waiting_passenger_counts = self.get_waiting_passenger_count()
         for destination, waiting_passenger_count in waiting_passenger_counts.items():
             entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
+            entity_states['expected_pax'][f'to_{destination}'] = expected_pax_arrivals_for_route(arrival_rate_df=self.pax_arrival_rates_df,
+                                                                                                 current_time=self.env.now,
+                                                                                                 look_ahead_time=sec_to_ms(self.network_and_demand['demand_lookahead_time']),
+                                                                                                 route=f'{self.vertiport_id}_{destination}')
 
         entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 

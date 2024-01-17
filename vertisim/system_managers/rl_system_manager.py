@@ -135,7 +135,8 @@ class RLSystemManager(BaseSystemManager):
         # Increase the passenger trip counter
         self.trip_counter += occupancy             
 
-        self.trip_time_counter += sec_to_min(self.get_average_flight_time(flight_direction=aircraft.flight_direction))
+        # self.trip_time_counter += sec_to_min(self.get_average_flight_time(flight_direction=aircraft.flight_direction))
+        self.trip_time_counter += 1
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.destination_vertiport_id, passengers=aircraft.passengers_onboard) 

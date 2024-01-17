@@ -3,7 +3,7 @@ import math
 import numpy as np
 import os
 from enum import Enum
-from ..utils.units import sec_to_ms
+from ..utils.units import sec_to_ms, ms_to_hr, ms_to_sec
 from typing import List, Union, Dict, Any, Optional
 import re
 import pandas as pd # For type hinting
@@ -491,6 +491,56 @@ def get_list_elements_from_enum(enum_object: Enum):
     Get a list of elements from an Enum.
     """
     return [object.name for object in enum_object]
+
+
+def expected_pax_arrivals(arrival_rate_df, current_time, look_ahead_time):
+    """
+    Get the expected arrivals for the next x minutes.
+
+    Parameters
+    ----------
+    arrival_rate_df : pd.DataFrame
+        Dataframe containing the arrival rates for each hour.
+    current_time : int
+        Current time in miliseconds.
+    look_ahead_time : int
+        Look ahead time in miliseconds.
+    """
+    interval = arrival_rate_df[arrival_rate_df['time_sec'] <= ms_to_sec(current_time)].iloc[-1]
+
+    expected_arrivals = {}
+    for column in arrival_rate_df.columns:
+        if column != 'time_sec':
+            lambda_rate = interval[column]
+            expected_arrivals[column] = round(ms_to_hr(lambda_rate * look_ahead_time))  # Convert to hours
+    return expected_arrivals
+
+
+def expected_pax_arrivals_for_route(arrival_rate_df, current_time, look_ahead_time, route):
+    """
+    Get the expected arrivals for the next x minutes.
+
+    Parameters
+    ----------
+    arrival_rate_df : pd.DataFrame
+        Dataframe containing the arrival rates for each hour.
+    current_time : int
+        Current time in miliseconds.
+    look_ahead_time : int
+        Look ahead time in miliseconds.
+    route : str
+        Route id.
+    """
+
+    # Find the current time interval
+    interval = arrival_rate_df[arrival_rate_df['time_sec'] <= ms_to_sec(current_time)].iloc[-1]
+
+    if route in arrival_rate_df.columns:
+        lambda_rate = interval[route]
+        expected_arrivals = round(ms_to_hr(lambda_rate * look_ahead_time))  # Convert to hours
+        return expected_arrivals
+    else:
+        return "Route not found"
 
 
 import simpy
