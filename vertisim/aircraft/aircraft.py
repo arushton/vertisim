@@ -1054,7 +1054,7 @@ class Aircraft:
             # If it is the first charging process, then add the pre-charging process time (fixed charging cost).
             if self.is_first_time_charge:
                 self.env.timeout(sec_to_ms(self.aircraft_params['time_pre_charging_processes']))
-                            
+
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
                                                                         shared_charger=shared_charger))
@@ -1368,8 +1368,8 @@ class Aircraft:
 
     
 class AircraftStatus(Enum):
-    CHARGE = 1
-    IDLE = 2
+    IDLE = 1
+    CHARGE = 2
     FLY = 3
 
 

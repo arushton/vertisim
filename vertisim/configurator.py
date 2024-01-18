@@ -40,6 +40,7 @@ class VertiportConfig:
                  vertiport_layout: dict,
                  vertiport_ids: list,
                  network_and_demand: dict,
+                 aircraft_capacity: int,
                  pax_waiting_time_threshold: int = 600):
         self.env = env
         self.vertiport_id = vertiport_id
@@ -48,6 +49,7 @@ class VertiportConfig:
         self.parking_pad_ids = vertiport_layout.parking_pad_ids
         self.vertiport_ids = vertiport_ids
         self.network_and_demand = network_and_demand
+        self.aircraft_capacity = aircraft_capacity
         self.pax_waiting_time_threshold = pax_waiting_time_threshold
         self.pax_arrival_rates_df = read_input_file(self.network_and_demand['passenger_arrival_rates_path'])
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
@@ -118,7 +120,7 @@ class VertiportConfig:
     def get_fato_queue_length(self):
         return sum(len(fato.fato_resource.queue) for fato in self.fato_store.items)
     
-    def get_waiting_time_cost(self, unit:str, last_decision_time: float, type:str):
+    def get_waiting_time_cost(self, unit:str, last_decision_time: float, type:str, exclude_pax_ids: list=[]):
         """
         Returns the waiting cost of the vertiport.
 
@@ -131,110 +133,130 @@ class VertiportConfig:
             NOT total waiting time from passenger waiting room arrival time.
         type : str
             The type of the waiting time cost. One of the following: 'linear', 'exponential'.
+        exclude_pax_ids : list
+            The list of passenger IDs to exclude from the waiting time cost.
         """
         if last_decision_time:
             if type == 'linear':
-                return self.get_linear_per_step_waiting_cost(last_decision_time, unit=unit)
+                return self.get_linear_per_step_waiting_cost(last_decision_time, 
+                                                             unit=unit, 
+                                                             exclude_pax_ids=exclude_pax_ids)
             elif type == 'exponential':
-                return self.get_exponential_per_step_waiting_cost(last_decision_time, unit=unit)
+                return self.get_exponential_per_step_waiting_cost(last_decision_time, 
+                                                                  unit=unit, 
+                                                                  exclude_pax_ids=exclude_pax_ids)
             else:
                 raise ValueError("Invalid waiting time cost type. Please input one of the following: 'linear', 'exponential'.")
         else:
             if type == 'linear':
-                return self.get_total_linear_waiting_cost(unit=unit)
+                return self.get_total_linear_waiting_cost(unit=unit, 
+                                                          exclude_pax_ids=exclude_pax_ids)
             elif type == 'exponential':
-                return self.get_total_exponential_waiting_cost(unit=unit)
+                return self.get_total_exponential_waiting_cost(unit=unit, 
+                                                               exclude_pax_ids=exclude_pax_ids)
             else:
                 raise ValueError("Invalid waiting time cost type. Please input one of the following: 'linear', 'exponential'.")
 
-    def get_linear_per_step_waiting_cost(self, last_decision_time: float, unit: str='hour') -> float:
+    def get_linear_per_step_waiting_cost(self, last_decision_time: float, unit: str='hour', exclude_pax_ids: list=[]) -> float:
         """
         Returns the total waiting time of all passengers in the vertiport in the given unit.
         Waiting time is computed using per time step, NOT total waiting time from 
         passenger waiting room arrival time.
+
+        If exclude_pax_ids are provided then we exlude them from the waiting time cost.        
         """
         total_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                if self.env.now - passenger.waiting_room_arrival_time != 0:
-                    total_waiting_time += self.env.now - last_decision_time
-                else:
-                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    if self.env.now - passenger.waiting_room_arrival_time != 0:
+                        total_waiting_time += self.env.now - last_decision_time
+                    else:
+                        total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
-                if self.env.now - passenger.waiting_room_arrival_time != 0:
-                    total_waiting_time += self.env.now - last_decision_time
-                else:
-                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    if self.env.now - passenger.waiting_room_arrival_time != 0:
+                        total_waiting_time += self.env.now - last_decision_time
+                    else:
+                        total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
 
         return VertiportConfig.unit_helper(unit=unit, value=total_waiting_time)
     
-    def get_exponential_per_step_waiting_cost(self, last_decision_time: float, unit: str='hour') -> float:
+    def get_exponential_per_step_waiting_cost(self, last_decision_time: float, unit: str='hour', exclude_pax_ids: list=[]) -> float:
         """
         Returns the total waiting time of all passengers in the vertiport in the given unit.
         Waiting time is computed using per time step, NOT total waiting time from
         passenger waiting room arrival time.
+
+        If exclude_pax_ids are provided then we exlude them from the waiting time cost.
         """
         total_weighted_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                waiting_time = self.env.now - passenger.waiting_room_arrival_time
-                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
-                    total_weighted_waiting_time += (self.env.now - last_decision_time)**1.1
-                else:
-                    if self.env.now - passenger.waiting_room_arrival_time != 0:
-                        total_weighted_waiting_time += self.env.now - last_decision_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                    if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                        total_weighted_waiting_time += (self.env.now - last_decision_time)**1.1
                     else:
-                        total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                        if self.env.now - passenger.waiting_room_arrival_time != 0:
+                            total_weighted_waiting_time += self.env.now - last_decision_time
+                        else:
+                            total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
         
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
-                waiting_time = self.env.now - passenger.waiting_room_arrival_time
-                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
-                    total_weighted_waiting_time += (self.env.now - last_decision_time)**1.1
-                else:
-                    if self.env.now - passenger.waiting_room_arrival_time != 0:
-                        total_weighted_waiting_time += self.env.now - last_decision_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                    if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                        total_weighted_waiting_time += (self.env.now - last_decision_time)**1.1
                     else:
-                        total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                        if self.env.now - passenger.waiting_room_arrival_time != 0:
+                            total_weighted_waiting_time += self.env.now - last_decision_time
+                        else:
+                            total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
         return VertiportConfig.unit_helper(unit=unit, value=total_weighted_waiting_time)
     
-    def get_total_linear_waiting_cost(self, unit='hour') -> float:
+    def get_total_linear_waiting_cost(self, unit='hour', exclude_pax_ids: list=[]) -> float:
         """
         Returns the total waiting time of all passengers in the vertiport in the given unit.
         """
         total_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
-                total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
 
         return VertiportConfig.unit_helper(unit=unit, value=total_waiting_time)
     
-    def get_total_exponential_waiting_cost(self, unit='hour'):
+    def get_total_exponential_waiting_cost(self, unit='hour', exclude_pax_ids: list=[]) -> float:
         """
         Returns the total waiting time of all passengers in the vertiport in the given unit.
         """
         total_weighted_waiting_time = 0
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                waiting_time = self.env.now - passenger.waiting_room_arrival_time
-                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
-                    total_weighted_waiting_time += sec_to_ms(self.pax_waiting_time_threshold) \
-                        + (waiting_time - sec_to_ms(self.pax_waiting_time_threshold))**1.1
-                else:
-                    total_weighted_waiting_time += waiting_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                    if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                        total_weighted_waiting_time += sec_to_ms(self.pax_waiting_time_threshold) \
+                            + (waiting_time - sec_to_ms(self.pax_waiting_time_threshold))**1.1
+                    else:
+                        total_weighted_waiting_time += waiting_time
             
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
-                waiting_time = self.env.now - passenger.waiting_room_arrival_time
-                if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
-                    total_weighted_waiting_time += sec_to_ms(self.pax_waiting_time_threshold) \
-                        + (waiting_time - sec_to_ms(self.pax_waiting_time_threshold))**1.1
-                else:
-                    total_weighted_waiting_time += waiting_time
+                if passenger.passenger_id not in exclude_pax_ids:
+                    waiting_time = self.env.now - passenger.waiting_room_arrival_time
+                    if waiting_time > sec_to_ms(self.pax_waiting_time_threshold):
+                        total_weighted_waiting_time += sec_to_ms(self.pax_waiting_time_threshold) \
+                            + (waiting_time - sec_to_ms(self.pax_waiting_time_threshold))**1.1
+                    else:
+                        total_weighted_waiting_time += waiting_time
         return VertiportConfig.unit_helper(unit=unit, value=total_weighted_waiting_time)
 
     @staticmethod
@@ -262,6 +284,13 @@ class VertiportConfig:
         """
         return sum(len(waiting_room_store.items) for waiting_room_store in self.waiting_room_stores.values()) +\
                 sum(len(flight_request_store.items) for flight_request_store in self.flight_request_stores.values())
+    
+    def get_waiting_passenger_ids(self, destination: str):
+        """
+        Returns the ids of the passengers in the waiting rooms in the given destination up to aircraft capacity
+        """
+        waiting_room_store = self.waiting_room_stores[destination]
+        return [passenger.passenger_id for passenger in waiting_room_store.items[:self.aircraft_capacity]]
     
     def get_waiting_room_count(self):
         """

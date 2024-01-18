@@ -6,6 +6,7 @@ from .utils.helpers import get_stopping_events, get_truncation_events, milisecon
 import time
 import numpy as np
 import gymnasium as gym
+from collections import defaultdict
 import pprint
 from .utils.get_state_variables import get_simulator_states
 from .utils import rl_utils
@@ -46,7 +47,8 @@ class VertiSim:
         # self.sim_setup.logger.remove_logs(seconds=10)
         self.rl_vars = {
             "partial_reward": 0,
-            "last_decision_time": 0
+            "last_decision_time": 0,
+            "total_reward": 0
         }
 
 
@@ -138,12 +140,14 @@ class VertiSim:
             # else:
             #     raise ValueError(f"Invalid action: {action[aircraft_id]}")
                 
-            # Compute the partial reward
-            pax_count = self.get_num_waiting_passengers(aircraft.destination_vertiport_id)
+            # Get the vertiport that is not the destination of the aircraft from the sim_setup.vertiport_ids
+            dest_vertiport_id = self.sim_setup.vertiport_ids[0] if aircraft.origin_vertiport_id != self.sim_setup.vertiport_ids[0] else self.sim_setup.vertiport_ids[1]
+            # Compute the partial reward             
+            pax_count = self.get_num_waiting_passengers(aircraft.origin_vertiport_id)[dest_vertiport_id]
             self.rl_vars['partial_reward'] += self.compute_action_reward_wrt_pax_count(num_waiting_pax=pax_count, action=action[aircraft_id], soc=aircraft.soc)
             
         # Compute the reward
-        # self.reward = self.calculate_reward(action)
+        self.rl_vars['total_reward'] = self.calculate_reward(action)
 
         # Apply the actions
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -154,6 +158,38 @@ class VertiSim:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
                 # print(f"Flight assigned to aircraft {aircraft.tail_number} at time {miliseconds_to_hms(self.env.now)}")
         yield self.env.all_of(process_list)
+
+    def calculate_reward(self, action):
+        """
+        Calculate the reward for the current state of the simulation.
+        """
+        pax_count = 0
+        reward = 0
+        trip_counter = 0
+        departing_passengers = set()
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if action[aircraft_id] == 2:
+                trip_counter += 1
+                # Get the vertiport that is not the destination of the aircraft from the sim_setup.vertiport_ids. TODO: For many-to-many sim, this should be changed.
+                dest_vertiport_id = self.sim_setup.vertiport_ids[0] if aircraft.origin_vertiport_id != self.sim_setup.vertiport_ids[0] else self.sim_setup.vertiport_ids[1]
+                departing_passengers.update(self.get_waiting_passenger_ids(origin_vertiport_id=aircraft.origin_vertiport_id,
+                                                                           destination_vertiport_id=dest_vertiport_id))
+                # To avoid double counting passengers on flights originating from aircraft located at the same vertiport.
+                pax_count += len(departing_passengers) - pax_count
+
+        reward += self.config['external_optimization_params']['reward_function_parameters']['trip_reward'] * pax_count
+        reward += self.config['external_optimization_params']['reward_function_parameters']['flight_cost'] * trip_counter
+
+        waiting_time_cost_type = self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost_type']
+        waiting_time_cost_unit = self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost_unit']
+
+        reward += self.waiting_time_penalty(how=waiting_time_cost_type, 
+                                            unit=waiting_time_cost_unit, 
+                                            exclude_pax_ids=departing_passengers)
+        
+        self.rl_vars['last_decision_time'] = self.env.now
+
+        return reward
     
     def calculate_weighted_reward(self):
         """
@@ -222,7 +258,8 @@ class VertiSim:
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
-                reward = round(self.calculate_weighted_reward(), 2)
+                # reward = round(self.calculate_weighted_reward(), 2)
+                reward = round(self.rl_vars['total_reward'], 2)
                 self.reset_rewards()
                 # print(f"Reward: {reward}")
                 # pprint.pprint(f"Currrent state: {self.get_current_state()}")
@@ -299,7 +336,7 @@ class VertiSim:
                     self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
         return self.get_current_state()
     
-    def waiting_time_penalty(self, how='linear', unit='hour'):
+    def waiting_time_penalty(self, how='linear', unit='hour', exclude_pax_ids=[]):
         """
         Calculate the waiting time penalty for the current state of the simulation.
 
@@ -309,9 +346,13 @@ class VertiSim:
             The type of the waiting time penalty. Either linear or exponential.
         """
         return sum(
-            vertiport.get_waiting_time_cost(last_decision_time=self.rl_vars['last_decision_time'], unit=unit, type=how)
+            vertiport.get_waiting_time_cost(unit=unit, 
+                                            type=how,
+                                            exclude_pax_ids=exclude_pax_ids,
+                                            last_decision_time=None)
             for _, vertiport in self.sim_setup.vertiports.items()) * \
                 self.config['external_optimization_params']['reward_function_parameters']['waiting_time_cost']
+
     
     def compute_action_reward_wrt_pax_count(self, num_waiting_pax, action, soc):
         """
@@ -341,6 +382,7 @@ class VertiSim:
         self.sim_setup.system_manager.holding_time_counter = 0
         self.reward = 0
         self.rl_vars['partial_reward'] = 0
+        self.rl_vars['total_reward'] = 0
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):
@@ -423,6 +465,12 @@ class VertiSim:
         Check the number of waiting passengers at the given vertiport.
         """
         return self.sim_setup.vertiports[vertiport_id].get_waiting_passenger_count()
+    
+    def get_waiting_passenger_ids(self, origin_vertiport_id: str, destination_vertiport_id: str):
+        """
+        Returns the ids of the waiting passengers up to aircraft capacity
+        """
+        return self.sim_setup.vertiports[origin_vertiport_id].get_waiting_passenger_ids(destination=destination_vertiport_id)
     
     def print_total_time_to_run(self):
         end_time = time.time()

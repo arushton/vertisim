@@ -127,10 +127,11 @@ class RLSystemManager(BaseSystemManager):
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers     
 
-        if len(departing_passengers) == 0:
-            occupancy = self.external_optimization_params['reward_function_parameters']['empty_flight_penalty']
-        elif len(departing_passengers) > 0:
-            occupancy = len(departing_passengers)
+        # if len(departing_passengers) == 0:
+        #     occupancy = self.external_optimization_params['reward_function_parameters']['empty_flight_penalty']
+        # elif len(departing_passengers) > 0:
+        #     occupancy = len(departing_passengers)
+        occupancy = len(departing_passengers)
 
         # Increase the passenger trip counter
         self.trip_counter += occupancy             

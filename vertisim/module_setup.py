@@ -41,6 +41,7 @@ def vertiport_config(env: object,
                      vertiport_layouts: dict,
                      vertiport_ids: list,
                      network_and_demand: dict,
+                     aircraft_capacity: int,
                      pax_waiting_time_threshold: int) -> dict:
     
     return {vertiport_id: VertiportConfig(env=env,
@@ -49,6 +50,7 @@ def vertiport_config(env: object,
                                           vertiport_layout=vertiport_layouts[vertiport_id],
                                           vertiport_ids=vertiport_ids,
                                           network_and_demand=network_and_demand,
+                                          aircraft_capacity=aircraft_capacity,
                                           pax_waiting_time_threshold=pax_waiting_time_threshold)
                 for vertiport_id, vertiport_data in vertiports.items()
             }

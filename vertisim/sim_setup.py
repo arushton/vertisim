@@ -211,6 +211,7 @@ class SimSetup:
             vertiports=self.network_and_demand_params['vertiports'],
             vertiport_ids=self.vertiport_ids,
             network_and_demand=self.network_and_demand_params,
+            aircraft_capacity=self.aircraft_params['pax'],
             pax_waiting_time_threshold=self.sim_params['max_passenger_waiting_time']
         )
     
