@@ -78,7 +78,6 @@ class SimSetup:
         self.vertiport_id_index_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)       
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
         self.check_inputs()
-        self.num_destinations = self.get_num_destinations()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
 
         self.airspace = self.create_airspace()  
@@ -168,12 +167,18 @@ class SimSetup:
         if self.sim_params['verbose']:
             print("Success: Vertiport network imported.")
         return vertiport_distances
+    
+    def num_vertiports(self):
+        """
+        Returns the number of vertiports
+        """
+        return len(self.vertiport_ids)
 
     def check_inputs(self):
         """
         Checks the inputs
         """
-        if len(self.vertiport_ids) != len(self.vertiport_layouts.keys()):
+        if self.num_vertiports() != len(self.vertiport_layouts.keys()):
             raise ValueError('The number of vertiport ids and layouts do not match. Check the vertiport network or vertiport input configs.')
             
         if self.sim_mode['offline_optimization'] == True and self.sim_mode['client_server'] == True:
@@ -196,12 +201,6 @@ class SimSetup:
         
         if self.external_optimization_params['charge_assignment_sensitivity'] and self.external_optimization_params['charge_schedule_file_path'] is None:
             raise ValueError('Charge assignment sensitivity is needed to run charge schedule. Check network_and_demand_params and external_optimization_params.')
-
-    def get_num_destinations(self) -> int:
-        """
-        Returns the number of destinations
-        """
-        return len(self.vertiport_distances)
 
     def create_vertiports(self) -> Dict:
         # Set vertiport configurations

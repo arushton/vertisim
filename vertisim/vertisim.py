@@ -120,9 +120,9 @@ class VertiSim:
         to be able to calculate the reward at the same time for the given action list.
 
         Actions:
-        0: Do nothing
-        1: Idle to charge
-        2: Idle to service (vertiport 1)
+        0, 1, ..., N-1: Idle to fly to vertiport n
+        N: Idle to charge
+        N+1: Do nothing
         """
         # print(f"Applying action: {action}")
         # print(f"Converted action: {action}")
@@ -157,7 +157,7 @@ class VertiSim:
             elif action[aircraft_id] == 2:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
                 # print(f"Flight assigned to aircraft {aircraft.tail_number} at time {miliseconds_to_hms(self.env.now)}")
-        yield self.env.all_of(process_list)
+        yield self.env.all_of(process_list)        
 
     def calculate_reward(self, action):
         """
@@ -282,7 +282,7 @@ class VertiSim:
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
             # print("Demand satisfied")
-            # self.sim_setup.print_brief_metrics()
+            self.sim_setup.print_brief_metrics()
             # self.sim_setup.system_manager.reward += \
             #     self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
             self.terminal_event.succeed()

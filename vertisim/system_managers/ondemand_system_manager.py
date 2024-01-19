@@ -297,7 +297,8 @@ class OnDemandSystemManager(BaseSystemManager):
                 self.env.process(self.assign_empty_flight(vertiport_id=destination_vertiport_id))
 
     def assign_empty_flight(self, vertiport_id: Any):
-        # TODO: Check the waiting rooms of the other vertiports and pick the one with the highest number of passengers
+        # TODO: Check the waiting rooms and the parking pad availability of the other vertiports and 
+        # pick the one with the highest number of passengers
         destination_id = random_choose_exclude_element(elements_list=self.vertiport_ids, 
                                                        exclude_element=vertiport_id, 
                                                        num_selection=1)[0]
