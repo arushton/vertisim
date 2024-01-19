@@ -155,13 +155,44 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
                                          demand_probabilities: List,
                                          passenger_arrival_rates: pd.DataFrame,
                                          network_simulation: bool):
+    """
+    Generate artificial passenger demand for a network of vertiports.
+
+    Parameters:
+    - passenger_arrival_process: Dict containing information about the passenger arrival process.
+    - vertiport_ids: List of vertiport IDs in the network.
+    - origin_vertiport_id: ID of the origin vertiport.
+    - demand_probabilities: Probabilities of passengers choosing each destination.
+    - passenger_arrival_rates: DataFrame containing time-varying passenger arrival rates.
+    - network_simulation: Boolean indicating if the simulation is for a network of vertiports.
+
+    Returns:
+    - DataFrame with passenger arrival times and destinations.
+    """
+
     num_passengers = passenger_arrival_process['num_passengers']
-    if network_simulation and demand_probabilities and len(vertiport_ids) != len(demand_probabilities):
-        raise ValueError('Number of vertiports and the length of demand_probabilities must be the same.')  
-    
-    if passenger_arrival_process['passenger_arrival_distribution'] is None and passenger_arrival_process['passenger_interarrival_constant'] is None:
-        raise ValueError('Either passenger_arrival_distribution or passenger_interarrival_constant must be defined.')          
-    
+
+    # Validate input lengths for network simulation
+    if network_simulation:
+        if demand_probabilities and len(vertiport_ids) != len(demand_probabilities):
+            raise ValueError('Number of vertiports and length of demand_probabilities must be the same.')
+
+    # Check for the existence of arrival distribution or constant
+    if not passenger_arrival_process.get('passenger_arrival_distribution') and not passenger_arrival_process.get('passenger_interarrival_constant'):
+        raise ValueError('Either passenger_arrival_distribution or passenger_interarrival_constant must be defined.')
+
+    # Determine interarrival times based on the specified process
+    if passenger_arrival_process.get('passenger_interarrival_constant') is not None:
+        interarrival_times = [passenger_arrival_process['passenger_interarrival_constant']] * num_passengers
+    elif passenger_arrival_rates is not None:
+        return generate_time_varying_arrival_times(passenger_arrival_rates, origin_vertiport_id)
+    else:
+        distribution = DistributionGenerator(distribution_params=passenger_arrival_process['passenger_arrival_distribution'])
+        interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_passengers)]
+
+    # Calculate cumulative passenger arrival times
+    passenger_arrival_times = cumulative_sum_array(interarrival_times)
+
     if network_simulation and demand_probabilities:
         destination_vertiport_ids = weighted_random_choose_exclude_element(elements_list=vertiport_ids, 
                                                                     exclude_element=origin_vertiport_id,
@@ -170,17 +201,7 @@ def generate_artificial_passenger_demand(passenger_arrival_process: Dict,
     else:
         destination_vertiport_ids = random_choose_exclude_element(elements_list=vertiport_ids,
                                                            exclude_element=origin_vertiport_id,
-                                                           num_selection=num_passengers)
-
-    if passenger_arrival_process['passenger_interarrival_constant'] is not None:
-        interarrival_times = [passenger_arrival_process['passenger_interarrival_constant']] * num_passengers
-    else:
-        if passenger_arrival_rates is not None:
-            return generate_time_varying_arrival_times(passenger_arrival_rates, origin_vertiport_id)
-        
-        distribution = DistributionGenerator(distribution_params=passenger_arrival_process['passenger_arrival_distribution'])
-        interarrival_times = [distribution.pick_number_from_distribution() for _ in range(num_passengers)]
-    passenger_arrival_times = cumulative_sum_array(interarrival_times)
+                                                           num_selection=num_passengers)    
 
     return pd.DataFrame({'passenger_arrival_time': passenger_arrival_times,
                          'origin_vertiport_id': origin_vertiport_id,

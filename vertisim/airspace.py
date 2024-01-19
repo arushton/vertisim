@@ -22,7 +22,8 @@ class Airspace:
         self.flight_directions = list(waypoint_ids.keys())
         self.waypoint_locations = waypoint_locations
         self.flight_directions = flight_directions
-        self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_locations)
+        self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_ids=self.waypoint_ids, 
+                                                                          waypoint_locations=self.waypoint_locations)
         self.airlink_resources = self.create_airlink_resources()
 
     def create_airlink_resources(self):
@@ -71,11 +72,17 @@ class Airspace:
         return all_states
     
     
+    # @staticmethod
+    # def calculate_distance(row1, row2, unit='meter') -> float:
+    #     return haversine_dist(row1['latitude'], row1['longitude'], 
+    #                         row2['latitude'], row2['longitude'], 
+    #                         unit=unit)
+    
     @staticmethod
     def calculate_distance(row1, row2, unit='meter') -> float:
-        return haversine_dist(row1['latitude'], row1['longitude'], 
-                            row2['latitude'], row2['longitude'], 
-                            unit=unit)
+        return haversine_dist(row1[0], row1[1], 
+                            row2[0], row2[1], 
+                            unit=unit)    
 
     @staticmethod
     def calculate_and_store_distances(df) -> Dict:
@@ -97,16 +104,30 @@ class Airspace:
         return distances
 
 
+    # @staticmethod
+    # def compute_distances_bw_waypoints(df) -> Dict:
+    #     # Check if input is a dictionary and convert to DataFrame if necessary
+    #     if isinstance(df, dict):
+    #         df = pd.DataFrame.from_dict(df, orient='index', columns=['latitude', 'longitude', 'altitude'])
+    #         df.index.set_names(['waypoint_id'], inplace=True)
+    #         df.reset_index(inplace=True)                
+    #     distances = Airspace.calculate_and_store_distances(df)
+    #     distances = Airspace.calculate_first_last_distance(df, distances)
+    #     return distances
+    
     @staticmethod
-    def compute_distances_bw_waypoints(df) -> Dict:
-        # Check if input is a dictionary and convert to DataFrame if necessary
-        if isinstance(df, dict):
-            df = pd.DataFrame.from_dict(df, orient='index', columns=['latitude', 'longitude', 'altitude'])
-            df.index.set_names(['waypoint_id'], inplace=True)
-            df.reset_index(inplace=True)                
-        distances = Airspace.calculate_and_store_distances(df)
-        distances = Airspace.calculate_first_last_distance(df, distances)
-        return distances
+    def compute_distances_bw_waypoints(waypoint_ids, waypoint_locations) -> Dict:
+        waypoint_distances = defaultdict(dict)
+        
+        for flight_direction, waypoints in waypoint_ids.items():
+            for i in range(len(waypoints) - 1):
+                waypoint1, waypoint2 = waypoints[i], waypoints[i + 1]
+                location1, location2 = waypoint_locations[waypoint1], waypoint_locations[waypoint2]
+                distance = Airspace.calculate_distance(location1, location2)
+                waypoint_distances[waypoint1][waypoint2] = distance
+                waypoint_distances[waypoint2][waypoint1] = distance  # If distance is bidirectional
+
+        return waypoint_distances    
 
     def get_wind_speed_and_direction(self):
         # Randomly pick a row from the wind data
