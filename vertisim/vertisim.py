@@ -112,7 +112,7 @@ class VertiSim:
         # Advance to the next stopping event. The returned state and rewward pair should be
         # the state and reward after all the actions are applied.
         return self.advance_to_next_stopping_event_setting(total_triggers)
-       
+
     def apply_action_reward(self, action: np.array):
         """
         Apply action to the simulation and compute the reward before execution.
@@ -129,35 +129,38 @@ class VertiSim:
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-            if action[aircraft_id] == 0:
-                aircraft.is_process_completed = True
-            elif action[aircraft_id] == 1:
+            # Charge the aircraft
+            if action[aircraft_id] == self.sim_setup.num_vertiports():
                 aircraft.status = AircraftStatus.CHARGE
                 aircraft.is_process_completed = False
-            elif action[aircraft_id] == 2:
+            # Do nothing
+            elif action[aircraft_id] == self.sim_setup.num_vertiports() + 1:
+                aircraft.is_process_completed = True
+            # Fly to the vertiport
+            elif action[aircraft_id] < self.sim_setup.num_vertiports():
                 aircraft.status = AircraftStatus.FLY  
                 aircraft.is_process_completed = False    
-            # else:
-            #     raise ValueError(f"Invalid action: {action[aircraft_id]}")
+            else:
+                raise ValueError(f"Invalid action: {action[aircraft_id]}")
                 
-            # Get the vertiport that is not the destination of the aircraft from the sim_setup.vertiport_ids
-            dest_vertiport_id = self.sim_setup.vertiport_ids[0] if aircraft.origin_vertiport_id != self.sim_setup.vertiport_ids[0] else self.sim_setup.vertiport_ids[1]
             # Compute the partial reward             
-            pax_count = self.get_num_waiting_passengers(aircraft.origin_vertiport_id)[dest_vertiport_id]
-            self.rl_vars['partial_reward'] += self.compute_action_reward_wrt_pax_count(num_waiting_pax=pax_count, action=action[aircraft_id], soc=aircraft.soc)
+            # pax_count = self.get_num_waiting_passengers(aircraft.origin_vertiport_id)[dest_vertiport_id]
+            # self.rl_vars['partial_reward'] += self.compute_action_reward_wrt_pax_count(num_waiting_pax=pax_count, action=action[aircraft_id], soc=aircraft.soc)
             
         # Compute the reward
         self.rl_vars['total_reward'] = self.calculate_reward(action)
 
         # Apply the actions
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-            if action[aircraft_id] == 1:
+            if action[aircraft_id] == self.sim_setup.num_vertiports():
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
                 # print(f"Charge assigned to aircraft {aircraft.tail_number} at time {miliseconds_to_hms(self.env.now)}")
-            elif action[aircraft_id] == 2:
-                process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft)))
+            elif action[aircraft_id] < self.sim_setup.num_vertiports():
+                destination_vertiport_id = self.sim_setup.vertiport_id_index_map[action[aircraft_id]]
+                process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft=aircraft, 
+                                                                                                    destination_vertiport_id=destination_vertiport_id)))
                 # print(f"Flight assigned to aircraft {aircraft.tail_number} at time {miliseconds_to_hms(self.env.now)}")
-        yield self.env.all_of(process_list)        
+        yield self.env.all_of(process_list)      
 
     def calculate_reward(self, action):
         """
@@ -168,10 +171,9 @@ class VertiSim:
         trip_counter = 0
         departing_passengers = set()
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-            if action[aircraft_id] == 2:
+            if action[aircraft_id] < self.sim_setup.num_vertiports():
                 trip_counter += 1
-                # Get the vertiport that is not the destination of the aircraft from the sim_setup.vertiport_ids. TODO: For many-to-many sim, this should be changed.
-                dest_vertiport_id = self.sim_setup.vertiport_ids[0] if aircraft.origin_vertiport_id != self.sim_setup.vertiport_ids[0] else self.sim_setup.vertiport_ids[1]
+                dest_vertiport_id = self.sim_setup.vertiport_id_index_map[action[aircraft_id]]
                 departing_passengers.update(self.get_waiting_passenger_ids(origin_vertiport_id=aircraft.origin_vertiport_id,
                                                                            destination_vertiport_id=dest_vertiport_id))
                 # To avoid double counting passengers on flights originating from aircraft located at the same vertiport.
@@ -220,22 +222,33 @@ class VertiSim:
     def action_mask(self):
         """
         Create the action mask for the current state of the simulation.
+        [Fly, Charge, Do nothing]
         """
         mask = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            # Can do any action
             if aircraft.status == AircraftStatus.IDLE \
                 and aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment_per_charge_event'] \
                     and aircraft.soc >= self.config['aircraft_params']['min_reserve_soc']:
-                mask.append([1, 1, 1])
+                destination_mask = [1 if destination != aircraft.destination_vertiport_id 
+                                    else 0 for destination in self.sim_setup.vertiport_ids]
+                mask.extend(destination_mask + [1, 1])
+            # Can only charge
             elif aircraft.status == AircraftStatus.IDLE \
                     and aircraft.soc <= self.config['aircraft_params']['min_reserve_soc']:
-                mask.append([1, 1, 0])
+                destination_mask = [0] * self.sim_setup.num_vertiports()
+                mask.extend(destination_mask + [1, 0])
+            # Can fly and do nothing
             elif aircraft.status == AircraftStatus.IDLE and aircraft.soc > 100-self.config['external_optimization_params']['soc_increment_per_charge_event']:
-                mask.append([1, 0, 1])
+                destination_mask = [1 if destination != aircraft.destination_vertiport_id 
+                                    else 0 for destination in self.sim_setup.vertiport_ids] 
+                mask.extend(destination_mask + [0, 1])               
             elif aircraft.status == AircraftStatus.CHARGE:
-                mask.append([1, 0, 0])
+                destination_mask = [0] * self.sim_setup.num_vertiports()
+                mask.extend(destination_mask + [0, 1])               
             elif aircraft.status == AircraftStatus.FLY:
-                mask.append([1, 0, 0])
+                destination_mask = [0] * self.sim_setup.num_vertiports()
+                mask.extend(destination_mask + [0, 1])
         # Flatten the mask
         return np.array(mask).flatten().tolist()
 
@@ -282,7 +295,7 @@ class VertiSim:
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
             # print("Demand satisfied")
-            self.sim_setup.print_brief_metrics()
+            # self.sim_setup.print_brief_metrics()
             # self.sim_setup.system_manager.reward += \
             #     self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
             self.terminal_event.succeed()
@@ -356,7 +369,7 @@ class VertiSim:
     
     def compute_action_reward_wrt_pax_count(self, num_waiting_pax, action, soc):
         """
-        Compute the reward or penalty for the given number of waiting passengers.
+        Compute the reward or penalty for the given number of waiting passengers. TODO: Needs update
         """
         if num_waiting_pax == 0 and action == 1:
             return self.config['external_optimization_params']['reward_function_parameters']['no_pax_and_charge_reward']

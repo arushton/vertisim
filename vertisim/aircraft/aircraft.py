@@ -1342,7 +1342,7 @@ class Aircraft:
     
     def get_aircraft_location_for_state(self):
         if self.system_manager.vertiports[self.destination_vertiport_id].is_parking_pad_location(self.location):
-            return self.get_vertiport_list().index(self.destination_vertiport_id)
+            return self.system_manager.vertiport_id_reverse_index_map[self.destination_vertiport_id]
         else:
             # Meaning that aircraft is is in the air. None of the locations
             return len(self.get_vertiport_list())

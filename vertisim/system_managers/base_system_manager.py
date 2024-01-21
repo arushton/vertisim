@@ -19,6 +19,7 @@ class BaseSystemManager:
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
+                 vertiport_id_reverse_index_map,
                  num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
@@ -38,6 +39,7 @@ class BaseSystemManager:
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
+        self.vertiport_id_reverse_index_map = vertiport_id_reverse_index_map
         self.num_initial_aircraft = num_initial_aircraft
         self.scheduler = scheduler
         self.wind = wind
