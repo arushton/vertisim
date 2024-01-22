@@ -31,15 +31,18 @@ class Logger:
         self.output_folder_path = output_folder_path
         self.logger = None
 
-    def create_logger(self, name, env, level=logging.WARNING):
-        log_file = self.set_logfile_path(name)
-        handler = logging.FileHandler(log_file)
-        formatter = CustomFormatter('%(asctime)s %(levelname)s %(tail_number)s %(location)s %(event)s %(message)s', env)
-        handler.setFormatter(formatter)
-
+    def create_logger(self, name, env, level=logging.WARNING, enable_logging=True):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
-        self.logger.addHandler(handler)
+
+        if enable_logging:
+            log_file = self.set_logfile_path(name)
+            handler = logging.FileHandler(log_file)
+            formatter = CustomFormatter('%(asctime)s %(levelname)s %(tail_number)s %(location)s %(event)s %(message)s', env)
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)      
+        else:
+            self.logger.addHandler(logging.NullHandler())
 
     def set_logfile_path(self, name):
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')

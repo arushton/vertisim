@@ -103,16 +103,16 @@ class SimSetup:
         Sets the loggers
         """
         logger = Logger(output_folder_path=self.output_folder_path)
-        logger.create_logger(name='main', env=self.env)
+        logger.create_logger(name='main', env=self.env, enable_logging=self.sim_params['logging'])
 
         aircraft_logger = Logger(output_folder_path=self.output_folder_path)
-        aircraft_logger.create_logger(name='aircraft', env=self.env)
+        aircraft_logger.create_logger(name='aircraft', env=self.env, enable_logging=self.sim_params['logging'])
 
         passenger_logger = Logger(output_folder_path=self.output_folder_path)
-        passenger_logger.create_logger(name='passenger', env=self.env)
+        passenger_logger.create_logger(name='passenger', env=self.env, enable_logging=self.sim_params['logging'])
 
         vertiport_logger = Logger(output_folder_path=self.output_folder_path)
-        vertiport_logger.create_logger(name='vertiport', env=self.env)
+        vertiport_logger.create_logger(name='vertiport', env=self.env, enable_logging=self.sim_params['logging'])
 
         return logger, aircraft_logger, passenger_logger, vertiport_logger
         
