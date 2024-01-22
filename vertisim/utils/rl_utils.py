@@ -16,6 +16,6 @@ def get_flight_duration_estimation(aircraft, system_manager):
     destination_vertiport_id = system_manager.get_random_destination(aircraft=aircraft)
 
     flight_duration_estimation = sec_to_min(system_manager.get_average_flight_time(
-        flight_direction=f"{aircraft.destination_vertiport_id}_{destination_vertiport_id}"))
+        flight_direction=f"{aircraft.current_vertiport_id}_{destination_vertiport_id}"))
     
     return flight_duration_estimation

@@ -75,8 +75,8 @@ class SimSetup:
         self.stopping_events = stopping_events
         self.vertiport_layouts = self.create_vertiport_layout()      
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids 
-        self.vertiport_id_index_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)    
-        self.vertiport_id_reverse_index_map = {v: k for k, v in self.vertiport_id_index_map.items()}   
+        self.vertiport_index_to_id_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)    
+        self.vertiport_id_to_index_map = {v: k for k, v in self.vertiport_index_to_id_map.items()}   
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
         self.check_inputs()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
@@ -358,7 +358,7 @@ class SimSetup:
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
-                'vertiport_id_reverse_index_map': self.vertiport_id_reverse_index_map,
+                'vertiport_id_to_index_map': self.vertiport_id_to_index_map,
                 'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
                 'scheduler': self.scheduler,
                 'wind': self.wind,
@@ -380,7 +380,7 @@ class SimSetup:
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
-                'vertiport_id_reverse_index_map': self.vertiport_id_reverse_index_map,                
+                'vertiport_id_to_index_map': self.vertiport_id_to_index_map,                
                 'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
                 'scheduler': self.scheduler,
                 'wind': self.wind,
@@ -406,7 +406,7 @@ class SimSetup:
                 'env': self.env,
                 'vertiports': self.vertiports,
                 'vertiport_ids': self.vertiport_ids,
-                'vertiport_id_reverse_index_map': self.vertiport_id_reverse_index_map,                
+                'vertiport_id_to_index_map': self.vertiport_id_to_index_map,                
                 'num_initial_aircraft': get_aircraft_count(self.network_and_demand_params),
                 'scheduler': self.scheduler,
                 'wind': self.wind,

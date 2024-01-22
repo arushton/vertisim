@@ -13,7 +13,7 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 vertiport_id_reverse_index_map,
+                 vertiport_id_to_index_map,
                  num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
@@ -35,7 +35,7 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
         super().__init__(env=env,
                         vertiports=vertiports,
                         vertiport_ids=vertiport_ids,
-                        vertiport_id_reverse_index_map=vertiport_id_reverse_index_map,
+                        vertiport_id_to_index_map=vertiport_id_to_index_map,
                         num_initial_aircraft=num_initial_aircraft,
                         scheduler=scheduler,
                         wind=wind,
@@ -139,6 +139,9 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
             yield self.env.process(self.simulate_landing_process(aircraft=aircraft))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+            
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)
@@ -159,7 +162,7 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
             aircraft.detailed_status = 'idle'
             # Put aircraft into available aircraft store
-            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.current_vertiport_id,
                                                             aircraft=aircraft)           
 
         # Only FATO case and starting point is not a FATO
@@ -175,11 +178,12 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)   
             self.save_passenger_trip_times(aircraft=aircraft)
-                   
+            
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
 
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                                aircraft=aircraft)              
+                                                            aircraft=aircraft)
 
         # If the aircraft is not assigned to a parking pad but its starting location is a FATO
         elif aircraft.parking_space_id is None and \
@@ -191,6 +195,9 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival'))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
@@ -209,6 +216,9 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
 
             # Get FATO
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival', fato_id=aircraft.assigned_fato_id))
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+
             if aircraft.initial_process in ['charging', None]:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
@@ -230,6 +240,9 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
 
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+            
             if aircraft.initial_process in [AircraftStatus.CHARGE, None]:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))

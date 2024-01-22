@@ -19,7 +19,7 @@ class BaseSystemManager:
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 vertiport_id_reverse_index_map,
+                 vertiport_id_to_index_map,
                  num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
@@ -39,7 +39,7 @@ class BaseSystemManager:
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
-        self.vertiport_id_reverse_index_map = vertiport_id_reverse_index_map
+        self.vertiport_id_to_index_map = vertiport_id_to_index_map
         self.num_initial_aircraft = num_initial_aircraft
         self.scheduler = scheduler
         self.wind = wind
@@ -563,7 +563,7 @@ class BaseSystemManager:
         # Set the status of the aircraft
         aircraft.status = AircraftStatus.FLY
         # Update the number of aircraft at the vertiport
-        self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)
+        self.update_ground_aircraft_count(vertiport_id=aircraft.current_vertiport_id, update=-1)
         # Update the vertiport flight request state
         self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
         # Set the real pushback time of the aircraft 

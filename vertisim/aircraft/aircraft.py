@@ -9,7 +9,6 @@ import numpy as np
 from collections import defaultdict
 from .optimize_velocity import VelocityOptimizer
 from ..utils.distance import distance_3d
-from ..utils import rl_utils
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import set_seed
 from .flight_helpers import stall_speed, climb_power_consumption_for_lift, climb_power_consumption_for_drag
@@ -93,6 +92,7 @@ class Aircraft:
         self.total_energy_consumption = 0
         self.target_soc = target_soc
         self.is_first_time_charge = True
+        self.current_vertiport_id = self.get_aircraft_vertiport()
 
         self.arrival_fix_usage_request = None
         self.arrival_fix_resource = None
@@ -1024,32 +1024,19 @@ class Aircraft:
         If not penalizes the agent and triggers a truncation event.
         """
         if self.system_manager.sim_mode == 'rl' \
-            and self.tail_number not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id):
-            print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.destination_vertiport_id)}. Status: {self.status}")
+            and self.tail_number not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.current_vertiport_id):
+            print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.current_vertiport_id)}. Status: {self.status}")
             self.system_manager.truncation_penalty += 1
             self.system_manager.trigger_truncation_event(event_name='infeasible_charge_truncation_event', id=self.tail_number)
-        
-    def get_charge_reward(self) -> None:
-        """
-        Reward for charging
-        """
-        if self.system_manager.sim_mode == 'rl':
-            self.system_manager.charge_reward += rl_utils.charge_reward(
-                current_soc=self.soc,
-                soc_reward_threshold=self.charging_strategy.soc_reward_threshold
-                )
     
     def charge_aircraft(self, parking_space: object, shared_charger: bool = False) -> None:
 
         # Check whether the aircraft is in a state that it can perform the action.
         self.check_for_state_action_violation()
 
-        # Reward for charging
-        self.get_charge_reward()
-
         if not self.system_manager.sim_mode == 'offline_optimization':
-            aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.destination_vertiport_id,
-                                                                     tail_number=self.tail_number)
+            aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
+                                                                   tail_number=self.tail_number)
             
             # If it is the first charging process, then add the pre-charging process time (fixed charging cost).
             if self.is_first_time_charge:
@@ -1058,7 +1045,7 @@ class Aircraft:
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
                                                                         shared_charger=shared_charger))
-            self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.destination_vertiport_id, aircraft=self) 
+            self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.current_vertiport_id, aircraft=self) 
         
         else:
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
@@ -1341,11 +1328,22 @@ class Aircraft:
         return flight_directions.index(self.flight_direction)
     
     def get_aircraft_location_for_state(self):
-        if self.system_manager.vertiports[self.destination_vertiport_id].is_parking_pad_location(self.location):
-            return self.system_manager.vertiport_id_reverse_index_map[self.destination_vertiport_id]
+        current_vertiport = self.get_aircraft_vertiport()
+        if current_vertiport is not None and self.system_manager.vertiports[current_vertiport].is_parking_pad_location(self.location):
+            return self.system_manager.vertiport_id_to_index_map[current_vertiport]
         else:
             # Meaning that aircraft is is in the air. None of the locations
             return len(self.get_vertiport_list())
+        
+    def convert_vertiport_id_to_index(self, vertiport_id):
+        return self.system_manager.vertiport_id_to_index_map[vertiport_id]
+        
+    def get_aircraft_vertiport(self):
+        # Use vertiport's is_node_vertiport_location method to determine the vertiport location
+        for vertiport_id, vertiport in self.system_manager.vertiports.items():
+            if vertiport.is_node_vertiport_location(self.location):
+                return vertiport_id
+        return None
 
     def get_aircraft_states(self) -> Dict:
         """

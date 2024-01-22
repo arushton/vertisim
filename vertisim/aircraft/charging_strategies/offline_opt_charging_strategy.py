@@ -13,9 +13,9 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
         charge_time = self.get_charge_time_from_soc(aircraft=aircraft,
                                                     init_soc=aircraft.soc,
                                                     target_soc=aircraft.target_soc)
-        aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.destination_vertiport_id,
+        aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.current_vertiport_id,
                                                      charging_time=charge_time)
-        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.destination_vertiport_id}. init_soc: {round(aircraft.soc, 2)}, target_soc: {aircraft.target_soc}")
+        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft.soc, 2)}, target_soc: {aircraft.target_soc}")
         
         return charge_time   
 
@@ -36,7 +36,7 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
             Charge time required to reach the target soc level.
         """
         if check_magnitude_order(init_soc, target_soc):
-            df = aircraft.system_manager.aircraft_battery_models[aircraft.destination_vertiport_id]
+            df = aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
             init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
             target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
             return sec_to_ms(target_soc_time - init_soc_time)        
@@ -100,7 +100,7 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
         yield aircraft.env.process(self.hold_for_charging_schedule_compatibility(aircraft=aircraft, charge_time=charge_time))
 
         aircraft.logger.info(f'Saved idle time of {miliseconds_to_hms(self._compute_holding_after_charge(charge_time))} for after charge holding for aircraft {aircraft.tail_number} at {aircraft.location}.')
-        aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
+        aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
 
     def _finalize_charging(self, aircraft: object, used_charger_resource: object, selected_charging_request: object) -> None:
         """
@@ -154,7 +154,7 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
         self.release_charger_resource(used_charger_resource, selected_charging_request)
         # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround
         aircraft.charged_during_turnaround = True
-        aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
+        aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
 
 
     def hold_for_charging_schedule_compatibility(self, aircraft, charge_time):

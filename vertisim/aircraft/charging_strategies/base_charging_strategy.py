@@ -22,7 +22,7 @@ class BaseChargingStrategy(ABC):
         This method is used when the charger configuration is normal (any parking pads can use any chargers).
         Returns the charger resource that is used by the aircraft and the charging request.
         """
-        used_charger_resource = aircraft.system_manager.vertiports[aircraft.destination_vertiport_id].charger_resource
+        used_charger_resource = aircraft.system_manager.vertiports[aircraft.current_vertiport_id].charger_resource
         return used_charger_resource, used_charger_resource.request()
 
     def handle_shared_charger(self, aircraft: object, parking_space: object):
@@ -95,7 +95,7 @@ class BaseChargingStrategy(ABC):
         """
         Updates the charge level of the aircraft using current charge time.
         """
-        charge_lookup_table = aircraft.system_manager.aircraft_battery_models[aircraft.destination_vertiport_id]
+        charge_lookup_table = aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
         final_soc = self.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=aircraft.soc, df=charge_lookup_table)
         # TODO: Might need attention. Previously it was self._soc = final_soc
         aircraft.soc = final_soc    

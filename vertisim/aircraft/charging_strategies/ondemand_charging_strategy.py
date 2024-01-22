@@ -16,9 +16,9 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
             charge_time = sec_to_ms(aircraft.system_manager.charging_time_distribution.pick_number_from_distribution())
             charge_time = max(aircraft.time_passenger_embark_disembark, charge_time)
 
-        aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.destination_vertiport_id,
+        aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.current_vertiport_id,
                                                      charging_time=charge_time)
-        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.destination_vertiport_id}. init_soc: {round(aircraft.soc, 2)}")
+        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft.soc, 2)}")
         
         return charge_time    
     
@@ -39,7 +39,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
             Charge time required to reach the target soc level.
         """
         if check_magnitude_order(init_soc, target_soc):
-            df = aircraft.system_manager.aircraft_battery_models[aircraft.destination_vertiport_id]
+            df = aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
             init_soc_time = df[df.soc == round(init_soc)]['time_sec'].values[0]
             target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
             return sec_to_ms(target_soc_time - init_soc_time)
@@ -90,7 +90,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         self.release_charger_resource(used_charger_resource, selected_charging_request)
         # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround
         aircraft.charged_during_turnaround = True
-        aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.destination_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
+        aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
 
     def _check_skip_charging(self, aircraft):
         aircraft.set_charging_time_trackers()

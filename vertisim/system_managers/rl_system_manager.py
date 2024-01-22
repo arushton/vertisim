@@ -15,7 +15,7 @@ class RLSystemManager(BaseSystemManager):
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 vertiport_id_reverse_index_map,
+                 vertiport_id_to_index_map,
                  num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
@@ -40,7 +40,7 @@ class RLSystemManager(BaseSystemManager):
         super().__init__(env=env,
                         vertiports=vertiports,
                         vertiport_ids=vertiport_ids,
-                        vertiport_id_reverse_index_map=vertiport_id_reverse_index_map,
+                        vertiport_id_to_index_map=vertiport_id_to_index_map,
                         num_initial_aircraft=num_initial_aircraft,
                         scheduler=scheduler,
                         wind=wind,
@@ -78,7 +78,7 @@ class RLSystemManager(BaseSystemManager):
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
         return random_choose_exclude_element(elements_list=self.vertiport_ids,
-                                             exclude_element=aircraft.destination_vertiport_id,
+                                             exclude_element=aircraft.current_vertiport_id,
                                              num_selection=1)[0]
 
     def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
@@ -86,45 +86,47 @@ class RLSystemManager(BaseSystemManager):
             destination_vertiport_id = self.get_random_destination(aircraft=aircraft)
             
         # Truncate if the aircraft is not at the vertiport
-        if aircraft.tail_number not in self.get_available_aircraft_tail_numbers(vertiport_id=aircraft.destination_vertiport_id):
-            print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.destination_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
+        if aircraft.tail_number not in self.get_available_aircraft_tail_numbers(vertiport_id=aircraft.current_vertiport_id):
+            print(f"Applying truncation. Aircraft {aircraft.tail_number} is not idling at the vertiport {aircraft.current_vertiport_id}. Aircraft location: {aircraft.location}. Status: {aircraft.status}. Current time: {self.env.now}")
             self.truncation_penalty += 1
             self.trigger_truncation_event(event_name="not_at_vertiport_truncation_event", id=aircraft.tail_number)
 
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
         # Update the vertiport flight request state
-        self.vertiports[aircraft.destination_vertiport_id].num_flight_requests += 1           
+        self.vertiports[aircraft.current_vertiport_id].num_flight_requests += 1           
         # Log the aircraft allocation process
         flight_id = get_random_process_id()
-        self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {aircraft.destination_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}')
+        self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}')
         # Get the intended pushback time of the aircraft
         pushback_time = self.env.now             
         # Retrieve aircraft from the store
-        aircraft = yield self.retrieve_aircraft(aircraft.destination_vertiport_id, aircraft.tail_number) 
+        aircraft = yield self.retrieve_aircraft(aircraft.current_vertiport_id, aircraft.tail_number) 
         # Set the status of the aircraft
-        aircraft.status = AircraftStatus.FLY     
+        aircraft.status = AircraftStatus.FLY   
+        # Set the destination vertiport of the aircraft
+        aircraft.destination_vertiport_id = destination_vertiport_id  
         # print(f"Reserved aircraft: {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}")
         # Update the number of aircraft at the vertiport
-        self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=-1)        
+        self.update_ground_aircraft_count(vertiport_id=aircraft.current_vertiport_id, update=-1)        
         # Update the vertiport flight request state
-        self.vertiports[aircraft.destination_vertiport_id].num_flight_requests -= 1    
+        self.vertiports[aircraft.current_vertiport_id].num_flight_requests -= 1    
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.scheduler.collect_departing_passengers_by_od_vertiport(
-            origin_vertiport_id=aircraft.destination_vertiport_id, destination_vertiport_id=destination_vertiport_id)                  
+            origin_vertiport_id=aircraft.current_vertiport_id, destination_vertiport_id=destination_vertiport_id)                  
         # Set the real pushback time of the aircraft 
         aircraft.pushback_time = pushback_time
         # Set the flight direction of the aircraft
-        aircraft.flight_direction = f'{aircraft.destination_vertiport_id}_{destination_vertiport_id}'
+        aircraft.flight_direction = f'{aircraft.current_vertiport_id}_{destination_vertiport_id}'
         # Set the flight ID of the aircraft
         aircraft.flight_id = flight_id
         # Measure and save the aircraft allocation time
-        self.save_aircraft_allocation_time(aircraft.destination_vertiport_id, aircraft, aircraft_allocation_start_time)
+        self.save_aircraft_allocation_time(aircraft.current_vertiport_id, aircraft, aircraft_allocation_start_time)
         # Log the aircraft allocation process
-        self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {aircraft.destination_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
+        self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
         # Save aircraft allocation and idle times
-        self.save_aircraft_times(origin_vertiport_id=aircraft.destination_vertiport_id, aircraft=aircraft)
+        self.save_aircraft_times(origin_vertiport_id=aircraft.current_vertiport_id, aircraft=aircraft)
 
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers     
@@ -138,23 +140,23 @@ class RLSystemManager(BaseSystemManager):
         # Increase the passenger trip counter
         self.trip_counter += occupancy             
 
-        # self.trip_time_counter += sec_to_min(self.get_average_flight_time(flight_direction=aircraft.flight_direction))
-        self.trip_time_counter += 1
+        self.trip_time_counter += sec_to_min(self.get_average_flight_time(flight_direction=aircraft.flight_direction))
+        # self.trip_time_counter += 1
 
         # Save total passenger waiting time and flight assignment time
-        self.save_passenger_times(origin_vertiport_id=aircraft.destination_vertiport_id, passengers=aircraft.passengers_onboard) 
-        self.passenger_logger.debug(f"Passenger waiting times for flight from {aircraft.destination_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
+        self.save_passenger_times(origin_vertiport_id=aircraft.current_vertiport_id, passengers=aircraft.passengers_onboard) 
+        self.passenger_logger.debug(f"Passenger waiting times for flight from {aircraft.current_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
 
         # Start the passenger departure process
         if departing_passengers:
-            self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {aircraft.destination_vertiport_id} for {destination_vertiport_id} flight.')
+            self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
             self.env.process(self.initiate_passenger_departure(departing_passengers=departing_passengers))
-            self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {aircraft.destination_vertiport_id} for {destination_vertiport_id} flight.')
+            self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
 
         # Start the aircraft departure process
         yield self.env.process(
             self.simulate_aircraft_departure_process(aircraft=aircraft,
-                                                    origin_vertiport_id=aircraft.destination_vertiport_id, 
+                                                    origin_vertiport_id=aircraft.current_vertiport_id, 
                                                     destination_vertiport_id=destination_vertiport_id)
         )        
 
@@ -208,6 +210,8 @@ class RLSystemManager(BaseSystemManager):
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
 
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft)  
@@ -246,6 +250,8 @@ class RLSystemManager(BaseSystemManager):
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
             self.update_flying_aircraft_count(update=-1)   
             self.save_passenger_trip_times(aircraft=aircraft)
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
                    
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
@@ -266,6 +272,9 @@ class RLSystemManager(BaseSystemManager):
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival'))
             # Taxi
             yield self.env.process(self.simulate_taxi_process(aircraft=aircraft, operation_type='arrival'))
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
@@ -290,6 +299,9 @@ class RLSystemManager(BaseSystemManager):
             # Get FATO
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival', fato_id=aircraft.assigned_fato_id))
             # Put aircraft into available aircraft store
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft) 
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
@@ -307,6 +319,9 @@ class RLSystemManager(BaseSystemManager):
 
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
+
+            aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+
             if aircraft.initial_process == AircraftStatus.CHARGE:
                 # Charging process
                 yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))

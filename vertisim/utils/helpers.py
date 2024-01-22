@@ -588,6 +588,73 @@ def get_truncation_events(env: simpy.Environment, truncation_events: List, aircr
     return events
 
 
+def create_action_enum(vertiport_ids):
+    class Action(Enum):
+        # Enum members will be created dynamically
+        pass
+
+    # Dynamically add actions for flying to each vertiport
+    for idx, vertiport_id in enumerate(vertiport_ids):
+        Action._value2member_map_[idx] = vertiport_id
+
+    # Add actions for charging and doing nothing
+    Action._value2member_map_[len(vertiport_ids)] = 'CHARGE'
+    Action._value2member_map_[len(vertiport_ids) + 1] = 'DO_NOTHING'
+
+    return Action
+
+
+def convert_action_values_to_enum(actions, action_enum: Enum):
+    converted_actions = []
+    for action_value in actions:
+        try:
+            _action_enum = action_enum(action_value)
+            converted_actions.append(_action_enum)
+        except ValueError:
+            print(f"No enum member with value: {action_value}")
+    return converted_actions
+
+
+def convert_action_list_to_enum(action_list: List, action_enum: Enum):
+    """
+    Convert a list of actions to an enum.
+    """
+    return [action_enum(action) for action in action_list]
+
+
+def create_action_dict(vertiport_ids):
+    action_dict = {idx: vertiport_id for idx, vertiport_id in enumerate(vertiport_ids)}
+    action_dict[len(vertiport_ids)] = 'CHARGE'
+    action_dict[len(vertiport_ids) + 1] = 'DO_NOTHING'
+    return action_dict
+
+
+def reverse_dict(d):
+    return {v: k for k, v in d.items()}
+
+
+def current_and_lookahead_pax_count(vertiport: object):
+    """
+    Get the current and lookahead pax count for the given vertiport.
+    """
+    return vertiport.get_total_waiting_passenger_count() + \
+            vertiport.get_total_expected_pax_arrival_count()
+
+
+def get_waiting_passenger_ids(sim_setup: object, origin_vertiport_id: str, destination_vertiport_id: str, exclude_pax_ids: List = []):
+    """
+    Returns the ids of the waiting passengers up to aircraft capacity
+    """
+    return sim_setup.vertiports[origin_vertiport_id].get_waiting_passenger_ids(destination=destination_vertiport_id, exclude_pax_ids=exclude_pax_ids)
+
+
+def get_total_waiting_passengers_at_vertiport(sim_setup: object, vertiport_id: str):
+    """
+    Get the number of waiting passengers at the given vertiport.
+    """
+    return sim_setup.vertiports[vertiport_id].get_total_waiting_passenger_count()
+
+
 def write_to_db(db_path, table_name, dic):
     """
     Write a dictionary to a database.
