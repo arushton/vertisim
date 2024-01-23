@@ -179,7 +179,7 @@ class OnDemandSystemManager(BaseSystemManager):
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=origin_vertiport_id, passengers=aircraft.passengers_onboard) 
-        self.passenger_logger.debug(f"Passenger waiting times for flight from {origin_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
+        self.passenger_logger.info(f"Passenger waiting times for flight from {origin_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
 
         # Start the passenger departure process
         if departing_passengers:
@@ -197,7 +197,7 @@ class OnDemandSystemManager(BaseSystemManager):
     
     # def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
     #     waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
-    #     self.passenger_logger.debug(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
+    #     self.passenger_logger.info(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
     #                                 f" Passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}"
     #                                 f" Their waiting room arrival times: {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}"
     #                                 f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in waiting_room.items]}") 
@@ -206,7 +206,7 @@ class OnDemandSystemManager(BaseSystemManager):
     #         departing_passengers.extend(self.scheduler.last_call_check(
     #             current_waiting_room=waiting_room,
     #             num_departing_passengers=len(departing_passengers))) 
-    #     self.passenger_logger.debug(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
+    #     self.passenger_logger.info(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
     #     return departing_passengers
     
     def check_passenger_max_waiting_time_threshold(self):
@@ -258,7 +258,7 @@ class OnDemandSystemManager(BaseSystemManager):
         passengers_waiting_room.put(passenger)
         passenger.waiting_room_store = passengers_waiting_room
         # Log the passenger's arrival
-        self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
+        self.passenger_logger.info(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
         if self.sim_params['training_data_collection']:
             self.save_state_variables_for_training(passenger_id=passenger.passenger_id)

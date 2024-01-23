@@ -103,16 +103,28 @@ class SimSetup:
         Sets the loggers
         """
         logger = Logger(output_folder_path=self.output_folder_path)
-        logger.create_logger(name='main', env=self.env, enable_logging=self.sim_params['logging'])
+        logger.create_logger(name='main', 
+                             env=self.env, 
+                             enable_logging=self.sim_params['logging'],
+                             level=self.sim_params['log_level'])
 
         aircraft_logger = Logger(output_folder_path=self.output_folder_path)
-        aircraft_logger.create_logger(name='aircraft', env=self.env, enable_logging=self.sim_params['logging'])
+        aircraft_logger.create_logger(name='aircraft', 
+                                      env=self.env, 
+                                      enable_logging=self.sim_params['logging'],
+                                      level=self.sim_params['log_level'])
 
         passenger_logger = Logger(output_folder_path=self.output_folder_path)
-        passenger_logger.create_logger(name='passenger', env=self.env, enable_logging=self.sim_params['logging'])
+        passenger_logger.create_logger(name='passenger', 
+                                       env=self.env, 
+                                       enable_logging=self.sim_params['logging'],
+                                       level=self.sim_params['log_level'])
 
         vertiport_logger = Logger(output_folder_path=self.output_folder_path)
-        vertiport_logger.create_logger(name='vertiport', env=self.env, enable_logging=self.sim_params['logging'])
+        vertiport_logger.create_logger(name='vertiport', 
+                                       env=self.env, 
+                                       enable_logging=self.sim_params['logging'],
+                                       level=self.sim_params['log_level'])
 
         return logger, aircraft_logger, passenger_logger, vertiport_logger
         
@@ -505,11 +517,12 @@ class SimSetup:
                                   output_params=self.output_params,
                                   verbose=self.sim_params['verbose']).performance_metrics
     
-    def print_brief_metrics(self):
+    def log_brief_metrics(self):
         calculate_passenger_trip_time_stats(passenger_trip_time_tracker=self.event_saver.performance_metrics()['passenger_trip_time_tracker'],
-                                            flight_directions=self.airspace.flight_directions) 
-        calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker=self.event_saver.performance_metrics()['passenger_waiting_time'])
-
+                                            flight_directions=self.airspace.flight_directions,
+                                            logger=self.logger)
+        calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker=self.event_saver.performance_metrics()['passenger_waiting_time'],
+                                               logger=self.logger)
                     
 
     def save_results(self, performance_metrics):

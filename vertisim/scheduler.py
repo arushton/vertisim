@@ -80,7 +80,7 @@ class Scheduler:
         for origin, vertiport in self.vertiports.items():
             for destination, wr_store in vertiport.waiting_room_stores.items():
                 num_agents_in_the_wr = len(wr_store.items)
-                self.passenger_logger.debug(f"Checking max waiting time threshold for {origin} to {destination}. Passengers in the waiting room: {[p.passenger_id for p in wr_store.items]}."
+                self.passenger_logger.info(f"Checking max waiting time threshold for {origin} to {destination}. Passengers in the waiting room: {[p.passenger_id for p in wr_store.items]}."
                                            f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in wr_store.items]}")
                 if num_agents_in_the_wr > 0:
                     for waiting_passenger in wr_store.items:
@@ -89,7 +89,7 @@ class Scheduler:
                             num_departing_passengers = min(self.aircraft_capacity, num_agents_in_the_wr)
                             departing_passengers = self.collect_departing_passengers(wr_store, num_departing_passengers)
                             departing_passenger_groups[origin][destination].extend(departing_passengers)
-                            self.passenger_logger.debug(f"Found {len(departing_passengers)}: {[p.passenger_id for p in departing_passengers]} passengers who are waited more than {max_flight_waiting_time} ms. ")
+                            self.passenger_logger.info(f"Found {len(departing_passengers)}: {[p.passenger_id for p in departing_passengers]} passengers who are waited more than {max_flight_waiting_time} ms. ")
         return departing_passenger_groups
 
     def check_waiting_room(self, current_waiting_room):
@@ -97,7 +97,7 @@ class Scheduler:
         Checks the departing_passenger's waiting room if that reached the
         aircraft_capacity. If yes then trigger reserve_aircraft
         """
-        self.passenger_logger.debug(f"Checking waiting room. Waiting room items: {current_waiting_room.items}.")
+        self.passenger_logger.info(f"Checking waiting room. Waiting room items: {current_waiting_room.items}.")
         if len(current_waiting_room.items) >= self.aircraft_capacity:
             return self.collect_departing_passengers(current_waiting_room=current_waiting_room, 
                                                           num_departing_passengers=self.aircraft_capacity)
@@ -131,7 +131,7 @@ class Scheduler:
             departing_passengers.append(current_waiting_room.items[0])
             # Remove the agent from the current_waiting_room
             current_waiting_room.get()
-        self.passenger_logger.debug(f"Departing passengers are collected by the Scheduler: {[p.passenger_id for p in departing_passengers]}."
+        self.passenger_logger.info(f"Departing passengers are collected by the Scheduler: {[p.passenger_id for p in departing_passengers]}."
                                     f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in departing_passengers]}."
                                     f" Remaining passengers in the waiting room: {[p.passenger_id for p in current_waiting_room.items]}."
                                     f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in current_waiting_room.items]}.")
@@ -159,7 +159,7 @@ class Scheduler:
             departing_passengers.append(waiting_room.items[0])
             # Remove the agent from the current_waiting_room
             waiting_room.get()
-        self.passenger_logger.debug(f"Departing passengers are collected by the Scheduler (fixed schedule) at {origin_vertiport_id}: {[p.passenger_id for p in departing_passengers]}."
+        self.passenger_logger.info(f"Departing passengers are collected by the Scheduler (fixed schedule) at {origin_vertiport_id}: {[p.passenger_id for p in departing_passengers]}."
                                     f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in departing_passengers]}."
                                     f" Remaining passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}."
                                     f" Their waiting room arrival times {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}.")            

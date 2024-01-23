@@ -145,7 +145,7 @@ class RLSystemManager(BaseSystemManager):
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.current_vertiport_id, passengers=aircraft.passengers_onboard) 
-        self.passenger_logger.debug(f"Passenger waiting times for flight from {aircraft.current_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
+        self.passenger_logger.info(f"Passenger waiting times for flight from {aircraft.current_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
 
         # Start the passenger departure process
         if departing_passengers:
@@ -221,9 +221,13 @@ class RLSystemManager(BaseSystemManager):
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
 
-            # print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
+            self.logger.warning(f"Aircraft {aircraft.tail_number} arrived with passengers: 
+                                {[p.passenger_id for p in aircraft.passengers_onboard]} at 
+                                {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. 
+                                Available aircraft at {aircraft.destination_vertiport_id} 
+                                that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}. 
+                                Number of aircraft at {aircraft.destination_vertiport_id}: {self.vertiports[aircraft.destination_vertiport_id].num_aircraft}.")
 
-            # print(f"Put aircraft into available aircraft store: Aircraft {aircraft.tail_number} at {aircraft.location}. Time: {self.env.now}. Available aircraft: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
             aircraft.status = AircraftStatus.IDLE  
 
@@ -377,7 +381,7 @@ class RLSystemManager(BaseSystemManager):
         passengers_waiting_room.put(passenger)
         passenger.waiting_room_store = passengers_waiting_room
         # Log the passenger's arrival
-        self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
+        self.passenger_logger.info(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
         # if len(passengers_waiting_room.items) > 1:
         # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time: {self.env.now}")

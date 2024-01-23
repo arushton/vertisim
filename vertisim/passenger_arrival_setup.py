@@ -95,7 +95,7 @@ class PassengerArrivalSetup:
                 22) + charging_time - self.aircraft_params['pax']/2 * passenger_arrival_interval_time
             time_to_fill_vertiport = max(0, time_to_fill_vertiport)
 
-            self.passenger_logger.debug(f"Single vertiport simulation initiated. Skipping time duration of {time_to_fill_vertiport} seconds to fill vertiport with aircraft.")
+            self.passenger_logger.info(f"Single vertiport simulation initiated. Skipping time duration of {time_to_fill_vertiport} seconds to fill vertiport with aircraft.")
 
             yield self.env.timeout(sec_to_ms(time_to_fill_vertiport))
 
@@ -111,7 +111,7 @@ class PassengerArrivalSetup:
             passenger_location = f'{origin_vertiport_id}_ENTRANCE'
 
             yield self.env.timeout(sec_to_ms(interarrival_time))
-            self.passenger_logger.debug(f'Passenger {passenger_id} arrives at {origin_vertiport_id} to fly to {destination_vertiport_id}')
+            self.passenger_logger.info(f'Passenger {passenger_id} arrives at {origin_vertiport_id} to fly to {destination_vertiport_id}')
             # Simulate passenger.
             self.initiate_passenger_arrival(
                     passenger_id=passenger_id,

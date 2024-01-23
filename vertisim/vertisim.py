@@ -8,7 +8,7 @@ import time
 import numpy as np
 import gymnasium as gym
 from collections import defaultdict
-import pprint
+from pprint import pformat
 from enum import Enum
 from .utils.get_state_variables import get_simulator_states
 from .utils import rl_utils
@@ -105,6 +105,7 @@ class VertiSim:
         Reset the simulation.
         """
         if not self.terminal_event.triggered:
+            self.sim_setup.logger.finalize_logging()
             return self.terminal_event.succeed()
     
     def step(self, actions):
@@ -130,7 +131,7 @@ class VertiSim:
         N: Idle to charge
         N+1: Do nothing
         """
-        # print(f"Applying action: {actions}")
+        self.sim_setup.logger.error(f"Action: {[self.action_dict[action] for action in actions]}")
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -160,6 +161,8 @@ class VertiSim:
                 process_list.append(self.env.process(aircraft.charge_aircraft(parking_space=aircraft.parking_space)))
             elif actions[aircraft_id] < self.sim_setup.num_vertiports():
                 destination_vertiport_id = self.sim_setup.vertiport_index_to_id_map[actions[aircraft_id]]
+                # Get the departing passengers
+                
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft=aircraft, 
                                                                                                     destination_vertiport_id=destination_vertiport_id)))
         yield self.env.all_of(process_list)    
@@ -231,14 +234,15 @@ class VertiSim:
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
                 event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-                # print(f"Triggered event: {event_name}")
+                self.sim_setup.logger.error(f"Triggered event: {event_name}")
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
                 reward = round(self.reward_function.reward, 2)
                 self.reward_function.reset_rewards()
-                # print(f"Reward: {reward}")
-                # pprint.pprint(f"Currrent state: {self.get_current_state()}")
+
+                self.sim_setup.logger.error(f"Reward: {reward}")
+                self.sim_setup.logger.error(f"Current state: {pformat(self.get_current_state())}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         self.finalize_simulation()
@@ -252,15 +256,13 @@ class VertiSim:
     
     def _check_demand_satisfied(self):
         # If system_manager.passenger_arrival_complete == True and if there is no passenger left in the waiting rooms of the vertiports, succeed the terminal event
-        # print(f"Total waiting passengers: {self.sim_setup.system_manager.get_total_waiting_passenger_count()} at time sec: {round(self.env.now/1000)}")
         if bool(
             self.sim_setup.system_manager.passenger_arrival_complete
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
-            # print("Demand satisfied")
-            self.sim_setup.print_brief_metrics()
-            # self.sim_setup.system_manager.reward += \
-            #     self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
+
+            # self.sim_setup.logger.warning("Demand satisfied")
+            self.sim_setup.logger.warning(self.sim_setup.log_brief_metrics())
             self.terminal_event.succeed()
             return True
         return False

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from .units import ms_to_min
 
-def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_directions):
+def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_directions, logger):
     trip_times = defaultdict(lambda: defaultdict(dict))
     for vertiport_id, data in passenger_trip_time_tracker.items():
         waiting_times = np.array(list(data.values()))
@@ -12,8 +12,8 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
         trip_times[vertiport_id]['passenger_trip_time']['std'] = ms_to_min(np.std(waiting_times))
         trip_times[vertiport_id]['passenger_trip_time']['max'] = ms_to_min(np.max(waiting_times))
         trip_times[vertiport_id]['passenger_trip_time']['min'] = ms_to_min(np.min(waiting_times))
-    print("Passenger trip time statistics in minutes:")
-    print("---------------------------------------------")
+    logger.warning("Passenger trip time statistics in minutes:")
+    logger.warning("---------------------------------------------")
     df = pd.DataFrame(
         {
             'mean': trip_times[flight_direction]['passenger_trip_time']['mean'],
@@ -24,10 +24,10 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
         } for flight_direction in flight_directions
     )
     df.index = flight_directions
-    print(df)
-    print("")  
+    logger.warning(df)
+    logger.warning("")  
 
-def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker):
+def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logger):
     waiting_times_dict = defaultdict(lambda: defaultdict(dict))
     for vertiport_id, data in passenger_waiting_time_tracker.items():
         waiting_times = np.array(list(data.values()))
@@ -36,8 +36,8 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker):
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['std'] = ms_to_min(np.std(waiting_times))
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['max'] = ms_to_min(np.max(waiting_times))
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['min'] = ms_to_min(np.min(waiting_times))
-    print("Passenger waiting time statistics in minutes:")
-    print("---------------------------------------------")
+    logger.warning("Passenger waiting time statistics in minutes:")
+    logger.warning("---------------------------------------------")
     df = pd.DataFrame(
         {
             'mean': waiting_times_dict[vertiport_id]['passenger_waiting_time']['mean'],
@@ -47,6 +47,6 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker):
             'min': waiting_times_dict[vertiport_id]['passenger_waiting_time']['min']
         } for vertiport_id in waiting_times_dict.keys()
     )
-    print(df)
-    print("---------------------------------------------")    
-    print("")
+    logger.warning(df)
+    logger.warning("---------------------------------------------")    
+    logger.warning("")

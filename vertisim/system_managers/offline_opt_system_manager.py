@@ -297,4 +297,4 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
         passengers_waiting_room.put(passenger)
         passenger.waiting_room_store = passengers_waiting_room
         # Log the passenger's arrival
-        self.passenger_logger.debug(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
+        self.passenger_logger.info(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')

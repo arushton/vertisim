@@ -25,15 +25,28 @@ class CustomFormatter(logging.Formatter):
             record.event = ''
         return super().format(record)
 
+logger_levels = {
+    'debug': logging.DEBUG,
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'critical': logging.CRITICAL
+}
 
 class Logger:
     def __init__(self, output_folder_path):
         self.output_folder_path = output_folder_path
         self.logger = None
 
-    def create_logger(self, name, env, level=logging.WARNING, enable_logging=True):
+    def create_logger(self, name, env, level='warning', enable_logging=True):
+        # Create the logger
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
+        # Set the logging level
+        self.logger.setLevel(logger_levels[level])
+        # Clear existing handlers
+        self.logger.handlers.clear()     
+        # Stop propagation to parent logger
+        self.logger.propagate = False           
 
         if enable_logging:
             log_file = self.set_logfile_path(name)
@@ -85,3 +98,13 @@ class Logger:
                     creation_time = file_stat.st_ctime
                     if (current_time - creation_time) >= seconds: # seconds
                         os.remove(file_path)
+
+    def finalize_logging(self):
+        # Assuming log_file is the path of the current log file
+        log_file = self.set_logfile_path(self.logger.name)
+        self.remove_empty_log_file(log_file)
+
+    def remove_empty_log_file(self, file_path):
+        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+            os.remove(file_path)
+            print(f"Removed empty log file: {file_path}")                        
