@@ -222,11 +222,12 @@ class RLSystemManager(BaseSystemManager):
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
 
             self.logger.warning(f"Aircraft {aircraft.tail_number} arrived with passengers: 
-                                {[p.passenger_id for p in aircraft.passengers_onboard]} at 
+                                {RLSystemManager.get_pax_ids_onboard(aircraft)} at 
                                 {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. 
-                                Available aircraft at {aircraft.destination_vertiport_id} 
-                                that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}. 
-                                Number of aircraft at {aircraft.destination_vertiport_id}: {self.vertiports[aircraft.destination_vertiport_id].num_aircraft}.")
+                                Available aircraft at {aircraft.destination_vertiport_id}: 
+                                {self.get_available_aircraft_ids_at_vertiport(aircraft.destination_vertiport_id)}. 
+                                Number of aircraft at {aircraft.destination_vertiport_id}: 
+                                {self.get_num_aircraft_at_vertiport(aircraft.destination_vertiport_id)}.")
 
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
             aircraft.status = AircraftStatus.IDLE  
@@ -433,3 +434,13 @@ class RLSystemManager(BaseSystemManager):
 
     def is_all_passenger_travelled(self):
         return self.trip_counter_tracker == self.total_demand
+    
+    @staticmethod
+    def get_pax_ids_onboard(aircraft: object):
+        return [p.passenger_id for p in aircraft.passengers_onboard]
+    
+    def get_available_aircraft_ids_at_a_vertiport(self, vertiport_id: str):
+        return [a.tail_number for a in self.vertiports[vertiport_id].available_aircraft_store.items]
+
+    def get_num_aircraft_at_vertiport(self, vertiport_id: str):
+        return self.vertiports[vertiport_id].num_aircraft
