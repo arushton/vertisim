@@ -156,12 +156,16 @@ class RLSystemManager(BaseSystemManager):
             self.env.process(self.initiate_passenger_departure(departing_passengers=departing_passengers))
             self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
 
+        # # Trigger the stopping event for aircraft departure
+        # self.logger.debug(f'aircraft_departure_event is triggered for {aircraft.tail_number} time {self.env.now}')
+        # self.trigger_stopping_event(event_name="aircraft_departure_event", id=aircraft.tail_number)
+        
         # Start the aircraft departure process
         yield self.env.process(
             self.simulate_aircraft_departure_process(aircraft=aircraft,
                                                     origin_vertiport_id=aircraft.current_vertiport_id, 
                                                     destination_vertiport_id=destination_vertiport_id)
-        )        
+        )
 
     def simulate_terminal_airspace_arrival_process(self, aircraft: object, arriving_passengers: list):
         # print(f"Terminal airspace arrival process for {aircraft.tail_number} at {aircraft.location}. Origin: {aircraft.origin_vertiport_id}. Destination: {aircraft.destination_vertiport_id} Time: {self.env.now}")

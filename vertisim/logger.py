@@ -41,14 +41,16 @@ class Logger:
     def create_logger(self, name, env, level='warning', enable_logging=True):
         # Create the logger
         self.logger = logging.getLogger(name)
-        # Set the logging level
-        self.logger.setLevel(logger_levels[level])
         # Clear existing handlers
         self.logger.handlers.clear()     
         # Stop propagation to parent logger
-        self.logger.propagate = False           
+        self.logger.propagate = False 
+        # Logger timestamp
+        self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')          
 
         if enable_logging:
+            # Set the logging level
+            self.logger.setLevel(logger_levels[level])
             log_file = self.set_logfile_path(name)
             handler = logging.FileHandler(log_file)
             formatter = CustomFormatter('%(asctime)s %(levelname)s %(tail_number)s %(location)s %(event)s %(message)s', env)
@@ -57,11 +59,10 @@ class Logger:
         else:
             self.logger.addHandler(logging.NullHandler())
 
-    def set_logfile_path(self, name):
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if not os.path.exists(f'{self.output_folder_path}/logs/{name}'):
+    def set_logfile_path(self, name, create_file=True):
+        if not os.path.exists(f'{self.output_folder_path}/logs/{name}') and create_file:
             os.makedirs(f'{self.output_folder_path}/logs/{name}', exist_ok=True)
-        return f'{self.output_folder_path}/logs/{name}/{name}_{timestamp}.log'
+        return f'{self.output_folder_path}/logs/{name}/{name}_{self.timestamp}.log'
 
     def debug(self, *args, **kwargs):
         if self.logger is None:
@@ -101,7 +102,7 @@ class Logger:
 
     def finalize_logging(self):
         # Assuming log_file is the path of the current log file
-        log_file = self.set_logfile_path(self.logger.name)
+        log_file = self.set_logfile_path(self.logger.name, create_file=False)
         self.remove_empty_log_file(log_file)
 
     def remove_empty_log_file(self, file_path):

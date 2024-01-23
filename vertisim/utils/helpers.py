@@ -561,7 +561,8 @@ def get_stopping_events(env: simpy.Environment, stopping_events: List, aircraft_
         elif event_name in [
             "aircraft_parking_pad_arrival_event",
             "charging_start_event",
-            "charging_end_event"
+            "charging_end_event",
+            "aircraft_departure_event"
         ]:
             for aircraft_id in range(aircraft_count):
                 key = f"{event_name}_{aircraft_id}"
