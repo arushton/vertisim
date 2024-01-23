@@ -13,7 +13,7 @@ from enum import Enum
 from .utils.get_state_variables import get_simulator_states
 from .utils import rl_utils
 from .rl_methods.reward_function import RewardFunction
-from .rl_methods.action_mask import ActionMask
+# from .rl_methods.action_mask import ActionMask
 from .utils.fetch_data_from_db import fetch_latest_data_from_db
 from .initiate_flow_entities import initiate_flow_entities
 from .utils.units import sec_to_ms, ms_to_hr, sec_to_min
@@ -164,7 +164,7 @@ class VertiSim:
                                                                                                     destination_vertiport_id=destination_vertiport_id)))
         yield self.env.all_of(process_list)    
 
-    def action_mask(self):
+    def action_mask(self, initial_state=False, final_state=False):
         """
         Create the action mask for the current state of the simulation.
         [Fly, Charge, Do nothing]
@@ -187,7 +187,8 @@ class VertiSim:
             elif aircraft.status == AircraftStatus.IDLE and aircraft.soc > 100-self.config['external_optimization_params']['soc_increment_per_charge_event']:
                 destination_mask = [1 if destination != aircraft.current_vertiport_id 
                                     else 0 for destination in self.sim_setup.vertiport_ids] 
-                mask.extend(destination_mask + [0, 1])               
+                mask.extend(destination_mask + [0, 1])             
+            # Can do nothing  
             elif aircraft.status == AircraftStatus.CHARGE or aircraft.status == AircraftStatus.FLY:
                 destination_mask = [0] * self.sim_setup.num_vertiports()
                 mask.extend(destination_mask + [0, 1])               
@@ -199,7 +200,18 @@ class VertiSim:
                 vertiport_index = self.sim_setup.vertiport_id_to_index_map[vertiport_id]
                 # Iterate through each aircraft's part of the mask
                 for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
-                    mask[i + vertiport_index] = 0                        
+                    mask[i + vertiport_index] = 0 
+
+        if initial_state:
+            # Set the flight actions to 0 for all aircrafts
+            for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
+                mask[i:i+self.sim_setup.num_vertiports()] = [0] * self.sim_setup.num_vertiports()
+        
+        if final_state:
+            # Only do nothing for all aircrafts
+            for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
+                mask[i:i+self.sim_setup.num_vertiports()] = [0] * self.sim_setup.num_vertiports()
+                mask[i+self.sim_setup.num_vertiports()+1] = 1
                     
         # Flatten the mask
         return np.array(mask).flatten().tolist()          
@@ -230,7 +242,7 @@ class VertiSim:
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         self.finalize_simulation()
-        return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask()    
+        return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
 
     def _should_continue_simulation(self):
         return (self.env.peek() < self.max_sim_time and 
@@ -246,7 +258,7 @@ class VertiSim:
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
             # print("Demand satisfied")
-            # self.sim_setup.print_brief_metrics()
+            self.sim_setup.print_brief_metrics()
             # self.sim_setup.system_manager.reward += \
             #     self.config['external_optimization_params']['reward_function_parameters']['completion_reward']
             self.terminal_event.succeed()

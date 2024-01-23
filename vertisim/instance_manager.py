@@ -21,7 +21,7 @@ class InstanceManager:
     
     def get_initial_state(self):
         initial_state = self.sim_instance.get_initial_state()
-        action_mask = self.sim_instance.action_mask()
+        action_mask = self.sim_instance.action_mask(initial_state=True)
         return {"initial_state": initial_state, "action_mask": action_mask}
     
     def step(self, actions):
