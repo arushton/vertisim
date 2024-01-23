@@ -228,16 +228,19 @@ class RLSystemManager(BaseSystemManager):
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
 
-            self.logger.warning(f"Aircraft {aircraft.tail_number} arrived with passengers: "
+            aircraft.status = AircraftStatus.IDLE  
+
+            self.logger.error(f"Aircraft {aircraft.tail_number} arrived with passengers: "
                                 f"{RLSystemManager.get_pax_ids_onboard(aircraft)} at "
                                 f"{aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. "
                                 f"Available aircraft at {aircraft.destination_vertiport_id}: "
                                 f"{self.get_available_aircraft_ids_at_vertiport(aircraft.destination_vertiport_id)}. "
                                 f"Number of aircraft at {aircraft.destination_vertiport_id}: "
-                                f"{self.get_num_aircraft_at_vertiport(aircraft.destination_vertiport_id)}.")
+                                f"{self.get_num_aircraft_at_vertiport(aircraft.destination_vertiport_id)}. "
+                                f"Aircraft status at {aircraft.destination_vertiport_id}: "
+                                f"{self.get_status_of_aircraft_at_vertiport(aircraft.destination_vertiport_id)}.")
 
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
-            aircraft.status = AircraftStatus.IDLE  
 
             # Set the FLY process complition True
             aircraft.is_process_completed = True 
@@ -264,11 +267,12 @@ class RLSystemManager(BaseSystemManager):
             self.save_passenger_trip_times(aircraft=aircraft)
 
             aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
+            
+            aircraft.status = AircraftStatus.IDLE
                    
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft)   
-            aircraft.status = AircraftStatus.IDLE
 
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
@@ -451,3 +455,13 @@ class RLSystemManager(BaseSystemManager):
 
     def get_num_aircraft_at_vertiport(self, vertiport_id: str):
         return self.vertiports[vertiport_id].num_aircraft
+    
+    def get_status_of_aircraft_at_vertiport(self, vertiport_id: str):
+        # return [(aircraft.current_vertiport_id, aircraft.status) for aircraft in self.aircraft_agents.values()]
+        return [aircraft.status for aircraft in self.aircraft_agents.values() if aircraft.current_vertiport_id == vertiport_id]
+    
+    def get_num_waiting_passengers_per_destination(self, vertiport_id):
+        """
+        Check the number of waiting passengers at the given vertiport.
+        """
+        return self.vertiports[vertiport_id].get_waiting_passenger_count()

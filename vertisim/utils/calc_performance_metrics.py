@@ -12,8 +12,8 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
         trip_times[vertiport_id]['passenger_trip_time']['std'] = ms_to_min(np.std(waiting_times))
         trip_times[vertiport_id]['passenger_trip_time']['max'] = ms_to_min(np.max(waiting_times))
         trip_times[vertiport_id]['passenger_trip_time']['min'] = ms_to_min(np.min(waiting_times))
-    logger.warning("Passenger trip time statistics in minutes:")
-    logger.warning("---------------------------------------------")
+    logger.error("Passenger trip time statistics in minutes:")
+    logger.error("---------------------------------------------")
     df = pd.DataFrame(
         {
             'mean': trip_times[flight_direction]['passenger_trip_time']['mean'],
@@ -24,8 +24,8 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
         } for flight_direction in flight_directions
     )
     df.index = flight_directions
-    logger.warning(df)
-    logger.warning("")  
+    logger.error(df)
+    logger.error("")  
 
 def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logger):
     waiting_times_dict = defaultdict(lambda: defaultdict(dict))
@@ -36,8 +36,8 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['std'] = ms_to_min(np.std(waiting_times))
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['max'] = ms_to_min(np.max(waiting_times))
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['min'] = ms_to_min(np.min(waiting_times))
-    logger.warning("Passenger waiting time statistics in minutes:")
-    logger.warning("---------------------------------------------")
+    logger.error("Passenger waiting time statistics in minutes:")
+    logger.error("---------------------------------------------")
     df = pd.DataFrame(
         {
             'mean': waiting_times_dict[vertiport_id]['passenger_waiting_time']['mean'],
@@ -47,6 +47,6 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
             'min': waiting_times_dict[vertiport_id]['passenger_waiting_time']['min']
         } for vertiport_id in waiting_times_dict.keys()
     )
-    logger.warning(df)
-    logger.warning("---------------------------------------------")    
-    logger.warning("")
+    logger.error(df)
+    logger.error("---------------------------------------------")    
+    logger.error("")

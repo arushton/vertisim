@@ -73,12 +73,20 @@ class RewardFunction:
 
     def _apply_unnecessary_flight_penalty(self, dest_id: int, origin_id: int) -> None:
         """
-        Apply penalty for unnecessary flights.
+        Apply penalty for unnecessary flights and reward for useful repositioning.
         """
         if current_and_lookahead_pax_count(self.sim_setup.vertiports[dest_id]) == 0:
             self.reward += self.config['external_optimization_params']['reward_function_parameters']['unnecessary_flight_penalty']
         elif current_and_lookahead_pax_count(self.sim_setup.vertiports[origin_id]) == 0:
             self.reward += self.config['external_optimization_params']['reward_function_parameters']['repositioning_reward']
+
+        # If there are available aircraft at the destination vertiport and the aircraft is sufficient to serve the demand
+        # then penalize the empty flight.
+        num_aircraft_at_destination = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_id)
+        num_expected_pax = current_and_lookahead_pax_count(self.sim_setup.vertiports[dest_id])
+        seat_capacity = self.config['aircraft_params']['pax']
+        if num_aircraft_at_destination > 0 and num_expected_pax <= num_aircraft_at_destination * seat_capacity:
+            self.reward += self.config['external_optimization_params']['reward_function_parameters']['unnecessary_flight_penalty']
 
     def _get_charge_reward(self, aircraft: object) -> float:
         """
@@ -120,10 +128,10 @@ class RewardFunction:
         encourage the agent to avoid repositioning even when it's necessary for future demand.
         """
         num_waiting_pax = get_total_waiting_passengers_at_vertiport(sim_setup=self.sim_setup, vertiport_id=aircraft.current_vertiport_id)
-        if num_waiting_pax == 0 and \
+        if num_waiting_pax <= self.config['aircraft_params']['pax']//2 and \
             action == self.reverse_action_dict['CHARGE']:
             return self.config['external_optimization_params']['reward_function_parameters']['no_pax_and_charge_reward']
-        elif num_waiting_pax == 0 and \
+        elif num_waiting_pax <= self.config['aircraft_params']['pax']//2 and \
             action == self.reverse_action_dict['DO_NOTHING']:
             return self.config['external_optimization_params']['reward_function_parameters']['no_pax_and_do_nothing_reward']   
         # # TODO: This requires to check the energy cons of the flight and the SoC level of the aircraft.

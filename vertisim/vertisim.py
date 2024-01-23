@@ -131,7 +131,7 @@ class VertiSim:
         N: Idle to charge
         N+1: Do nothing
         """
-        self.sim_setup.logger.error(f"Action: {[self.action_dict[action] for action in actions]}")
+        self.sim_setup.logger.warning(f"Action: {[self.action_dict[action] for action in actions]}")
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -237,15 +237,15 @@ class VertiSim:
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
                 event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-                self.sim_setup.logger.error(f"Triggered event: {event_name}")
+                self.sim_setup.logger.warning(f"Triggered event: {event_name}")
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
                 reward = round(self.reward_function.reward, 2)
                 self.reward_function.reset_rewards()
 
-                self.sim_setup.logger.error(f"Reward: {reward}")
-                self.sim_setup.logger.error(f"Current state: {pformat(self.get_current_state())}")
+                self.sim_setup.logger.warning(f"Reward: {reward}")
+                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         self.finalize_simulation()
@@ -265,7 +265,7 @@ class VertiSim:
             and self.sim_setup.system_manager.is_all_passenger_travelled()):
 
             # self.sim_setup.logger.warning("Demand satisfied")
-            self.sim_setup.logger.warning(self.sim_setup.log_brief_metrics())
+            self.sim_setup.logger.error(self.sim_setup.log_brief_metrics())
             self.terminal_event.succeed()
             return True
         return False
