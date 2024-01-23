@@ -162,9 +162,12 @@ class VertiSim:
             elif actions[aircraft_id] < self.sim_setup.num_vertiports():
                 destination_vertiport_id = self.sim_setup.vertiport_index_to_id_map[actions[aircraft_id]]
                 # Get the departing passengers
-                
+                departing_passengers = self.sim_setup.scheduler.collect_departing_passengers_by_od_vertiport(
+                    origin_vertiport_id=aircraft.current_vertiport_id, 
+                    destination_vertiport_id=destination_vertiport_id)   
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft=aircraft, 
-                                                                                                    destination_vertiport_id=destination_vertiport_id)))
+                                                                                                    destination_vertiport_id=destination_vertiport_id,
+                                                                                                    departing_passengers=departing_passengers)))
         yield self.env.all_of(process_list)    
 
     def action_mask(self, initial_state=False, final_state=False):

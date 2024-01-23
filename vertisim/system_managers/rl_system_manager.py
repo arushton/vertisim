@@ -81,7 +81,10 @@ class RLSystemManager(BaseSystemManager):
                                              exclude_element=aircraft.current_vertiport_id,
                                              num_selection=1)[0]
 
-    def reserve_aircraft(self, aircraft: object, destination_vertiport_id: str = None):
+    def reserve_aircraft(self, aircraft: object, 
+                         destination_vertiport_id: str = None, 
+                         departing_passengers: list = None):
+        
         if destination_vertiport_id is None:
             destination_vertiport_id = self.get_random_destination(aircraft=aircraft)
             
@@ -111,9 +114,9 @@ class RLSystemManager(BaseSystemManager):
         self.update_ground_aircraft_count(vertiport_id=aircraft.current_vertiport_id, update=-1)        
         # Update the vertiport flight request state
         self.vertiports[aircraft.current_vertiport_id].num_flight_requests -= 1    
-        # Check the waiting room for additional passengers if there is still space on the aircraft
-        departing_passengers = self.scheduler.collect_departing_passengers_by_od_vertiport(
-            origin_vertiport_id=aircraft.current_vertiport_id, destination_vertiport_id=destination_vertiport_id)                  
+        # # Check the waiting room for passengers
+        # departing_passengers = self.scheduler.collect_departing_passengers_by_od_vertiport(
+        #     origin_vertiport_id=aircraft.current_vertiport_id, destination_vertiport_id=destination_vertiport_id)                  
         # Set the real pushback time of the aircraft 
         aircraft.pushback_time = pushback_time
         # Set the flight direction of the aircraft
