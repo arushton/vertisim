@@ -1,4 +1,5 @@
 from typing import List, Dict, Set
+from ..aircraft.aircraft import AircraftStatus
 
 from ..utils import rl_utils
 from ..utils.helpers import (
@@ -79,6 +80,11 @@ class RewardFunction:
                 trip_time_counter += self._calculate_trip_time(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)
                 self._apply_unnecessary_flight_penalty(dest_id=dest_vertiport_id, 
                                                        origin_id=aircraft.current_vertiport_id)
+                
+                # Penalize if there is an aircraft already headed to the same destination vertiport and
+                # that aircraft + existing aircraft is suffient to serve the demand.
+                self._penalize_for_not_counting_arriving_aircraft(dest_id=dest_vertiport_id)
+
             elif actions[aircraft_id] == self.reverse_action_dict['CHARGE']:
                 self.reward += self._get_charge_reward(aircraft)
 
@@ -100,6 +106,19 @@ class RewardFunction:
         Get the destination vertiport id for a given aircraft.
         """
         return self.sim_setup.vertiport_index_to_id_map[actions[aircraft_id]]
+    
+    def _penalize_for_not_counting_arriving_aircraft(self, dest_id: int) -> None:
+        # Get the aircraft that is actually flying (not on the ground) and is headed to the destination vertiport
+        lookahead_aircraft_count = 0
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if aircraft.status == AircraftStatus.FLY and \
+                aircraft.flight_direction == f"{aircraft.current_vertiport_id}_{dest_id}" and \
+                    aircraft.soc > self.config['aircraft_params']['min_reserve_soc']:
+                lookahead_aircraft_count += 1
+        lookahead_aircraft_count += self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_id)
+        if lookahead_aircraft_count * self.config['aircraft_params']['pax'] >= current_and_lookahead_pax_count(self.sim_setup.vertiports[dest_id]):
+            self.reward += self.config['external_optimization_params']['reward_function_parameters']['unnecessary_flight_penalty']
+
 
     def _apply_unnecessary_flight_penalty(self, dest_id: int, origin_id: int) -> None:
         """

@@ -219,6 +219,8 @@ class RLSystemManager(BaseSystemManager):
 
             aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
 
+            aircraft.flight_direction = None
+
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft)  
