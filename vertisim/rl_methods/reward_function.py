@@ -20,8 +20,9 @@ class RewardFunction:
         Calculate the reward based on the provided actions.
         """
         departing_passengers = self._compute_departing_passengers(actions)
-        self._apply_flight_rewards(actions, departing_passengers)
-        self.reward += self._waiting_time_penalty(departing_passengers)
+        self._apply_flight_rewards(actions=actions,
+                                   departing_passengers=departing_passengers)
+        self.reward += self._waiting_time_penalty(departing_passengers=departing_passengers)
 
     def _compute_departing_passengers(self, actions: List[int]) -> Set[int]:
         """
@@ -37,6 +38,34 @@ class RewardFunction:
                     destination_vertiport_id=self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
                 ))
         return departing_passengers
+    
+    # def _create_departing_passengers_dict(self, actions: List[int]) -> Dict[int, List[int]]:
+    #     """
+    #     Creates a dictionary of departing passengers for each aircraft.
+    #     The keys are aircraft_ids and the values are lists of passenger ids.
+    #     Passengers already assigned to an aircraft are excluded from subsequent ones.
+    #     """
+    #     departing_passengers_dict = {}
+    #     all_departing_passengers = set()  # Set to keep track of all departing passengers
+
+    #     for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+    #         if actions[aircraft_id] < self.sim_setup.num_vertiports():
+    #             # Get departing passenger IDs for this aircraft, excluding those already in the dictionary
+    #             departing_passenger_ids = list(get_waiting_passenger_ids(
+    #                 sim_setup=self.sim_setup,
+    #                 exclude_pax_ids=all_departing_passengers,
+    #                 origin_vertiport_id=aircraft.current_vertiport_id,
+    #                 destination_vertiport_id=self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
+    #             ))
+
+    #             # Update the dictionary with the aircraft_id and its departing passengers
+    #             departing_passengers_dict[aircraft_id] = departing_passenger_ids
+
+    #             # Update the set of all departing passengers
+    #             all_departing_passengers.update(departing_passenger_ids)
+
+    #     return departing_passengers_dict, all_departing_passengers
+
 
     def _apply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         """
@@ -48,7 +77,8 @@ class RewardFunction:
             if actions[aircraft_id] < self.sim_setup.num_vertiports():
                 dest_vertiport_id = self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
                 trip_time_counter += self._calculate_trip_time(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)
-                self._apply_unnecessary_flight_penalty(dest_id=dest_vertiport_id, origin_id=aircraft.current_vertiport_id)
+                self._apply_unnecessary_flight_penalty(dest_id=dest_vertiport_id, 
+                                                       origin_id=aircraft.current_vertiport_id)
             elif actions[aircraft_id] == self.reverse_action_dict['CHARGE']:
                 self.reward += self._get_charge_reward(aircraft)
 
@@ -82,11 +112,10 @@ class RewardFunction:
 
         # If there are available aircraft at the destination vertiport and the aircraft is sufficient to serve the demand
         # then penalize the empty flight.
-        num_aircraft_at_destination = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_id)
-        num_expected_pax = current_and_lookahead_pax_count(self.sim_setup.vertiports[dest_id])
-        seat_capacity = self.config['aircraft_params']['pax']
-        if num_aircraft_at_destination > 0 and num_expected_pax <= num_aircraft_at_destination * seat_capacity:
-            self.reward += self.config['external_optimization_params']['reward_function_parameters']['unnecessary_flight_penalty']
+        # num_aircraft_at_destination = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_id)
+        # num_expected_pax = current_and_lookahead_pax_count(self.sim_setup.vertiports[dest_id])
+        # if num_aircraft_at_destination > 0 and num_expected_pax <= num_aircraft_at_destination * self.config['aircraft_params']['pax']:
+        #     self.reward += self.config['external_optimization_params']['reward_function_parameters']['unnecessary_flight_penalty']
 
     def _get_charge_reward(self, aircraft: object) -> float:
         """

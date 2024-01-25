@@ -460,8 +460,8 @@ class RLSystemManager(BaseSystemManager):
         # return [(aircraft.current_vertiport_id, aircraft.status) for aircraft in self.aircraft_agents.values()]
         return [aircraft.status for aircraft in self.aircraft_agents.values() if aircraft.current_vertiport_id == vertiport_id]
     
-    def get_num_waiting_passengers_per_destination(self, vertiport_id):
+    def get_num_waiting_passengers_per_vertiport(self, vertiport_id):
         """
         Check the number of waiting passengers at the given vertiport.
         """
-        return self.vertiports[vertiport_id].get_waiting_passenger_count()
+        return self.vertiports[vertiport_id].get_total_waiting_passenger_count()

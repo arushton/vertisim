@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from .sim_setup import SimSetup
 from .aircraft.aircraft import AircraftStatus
 from .utils.helpers import get_stopping_events, get_truncation_events, miliseconds_to_hms, \
-    create_action_enum, convert_action_values_to_enum, create_action_dict, reverse_dict, current_and_lookahead_pax_count
+    create_action_enum, convert_action_values_to_enum, create_action_dict, reverse_dict, current_and_lookahead_pax_count, get_total_waiting_passengers_at_vertiport
 import time
 import numpy as np
 import gymnasium as gym
@@ -201,12 +201,26 @@ class VertiSim:
             
         # Review the mask based on demand. If there is no current and future demand at any particular vertiport, mask out the action
         for vertiport_id, vertiport in self.sim_setup.vertiports.items():
-            if current_and_lookahead_pax_count(vertiport) == 0:
+            expected_lookahead_dest_demand = current_and_lookahead_pax_count(vertiport)
+            if expected_lookahead_dest_demand == 0:
                 # Find the index of the vertiport in the mask for each aircraft and mask out the action
                 vertiport_index = self.sim_setup.vertiport_id_to_index_map[vertiport_id]
                 # Iterate through each aircraft's part of the mask
                 for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
                     mask[i + vertiport_index] = 0 
+
+            # If there are enough idling aircraft at the destination vertiport, and 
+            # no passenger at the current vertiport of an aircraft mask out the repositioning action
+                    
+            # Get the number of available aircraft at the destination vertiport    
+            # num_aircraft = self.sim_setup.system_manager.get_available_aircraft_count(vertiport_id=vertiport_id)
+            num_aircraft = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=vertiport_id)
+            if num_aircraft * self.config['aircraft_params']['pax'] >= expected_lookahead_dest_demand:
+                # Check each aircraft's vertiport passenger count. If there is no passenger at the current vertiport of an aircraft, mask out the repositioning action
+                for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+                    if get_total_waiting_passengers_at_vertiport(sim_setup=self.sim_setup, vertiport_id=aircraft.current_vertiport_id) == 0:
+                        # Mask out the flight from the current vertiport of the aircraft to the destination vertiport
+                        mask[aircraft_id * (self.sim_setup.num_vertiports() + 2) + self.sim_setup.vertiport_id_to_index_map[vertiport_id]] = 0
 
         if initial_state:
             # Set the flight actions to 0 for all aircrafts
@@ -214,7 +228,7 @@ class VertiSim:
                 mask[i:i+self.sim_setup.num_vertiports()] = [0] * self.sim_setup.num_vertiports()
         
         if final_state:
-            # Only do nothing for all aircrafts
+            # Only do nothing for all aircraft
             for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
                 mask[i:i+self.sim_setup.num_vertiports()] = [0] * self.sim_setup.num_vertiports()
                 mask[i+self.sim_setup.num_vertiports()+1] = 1
@@ -246,6 +260,7 @@ class VertiSim:
 
                 self.sim_setup.logger.warning(f"Reward: {reward}")
                 self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
+                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
 
         self.finalize_simulation()
@@ -393,7 +408,7 @@ class VertiSim:
             for _, vertiport in self.config['network_and_demand_params']['vertiports'].items()
         )
     
-    def get_num_waiting_passengers_per_destination(self, vertiport_id):
+    def get_num_waiting_passengers_per_vertiport(self, vertiport_id):
         """
         Check the number of waiting passengers at the given vertiport.
         """

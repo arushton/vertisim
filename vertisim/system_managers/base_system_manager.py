@@ -70,11 +70,14 @@ class BaseSystemManager:
             for _, vertiport in self.vertiports.items()
         )    
     
-    def get_available_aircraft_count(self) -> int:
-        return sum(
-            len(self.get_available_aircraft_tail_numbers(vertiport_id))
-            for vertiport_id, _ in self.vertiports.items()
-        )
+    def get_available_aircraft_count(self, vertiport_id: str=None) -> int:
+        if vertiport_id is not None:
+            return len(self.vertiports[vertiport_id].available_aircraft_store.items)
+        else:
+            return sum(
+                len(self.vertiports[vertiport_id].available_aircraft_store.items)
+                for vertiport_id, _ in self.vertiports.items()
+            )
 
     def build_aircraft_battery_models(self) -> Dict[Any, pd.DataFrame]:
         """
