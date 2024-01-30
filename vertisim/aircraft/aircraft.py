@@ -1322,7 +1322,7 @@ class Aircraft:
     def get_flight_direction_index(self):
         flight_directions = list(self.system_manager.airspace.flight_directions)
         # If aircraft is on the ground, idling or charging then the flight direction is None.
-        if self.status == AircraftStatus.IDLE or self.status == AircraftStatus.CHARGE:
+        if self.status == AircraftStatus.IDLE or self.status == AircraftStatus.CHARGE or self.flight_direction is None:
             # +1 is for the None flight direction
             return len(flight_directions)+1
         return flight_directions.index(self.flight_direction)

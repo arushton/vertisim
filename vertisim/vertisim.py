@@ -314,7 +314,7 @@ class VertiSim:
         return get_simulator_states(vertiports=self.sim_setup.vertiports,
                                     aircraft_agents=self.sim_setup.system_manager.aircraft_agents,
                                     num_initial_aircraft=self.sim_setup.system_manager.num_initial_aircraft,
-                                    simulation_states=self.sim_setup.sim_params['simulation_states'],
+                                    simulation_states=self.config['sim_params']['simulation_states'],
                                     reward_function_parameters=self.config['external_optimization_params']['reward_function_parameters'])
     
     def get_initial_state(self):

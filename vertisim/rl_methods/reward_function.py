@@ -24,6 +24,7 @@ class RewardFunction:
         self._apply_flight_rewards(actions=actions,
                                    departing_passengers=departing_passengers)
         self.reward += self._waiting_time_penalty(departing_passengers=departing_passengers)
+        self.reward += self.config['external_optimization_params']['reward_function_parameters']['step_penalty']
 
     def _compute_departing_passengers(self, actions: List[int]) -> Set[int]:
         """
@@ -118,7 +119,6 @@ class RewardFunction:
         lookahead_aircraft_count += self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_id)
         if lookahead_aircraft_count * self.config['aircraft_params']['pax'] >= current_and_lookahead_pax_count(self.sim_setup.vertiports[dest_id]):
             self.reward += self.config['external_optimization_params']['reward_function_parameters']['unnecessary_flight_penalty']
-
 
     def _apply_unnecessary_flight_penalty(self, dest_id: int, origin_id: int) -> None:
         """

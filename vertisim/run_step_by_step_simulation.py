@@ -25,7 +25,7 @@ def run_steps_until_specific_events(env: object,
                                     vertiports: Dict,
                                     airspace: object,
                                     system_manager: object,
-                                    simulation_states: List,
+                                    simulation_states: Dict[str, List], # TODO: Now simulation states are a dict of lists.
                                     terminal_event: object,
                                     stopping_events: Dict):
     while env.peek() < max_sim_time and terminal_event.triggered == False:

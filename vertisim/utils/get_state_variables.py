@@ -31,7 +31,7 @@ def get_simulator_states(
     vertiports: Dict[str, Any],
     aircraft_agents: Dict[int, Any],
     num_initial_aircraft: int,
-    simulation_states: List[str],
+    simulation_states: Dict[str, Any],
     reward_function_parameters: Dict[str, Any],
 ) -> Dict:
     """
@@ -41,7 +41,7 @@ def get_simulator_states(
     - vertiports: Dictionary containing vertiport details.
     - aircraft_agents: Dictionary containing aircraft agent details.
     - num_aircraft: Total number of aircraft expected in simulation.
-    - simulation_states: List of state keys to be filtered from the results.
+    - simulation_states: Dict List of state keys to be filtered from the results.
 
     Returns:
     - Dictionary containing filtered states for vertiports, aircrafts, and environment.
@@ -55,26 +55,31 @@ def get_simulator_states(
 
     aircraft_states = {
         tail_number: filter_and_get_states(get_states_func=aircraft.get_aircraft_states, 
-                                           keys=simulation_states)
+                                           keys=simulation_states['aircraft_states'])
         for tail_number, aircraft in aircraft_agents.items()
     }
 
     vertiport_states = {
         vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, 
-                                            keys=simulation_states,
+                                            keys=simulation_states['vertiport_states'],
                                             aircraft_agents=aircraft_agents,
                                             reward_function_parameters=reward_function_parameters)
         for vertiport_id, vertiport in vertiports.items()
     }
 
+    # TODO: These needs to be received from the config file
     environmental_states = system_manager.wind.get_wind_states(locations=system_manager.vertiport_ids,
                                                                time=system_manager.env.now)
+    
+    additional_states = {
+        'sim_time': round(ms_to_min(system_manager.env.now), 2) if 'sim_time' in simulation_states['additional_states'] else 0,
+    }
 
     simulator_states = {
         'vertiport_states': vertiport_states,
         'aircraft_states': aircraft_states,
         # 'environmental_states': environmental_states,
-        'sim_time': round(ms_to_min(system_manager.env.now), 2)
+        **additional_states
     }
 
     # Validate and serialize the data using Pydantic
