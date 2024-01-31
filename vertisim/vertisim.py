@@ -59,6 +59,8 @@ class VertiSim:
         self.action_dict = create_action_dict(self.sim_setup.vertiport_ids)
         self.reverse_action_dict = reverse_dict(self.action_dict)
         self.reward_function = RewardFunction(config=self.config, reverse_action_dict=self.reverse_action_dict, sim_setup=self.sim_setup)
+        if self.config['external_optimization_params']['periodic_time_step']:
+            self.env.process(self.periodic_state_check(time_step=self.config['external_optimization_params']['periodic_time_step']))
 
     def set_simulation_events(self, env, config):
         """
@@ -117,9 +119,12 @@ class VertiSim:
         total_triggers = sum(action != 0 for action in actions)
         # Apply the actions and rewards at the same time to keep the Markov property
         self.env.process(self.apply_action_reward(actions=actions))
-        # Advance to the next stopping event. The returned state and rewward pair should be
+        # Advance to the next stopping event. The returned state and reward pair should be
         # the state and reward after all the actions are applied.
-        return self.advance_to_next_stopping_event_setting(total_triggers)
+        if self.config['external_optimization_params']['periodic_time_step']:
+            return self.advance_periodically()
+        else:
+            return self.advance_to_next_stopping_event(total_triggers)
 
     def apply_action_reward(self, actions: Enum):
         """
@@ -235,9 +240,54 @@ class VertiSim:
                 mask[i+self.sim_setup.num_vertiports()+1] = 1
                     
         # Flatten the mask
-        return np.array(mask).flatten().tolist()          
+        return np.array(mask).flatten().tolist()     
 
-    def advance_to_next_stopping_event_setting(self, total_triggers):
+    def schedule_periodic_stop_event(self):
+        """
+        Schedule a stopping event at a fixed interval.
+        """
+        interval = self.config['external_optimization_params']['periodic_time_step']
+        stop_event = self.env.event()
+        self.env.process(self.trigger_stop_event_after_interval(stop_event, interval))
+        return stop_event
+
+    def trigger_stop_event_after_interval(self, event, interval):
+        """
+        Process to trigger a given event after a specified interval.
+        """
+        yield self.env.timeout(interval)
+        event.succeed()
+
+    def advance_periodically(self):
+        """
+        Advance the simulation for a fixed interval and return the state and reward.
+        """
+        # # Schedule the simulation to advance for the interval
+        # yield self.env.timeout(sec_to_ms(self.config['external_optimization_params']['periodic_time_step']))
+
+        # Schedule the simulation to advance for the interval
+        stop_event = self.schedule_periodic_stop_event()
+        # Advance the simulation until the stop event is triggered
+        while self._should_continue_simulation():
+            # Step the simulation
+            self.env.step()
+
+            if stop_event.triggered:
+                print(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                # Return the states
+                reward = round(self.reward_function.reward, 2)
+                self.reward_function.reset_rewards()
+
+                self.sim_setup.logger.warning(f"Reward: {reward}")
+                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
+                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
+                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+            
+        self.finalize_simulation()
+        return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
+
+
+    def advance_to_next_stopping_event(self, total_triggers):
         """
         Runs the simulation until the next defined stopping event.
         Rewards the agent right after the each action is completed.

@@ -30,6 +30,7 @@ class VertiportStates(BaseModel):
     total_passenger_waiting_time: float
     expected_pax: Dict[str, float]
     aircraft_status: Dict[int, int]
+    num_holding_aircraft: int
 
 class VertiportConfig:
 
