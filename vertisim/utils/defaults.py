@@ -73,7 +73,7 @@ DEFAULT_PASSENGER_ARRIVAL_PROCESS = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
 DEFAULT_AIRCRAFT_ARRIVAL_PROCESS = {
-                'num_initial_aircraft_in_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_at_vertiport': 4,  # Number of aircraft in the simulation/vertiport. 
                 'initial_parking_occupancy': 4,  # The # of the parking spaces that are occupied with aircraft at the beginning of the sim.
                 'initial_arrival_queue_state': 0,  # TODO: Number of aircraft in the arrival queue at the beginning of the sim.                
                 'num_aircraft': 200,  # Number of aircraft to be generated
@@ -92,7 +92,7 @@ DEFAULT_AIRCRAFT_ARRIVAL_PROCESS = {
 DEFAULT_AIRSPACE_PARAMS = {
     'airspace_layout_file_path': None,
     'airlink_capacity': 1,
-    'airlink_segment_length': 0.25  # miles
+    'airlink_segment_length_mile': 0.25  # miles
 }
 
 

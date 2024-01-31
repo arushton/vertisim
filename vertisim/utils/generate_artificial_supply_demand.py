@@ -73,7 +73,7 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
         soc = [random.randint(min_init_soc, max_init_soc) for _ in range(num_aircraft)]
     else:
         # If network simulation, aircraft start from the ground with max_init_soc.
-        num_aircraft = aircraft_arrival_process['num_initial_aircraft_in_vertiport']
+        num_aircraft = aircraft_arrival_process['num_initial_aircraft_at_vertiport']
         interarrival_times = [0 for _ in range(num_aircraft)]
         soc = [max_init_soc for _ in range(num_aircraft)]
         # TODO: These things are kind of hardcoded.

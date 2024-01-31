@@ -95,7 +95,7 @@ def loop_input(vertiport1,
                 # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
                 # -------------------------------------
                 'aircraft_arrival_process': {
-                    'num_initial_aircraft_in_vertiport': round(fleet_size/2),  # Number of aircraft in the simulation/vertiport. 
+                    'num_initial_aircraft_at_vertiport': round(fleet_size/2),  # Number of aircraft in the simulation/vertiport. 
                     'initial_arrival_queue_state': 0,
                     # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                     # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -138,7 +138,7 @@ def loop_input(vertiport1,
                 },
                 # Aircraft Arrival Process
                 'aircraft_arrival_process': {
-                    'num_initial_aircraft_in_vertiport': round(fleet_size/2),
+                    'num_initial_aircraft_at_vertiport': round(fleet_size/2),
                     'initial_arrival_queue_state': 0
                 }
             }     
@@ -152,7 +152,7 @@ def loop_input(vertiport1,
         'airspace_layout_sheet_name': None,
         'airlink_capacity': 1,
         # If the airlink file is not None, then the below parameters are not used.
-        'airlink_segment_length': 0.25,  # miles
+        'airlink_segment_length_mile': 0.25,  # miles
         'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
         'cruise_altitude': 450,  # m
     }

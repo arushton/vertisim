@@ -12,6 +12,6 @@ def get_aircraft_count(network_and_demand_params: Dict):
     """
     return sum(
         vertiport['aircraft_arrival_process'][
-            'num_initial_aircraft_in_vertiport']
+            'num_initial_aircraft_at_vertiport']
         for _, vertiport in network_and_demand_params['vertiports'].items()
     )

@@ -102,7 +102,7 @@ network_and_demand_params = {
             # ARTIFICIAL AIRCRAFT SUPPLY GENERATION
             # -------------------------------------
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport':5,  # Number of aircraft in the simulation/vertiport. 
+                'num_initial_aircraft_at_vertiport':5,  # Number of aircraft in the simulation/vertiport. 
                 'initial_arrival_queue_state': 0,
                 # For network simulation num_aircraft cannot exceed the number of parking pads on that vertiport. 
                 # In the case of single vertiport sim, if num_aircraft None, then the required number of aircraft will be estimated from the num_passengers.
@@ -145,7 +145,7 @@ network_and_demand_params = {
             },
             # Aircraft Arrival Process
             'aircraft_arrival_process': {
-                'num_initial_aircraft_in_vertiport': 8,
+                'num_initial_aircraft_at_vertiport': 8,
                 'initial_arrival_queue_state': 0
             }
         }     
@@ -159,7 +159,7 @@ airspace_params = {
     'airspace_layout_sheet_name': None,
     'airlink_capacity': 1,
     # If the airlink file is not None, then the below parameters are not used.
-    'airlink_segment_length': 1,  # miles
+    'airlink_segment_length_mile': 1,  # miles
     'holding_unit_capacity': 20, # TODO: Remove this from here. This is vertiport parameter.
     'cruise_altitude': 450,  # m
     'static_wind': False, # If True, then wind data won't be used. Instead the wind data will be generated based on the wind parameters below.

@@ -377,7 +377,7 @@ class VertiSim:
     
     def get_aircraft_count(self) -> int:
         return sum(
-            vertiport['aircraft_arrival_process']['num_initial_aircraft_in_vertiport']
+            vertiport['aircraft_arrival_process']['num_initial_aircraft_at_vertiport']
             for _, vertiport in self.config['network_and_demand_params']['vertiports'].items()
         )
 

@@ -23,8 +23,7 @@ class AirspaceCreator:
 
 
     def read_waypoint_locations_from_file(self):
-        waypoints = read_input_file(file_path=self.airspace_params['airspace_layout_file_path'], 
-                                    sheet_name=self.airspace_params['airspace_layout_sheet_name'])
+        waypoints = read_input_file(file_path=self.airspace_params['airspace_layout_file_path'])
         waypoint_ids = defaultdict(list)
         waypoint_locations = defaultdict(dict)
         flight_directions = set()
@@ -74,7 +73,7 @@ class AirspaceCreator:
             origin_terminal_airspace_radius = self.vertiports[row['origin_vertiport_id']].vertiport_layout.terminal_airspace_radius
             destination_terminal_airspace_radius = self.vertiports[row['destination_vertiport_id']].vertiport_layout.terminal_airspace_radius
             airlink_length = row['distance_miles'] - origin_terminal_airspace_radius - destination_terminal_airspace_radius
-            num_waypoints = int(airlink_length / self.airspace_params['airlink_segment_length']) - 1
+            num_waypoints = int(airlink_length / self.airspace_params['airlink_segment_length_mile']) - 1
             num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints # + 4 # Add 2 for the origin and destination vertiports and 2 for the departure and arrival fix
         return num_waypoints_per_airlink
 
