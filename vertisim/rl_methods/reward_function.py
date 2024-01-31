@@ -25,6 +25,7 @@ class RewardFunction:
                                    departing_passengers=departing_passengers)
         self.reward += self._waiting_time_penalty(departing_passengers=departing_passengers)
         self.reward += self.config['external_optimization_params']['reward_function_parameters']['step_penalty']
+        self.reward += self.config['external_optimization_params']['reward_function_parameters']['holding_penalty'] * self.sim_setup.system_manager.holding_time_counter
 
     def _compute_departing_passengers(self, actions: List[int]) -> Set[int]:
         """

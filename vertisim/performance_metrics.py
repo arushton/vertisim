@@ -567,7 +567,7 @@ class PerformanceMetrics:
         print("")
 
     def print_aircraft_holding_times_stats(self):
-        print("Aircraft holding time statistics in minutes:")
+        print("\nAircraft holding time statistics in minutes:")
         print("-----------------------------")
         df = pd.DataFrame(
             {
@@ -724,27 +724,27 @@ class PerformanceMetrics:
 
     def print_verbose_performance_metrics(self):
         if not self.only_aircraft_simulation:
-            # self.print_passenger_consolidation_time_stats()
+            self.print_passenger_consolidation_time_stats()
             self.print_passenger_waiting_time_stats()
             # self.print_passenger_transfer_time_stats()
             self.print_passenger_trip_time_stats()
             # self.print_passenger_departure_queue_count_stats()
-        #     self.print_avg_load_factor()
-        #     self.print_aircraft_idle_time_stats()
+            self.print_avg_load_factor()
+            self.print_aircraft_idle_time_stats()
             self.print_total_passenger_throughput()
-        #     self.print_average_passenger_throughput()
+            self.print_average_passenger_throughput()
         # self.print_aircraft_arrival_queue_count_stats()
         # self.print_aircraft_departure_queue_count_stats()
-        # self.print_aircraft_holding_times_stats()
-        # self.print_average_charge_time()
-        # self.print_total_simulated_time()
+        self.print_aircraft_holding_times_stats()
+        self.print_average_charge_time()
+        self.print_total_simulated_time()
         self.print_total_aircraft_throughput()
         self.print_flight_duration_stats()
         self.print_energy_consumption_stats()
-        # self.print_aircraft_throughput_stats_for_each_hr_verbose()
-        # self.print_average_aircraft_throughput()
-        # self.print_fato_utilization()
-        # self.print_total_empty_flights()
+        self.print_aircraft_throughput_stats_for_each_hr_verbose()
+        self.print_average_aircraft_throughput()
+        self.print_fato_utilization()
+        self.print_total_empty_flights()
 
     def print_performance_metrics(self):
         if not self.only_aircraft_simulation:

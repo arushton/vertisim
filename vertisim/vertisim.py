@@ -83,6 +83,7 @@ class VertiSim:
         # performance_metrics = self.sim_setup.calculate_performance_metrics()
         # self.sim_setup.save_results(performance_metrics)
         # self.sim_setup.print_passenger_trip_time_stats()
+        # self.sim_setup.log_brief_metrics(print_metrics=True)
 
     def finalize_simulation(self):
         if not self.sim_setup.sim_mode['rl']:
@@ -417,7 +418,7 @@ class VertiSim:
     def print_total_time_to_run(self):
         end_time = time.time()
         time_taken = end_time - self.sim_start_time
-        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds')   
+        print(f'Simulation Completed. Total time to run: {round(time_taken, 2)} seconds\n')   
     
     def get_performance_metrics(self):
         return fetch_latest_data_from_db(db_path="sqlite/db/vertisimDatabase.sqlite")

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from .units import ms_to_min
 
-def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_directions, logger):
+def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_directions, logger, print_metrics=False):
     trip_times = defaultdict(lambda: defaultdict(dict))
     for vertiport_id, data in passenger_trip_time_tracker.items():
         waiting_times = np.array(list(data.values()))
@@ -25,9 +25,16 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
     )
     df.index = flight_directions
     logger.error(df)
-    logger.error("")  
+    logger.error("")
 
-def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logger):
+    if print_metrics:
+        print("Passenger trip time statistics in minutes:")
+        print("---------------------------------------------")
+        print(df)
+        print("---------------------------------------------")
+        print("") 
+
+def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logger, print_metrics=False):
     waiting_times_dict = defaultdict(lambda: defaultdict(dict))
     for vertiport_id, data in passenger_waiting_time_tracker.items():
         waiting_times = np.array(list(data.values()))
@@ -50,3 +57,10 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
     logger.error(df)
     logger.error("---------------------------------------------")    
     logger.error("")
+
+    if print_metrics:
+        print("Passenger waiting time statistics in minutes:")
+        print("---------------------------------------------")
+        print(df)
+        print("---------------------------------------------")
+        print("")

@@ -98,6 +98,16 @@ def none_checker(val):
     return None if val is None else val
 
 
+def pick_random_file(folder_path: str):
+    set_seed(how='instant')
+    """
+    Pick a random file from a folder.
+    :param folder_path:
+    :return:
+    """
+    return random.choice(os.listdir(folder_path))
+
+
 def timestamp_to_datetime(sim_start_time, sim_time):
     """
     Converts a timestamp to a datetime.

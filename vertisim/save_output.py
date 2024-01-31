@@ -41,7 +41,7 @@ def save_performance_metrics(simulation_params: dict,
                              flight_directions: list) -> str:
 
     output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/db/vertisimDatabase.sqlite"
-    print(f"Saving performance metrics to {output_path}")
+    print(f"Saving performance metrics to {output_path}\n")
     # If path doesn't exist, create it
     if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db"):
         os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db", exist_ok=True)

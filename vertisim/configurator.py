@@ -71,6 +71,7 @@ class VertiportConfig:
         self.num_flight_requests = 0
         self.num_waiting_passengers = 0
         self.cum_waiting_cost = 0
+        self.num_holding_aircraft = 0
 
 
     def is_node_vertiport_location(self, location):
@@ -340,7 +341,7 @@ class VertiportConfig:
         entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
         entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
-        entity_states['expected_pax'] = self.get_expected_pax_arrivals_for_route()
+        # entity_states['expected_pax'] = self.get_expected_pax_arrivals_for_route()
         entity_states['num_waiting_passengers'] = self.get_waiting_passenger_count()
 
         # waiting_passenger_counts = self.get_waiting_passenger_count()
@@ -354,6 +355,8 @@ class VertiportConfig:
         entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
+
+        entity_states['num_holding_aircraft'] = self.num_holding_aircraft
 
         # Validate and serialize the data using Pydantic
         valid_entity_states = VertiportStates(**entity_states)

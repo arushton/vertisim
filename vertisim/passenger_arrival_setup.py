@@ -1,7 +1,7 @@
 from typing import Dict, Union, List, Any
 import pandas as pd
 from .utils.read_files import read_input_file
-from .utils.helpers import compute_interarrival_times_from_schedule, miliseconds_to_hms
+from .utils.helpers import compute_interarrival_times_from_schedule, miliseconds_to_hms, pick_random_file
 from .utils.generate_artificial_supply_demand import generate_passenger_network_demand
 from .utils.units import sec_to_ms
 from .passenger import Passenger
@@ -55,7 +55,14 @@ class PassengerArrivalSetup:
             # Check if the columns of the input file are correct.
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
             print("Success: Passenger arrival schedule loaded from file.")
-
+        
+        elif self.network_and_demand['autoregressive_demand_files_path'] is not None:
+            # Pick a random file from the list of autoregressive demand files.
+            file_name = pick_random_file(self.network_and_demand['autoregressive_demand_files_path'])
+            # Load passenger arrival schedule from the path
+            passenger_arrival_schedule = read_input_file(f"{self.network_and_demand['autoregressive_demand_files_path']}/{file_name}")
+            # Check if the columns of the input file are correct.
+            self.check_passenger_arrival_schedule(passenger_arrival_schedule)        
         else:
             passenger_arrival_rates = read_input_file(self.network_and_demand['passenger_arrival_rates_path'])
             # Generate artificial passenger arrival schedule.

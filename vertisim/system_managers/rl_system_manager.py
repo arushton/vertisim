@@ -170,6 +170,9 @@ class RLSystemManager(BaseSystemManager):
     def simulate_terminal_airspace_arrival_process(self, aircraft: object, arriving_passengers: list):
         # print(f"Terminal airspace arrival process for {aircraft.tail_number} at {aircraft.location}. Origin: {aircraft.origin_vertiport_id}. Destination: {aircraft.destination_vertiport_id} Time: {self.env.now}")
         holding_start = self.env.now
+
+        # Increase the holding aircraft counter of the vertiport
+        self.vertiports[aircraft.destination_vertiport_id].num_holding_aircraft += 1
         
         # Increase aircraft arrival queue counter
         self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.destination_vertiport_id,
@@ -190,6 +193,9 @@ class RLSystemManager(BaseSystemManager):
 
         holding_end = self.env.now
         aircraft.holding_time = holding_end - holding_start
+
+        # Decrease the holding aircraft counter of the vertiport
+        self.vertiports[aircraft.destination_vertiport_id].num_holding_aircraft -= 1
 
         self.holding_time_counter += ms_to_min(aircraft.holding_time)
 
