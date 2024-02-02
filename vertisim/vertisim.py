@@ -3,7 +3,9 @@ from typing import Any, Dict, List
 from .sim_setup import SimSetup
 from .aircraft.aircraft import AircraftStatus
 from .utils.helpers import get_stopping_events, get_truncation_events, miliseconds_to_hms, \
-    create_action_enum, convert_action_values_to_enum, create_action_dict, reverse_dict, current_and_lookahead_pax_count, get_total_waiting_passengers_at_vertiport
+    create_action_enum, convert_action_values_to_enum, create_action_dict, reverse_dict, \
+        current_and_lookahead_pax_count, get_total_waiting_passengers_at_vertiport, \
+        get_inflow_demand_to_vertiport
 import time
 import numpy as np
 import gymnasium as gym
@@ -59,8 +61,6 @@ class VertiSim:
         self.action_dict = create_action_dict(self.sim_setup.vertiport_ids)
         self.reverse_action_dict = reverse_dict(self.action_dict)
         self.reward_function = RewardFunction(config=self.config, reverse_action_dict=self.reverse_action_dict, sim_setup=self.sim_setup)
-        if self.config['external_optimization_params']['periodic_time_step']:
-            self.env.process(self.periodic_state_check(time_step=self.config['external_optimization_params']['periodic_time_step']))
 
     def set_simulation_events(self, env, config):
         """
@@ -183,50 +183,84 @@ class VertiSim:
         """
         mask = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+
+            current_vertiport_id = aircraft.current_vertiport_id
+            current_vertiport = self.sim_setup.vertiports[current_vertiport_id]
+            current_vertiport_index = self.sim_setup.vertiport_id_to_index_map[current_vertiport_id]  
+
+            can_do_any = (aircraft.status == AircraftStatus.IDLE and 
+                          aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment_per_charge_event'] and 
+                          aircraft.soc >= self.config['aircraft_params']['min_reserve_soc'])  
+            
+            can_fly_and_do_nothing = (aircraft.status == AircraftStatus.IDLE and
+                                      aircraft.soc > 100-self.config['external_optimization_params']['soc_increment_per_charge_event'])
+            
             # Can do any action
-            if aircraft.status == AircraftStatus.IDLE \
-                and aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment_per_charge_event'] \
-                    and aircraft.soc >= self.config['aircraft_params']['min_reserve_soc']:
-                destination_mask = [1 if destination != aircraft.current_vertiport_id 
+            if can_do_any:
+                destination_mask = [1 if destination != current_vertiport_id
                                     else 0 for destination in self.sim_setup.vertiport_ids]
-                mask.extend(destination_mask + [1, 1])
+                # aircraft_mask = destination_mask + [1, 1]
+                non_flight_actions = [1, 1]
             # Can only charge
             elif aircraft.status == AircraftStatus.IDLE \
                     and aircraft.soc <= self.config['aircraft_params']['min_reserve_soc']:
                 destination_mask = [0] * self.sim_setup.num_vertiports()
-                mask.extend(destination_mask + [1, 0])
+                # aircraft_mask = destination_mask + [1, 0]
+                non_flight_actions = [1, 0]
             # Can fly and do nothing
-            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc > 100-self.config['external_optimization_params']['soc_increment_per_charge_event']:
-                destination_mask = [1 if destination != aircraft.current_vertiport_id 
+            elif can_fly_and_do_nothing:
+                destination_mask = [1 if destination != current_vertiport_id 
                                     else 0 for destination in self.sim_setup.vertiport_ids] 
-                mask.extend(destination_mask + [0, 1])             
+                # aircraft_mask = destination_mask + [0, 1] 
+                non_flight_actions = [0, 1]         
             # Can do nothing  
             elif aircraft.status == AircraftStatus.CHARGE or aircraft.status == AircraftStatus.FLY:
                 destination_mask = [0] * self.sim_setup.num_vertiports()
-                mask.extend(destination_mask + [0, 1])               
+                # aircraft_mask = destination_mask + [0, 1]     
+                non_flight_actions = [0, 1]         
             
-        # Review the mask based on demand. If there is no current and future demand at any particular vertiport, mask out the action
-        for vertiport_id, vertiport in self.sim_setup.vertiports.items():
-            expected_lookahead_dest_demand = current_and_lookahead_pax_count(vertiport)
-            if expected_lookahead_dest_demand == 0:
-                # Find the index of the vertiport in the mask for each aircraft and mask out the action
-                vertiport_index = self.sim_setup.vertiport_id_to_index_map[vertiport_id]
-                # Iterate through each aircraft's part of the mask
-                for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
-                    mask[i + vertiport_index] = 0 
+            # If flight actions are enabled, check for further conditions
+            if sum(destination_mask) != 0:
 
-            # If there are enough idling aircraft at the destination vertiport, and 
-            # no passenger at the current vertiport of an aircraft mask out the repositioning action
-                    
-            # Get the number of available aircraft at the destination vertiport    
-            # num_aircraft = self.sim_setup.system_manager.get_available_aircraft_count(vertiport_id=vertiport_id)
-            num_aircraft = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=vertiport_id)
-            if num_aircraft * self.config['aircraft_params']['pax'] >= expected_lookahead_dest_demand:
-                # Check each aircraft's vertiport passenger count. If there is no passenger at the current vertiport of an aircraft, mask out the repositioning action
-                for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-                    if get_total_waiting_passengers_at_vertiport(sim_setup=self.sim_setup, vertiport_id=aircraft.current_vertiport_id) == 0:
-                        # Mask out the flight from the current vertiport of the aircraft to the destination vertiport
-                        mask[aircraft_id * (self.sim_setup.num_vertiports() + 2) + self.sim_setup.vertiport_id_to_index_map[vertiport_id]] = 0
+                # Check if there is no demand at the aircraft's vertiport and it's not over capacity
+                if current_and_lookahead_pax_count(current_vertiport) == 0 and current_vertiport.get_parking_pad_availability() > 0:
+                    destination_mask = [0] * self.sim_setup.num_vertiports()
+
+                # Check if there are enough idling aircraft at the destination, no passengers, and no holding aircraft at the current vertiport
+                for dest_vertiport_id in self.sim_setup.vertiport_ids:
+                    if dest_vertiport_id == current_vertiport_id:
+                        continue
+                    # Get the destination vertiport object
+                    dest_vertiport = self.sim_setup.vertiports[dest_vertiport_id]
+                    # Get the index of the destination vertiport
+                    dest_vertiport_index = self.sim_setup.vertiport_id_to_index_map[dest_vertiport_id]
+                    # Get the number of expected passengers at the destination vertiport
+                    expected_lookahead_dest_demand = current_and_lookahead_pax_count(dest_vertiport)
+                    # # Get the number of expected inflow demand to the destination vertiport
+                    # expected_lookahead_inflow_demand = get_inflow_demand_to_vertiport(
+                    #     destination_vertiport_id=vertiport_id, 
+                    #     system_manager=self.sim_setup.system_manager)   
+                    # Get the demand from origin vertiport to the destination vertiport
+                    dest_demand_from_origin = current_vertiport.get_waiting_passenger_count()[dest_vertiport_id]
+                    # Get the number of aircraft at the destination vertiport                
+                    num_aircraft = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_vertiport_id)
+                    # Check if there are enough idling aircraft at the destination vertiport, and no passenger at the current vertiport
+                    if num_aircraft * self.config['aircraft_params']['pax'] >= expected_lookahead_dest_demand and \
+                        dest_demand_from_origin == 0 and \
+                            current_vertiport.num_holding_aircraft == 0:
+                        # Mask out the flight action to the destination vertiport
+                        destination_mask[dest_vertiport_index] = 0
+
+                if current_vertiport.get_parking_pad_availability() == 0 and \
+                        (can_do_any or can_fly_and_do_nothing):
+                    # Enable flight action to all vertiports except the current one
+                    destination_mask = [1 if idx != current_vertiport_index else 0 for idx in range(self.sim_setup.num_vertiports())]
+
+            # Add the destination mask to the mask
+            mask.extend(destination_mask)
+            # Add the non-flight actions to the mask
+            mask.extend(non_flight_actions)
+        
 
         if initial_state:
             # Set the flight actions to 0 for all aircrafts
@@ -246,7 +280,7 @@ class VertiSim:
         """
         Schedule a stopping event at a fixed interval.
         """
-        interval = self.config['external_optimization_params']['periodic_time_step']
+        interval = sec_to_ms(self.config['external_optimization_params']['periodic_time_step'])
         stop_event = self.env.event()
         self.env.process(self.trigger_stop_event_after_interval(stop_event, interval))
         return stop_event
@@ -262,9 +296,6 @@ class VertiSim:
         """
         Advance the simulation for a fixed interval and return the state and reward.
         """
-        # # Schedule the simulation to advance for the interval
-        # yield self.env.timeout(sec_to_ms(self.config['external_optimization_params']['periodic_time_step']))
-
         # Schedule the simulation to advance for the interval
         stop_event = self.schedule_periodic_stop_event()
         # Advance the simulation until the stop event is triggered
@@ -273,7 +304,7 @@ class VertiSim:
             self.env.step()
 
             if stop_event.triggered:
-                print(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Return the states
                 reward = round(self.reward_function.reward, 2)
                 self.reward_function.reset_rewards()
@@ -283,7 +314,6 @@ class VertiSim:
                 self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
             
-        self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
 
 
@@ -325,6 +355,10 @@ class VertiSim:
     
     def _check_demand_satisfied(self):
         # If system_manager.passenger_arrival_complete == True and if there is no passenger left in the waiting rooms of the vertiports, succeed the terminal event
+        # self.sim_setup.logger.warning(f"Is passenger arrival complete: {self.sim_setup.system_manager.passenger_arrival_complete}")
+        # self.sim_setup.logger.warning(f"Is all waiting rooms empty: {self.sim_setup.system_manager.check_all_waiting_rooms_empty()}")
+        # self.sim_setup.logger.warning(f"Is all passenger travelled: {self.sim_setup.system_manager.is_all_passenger_travelled()}")
+        # self.sim_setup.logger.warning(f"Total travelled passengers: {self.sim_setup.system_manager.trip_counter_tracker}")
         if bool(
             self.sim_setup.system_manager.passenger_arrival_complete
             and self.sim_setup.system_manager.check_all_waiting_rooms_empty()

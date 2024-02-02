@@ -28,6 +28,10 @@ def set_seed(seed=None, how='instant'):
         np.random.seed(42)
 
 
+def is_none(value):
+    return value is None
+
+
 def get_absolute_path(resource_path: str) -> str:
     return pkg_resources.resource_filename('vertisim', resource_path)
 
@@ -503,28 +507,47 @@ def get_list_elements_from_enum(enum_object: Enum):
     return [object.name for object in enum_object]
 
 
-def expected_pax_arrivals(arrival_rate_df, current_time, look_ahead_time):
+def expected_pax_arrivals(arrival_df, demand_type, current_time, look_ahead_time, origin, destination):
     """
     Get the expected arrivals for the next x minutes.
 
     Parameters
     ----------
-    arrival_rate_df : pd.DataFrame
-        Dataframe containing the arrival rates for each hour.
+    arrival_df : pd.DataFrame
+        Dataframe containing the arrival process for the demand type.
+    demand_type : str
+        Demand type. Can be 'rate_based' or 'scheduled'.
     current_time : int
         Current time in miliseconds.
     look_ahead_time : int
         Look ahead time in miliseconds.
+    origin : str
+        Origin vertiport id.
+    destination : str
+        Destination vertiport id.
     """
-    interval = arrival_rate_df[arrival_rate_df['time_sec'] <= ms_to_sec(current_time)].iloc[-1]
+    if demand_type == 'rate_based':
+        # Find the current time interval
+        interval = arrival_df[arrival_df['time_sec'] <= ms_to_sec(current_time)].iloc[-1]
 
-    expected_arrivals = {}
-    for column in arrival_rate_df.columns:
-        if column != 'time_sec':
-            lambda_rate = interval[column]
-            expected_arrivals[column] = round(ms_to_hr(lambda_rate * look_ahead_time))  # Convert to hours
-    return expected_arrivals
+        route = f"{origin}_{destination}"
 
+        if route in arrival_df.columns:
+            lambda_rate = interval[route]
+            expected_arrivals = round(ms_to_hr(lambda_rate * look_ahead_time))  # Convert to hours
+            return expected_arrivals
+        else:
+            return "Route not found"
+    elif demand_type == 'scheduled' or 'autoregressive':
+        # Filter the data for the specified origin and destination
+        filtered_data = arrival_df[(arrival_df['origin_vertiport_id'] == origin) & (arrival_df['destination_vertiport_id'] == destination)]
+
+        # Filter the data to only include arrivals within the specified window
+        time_window_data = filtered_data[(filtered_data['passenger_arrival_time'] >= current_time - look_ahead_time) & 
+                                        (filtered_data['passenger_arrival_time'] < current_time)]
+
+        # Estimate the expected arrivals in the next 10 minutes
+        return len(time_window_data)
 
 def expected_pax_arrivals_for_route(arrival_rate_df, current_time, look_ahead_time, route):
     """
@@ -650,6 +673,17 @@ def current_and_lookahead_pax_count(vertiport: object):
     """
     return vertiport.get_total_waiting_passenger_count() + \
             vertiport.get_total_expected_pax_arrival_count()
+
+
+def get_inflow_demand_to_vertiport(destination_vertiport_id: str, system_manager: object):
+    """
+    Get the inflow demand to a vertiport.
+    """
+    inflow_demand = 0
+    for vertiport_id, vertiport in system_manager.vertiports.items():
+        if vertiport_id != destination_vertiport_id:
+            inflow_demand += vertiport.get_waiting_passenger_count()[destination_vertiport_id]
+    return inflow_demand
 
 
 def get_waiting_passenger_ids(sim_setup: object, origin_vertiport_id: str, destination_vertiport_id: str, exclude_pax_ids: List = []):

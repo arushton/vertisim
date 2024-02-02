@@ -54,7 +54,7 @@ class PassengerArrivalSetup:
             passenger_arrival_schedule.reset_index(drop=True, inplace=True)
             # Check if the columns of the input file are correct.
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
-            print("Success: Passenger arrival schedule loaded from file.")
+            # print("Success: Passenger arrival schedule loaded from file.")
         
         elif self.network_and_demand['autoregressive_demand_files_path'] is not None:
             # Pick a random file from the list of autoregressive demand files.
@@ -74,13 +74,19 @@ class PassengerArrivalSetup:
                 network_simulation=self.network_simulation
             )
             # print("Success: Passenger arrival schedule is generated from the given distribution.")
+        
+        self.load_pax_arrival_df_to_vertiports(passenger_arrival_schedule)
         return passenger_arrival_schedule
+
+    def load_pax_arrival_df_to_vertiports(self, passenger_arrival_schedule):
+        for vertiport_id in self.vertiport_ids:
+            self.system_manager.vertiports[vertiport_id].pax_arrival_df = passenger_arrival_schedule
 
     def create_passenger_arrival(self):
         # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
         self.system_manager.total_demand = len(passenger_arrival_schedule)
-        # print(f"Total number of passengers: {self.system_manager.total_demand}")
+        self.system_manager.logger.warning(f"Total number of passengers: {self.system_manager.total_demand}")
 
         if not self.network_simulation:
             if self.aircraft_params['time_charging']:

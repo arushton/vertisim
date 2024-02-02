@@ -59,8 +59,6 @@ class RLChargingStrategy(BaseChargingStrategy):
         easier to follow which resource is being used by which aircraft.
         """
         aircraft.status = AircraftStatus.CHARGE
-        # print(f"Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. At time {miliseconds_to_hms(aircraft.env.now)}.")
-        # aircraft.system_manager.trigger_stopping_event(event_name="charging_start_event", id=aircraft.tail_number)
 
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:

@@ -32,7 +32,7 @@ from .utils.get_aircraft_count import get_aircraft_count
 from .utils.calc_performance_metrics import calculate_passenger_trip_time_stats, calculate_passenger_waiting_time_stats
 from .utils.bundle_passenger_related_distributions import bundle_distributions
 from .utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
-from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes
+from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes, is_none
 from .utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from .utils.setup_distributions import setup_passenger_distributions
 from .utils.units import sec_to_ms, ms_to_min
@@ -412,7 +412,8 @@ class SimSetup:
                 'stopping_events': self.stopping_events,
                 'truncation_events': self.truncation_events,
                 'truncation_event': self.truncation_event,
-                'sim_mode': system_manager_type
+                'sim_mode': system_manager_type,
+                'periodic_stopping': not is_none(self.external_optimization_params['periodic_time_step'])
             },
             'offline_optimization': {
                 'env': self.env,

@@ -25,7 +25,16 @@ class RewardFunction:
                                    departing_passengers=departing_passengers)
         self.reward += self._waiting_time_penalty(departing_passengers=departing_passengers)
         self.reward += self.config['external_optimization_params']['reward_function_parameters']['step_penalty']
-        self.reward += self.config['external_optimization_params']['reward_function_parameters']['holding_penalty'] * self.sim_setup.system_manager.holding_time_counter
+        self.reward += self._compute_holding_penalty()
+
+    def _compute_holding_penalty(self) -> float:
+        """
+        Compute the holding penalty.
+        """
+        holding_time = 0
+        for _, vertiport in self.sim_setup.vertiports.items():
+            holding_time += vertiport.get_holding_time_cost()
+        return holding_time * self.config['external_optimization_params']['reward_function_parameters']['holding_penalty']
 
     def _compute_departing_passengers(self, actions: List[int]) -> Set[int]:
         """
@@ -41,34 +50,6 @@ class RewardFunction:
                     destination_vertiport_id=self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
                 ))
         return departing_passengers
-    
-    # def _create_departing_passengers_dict(self, actions: List[int]) -> Dict[int, List[int]]:
-    #     """
-    #     Creates a dictionary of departing passengers for each aircraft.
-    #     The keys are aircraft_ids and the values are lists of passenger ids.
-    #     Passengers already assigned to an aircraft are excluded from subsequent ones.
-    #     """
-    #     departing_passengers_dict = {}
-    #     all_departing_passengers = set()  # Set to keep track of all departing passengers
-
-    #     for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-    #         if actions[aircraft_id] < self.sim_setup.num_vertiports():
-    #             # Get departing passenger IDs for this aircraft, excluding those already in the dictionary
-    #             departing_passenger_ids = list(get_waiting_passenger_ids(
-    #                 sim_setup=self.sim_setup,
-    #                 exclude_pax_ids=all_departing_passengers,
-    #                 origin_vertiport_id=aircraft.current_vertiport_id,
-    #                 destination_vertiport_id=self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
-    #             ))
-
-    #             # Update the dictionary with the aircraft_id and its departing passengers
-    #             departing_passengers_dict[aircraft_id] = departing_passenger_ids
-
-    #             # Update the set of all departing passengers
-    #             all_departing_passengers.update(departing_passenger_ids)
-
-    #     return departing_passengers_dict, all_departing_passengers
-
 
     def _apply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         """

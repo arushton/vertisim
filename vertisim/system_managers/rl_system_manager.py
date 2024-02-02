@@ -35,7 +35,8 @@ class RLSystemManager(BaseSystemManager):
                  stopping_events: Dict,
                  truncation_events: Dict,
                  truncation_event: simpy.Event,
-                 sim_mode: str = 'rl'
+                 sim_mode: str = 'rl',
+                 periodic_stopping: bool = False
                  ):
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -61,6 +62,7 @@ class RLSystemManager(BaseSystemManager):
         
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.external_optimization_params = external_optimization_params
+        self.periodic_stopping = periodic_stopping
         self.stopping_events = stopping_events
         self.truncation_events = truncation_events
         self.truncation_event = truncation_event
@@ -173,6 +175,7 @@ class RLSystemManager(BaseSystemManager):
 
         # Increase the holding aircraft counter of the vertiport
         self.vertiports[aircraft.destination_vertiport_id].num_holding_aircraft += 1
+        self.vertiports[aircraft.destination_vertiport_id].holding_times[aircraft.tail_number]['start'] = self.env.now
         
         # Increase aircraft arrival queue counter
         self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.destination_vertiport_id,
@@ -193,6 +196,9 @@ class RLSystemManager(BaseSystemManager):
 
         holding_end = self.env.now
         aircraft.holding_time = holding_end - holding_start
+        
+        # Delete the holding time from the vertiport holding times
+        del self.vertiports[aircraft.destination_vertiport_id].holding_times[aircraft.tail_number]
 
         # Decrease the holding aircraft counter of the vertiport
         self.vertiports[aircraft.destination_vertiport_id].num_holding_aircraft -= 1
@@ -284,7 +290,7 @@ class RLSystemManager(BaseSystemManager):
 
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
-            self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)         
+            self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)   
 
         # If the aircraft is not assigned to a parking pad but its starting location is a FATO
         elif aircraft.parking_space_id is None and \
@@ -332,7 +338,7 @@ class RLSystemManager(BaseSystemManager):
             aircraft.status = AircraftStatus.IDLE            
             # Trigger the stopping event
             self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
-            self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)        
+            self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number) 
             
         # If the aircraft is assigned to a parking pad
         elif aircraft.parking_space_id is not None:
@@ -437,6 +443,8 @@ class RLSystemManager(BaseSystemManager):
         """
         Trigger the stopping event.
         """
+        if self.periodic_stopping:
+            return
         if id is not None:
             event_name = f"{event_name}_{id}"
         self.triggered_stopping_event_queue.append(event_name)

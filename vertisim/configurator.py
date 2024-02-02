@@ -2,14 +2,14 @@ import simpy
 import random
 from typing import Dict, Any, Union, List, Optional
 from collections import defaultdict
-from .utils.helpers import flatten
+from .utils.helpers import flatten, extract_dict_values
 from .charger_model import ChargerModel
 from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
 from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms, sec_to_ms
 from .utils.read_files import read_input_file
-from .utils.helpers import miliseconds_to_hms, expected_pax_arrivals_for_route
+from .utils.helpers import miliseconds_to_hms, expected_pax_arrivals
 from pydantic import BaseModel
 
 class EntitySubState(BaseModel):
@@ -52,7 +52,8 @@ class VertiportConfig:
         self.network_and_demand = network_and_demand
         self.aircraft_capacity = aircraft_capacity
         self.pax_waiting_time_threshold = pax_waiting_time_threshold
-        self.pax_arrival_rates_df = read_input_file(self.network_and_demand['passenger_arrival_rates_path'])
+        self.demand_type = self.get_demand_type()         
+        self.pax_arrival_df = None
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
         self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
         self.charger_model = self.set_charger_model()
@@ -67,6 +68,7 @@ class VertiportConfig:
         self.taxi_resource = simpy.Resource(self.env, capacity=1)
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
+        self.holding_times = defaultdict(defaultdict)
         self.num_aircraft = 0
         self.aircraft_departure_queue_count = 0
         self.num_flight_requests = 0
@@ -75,6 +77,16 @@ class VertiportConfig:
         self.num_holding_aircraft = 0
 
 
+    def get_demand_type(self):
+        if self.network_and_demand['passenger_schedule_file_path']:
+            return 'scheduled'
+        elif self.network_and_demand['passenger_arrival_rates_path']:
+            return 'rate_based'
+        elif self.network_and_demand['autoregressive_demand_files_path']:
+            return 'autoregressive'
+        else:
+            raise ValueError("Please provide a valid demand.")  
+        
     def is_node_vertiport_location(self, location):
         return (self.is_taxi_node_location(location) or 
                 self.is_fato_location(location) or
@@ -121,6 +133,13 @@ class VertiportConfig:
     
     def get_fato_queue_length(self):
         return sum(len(fato.fato_resource.queue) for fato in self.fato_store.items)
+    
+    def get_holding_time_cost(self, unit: str='minute') -> float:
+        # Compute the waiting times by substracting the current time from the holding start times in the holding_times
+        if len(self.holding_times) == 0:
+            return 0
+        holding_times = [self.env.now - holding_time for holding_time in extract_dict_values(self.holding_times)]
+        return VertiportConfig.unit_helper(unit=unit, value=sum(holding_times))
     
     def get_waiting_time_cost(self, unit:str, last_decision_time: float, type:str, exclude_pax_ids: list=[]):
         """
@@ -342,16 +361,17 @@ class VertiportConfig:
         entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
         entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
-        # entity_states['expected_pax'] = self.get_expected_pax_arrivals_for_route()
         entity_states['num_waiting_passengers'] = self.get_waiting_passenger_count()
 
         # waiting_passenger_counts = self.get_waiting_passenger_count()
         # for destination, waiting_passenger_count in waiting_passenger_counts.items():
         #     entity_states['num_waiting_passengers'][f'to_{destination}'] = waiting_passenger_count
-        #     entity_states['expected_pax'][f'to_{destination}'] = expected_pax_arrivals_for_route(arrival_rate_df=self.pax_arrival_rates_df,
+        #     entity_states['expected_pax'][f'to_{destination}'] = expected_pax_arrivals_for_route(arrival_rate_df=self.pax_arrival_df,
         #                                                                                          current_time=self.env.now,
         #                                                                                          look_ahead_time=sec_to_ms(self.network_and_demand['demand_lookahead_time']),
         #                                                                                          route=f'{self.vertiport_id}_{destination}')
+        for destination, expected_pax in self.get_expected_pax_arrivals_for_vertiport().items():
+            entity_states['expected_pax'][destination] = expected_pax
 
         entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 
@@ -373,23 +393,25 @@ class VertiportConfig:
                                           last_decision_time=None,
                                           type=reward_function_parameters['waiting_time_cost_type'])
     
-    def get_expected_pax_arrivals_for_route(self):
+    def get_expected_pax_arrivals_for_vertiport(self):
         """
         Returns the expected passenger arrivals for each route.
         """
-        expected_pax_arrivals = {}
+        expected_pax_arrivals_dict = {}
         for destination, _ in self.waiting_room_stores.items():
-            expected_pax_arrivals[destination] = expected_pax_arrivals_for_route(arrival_rate_df=self.pax_arrival_rates_df,
-                                                                                  current_time=self.env.now,
-                                                                                  look_ahead_time=sec_to_ms(self.network_and_demand['demand_lookahead_time']),
-                                                                                  route=f'{self.vertiport_id}_{destination}')
-        return expected_pax_arrivals
+            expected_pax_arrivals_dict[destination] = expected_pax_arrivals(arrival_df=self.pax_arrival_df,
+                                                                            demand_type=self.demand_type,
+                                                                            current_time=self.env.now,
+                                                                            look_ahead_time=sec_to_ms(self.network_and_demand['demand_lookahead_time']),
+                                                                            origin=self.vertiport_id,
+                                                                            destination=destination)
+        return expected_pax_arrivals_dict
     
     def get_total_expected_pax_arrival_count(self):
         """
         Returns the total expected passenger arrivals for all routes.
         """
-        return sum(self.get_expected_pax_arrivals_for_route().values())
+        return sum(self.get_expected_pax_arrivals_for_vertiport().values())
 
     def get_waiting_passenger_count(self):
         waiting_passenger_count = {destination: 0 for destination in self.waiting_room_stores.keys()}
