@@ -173,6 +173,8 @@ class RLSystemManager(BaseSystemManager):
         # print(f"Terminal airspace arrival process for {aircraft.tail_number} at {aircraft.location}. Origin: {aircraft.origin_vertiport_id}. Destination: {aircraft.destination_vertiport_id} Time: {self.env.now}")
         aircraft.holding_start = self.env.now
 
+        aircraft.status = AircraftStatus.HOLD
+
         # Increase the holding aircraft counter of the vertiport
         self.vertiports[aircraft.destination_vertiport_id].num_holding_aircraft += 1
         self.vertiports[aircraft.destination_vertiport_id].holding_times[aircraft.tail_number]['start'] = self.env.now
@@ -193,6 +195,8 @@ class RLSystemManager(BaseSystemManager):
         # Wait until getting the arrival fix usage request
         yield arrival_fix_usage_request
         self.logger.debug(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')
+
+        aircraft.status = AircraftStatus.FLY
 
         aircraft.holding_end = self.env.now
         aircraft.holding_time = aircraft.holding_end - aircraft.holding_start

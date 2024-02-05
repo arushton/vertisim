@@ -1357,6 +1357,8 @@ class Aircraft:
             self.soc = new_soc
 
     def get_holding_time(self):
+        if self.status == AircraftStatus.HOLD:
+            return ms_to_min(self.env.now - self.holding_start_time)
         if self.holding_time is None:
             return 0
         return ms_to_min(self.holding_time)
@@ -1388,6 +1390,7 @@ class AircraftStatus(Enum):
     IDLE = 1
     CHARGE = 2
     FLY = 3
+    HOLD = 4
 
 
 from pydantic import BaseModel
