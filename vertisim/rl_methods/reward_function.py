@@ -21,10 +21,11 @@ class RewardFunction:
         Calculate the reward based on the provided actions.
         """
         departing_passengers = self._compute_departing_passengers(actions)
-        self._apply_flight_rewards(actions=actions,
-                                   departing_passengers=departing_passengers)
+        # self._apply_flight_rewards(actions=actions,
+        #                            departing_passengers=departing_passengers)
+        self._apply_simply_flight_rewards(actions=actions, 
+                                          departing_passengers=departing_passengers)
         self.reward += self._waiting_time_penalty(departing_passengers=departing_passengers)
-        self.reward += self.config['external_optimization_params']['reward_function_parameters']['step_penalty']
         self.reward += self._compute_holding_penalty()
 
     def _compute_holding_penalty(self) -> float:
@@ -32,8 +33,8 @@ class RewardFunction:
         Compute the holding penalty.
         """
         holding_time = 0
-        for _, vertiport in self.sim_setup.vertiports.items():
-            holding_time += vertiport.get_holding_time_cost()
+        for aircraft in self.sim_setup.system_manager.aircraft_agents.values():
+            holding_time += aircraft.get_holding_time()
         return holding_time * self.config['external_optimization_params']['reward_function_parameters']['holding_penalty']
 
     def _compute_departing_passengers(self, actions: List[int]) -> Set[int]:
@@ -50,6 +51,15 @@ class RewardFunction:
                     destination_vertiport_id=self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
                 ))
         return departing_passengers
+    
+    def _apply_simply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
+        pax_count = len(departing_passengers)
+        trip_time_counter = 0
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if actions[aircraft_id] < self.sim_setup.num_vertiports():
+                dest_vertiport_id = self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
+                trip_time_counter += self._calculate_trip_length(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)            
+        self._apply_trip_and_flight_cost_reward(pax_count, trip_time_counter)
 
     def _apply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         """
@@ -60,7 +70,7 @@ class RewardFunction:
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if actions[aircraft_id] < self.sim_setup.num_vertiports():
                 dest_vertiport_id = self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
-                trip_time_counter += self._calculate_trip_time(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)
+                trip_time_counter += self._calculate_trip_length(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)
                 self._apply_unnecessary_flight_penalty(dest_id=dest_vertiport_id, 
                                                        origin_id=aircraft.current_vertiport_id)
                 
@@ -75,7 +85,7 @@ class RewardFunction:
 
         self._apply_trip_and_flight_cost_reward(pax_count, trip_time_counter)
 
-    def _calculate_trip_time(self, origin_id: int, destination_id: int) -> int:
+    def _calculate_trip_length(self, origin_id: int, destination_id: int) -> int:
         """
         Calculate the trip time for a flight.
         """
@@ -190,7 +200,12 @@ class RewardFunction:
         self.sim_setup.system_manager.holding_time_counter = 0
         self.reward = 0
 
-
+        # Flush the holding time of the aircraft
+        for aircraft in self.sim_setup.system_manager.aircraft_agents.values():
+            if aircraft.status != AircraftStatus.FLY:
+                aircraft.holding_time = None
+                aircraft.holding_start_time = None
+                aircraft.holding_end_time = None
 
 
 # from typing import List, Dict

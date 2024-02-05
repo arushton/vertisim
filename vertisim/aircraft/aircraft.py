@@ -82,6 +82,8 @@ class Aircraft:
         self.assigned_fato_id = None
         self.assigned_fato_resource = None
         self.holding_time = None
+        self.holding_start = None
+        self.holding_end = None
         self.idle_time = 0
         self.ground_holding_end_time = arrival_time
         self.flight_direction = self.set_initial_flight_direction()
@@ -1354,17 +1356,23 @@ class Aircraft:
                                                                        df=charge_lookup_table)
             self.soc = new_soc
 
+    def get_holding_time(self):
+        if self.holding_time is None:
+            return 0
+        return ms_to_min(self.holding_time)
+
     def get_aircraft_states(self) -> Dict:
         """
         Returns the aircraft states.
         """
         self.update_aircraft_soc_for_state()
-        
+
         state_data = {
             'flight_direction': self.get_flight_direction_index(),
             'location': self.get_aircraft_location_for_state(),
             'soc': int(self.soc),
             'time_to_arrival': int(self.estimate_time_to_arrival()),
+            'holding_time': self.get_holding_time(),
             'num_passengers': len(self.passengers_onboard),
             'status': self.status.value,
             'is_process_completed': int(self.is_process_completed),
@@ -1389,6 +1397,7 @@ class AircraftState(BaseModel):
     location: int
     soc: int
     time_to_arrival: int
+    holding_time: float
     num_passengers: int
     status: int
     is_process_completed: int
