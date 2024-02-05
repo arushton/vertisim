@@ -448,6 +448,7 @@ class SimSetup:
             return OfflineOptimizationChargingStrategy()
         elif self.sim_mode['rl']:
             return RLChargingStrategy(soc_increment_per_charge_event=self.external_optimization_params['soc_increment_per_charge_event'],
+                                      charge_time_per_charge_event=self.external_optimization_params['charge_time_per_charge_event'],
                                       soc_reward_threshold=self.external_optimization_params['reward_function_parameters']['soc_reward_threshold'])
         else:
             return OnDemandChargingStrategy()

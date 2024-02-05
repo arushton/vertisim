@@ -5,25 +5,31 @@ from ..aircraft import AircraftStatus
 import numpy as np
 
 class RLChargingStrategy(BaseChargingStrategy):
-    def __init__(self, soc_increment_per_charge_event=10, soc_reward_threshold=80):
+    def __init__(self, soc_increment_per_charge_event=10, charge_time_per_charge_event=600, soc_reward_threshold=80):
         self.soc_increment_per_charge_event = soc_increment_per_charge_event
+        self.charge_time_per_charge_event = sec_to_ms(charge_time_per_charge_event)
         self.soc_reward_threshold = soc_reward_threshold
 
     def get_charging_time(self, aircraft):
         """
         Get charging time - Two options: Constant charging time or draw a number from distribution
         """
-        init_soc = round(aircraft.soc)
-        target_soc = init_soc + self.soc_increment_per_charge_event
-        charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=init_soc, target_soc=target_soc)
-        # charge_time = sec_to_ms(5*60)
+        if self.soc_increment_per_charge_event:
+            init_soc = round(aircraft.soc)
+            target_soc = init_soc + self.soc_increment_per_charge_event
+            charge_time = self.get_charge_time_from_soc(aircraft=aircraft, init_soc=init_soc, target_soc=target_soc)
+            # charge_time = sec_to_ms(5*60)
 
-        aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.current_vertiport_id,
-                                                     charging_time=charge_time)
-        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft.soc, 2)}")
-        
-        return charge_time
-    
+            aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.current_vertiport_id,
+                                                        charging_time=charge_time)
+            aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft.soc, 2)}")
+            
+            return charge_time
+        elif self.charge_time_per_charge_event:
+            return self.charge_time_per_charge_event
+        else:
+            raise ValueError("Charging time is not defined.")
+
     def get_charge_time_from_soc(self, aircraft: object, init_soc:int, target_soc: int) -> (float, float) :
         """
         Calculates the charge time required to reach the target soc level.
