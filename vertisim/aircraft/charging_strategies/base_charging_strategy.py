@@ -91,11 +91,11 @@ class BaseChargingStrategy(ABC):
         idx_final_soc = df['time_sec'].sub(final_soc_time).abs().idxmin()
         return df.loc[idx_final_soc]['soc']
     
-    def soc_charge_update(self, aircraft: object, charge_time: float) -> None:
+    def soc_charge_update(self, aircraft: object, initial_soc: float, charge_time: float) -> None:
         """
         Updates the charge level of the aircraft using current charge time.
         """
         charge_lookup_table = aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
-        final_soc = self.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=aircraft.soc, df=charge_lookup_table)
+        final_soc = self.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=initial_soc, df=charge_lookup_table)
         # TODO: Might need attention. Previously it was self._soc = final_soc
         aircraft.soc = final_soc    

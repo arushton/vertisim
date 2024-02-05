@@ -1344,11 +1344,22 @@ class Aircraft:
             if vertiport.is_node_vertiport_location(self.location):
                 return vertiport_id
         return None
+    
+    def update_aircraft_soc_for_state(self) -> None:
+        if self.status == AircraftStatus.CHARGE:
+            charge_time = self.env.now - self.charge_start_time
+            charge_lookup_table = self.system_manager.aircraft_battery_models[self.current_vertiport_id]
+            new_soc = self.charging_strategy.calc_soc_from_charge_time(charge_time=charge_time, 
+                                                                       initial_soc=self.soc,
+                                                                       df=charge_lookup_table)
+            self.soc = new_soc
 
     def get_aircraft_states(self) -> Dict:
         """
         Returns the aircraft states.
         """
+        self.update_aircraft_soc_for_state()
+        
         state_data = {
             'flight_direction': self.get_flight_direction_index(),
             'location': self.get_aircraft_location_for_state(),
