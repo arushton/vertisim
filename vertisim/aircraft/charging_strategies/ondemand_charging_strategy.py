@@ -81,7 +81,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         self.end_charging_process(aircraft=aircraft)
 
         old_soc = aircraft.soc
-        self.soc_charge_update(aircraft=aircraft, charge_time=charge_time)
+        self.soc_charge_update(aircraft=aircraft, charge_time=charge_time, initial_soc=old_soc)
 
         # Set the aircraft status to idle
         aircraft.status = AircraftStatus.IDLE 
