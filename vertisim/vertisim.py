@@ -188,12 +188,21 @@ class VertiSim:
             current_vertiport = self.sim_setup.vertiports[current_vertiport_id]
             current_vertiport_index = self.sim_setup.vertiport_id_to_index_map[current_vertiport_id]  
 
+            if self.config['external_optimization_params']['soc_increment_per_charge_event'] is not None:
+                soc_increment = self.config['aircraft_params']['soc_increment_per_charge_event']
+            elif self.config['external_optimization_params']['charge_time_per_charge_event'] is not None:
+                charge_lookup_table = self.sim_setup.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
+                new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(charge_time=sec_to_ms(self.config['external_optimization_params']['charge_time_per_charge_event']), 
+                                                                        initial_soc=aircraft.soc,
+                                                                        df=charge_lookup_table)
+                soc_increment = new_soc - aircraft.soc
+
             can_do_any = (aircraft.status == AircraftStatus.IDLE and 
-                          aircraft.soc <= 100-self.config['external_optimization_params']['soc_increment_per_charge_event'] and 
-                          aircraft.soc >= self.config['aircraft_params']['min_reserve_soc'])  
+                          aircraft.soc <= 100-soc_increment and 
+                          aircraft.soc >= self.config['aircraft_params']['min_reserve_soc'])
             
             can_fly_and_do_nothing = (aircraft.status == AircraftStatus.IDLE and
-                                      aircraft.soc > 100-self.config['external_optimization_params']['soc_increment_per_charge_event'])
+                                      aircraft.soc > 100-soc_increment)
             
             # Can do any action
             if can_do_any:
@@ -214,7 +223,7 @@ class VertiSim:
                 # aircraft_mask = destination_mask + [0, 1] 
                 non_flight_actions = [0, 1]         
             # Can do nothing  
-            elif aircraft.status == AircraftStatus.CHARGE or aircraft.status == AircraftStatus.FLY:
+            elif aircraft.status == AircraftStatus.CHARGE or aircraft.status == AircraftStatus.FLY or aircraft.status == AircraftStatus.HOLD:
                 destination_mask = [0] * self.sim_setup.num_vertiports()
                 # aircraft_mask = destination_mask + [0, 1]     
                 non_flight_actions = [0, 1]         

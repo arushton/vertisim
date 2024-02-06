@@ -65,7 +65,7 @@ class RLChargingStrategy(BaseChargingStrategy):
         easier to follow which resource is being used by which aircraft.
         """
         aircraft.status = AircraftStatus.CHARGE
-        old_soc = aircraft.soc
+        old_soc = aircraft.soc        
 
         # If the chargers are shared, request all of the chargers that the parking pad has access to.
         if shared_charger:

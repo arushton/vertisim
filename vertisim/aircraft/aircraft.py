@@ -1349,16 +1349,17 @@ class Aircraft:
     
     def update_aircraft_soc_for_state(self) -> None:
         if self.status == AircraftStatus.CHARGE:
-            charge_time = self.env.now - self.charge_start_time
-            charge_lookup_table = self.system_manager.aircraft_battery_models[self.current_vertiport_id]
-            new_soc = self.charging_strategy.calc_soc_from_charge_time(charge_time=charge_time, 
-                                                                       initial_soc=self.soc,
-                                                                       df=charge_lookup_table)
-            self.soc = new_soc
+            if self.charging_start_time is not None:
+                charge_time = self.env.now - self.charging_start_time
+                charge_lookup_table = self.system_manager.aircraft_battery_models[self.current_vertiport_id]
+                new_soc = self.charging_strategy.calc_soc_from_charge_time(charge_time=charge_time, 
+                                                                        initial_soc=self.soc,
+                                                                        df=charge_lookup_table)
+                self.soc = new_soc
 
     def get_holding_time(self):
         if self.status == AircraftStatus.HOLD:
-            return ms_to_min(self.env.now - self.holding_start_time)
+            return ms_to_min(self.env.now - self.holding_start)
         if self.holding_time is None:
             return 0
         return ms_to_min(self.holding_time)
