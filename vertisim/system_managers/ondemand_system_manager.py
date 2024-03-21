@@ -63,6 +63,7 @@ class OnDemandSystemManager(BaseSystemManager):
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.taxi_resource = simpy.Resource(self.env, 1)
+        self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()      
         if (
             not self.sim_params['only_aircraft_simulation']

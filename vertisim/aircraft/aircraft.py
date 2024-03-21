@@ -173,9 +173,9 @@ class Aircraft:
     
     @soc.setter
     def soc(self, value):
-        if self._soc <= 0:
+        if value <= 0:
             self._soc = 0
-        elif self._soc >= 100:
+        elif value >= 100:
             self._soc = 100
         else:
             self._soc = value

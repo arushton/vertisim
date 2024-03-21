@@ -98,4 +98,4 @@ class BaseChargingStrategy(ABC):
         charge_lookup_table = aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
         final_soc = self.calc_soc_from_charge_time(charge_time=charge_time, initial_soc=initial_soc, df=charge_lookup_table)
         # TODO: Might need attention. Previously it was self._soc = final_soc
-        aircraft.soc = final_soc    
+        aircraft._soc = final_soc    
