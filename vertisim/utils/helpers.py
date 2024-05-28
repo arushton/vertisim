@@ -437,9 +437,9 @@ def check_magnitude_order(value1, value2, max_val=100):
     """
     Check whether the magnitude of value1 is greater than the magnitude of value2.
     """
-    if value1 >= value2:
+    if value1 > value2:
         raise ValueError(
-            f'The magnitude of value1 ({value1}) is greater than or equal to the magnitude of value2 ({value2}).'
+            f'The magnitude of value1 ({value1}) is greater than magnitude of value2 ({value2}).'
         )
     return value2 <= max_val
     

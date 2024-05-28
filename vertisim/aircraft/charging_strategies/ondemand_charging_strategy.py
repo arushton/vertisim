@@ -18,7 +18,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
 
         aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.current_vertiport_id,
                                                      charging_time=charge_time)
-        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft.soc, 2)}")
+        aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft._soc, 2)}")
         
         return charge_time    
     
@@ -53,7 +53,8 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         should be requested. We use chargers as a resource instead of simpy.Store or simpy.Filterstore because it's
         easier to follow which resource is being used by which aircraft.
         """
-        if aircraft.soc >= aircraft.aircraft_params['min_reserve_soc']:
+        # TODO: Write tests for all cases
+        if (not aircraft.target_soc_constant and aircraft.soc >= aircraft.aircraft_params['min_reserve_soc']) or (aircraft.target_soc_constant and aircraft.soc >= aircraft.target_soc_constant):
             return self._check_skip_charging(aircraft)
         aircraft.status = AircraftStatus.CHARGE
 
@@ -80,7 +81,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         aircraft.detailed_status = 'idle'
         self.end_charging_process(aircraft=aircraft)
 
-        old_soc = aircraft.soc
+        old_soc = aircraft._soc
         self.soc_charge_update(aircraft=aircraft, charge_time=charge_time, initial_soc=old_soc)
 
         # Set the aircraft status to idle

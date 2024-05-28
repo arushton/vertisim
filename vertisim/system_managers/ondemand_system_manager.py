@@ -147,7 +147,7 @@ class OnDemandSystemManager(BaseSystemManager):
         flight_id = get_random_process_id()
         self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}.')
         # Get the intended pushback time of the aircraft
-        pushback_time = self.env.now             
+        # pushback_time = self.env.now             
         # Retrieve aircraft from the store
         # yield self.env.timeout(1)
         aircraft = yield self.retrieve_aircraft(origin_vertiport_id) 
@@ -156,7 +156,7 @@ class OnDemandSystemManager(BaseSystemManager):
         # Update the vertiport flight request state
         self.vertiports[origin_vertiport_id].num_flight_requests -= 1            
         # Set the real pushback time of the aircraft 
-        aircraft.pushback_time = pushback_time
+        aircraft.pushback_time = self.env.now
         # Set the flight direction of the aircraft
         aircraft.flight_direction = f'{origin_vertiport_id}_{destination_vertiport_id}'
         # Set the flight ID of the aircraft
@@ -362,8 +362,8 @@ class OnDemandSystemManager(BaseSystemManager):
 
             aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
             # Put aircraft into available aircraft store
-            self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                            aircraft=aircraft)    
+            # self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
+            #                                                 aircraft=aircraft)    
 
             # print(f"Aircraft {aircraft.tail_number} parked with passengers: {[p.passenger_id for p in aircraft.passengers_onboard]} to {aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. Available aircraft at that location: {[a.tail_number for a in self.vertiports[aircraft.destination_vertiport_id].available_aircraft_store.items]}")
 

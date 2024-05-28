@@ -259,7 +259,7 @@ class EventSaver:
                 self.aircraft_agent_trajectory[time]['tail_number'] = f'{agent_type}{agent.tail_number}'
                 self.aircraft_agent_trajectory[time]['location'] = agent.location
                 self.aircraft_agent_trajectory[time]['speed'] = agent.forward_velocity
-                self.aircraft_agent_trajectory[time]['soc'] = agent.soc
+                self.aircraft_agent_trajectory[time]['soc'] = agent._soc
                 self.aircraft_agent_trajectory[time]['flight_direction'] = agent.flight_direction
                 self.aircraft_agent_trajectory[time]['event'] = event
                 self.aircraft_agent_trajectory[time]['latitude'] = self.node_locations[agent.location][0]

@@ -34,35 +34,55 @@ class AirspaceCreator:
         return waypoint_ids, waypoint_locations, flight_directions
 
     
+    # @staticmethod
+    # def generate_waypoints(start_end_points, num_waypoints, cruise_altitude, origin_destination_vertiport_locs, origin_altitude, destination_altitude):
+    #     lat1, lon1, lat2, lon2 = start_end_points # Approach departures fixes
+    #     o_vert_lat, o_vert_lon, d_vert_lat, d_vert_lon = origin_destination_vertiport_locs
+
+    #     # Calculate haversine distance between the two points
+    #     distance_miles = haversine_dist(lat1, lon1, lat2, lon2, unit='mile')
+
+    #     # Convert distance to radians
+    #     c = distance_miles / 3958
+
+    #     # Convert latitude and longitude to radians
+    #     lat1_rad, lon1_rad = np.radians(lat1), np.radians(lon1)
+    #     lat2_rad, lon2_rad = np.radians(lat2), np.radians(lon2)
+
+    #     waypoints = []
+    #     for i in range(1, num_waypoints + 1 - 4):
+    #         f = i / (num_waypoints + 1)
+    #         A = np.sin((1 - f) * c) / np.sin(c)
+    #         B = np.sin(f * c) / np.sin(c)
+    #         x = A * np.cos(lat1_rad) * np.cos(lon1_rad) + B * np.cos(lat2_rad) * np.cos(lon2_rad)
+    #         y = A * np.cos(lat1_rad) * np.sin(lon1_rad) + B * np.cos(lat2_rad) * np.sin(lon2_rad)
+    #         z = A * np.sin(lat1_rad) + B * np.sin(lat2_rad)
+    #         lat_rad = np.arctan2(z, np.sqrt(x ** 2 + y ** 2))
+    #         lon_rad = np.arctan2(y, x)
+    #         lat, lon = np.degrees(lat_rad), np.degrees(lon_rad)
+    #         waypoints.append((lat, lon, cruise_altitude))
+    #     return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+60)] + waypoints + [(lat2, lon2, destination_altitude+60)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 60 is the altitude of the approach departure fix. This is according to one model. Needs to change.
+
     @staticmethod
     def generate_waypoints(start_end_points, num_waypoints, cruise_altitude, origin_destination_vertiport_locs, origin_altitude, destination_altitude):
         lat1, lon1, lat2, lon2 = start_end_points # Approach departures fixes
         o_vert_lat, o_vert_lon, d_vert_lat, d_vert_lon = origin_destination_vertiport_locs
 
-        # Calculate haversine distance between the two points
-        distance_miles = haversine_dist(lat1, lon1, lat2, lon2, unit='mile')
+        total_waypoints = num_waypoints + 1 - 4
 
-        # Convert distance to radians
-        c = distance_miles / 3958
-
-        # Convert latitude and longitude to radians
-        lat1_rad, lon1_rad = np.radians(lat1), np.radians(lon1)
-        lat2_rad, lon2_rad = np.radians(lat2), np.radians(lon2)
+        # Calculate increment for latitude and longitude
+        lat_increment = (lat2 - lat1) / total_waypoints
+        lon_increment = (lon2 - lon1) / total_waypoints 
 
         waypoints = []
-        for i in range(1, num_waypoints + 1 - 4):
-            f = i / (num_waypoints + 1)
-            A = np.sin((1 - f) * c) / np.sin(c)
-            B = np.sin(f * c) / np.sin(c)
-            x = A * np.cos(lat1_rad) * np.cos(lon1_rad) + B * np.cos(lat2_rad) * np.cos(lon2_rad)
-            y = A * np.cos(lat1_rad) * np.sin(lon1_rad) + B * np.cos(lat2_rad) * np.sin(lon2_rad)
-            z = A * np.sin(lat1_rad) + B * np.sin(lat2_rad)
-            lat_rad = np.arctan2(z, np.sqrt(x ** 2 + y ** 2))
-            lon_rad = np.arctan2(y, x)
-            lat, lon = np.degrees(lat_rad), np.degrees(lon_rad)
-            waypoints.append((lat, lon, cruise_altitude))
-        return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+60)] + waypoints + [(lat2, lon2, destination_altitude+60)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 60 is the altitude of the approach departure fix. This is according to one model. Needs to change.
 
+        # Generate intermediate waypoints
+        for i in range(1, total_waypoints):
+            new_lat = lat1 + lat_increment * i
+            new_lon = lon1 + lon_increment * i
+            waypoints.append((new_lat, new_lon, cruise_altitude)) 
+
+        return [(o_vert_lat, o_vert_lon, origin_altitude+15)]+ [(lat1, lon1, origin_altitude+60)] + waypoints + [(lat2, lon2, destination_altitude+60)] + [(d_vert_lat, d_vert_lon, destination_altitude+15)] # HACK: 60 is the altitude of the approach departure fix. This is according to one model. Needs to change.              
     
     def determine_num_waypoints(self) -> Dict: # vertiport_distances: pd.DataFrame
         """

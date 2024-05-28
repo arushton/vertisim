@@ -1037,22 +1037,24 @@ class Aircraft:
         self.check_for_state_action_violation()
 
         if not self.system_manager.sim_mode == 'offline_optimization':
-            aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
-                                                                   tail_number=self.tail_number)
+            # aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
+            #                                                        tail_number=self.tail_number)
             
             # If it is the first charging process, then add the pre-charging process time (fixed charging cost).
             if self.is_first_time_charge:
-                self.env.timeout(sec_to_ms(self.aircraft_params['time_pre_charging_processes']))
+                yield self.env.timeout(sec_to_ms(self.aircraft_params['time_pre_charging_processes']))
 
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
                                                                         shared_charger=shared_charger))
+            
             self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.current_vertiport_id, aircraft=self) 
         
         else:
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
                                                                         shared_charger=shared_charger))   
+            
         self.is_first_time_charge = False            
         # Set the aircraft status to idle
         self.status = AircraftStatus.IDLE 
@@ -1075,7 +1077,7 @@ class Aircraft:
         """
         self.aircraft_logger.info(f"Discharging {kwh} kwh from aircraft {self.tail_number} at {self.location}"
                                   f" during {self.detailed_status}, SOC: {round(self.soc, 2)}")
-        if self.soc-self.convert_kwh_soc(kwh) < 0:
+        if self.soc-self.convert_kwh_soc(kwh) < 1:
             soc_update = self.soc
             if self.system_manager.sim_mode == 'rl' and self.soc_at_zero_event_triggered == False:
                 print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(max(self.soc-self.convert_kwh_soc(kwh),0), 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
