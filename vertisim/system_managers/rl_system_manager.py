@@ -192,6 +192,9 @@ class RLSystemManager(BaseSystemManager):
         # self.logger.debug(f'aircraft_faf_arrival_event is triggered at {aircraft.destination_vertiport_id} time {self.env.now}')
         # self.trigger_stopping_event(event_name="aircraft_faf_arrival_event", id=aircraft.destination_vertiport_id)
 
+        # Start the SOC update process
+        self.env.process(self.update_soc_during_holding(aircraft))
+
         # Wait until getting the arrival fix usage request
         yield arrival_fix_usage_request
         self.logger.debug(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')
@@ -209,7 +212,7 @@ class RLSystemManager(BaseSystemManager):
 
         self.holding_time_counter += ms_to_min(aircraft.holding_time)
 
-        aircraft.update_holding_energy_consumption(aircraft.holding_time)
+        # aircraft.update_holding_energy_consumption(aircraft.holding_time)
         aircraft.save_process_time(event='holding', process_time=aircraft.holding_time)
 
         self.event_saver.save_aircraft_holding_time(vertiport_id=aircraft.destination_vertiport_id,
@@ -219,6 +222,14 @@ class RLSystemManager(BaseSystemManager):
         aircraft.arrival_fix_usage_request = arrival_fix_usage_request       
 
         yield self.env.process(self.fato_and_parking_pad_usage_process(aircraft=aircraft))
+
+    def update_soc_during_holding(self, aircraft: object):
+        """Regularly update the state of charge (SoC) of the aircraft while holding."""
+        while aircraft.status == AircraftStatus.HOLD:
+            yield self.env.timeout(sec_to_ms(aircraft.aircraft_params['soc_update_interval']))  # Wait for X seconds
+            if aircraft.status == AircraftStatus.HOLD:
+                aircraft.update_holding_energy_consumption(sec_to_ms(aircraft.aircraft_params['soc_update_interval']))  # Update SoC for X seconds of holding
+                self.logger.debug(f'Aircraft {aircraft.tail_number} updated SoC during holding at {aircraft.destination_vertiport_id}. Current SoC: {careful_round(aircraft.soc, 2)}')
 
     def fato_and_parking_pad_usage_process(self, aircraft: object):
         if aircraft.parking_space_id is None and \

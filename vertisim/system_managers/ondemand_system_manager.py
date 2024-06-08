@@ -317,6 +317,8 @@ class OnDemandSystemManager(BaseSystemManager):
 
     def simulate_terminal_airspace_arrival_process(self, aircraft: object, arriving_passengers: list):
         holding_start = self.env.now
+
+        aircraft.status = AircraftStatus.HOLD
         
         # Increase aircraft arrival queue counter
         self.event_saver.update_aircraft_arrival_queue_counter(vertiport_id=aircraft.destination_vertiport_id,
@@ -331,12 +333,18 @@ class OnDemandSystemManager(BaseSystemManager):
             self.check_holding_aircraft(flight_direction=aircraft.flight_direction,
                                         origin_vertiport_id=aircraft.origin_vertiport_id,
                                         destination_vertiport_id=aircraft.destination_vertiport_id)
+            
+        # Start the SOC update process
+        self.env.process(self.update_soc_during_holding(aircraft))
+
         yield arrival_fix_usage_request
         self.logger.debug(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')
 
+        aircraft.status = AircraftStatus.FLY
+
         holding_end = self.env.now
         aircraft.holding_time = holding_end - holding_start
-        aircraft.update_holding_energy_consumption(aircraft.holding_time)
+        # aircraft.update_holding_energy_consumption(aircraft.holding_time)
         aircraft.save_process_time(event='holding', process_time=aircraft.holding_time)
 
         self.event_saver.save_aircraft_holding_time(vertiport_id=aircraft.destination_vertiport_id,
@@ -346,6 +354,14 @@ class OnDemandSystemManager(BaseSystemManager):
         aircraft.arrival_fix_usage_request = arrival_fix_usage_request  
 
         yield self.env.process(self.fato_and_parking_pad_usage_process(aircraft=aircraft))       
+
+    def update_soc_during_holding(self, aircraft: object):
+        """Regularly update the state of charge (SoC) of the aircraft while holding."""
+        while aircraft.status == AircraftStatus.HOLD:
+            yield self.env.timeout(sec_to_ms(aircraft.aircraft_params['soc_update_interval']))  # Wait for X seconds
+            if aircraft.status == AircraftStatus.HOLD:
+                aircraft.update_holding_energy_consumption(sec_to_ms(aircraft.aircraft_params['soc_update_interval']))  # Update SoC for X seconds of holding
+                self.logger.debug(f'Aircraft {aircraft.tail_number} updated SoC during holding at {aircraft.destination_vertiport_id}. Current SoC: {careful_round(aircraft.soc, 2)}')
 
     def fato_and_parking_pad_usage_process(self, aircraft: object):
         if aircraft.parking_space_id is None and \

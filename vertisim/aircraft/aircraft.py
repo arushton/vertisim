@@ -1080,7 +1080,7 @@ class Aircraft:
         if self.soc-self.convert_kwh_soc(kwh) < 1:
             soc_update = self.soc
             if self.system_manager.sim_mode == 'rl' and self.soc_at_zero_event_triggered == False:
-                print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(max(self.soc-self.convert_kwh_soc(kwh),0), 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
+                # print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(max(self.soc-self.convert_kwh_soc(kwh),0), 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
                 self.soc_at_zero_event_triggered = True
                 self.system_manager.truncation_penalty += 1
                 self.logger.debug(f'soc_at_zero_event is triggered for {self.tail_number} time {self.env.now}')
