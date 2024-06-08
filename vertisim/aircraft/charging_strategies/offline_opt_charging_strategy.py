@@ -15,6 +15,7 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
                                                     target_soc=aircraft.target_soc)
         aircraft.event_saver.save_aircraft_charging_time(vertiport_id=aircraft.current_vertiport_id,
                                                      charging_time=charge_time)
+
         aircraft.logger.debug(f"Started Charging: Aircraft {aircraft.tail_number} will charge for {round(ms_to_sec(charge_time)/60,2)} mins at {aircraft.current_vertiport_id}. init_soc: {round(aircraft.soc, 2)}, target_soc: {aircraft.target_soc}")
         
         return charge_time   
@@ -122,7 +123,8 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
             used_charger_resource, selected_charging_request = self.request_charger(aircraft=aircraft)
             yield selected_charging_request  
 
-        self.start_charging_process(aircraft=aircraft)   
+        self.start_charging_process(aircraft=aircraft)  
+
         if not aircraft.charged_during_turnaround:
             idle_time = aircraft.env.now - aircraft.arrival_time
         else:
@@ -132,6 +134,10 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
         aircraft.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {aircraft.tail_number} at {aircraft.location}.')
 
         aircraft.detailed_status = 'charging'    
+
+        if aircraft.aircraft_params['time_pre_charging_processes'] > 0:
+            yield aircraft.env.timeout(sec_to_ms(aircraft.aircraft_params['time_pre_charging_processes']))
+
         charge_time = self.get_charging_time(aircraft)
         yield aircraft.env.timeout(round(charge_time))
         aircraft.save_process_time(event='charge', process_time=charge_time)
@@ -143,7 +149,7 @@ class OfflineOptimizationChargingStrategy(BaseChargingStrategy):
         aircraft.logger.info(f'Saved idle time of {miliseconds_to_hms(self._compute_holding_after_charge(charge_time))} for after charge holding for aircraft {aircraft.tail_number} at {aircraft.location}.')
 
         old_soc = aircraft.soc
-        self.soc_charge_update(aircraft=aircraft, charge_time=charge_time)  
+        self.soc_charge_update(aircraft=aircraft, initial_soc= old_soc, charge_time=charge_time)  
 
         # Set the aircraft status to idle
         aircraft.status = AircraftStatus.IDLE    

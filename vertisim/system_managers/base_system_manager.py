@@ -595,9 +595,9 @@ class BaseSystemManager:
 
         # Start the passenger departure process
         if departing_passengers:
-            self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {origin_vertiport_id} for {destination_vertiport_id} flight.')
+            # self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {origin_vertiport_id} for {destination_vertiport_id} flight.')
             self.env.process(self.initiate_passenger_departure(departing_passengers=departing_passengers))
-            self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {origin_vertiport_id} for {destination_vertiport_id} flight.')
+            # self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {origin_vertiport_id} for {destination_vertiport_id} flight.')
 
         # Start the aircraft departure process
         yield self.env.process(
@@ -789,7 +789,7 @@ class BaseSystemManager:
         for passenger in aircraft.passengers_onboard:
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_start')
 
-        if not aircraft.charged_during_turnaround:
+        if not aircraft.charged_during_turnaround and self.sim_mode != 'offline_optimization':
             yield self.env.process(aircraft.embark_passengers())
             aircraft.save_process_time(event='boarding', process_time=self.env.now-aircraft.flight_allocation_time)
 

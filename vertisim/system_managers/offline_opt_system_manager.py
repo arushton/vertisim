@@ -4,7 +4,7 @@ import simpy
 from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round, flatten_dict, write_to_db
 from ..aircraft.aircraft import AircraftStatus
-from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m
+from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min
 
 
 
@@ -147,14 +147,24 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
 
-            if aircraft.flight_duration and self.env.now - aircraft.pushback_time < self.external_optimization_params['flight_duration_constant']:
-                ground_holding_time = self.external_optimization_params['flight_duration_constant'] - (self.env.now - aircraft.pushback_time) - 1
-                self.logger.debug(f"|{duplicate_str(aircraft.tail_number)}| Flight duration is less than {ms_to_min(self.external_optimization_params['flight_duration_constant'])} minutes."
+            # Check optimizer and simulation flight time compatibility
+            if aircraft.flight_duration and self.env.now - aircraft.pushback_time < \
+                sec_to_ms(self.external_optimization_params['flight_duration_constant']):
+                ground_holding_time = sec_to_ms(self.external_optimization_params['flight_duration_constant']) \
+                    - (self.env.now - aircraft.pushback_time) - 1
+                self.logger.debug(f"|{duplicate_str(aircraft.tail_number)}| Flight duration is less than {sec_to_min(self.external_optimization_params['flight_duration_constant'])} minutes."
                                     f' Pushback time was {miliseconds_to_hms(aircraft.pushback_time)}. Aircraft {aircraft.tail_number}'
                                     f' will hold for {ms_to_min(ground_holding_time)} ({miliseconds_to_hms(ground_holding_time)}) mins at {aircraft.location}')
                 yield self.env.timeout(ground_holding_time)
             else:
                 ground_holding_time = 0
+
+            # Check optimizer and simulation energy consumption compatibility
+            if aircraft.preflight_soc - aircraft.soc != self.external_optimization_params['soc_decrement_constant']:
+                self.logger.debug(f"|{duplicate_str(aircraft.tail_number)}| SoC is {aircraft.soc} and SoC decrement is {aircraft.preflight_soc - aircraft.soc}."
+                                    f' Aircraft {aircraft.tail_number} SoC will be modified to {careful_round(aircraft.preflight_soc - self.external_optimization_params["soc_decrement_constant"], 2)}')
+                aircraft.soc = aircraft.preflight_soc - self.external_optimization_params['soc_decrement_constant']
+
             aircraft.ground_holding_end_time = self.env.now
             aircraft.idle_time += ground_holding_time
             aircraft.save_process_time(event='idle', process_time=ground_holding_time)
