@@ -23,7 +23,7 @@ class RewardFunction:
         departing_passengers = self._compute_departing_passengers(actions)
         # self._apply_flight_rewards(actions=actions,
         #                            departing_passengers=departing_passengers)
-        self._apply_simply_flight_rewards(actions=actions, 
+        self._apply_simplified_flight_rewards(actions=actions, 
                                           departing_passengers=departing_passengers)
         self.reward += self._waiting_time_penalty(departing_passengers=departing_passengers)
         self.reward += self._compute_holding_penalty()
@@ -52,14 +52,14 @@ class RewardFunction:
                 ))
         return departing_passengers
     
-    def _apply_simply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
+    def _apply_simplified_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         pax_count = len(departing_passengers)
-        trip_time_counter = 0
+        trip_length_counter = 0
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if actions[aircraft_id] < self.sim_setup.num_vertiports():
                 dest_vertiport_id = self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
-                trip_time_counter += self._calculate_trip_length(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)            
-        self._apply_trip_and_flight_cost_reward(pax_count, trip_time_counter)
+                trip_length_counter += self._calculate_trip_length(origin_id=aircraft.current_vertiport_id, destination_id=dest_vertiport_id)            
+        self._apply_trip_and_flight_cost_reward(pax_count, trip_length_counter)
 
     def _apply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         """
