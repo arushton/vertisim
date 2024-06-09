@@ -85,9 +85,11 @@ class VertiSim:
         # performance_metrics = self.sim_setup.calculate_performance_metrics()
         # self.sim_setup.save_results(performance_metrics)
         # self.sim_setup.print_passenger_trip_time_stats()
-        # self.sim_setup.log_brief_metrics(print_metrics=True)
 
     def finalize_simulation(self):
+        if self.config['sim_mode']['rl'] and self.config['sim_params']['print_brief_metrics']:
+            self.sim_setup.log_brief_metrics(print_metrics=True)
+                    
         if not self.sim_setup.sim_mode['rl']:
             self.print_total_time_to_run()
             if self.env.now > 0:

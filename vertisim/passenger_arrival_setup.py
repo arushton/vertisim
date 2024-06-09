@@ -45,7 +45,24 @@ class PassengerArrivalSetup:
         if 'interarrival_time' not in passenger_arrival_schedule.columns:
             passenger_arrival_schedule['interarrival_time'] = compute_interarrival_times_from_schedule(passenger_arrival_schedule['passenger_arrival_time'])
 
+    def check_multiple_passenger_arrival_paths(self):
+        paths = [
+            self.network_and_demand['passenger_schedule_file_path'],
+            self.network_and_demand['autoregressive_demand_files_path'],
+            self.network_and_demand['passenger_arrival_rates_path'],
+            self.network_and_demand['pick_demand_files_path']
+        ]
+
+        # Count the number of non-None paths.
+        non_none_paths = sum(path is not None for path in paths)
+
+        if non_none_paths > 1:
+            raise ValueError('Only one passenger arrival path should be provided.')
+        
     def setup_passenger_arrival(self):
+        # Check if more than one passenger arrival path is provided.
+        self.check_multiple_passenger_arrival_paths()
+
         if self.network_and_demand['passenger_schedule_file_path'] is not None:
             # Load passenger arrival schedule from the path provided on self.passenger_arrival_schedule.
             passenger_arrival_schedule = read_input_file(self.network_and_demand['passenger_schedule_file_path'])
@@ -56,6 +73,14 @@ class PassengerArrivalSetup:
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
             # print("Success: Passenger arrival schedule loaded from file.")
         
+        elif self.network_and_demand['pick_demand_files_path'] is not None:
+            # Pick a random file from the list of pick demand files.
+            file_name = pick_random_file(self.network_and_demand['pick_demand_files_path'])
+            # Load passenger arrival schedule from the path
+            passenger_arrival_schedule = read_input_file(f"{self.network_and_demand['pick_demand_files_path']}/{file_name}")
+            # Check if the columns of the input file are correct.
+            self.check_passenger_arrival_schedule(passenger_arrival_schedule)
+            
         elif self.network_and_demand['autoregressive_demand_files_path'] is not None:
             # Pick a random file from the list of autoregressive demand files.
             file_name = pick_random_file(self.network_and_demand['autoregressive_demand_files_path'])

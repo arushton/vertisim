@@ -78,7 +78,7 @@ class VertiportConfig:
 
 
     def get_demand_type(self):
-        if self.network_and_demand['passenger_schedule_file_path']:
+        if self.network_and_demand['passenger_schedule_file_path'] or self.network_and_demand['pick_demand_files_path']:
             return 'scheduled'
         elif self.network_and_demand['passenger_arrival_rates_path']:
             return 'rate_based'
