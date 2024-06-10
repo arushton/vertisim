@@ -78,9 +78,12 @@ class PassengerArrivalSetup:
             file_name = pick_random_file(self.network_and_demand['pick_demand_files_path'])
             # Load passenger arrival schedule from the path
             passenger_arrival_schedule = read_input_file(f"{self.network_and_demand['pick_demand_files_path']}/{file_name}")
+            # Sort the passenger arrival schedule by passenger_arrival_time
+            passenger_arrival_schedule.sort_values(by='passenger_arrival_time', inplace=True)
+            passenger_arrival_schedule.reset_index(drop=True, inplace=True)            
             # Check if the columns of the input file are correct.
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
-            
+
         elif self.network_and_demand['autoregressive_demand_files_path'] is not None:
             # Pick a random file from the list of autoregressive demand files.
             file_name = pick_random_file(self.network_and_demand['autoregressive_demand_files_path'])
