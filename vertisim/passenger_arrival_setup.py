@@ -50,6 +50,7 @@ class PassengerArrivalSetup:
             self.network_and_demand['passenger_schedule_file_path'],
             self.network_and_demand['autoregressive_demand_files_path'],
             self.network_and_demand['passenger_arrival_rates_path'],
+            self.network_and_demand['pick_rate_files_path'],
             self.network_and_demand['pick_demand_files_path']
         ]
 
@@ -72,6 +73,21 @@ class PassengerArrivalSetup:
             # Check if the columns of the input file are correct.
             self.check_passenger_arrival_schedule(passenger_arrival_schedule)
             # print("Success: Passenger arrival schedule loaded from file.")
+        
+        elif self.network_and_demand['pick_rate_files_path'] is not None:
+            # Pick a random file from the list of pick rate files.
+            file_name = pick_random_file(self.network_and_demand['pick_rate_files_path'])
+            # Load passenger arrival schedule from the path
+            passenger_arrival_rates = read_input_file(f"{self.network_and_demand['pick_rate_files_path']}/{file_name}")
+
+            # Generate artificial passenger arrival schedule.
+            passenger_arrival_schedule = generate_passenger_network_demand(
+                vertiport_configs=self.vertiport_configs,
+                vertiport_ids=self.vertiport_ids,
+                demand_probabilities=self.network_and_demand['demand_probabilities'],
+                passenger_arrival_rates=passenger_arrival_rates,
+                network_simulation=self.network_simulation
+            )
         
         elif self.network_and_demand['pick_demand_files_path'] is not None:
             # Pick a random file from the list of pick demand files.

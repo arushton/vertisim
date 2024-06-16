@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 import numpy as np
 import random
 import pandas as pd
@@ -9,7 +9,6 @@ from .units import sec_to_ms
 from .helpers import cumulative_sum_array, nested_dict_filter_keys, compute_interarrival_times_from_schedule, set_seed
 from .weighted_random_chooser import weighted_random_choose_exclude_element, random_choose_exclude_element
 from .time_varying_arrival_generator import generate_time_varying_arrival_times
-from typing import Dict
 from ..aircraft.aircraft import AircraftStatus
 
 def generate_aircraft_network_schedule(vertiport_configs: Dict, 
@@ -114,10 +113,10 @@ def generate_passenger_network_demand(vertiport_configs: Dict,
     """
     Generate artificial passenger demand for each vertiport in the network.
     """
-    if demand_probabilities is None and passenger_arrival_rates is None:
+    if (demand_probabilities is None) & (passenger_arrival_rates is None):
         raise ValueError('Either demand_probabilities or passenger_arrival_rates must be defined.')
     
-    if demand_probabilities is not None and passenger_arrival_rates is not None: 
+    if (demand_probabilities is not None) & (passenger_arrival_rates is not None): 
         raise ValueError('Either demand_probabilities or passenger_arrival_rates must be None.')
     
     network_demand = pd.DataFrame()

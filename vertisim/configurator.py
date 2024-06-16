@@ -78,9 +78,9 @@ class VertiportConfig:
 
 
     def get_demand_type(self):
-        if self.network_and_demand['passenger_schedule_file_path'] or self.network_and_demand['pick_demand_files_path']:
+        if (self.network_and_demand['passenger_schedule_file_path']) or (self.network_and_demand['pick_demand_files_path']) or (self.network_and_demand['pick_rate_files_path']):
             return 'scheduled'
-        elif self.network_and_demand['passenger_arrival_rates_path']:
+        elif (self.network_and_demand['passenger_arrival_rates_path']):
             return 'rate_based'
         elif self.network_and_demand['autoregressive_demand_files_path']:
             return 'autoregressive'
@@ -369,7 +369,9 @@ class VertiportConfig:
         #     entity_states['expected_pax'][f'to_{destination}'] = expected_pax_arrivals_for_route(arrival_rate_df=self.pax_arrival_df,
         #                                                                                          current_time=self.env.now,
         #                                                                                          look_ahead_time=sec_to_ms(self.network_and_demand['demand_lookahead_time']),
-        #                                                                                          route=f'{self.vertiport_id}_{destination}')
+        #    
+        #                                                                                       route=f'{self.vertiport_id}_{destination}')
+
         for destination, expected_pax in self.get_expected_pax_arrivals_for_vertiport().items():
             entity_states['expected_pax'][destination] = expected_pax
 
