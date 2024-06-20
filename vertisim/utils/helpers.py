@@ -8,6 +8,8 @@ from typing import List, Union, Dict, Any, Optional
 import re
 import pandas as pd # For type hinting
 import pkg_resources
+import functools
+import pickle
 
 
 def set_seed(seed=None, how='instant'):
@@ -26,6 +28,20 @@ def set_seed(seed=None, how='instant'):
     else:
         random.seed(42)
         np.random.seed(42)
+
+
+def cache_to_file(filename):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            if os.path.exists(filename):
+                with open(filename, 'rb') as file:
+                    return pickle.load(file)
+            result = func(*args, **kwargs)
+            with open(filename, 'wb') as file:
+                pickle.dump(result, file)
+            return result
+        return wrapper
+    return decorator
 
 
 def is_none(value):
