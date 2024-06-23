@@ -262,6 +262,12 @@ class VertiSim:
                         # Mask out the flight action to the destination vertiport
                         destination_mask[dest_vertiport_index] = 0
 
+                    # Mask out destinations if the aircraft cannot fly to them with min reserve
+                    flight_soc_required = self.sim_setup.event_saver.average_energy_consumption_per_od_pair[
+                        f"{current_vertiport_id}_{dest_vertiport_id}"]['average'] / aircraft.battery_capacity * 100
+                    if aircraft.soc < flight_soc_required + self.config['aircraft_params']['min_reserve_soc']:
+                        destination_mask[dest_vertiport_index] = 0                        
+
                 if current_vertiport.get_parking_pad_availability() == 0 and \
                         (can_do_any or can_fly_and_do_nothing):
                     # Enable flight action to all vertiports except the current one

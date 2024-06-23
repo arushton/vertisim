@@ -1,6 +1,6 @@
 from collections import defaultdict
 from .utils.helpers import timestamp_to_datetime
-from .utils.units import ms_to_sec
+from .utils.units import ms_to_sec, hr_to_ms
 from typing import Dict, Any, Union
 
 
@@ -9,7 +9,7 @@ class EventSaver:
     eventSaver saves events both for analysis and visualization purposes.
     """
 
-    def __init__(self, env, vertiports, sim_start_timestamp, sim_params, node_locations):
+    def __init__(self, env, vertiports, sim_start_timestamp, sim_params, node_locations, flight_directions):
         self.env = env
         self.vertiports = vertiports
         self.sim_start_timestamp = sim_start_timestamp
@@ -45,6 +45,8 @@ class EventSaver:
         self.flying_aircraft_counter = defaultdict(dict)
         self.passenger_trip_time_tracker = defaultdict(dict)
         self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 0} for flight_direction in flight_directions}
+
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
             self.passenger_departure_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -111,6 +113,22 @@ class EventSaver:
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.aircraft_energy_consumption_tracker[flight_direction])
         self.aircraft_energy_consumption_tracker[flight_direction][time] = energy_consumption
+
+        # If the system time is less than two hours, then update the average energy consumption dictionary
+        if self.env.now < hr_to_ms(2):
+            self.update_average_energy_consumption(flight_direction, energy_consumption)
+
+    def update_average_energy_consumption(self, flight_direction, new_energy_consumption):
+        # Check if the flight direction is in the dictionary
+        if flight_direction in self.average_energy_consumption_per_od_pair:
+            # Update the sum of energy consumption
+            self.average_energy_consumption_per_od_pair[flight_direction]['sum'] += new_energy_consumption
+            # Update the count of updates
+            self.average_energy_consumption_per_od_pair[flight_direction]['count'] += 1
+            # Calculate the new average
+            count = self.average_energy_consumption_per_od_pair[flight_direction]['count']
+            total_sum = self.average_energy_consumption_per_od_pair[flight_direction]['sum']
+            self.average_energy_consumption_per_od_pair[flight_direction]['average'] = total_sum / count
 
     def save_flight_phase_energy(self, flight_direction, flight_id, flight_phase, energy):
         # If the value exists, add the new value to the existing value

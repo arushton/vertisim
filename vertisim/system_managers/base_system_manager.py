@@ -63,7 +63,6 @@ class BaseSystemManager:
         self.aircraft_battery_models = self.build_aircraft_battery_models()
         self.passenger_arrival_complete = False
 
-
     def get_aircraft_count(self) -> int:
         return sum(
             vertiport.num_aircraft

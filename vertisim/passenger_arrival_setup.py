@@ -27,21 +27,13 @@ class PassengerArrivalSetup:
         self.network_simulation = network_simulation
         self.passenger_logger = passenger_logger
 
+
     @staticmethod
     def check_passenger_arrival_schedule(passenger_arrival_schedule: pd.DataFrame):
-        # Check if passenger ID column exists.
-        if 'passenger_id' not in passenger_arrival_schedule.columns:
-            raise ValueError('Passenger arrival schedule must have a column named passenger_id.')
-        # Check if passenger arrival time column exists.
-        if 'passenger_arrival_time' not in passenger_arrival_schedule.columns:
-            raise ValueError('Passenger arrival schedule must have a column named passenger_arrival_time.')
-        # Check if arrival vertiport id column exists.
-        if 'origin_vertiport_id' not in passenger_arrival_schedule.columns:
-            raise ValueError('Passenger arrival schedule must have a column named origin_vertiport_id.')
-        # Check if passenger destination vertiport ID column exists.
-        if 'destination_vertiport_id' not in passenger_arrival_schedule.columns:
-            raise ValueError('Passenger arrival schedule must have a column named destination_vertiport_id.')
-        # Check if passenger interarrival time column exists.
+        required_columns = ['passenger_id', 'passenger_arrival_time', 'origin_vertiport_id', 'destination_vertiport_id']
+        missing_columns = set(required_columns) - set(passenger_arrival_schedule.columns)
+        if missing_columns:
+            raise ValueError(f"Passenger arrival schedule must have columns: {', '.join(missing_columns)}")
         if 'interarrival_time' not in passenger_arrival_schedule.columns:
             passenger_arrival_schedule['interarrival_time'] = compute_interarrival_times_from_schedule(passenger_arrival_schedule['passenger_arrival_time'])
 

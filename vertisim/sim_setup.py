@@ -36,7 +36,11 @@ from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes, is_no
 from .utils.import_aircraft_energy_consumption_data import import_aircraft_energy_consumption_data
 from .utils.setup_distributions import setup_passenger_distributions
 from .utils.units import sec_to_ms, ms_to_min
+import diskcache as dc
 
+
+vertiport_distance_cache = dc.Cache('/tmp/vertiport_distance_cache')
+node_locations_cache = dc.Cache('/tmp/node_locations_cache')
 
 
 class SimSetup:
@@ -68,13 +72,16 @@ class SimSetup:
         set_seed(sim_params['random_seed'])
         # Get a random id for the simulation
         self.sim_id = get_random_id()
-        self.sim_params['sim_id'] = self.sim_id        
+        self.sim_params['sim_id'] = self.sim_id    
+            
+        self.flush_cache()
         self.env = env
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
         self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
         self.stopping_events = stopping_events
         self.vertiport_layouts = self.create_vertiport_layout()      
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids 
+        self.vertiport_id_config = '_'.join(self.vertiport_ids)
         self.vertiport_index_to_id_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)    
         self.vertiport_id_to_index_map = {v: k for k, v in self.vertiport_index_to_id_map.items()}   
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
@@ -97,6 +104,10 @@ class SimSetup:
         self.create_aircraft_arrival_process()
         self.create_passenger_arrival_process()
 
+    def flush_cache(self):
+        if self.sim_params['flush_cache']:
+            vertiport_distance_cache.clear()
+            node_locations_cache.clear()
 
     def create_loggers(self):
         """
@@ -171,6 +182,10 @@ class SimSetup:
         """
         Imports the vertiport distance
         """
+        cache_key = self.vertiport_id_config
+        if cache_key in vertiport_distance_cache:
+            return vertiport_distance_cache[cache_key]
+            
         # Import vertiport distance
         vertiport_distances = calc_vertiport_distances(
             vertiport_network_file_path=self.network_and_demand_params['vertiport_network_file_path'],
@@ -179,6 +194,9 @@ class SimSetup:
             network_simulation=self.sim_params['network_simulation'])
         if self.sim_params['verbose']:
             print("Success: Vertiport network imported.")
+
+        vertiport_distance_cache[cache_key] = vertiport_distances
+
         return vertiport_distances
     
     def num_vertiports(self):
@@ -236,7 +254,8 @@ class SimSetup:
                           vertiports=self.vertiports, 
                           sim_start_timestamp=self.sim_start_timestamp, 
                           sim_params=self.sim_params,
-                          node_locations=self.node_locations)    
+                          node_locations=self.node_locations,
+                          flight_directions=self.airspace.flight_directions)    
 
     def set_taxi_operations_config(self):
         """
@@ -311,13 +330,18 @@ class SimSetup:
                             vertiport_logger=self.vertiport_logger)
 
     def create_airspace(self):
-        # Create airspace
-        return create_airspace_layout(env=self.env,
-                                    vertiports=self.vertiports,
-                                    vertiport_distances=self.vertiport_distances,
-                                    airspace_params=self.airspace_params)
+        return create_airspace_layout(
+            env=self.env,
+            vertiports=self.vertiports,
+            vertiport_distances=self.vertiport_distances,
+            airspace_params=self.airspace_params
+        ) 
     
     def build_node_locations_dict(self):
+        cache_key = self.vertiport_id_config
+        if cache_key in node_locations_cache:
+            return node_locations_cache[cache_key]
+        
         # Build node locations dictionary
         node_locations = {}
         # Merge all vertiport element locations
@@ -326,7 +350,9 @@ class SimSetup:
         # Merge all airspace element locations
         node_locations |= self.airspace.waypoint_locations
         node_locations |= {None: None}
-        return node_locations
+
+        node_locations_cache[cache_key] = node_locations
+        return node_locations    
     
     def merge_structural_entity_groups(self) -> dict:
         merged_dict = defaultdict(list)
