@@ -70,6 +70,9 @@ class OnDemandSystemManager(BaseSystemManager):
             and self.sim_params['max_passenger_waiting_time']
         ):
             self.env.process(self.check_passenger_max_waiting_time_threshold())
+        
+        self.trip_counter_tracker = 0
+        self.total_demand = 0
 
 
     def build_charging_time_distribution(self) -> Optional[DistributionGenerator]:
@@ -388,6 +391,8 @@ class OnDemandSystemManager(BaseSystemManager):
             self.update_flying_aircraft_count(update=-1)
             self.save_passenger_trip_times(aircraft=aircraft, flight_direction=flight_direction)
 
+            self.trip_counter_tracker += len(aircraft.passengers_onboard)
+
             yield self.env.process(self.aircraft_charging_process(aircraft=aircraft))
        
         # Only FATO case and starting point is not a FATO
@@ -491,3 +496,6 @@ class OnDemandSystemManager(BaseSystemManager):
             yield self.env.process(
                 self.simulate_aircraft_departure_process(aircraft=aircraft, origin_vertiport_id=aircraft.origin_vertiport_id, destination_vertiport_id=None)
             )                 
+
+    def is_all_passenger_travelled(self):
+        return self.trip_counter_tracker == self.total_demand

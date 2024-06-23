@@ -103,7 +103,9 @@ class VertiSim:
         if self.sim_setup.sim_mode['offline_optimization']:
             self.env.run()
         else:
-            self.env.run(until=self.max_sim_time)
+            while self._should_continue_simulation():
+                self.env.step()
+            # self.env.run(until=self.max_sim_time)
 
     def reset(self):
         """
