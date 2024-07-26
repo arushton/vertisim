@@ -1328,7 +1328,7 @@ class Aircraft:
         # If aircraft is on the ground, idling or charging then the flight direction is None.
         if self.status == AircraftStatus.IDLE or self.status == AircraftStatus.CHARGE or self.flight_direction is None:
             # +1 is for the None flight direction
-            return len(flight_directions)+1
+            return len(flight_directions)
         return flight_directions.index(self.flight_direction)
     
     def get_aircraft_location_for_state(self):
@@ -1338,6 +1338,23 @@ class Aircraft:
         else:
             # Meaning that aircraft is is in the air. None of the locations
             return len(self.get_vertiport_list())
+        
+    def get_od_pair(self):
+        """
+        Obtains the origin-destination pair of the aircraft. If the aircraft is on the ground, 
+        then the od_pair is the current vertiport.
+        """
+        flight_direction_index = self.get_flight_direction_index()
+        vertiport_start_index = len(self.system_manager.airspace.flight_directions)
+
+        if self.status != AircraftStatus.IDLE and self.status != AircraftStatus.CHARGE and self.flight_direction is not None:
+            return flight_direction_index
+        else:
+            current_vertiport = self.get_aircraft_vertiport()
+            if current_vertiport is not None:
+                return vertiport_start_index + self.convert_vertiport_id_to_index(current_vertiport)
+            else:
+                raise ValueError("Aircraft location index could not correctly defined.")
         
     def convert_vertiport_id_to_index(self, vertiport_id):
         return self.system_manager.vertiport_id_to_index_map[vertiport_id]
