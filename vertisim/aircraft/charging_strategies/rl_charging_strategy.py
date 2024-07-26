@@ -3,6 +3,7 @@ from ...utils.units import ms_to_sec, sec_to_ms
 from ...utils.helpers import check_magnitude_order, miliseconds_to_hms, careful_round
 from ..aircraft import AircraftStatus
 import numpy as np
+import heapq
 
 class RLChargingStrategy(BaseChargingStrategy):
     def __init__(self, soc_increment_per_charge_event=10, charge_time_per_charge_event=600, soc_reward_threshold=80):
@@ -87,10 +88,18 @@ class RLChargingStrategy(BaseChargingStrategy):
         aircraft.detailed_status = 'charging'
         charge_time = self.get_charging_time(aircraft=aircraft)
 
+        finish_time = aircraft.env.now + charge_time
+
+        # Add charging process to the heap to keep track of the next available time for the chargers.
+        self.add_to_active_charging_process(aircraft=aircraft, finish_time=finish_time)
+
         yield aircraft.env.timeout(round(charge_time))
         aircraft.save_process_time(event='charge', process_time=charge_time)
         aircraft.detailed_status = 'idle'
         self.end_charging_process(aircraft=aircraft)
+
+        # Remove the charging process from the heap since the charging is completed.
+        self.remove_from_active_charging_process(aircraft=aircraft, finish_time=finish_time)
 
         # print(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. At time {miliseconds_to_hms(aircraft.env.now)}.")
         self.soc_charge_update(aircraft=aircraft, initial_soc=old_soc, charge_time=charge_time)
@@ -100,3 +109,19 @@ class RLChargingStrategy(BaseChargingStrategy):
         # Set the charged_during_turnaround to True to avoid charging the aircraft again during the turnaround
         aircraft.charged_during_turnaround = True
         aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
+
+    def add_to_active_charging_process(self, aircraft: object, finish_time: float) -> None:
+        """
+        Adds the finish, start and duration aircraft to the active charging process of the vertiport.
+        """
+        vertiport = aircraft.system_manager.vertiports[aircraft.current_vertiport_id]
+        # Push the finish time to the heap
+        heapq.heappush(vertiport.active_charging_processes, finish_time)
+
+    def remove_from_active_charging_process(self, aircraft: object, finish_time: float) -> None:
+        """
+        Removes the finish, start and duration aircraft from the active charging process of the vertiport.
+        """
+        vertiport = aircraft.system_manager.vertiports[aircraft.current_vertiport_id]
+        vertiport.active_charging_processes.remove(finish_time)
+        heapq.heapify(vertiport.active_charging_processes)

@@ -1339,7 +1339,7 @@ class Aircraft:
             # Meaning that aircraft is is in the air. None of the locations
             return len(self.get_vertiport_list())
         
-    def get_od_pair(self):
+    def get_od_pair_and_loc(self):
         """
         Obtains the origin-destination pair of the aircraft. If the aircraft is on the ground, 
         then the od_pair is the current vertiport.
@@ -1392,6 +1392,7 @@ class Aircraft:
         state_data = {
             'flight_direction': self.get_flight_direction_index(),
             'location': self.get_aircraft_location_for_state(),
+            'od_pair': self.get_od_pair_and_loc(),
             'soc': int(self.soc),
             'time_to_arrival': int(self.estimate_time_to_arrival()),
             'holding_time': self.get_holding_time(),

@@ -71,6 +71,7 @@ class VertiportConfig:
         self.arrival_fix_resource = simpy.Resource(self.env, capacity=self.vertiport_data['holding_unit_capacity'])
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
         self.holding_times = defaultdict(defaultdict)
+        self.active_charging_processes = [] # min-heap for active charging sessions at the vertiport
         self.num_aircraft = 0
         self.aircraft_departure_queue_count = 0
         self.num_flight_requests = 0
@@ -135,6 +136,28 @@ class VertiportConfig:
     
     def get_fato_queue_length(self):
         return sum(len(fato.fato_resource.queue) for fato in self.fato_store.items)
+    
+    def get_next_available_charger_time(self):
+        # Check if there are no chargers
+        if self.charger_resource.capacity == 0:
+            return -1
+
+        # Check if any charger is immediately available
+        if len(self.active_charging_processes) < self.charger_resource.capacity:
+            return 0  # There is at least one available charger right now
+        
+        # The heap's smallest element is the next charger to be available
+        next_available_time = self.active_charging_processes[0]  # First element of tuple is the finish time
+
+        # Factor in the charger queue
+        queued_processes = len(self.charger_resource.queue)
+        if self.charger_resource.count == self.charger_resource.capacity and queued_processes > 0:
+            # Get the index of the queued_process'ed order as the next_available_time
+            # Ensure there are enough active charges to match the queue length
+            index = min(queued_processes, len(self.active_charging_processes) - 1)
+            next_available_time = self.active_charging_processes[index]
+
+        return max(0, ms_to_min(next_available_time - self.env.now))
     
     def get_holding_time_cost(self, unit: str='minute') -> float:
         # Compute the waiting times by substracting the current time from the holding start times in the holding_times
