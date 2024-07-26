@@ -52,6 +52,7 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
         logger.error("-------------------------------------")
         df = pd.DataFrame(
             {
+                'Vertiport ID': vertiport_id,
                 'mean': waiting_times_dict[vertiport_id]['passenger_waiting_time']['mean'],
                 'median': waiting_times_dict[vertiport_id]['passenger_waiting_time']['median'],
                 'std': waiting_times_dict[vertiport_id]['passenger_waiting_time']['std'],

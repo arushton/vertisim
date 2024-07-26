@@ -546,10 +546,10 @@ class SimSetup:
                                   verbose=self.sim_params['verbose']).performance_metrics
     
     def log_brief_metrics(self, print_metrics=False):
-        calculate_passenger_trip_time_stats(passenger_trip_time_tracker=self.event_saver.performance_metrics()['passenger_trip_time_tracker'],
-                                            flight_directions=self.airspace.flight_directions,
-                                            logger=self.logger,
-                                            print_metrics=print_metrics)
+        # calculate_passenger_trip_time_stats(passenger_trip_time_tracker=self.event_saver.performance_metrics()['passenger_trip_time_tracker'],
+        #                                     flight_directions=self.airspace.flight_directions,
+        #                                     logger=self.logger,
+        #                                     print_metrics=print_metrics)
         calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker=self.event_saver.performance_metrics()['passenger_waiting_time'],
                                                logger=self.logger,
                                                print_metrics=print_metrics)

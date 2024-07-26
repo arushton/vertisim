@@ -31,6 +31,8 @@ class VertiportStates(BaseModel):
     expected_pax: Dict[str, float]
     aircraft_status: Dict[int, int]
     num_holding_aircraft: int
+    avg_pax_waiting_time: Dict[str, float]
+    std_pax_waiting_time: Dict[str, float]
 
 class VertiportConfig:
 
@@ -381,6 +383,10 @@ class VertiportConfig:
 
         entity_states['num_holding_aircraft'] = self.num_holding_aircraft
 
+        entity_states['avg_pax_waiting_time'] = round(self.average_pax_waiting_time(reward_function_parameters), 2)
+
+        entity_states['std_pax_waiting_time'] = round(self.std_pax_waiting_time(reward_function_parameters), 2)
+
         # Validate and serialize the data using Pydantic
         valid_entity_states = VertiportStates(**entity_states)
 
@@ -394,6 +400,41 @@ class VertiportConfig:
         return self.get_waiting_time_cost(unit=reward_function_parameters['waiting_time_cost_unit'],
                                           last_decision_time=None,
                                           type=reward_function_parameters['waiting_time_cost_type'])
+    
+    def average_pax_waiting_time(self, reward_function_parameters):
+        """
+        Returns the average pax waiting time at each waiting room
+        """
+        waiting_times = {destination: 0 for destination in self.waiting_room_stores.keys()}
+        for waiting_room_store in self.waiting_room_stores.values():
+            for passenger in waiting_room_store.items:
+                waiting_times[passenger.destination] += self.env.now - passenger.waiting_room_arrival_time
+        # Calculate the average waiting time for each waiting room
+        waiting_pax_count = self.get_waiting_passenger_count()
+        for destination in waiting_times.keys():
+            if waiting_pax_count[destination] != 0:
+                waiting_times[destination] /= waiting_pax_count[destination]
+            # Convert the waiting times to the desired unit                
+            waiting_times[destination] = VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
+                                                                     value=waiting_times[destination])            
+        return waiting_times
+    
+    def std_pax_waiting_time(self, reward_function_parameters):
+        """
+        Returns the standard deviation of pax waiting time at each waiting room
+        """
+        waiting_times = {destination: [] for destination in self.waiting_room_stores.keys()}
+        for waiting_room_store in self.waiting_room_stores.values():
+            for passenger in waiting_room_store.items:
+                waiting_times[passenger.destination].append(self.env.now - passenger.waiting_room_arrival_time)
+        # Calculate the standard deviation of waiting time for each waiting room
+        for destination in waiting_times.keys():
+            waiting_times[destination] = np.std(waiting_times[destination])
+
+            # Convert the waiting times to the desired unit                
+            waiting_times[destination] = VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
+                                                                     value=waiting_times[destination])            
+        return waiting_times
     
     def get_expected_pax_arrivals_for_vertiport(self):
         """
