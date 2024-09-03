@@ -284,6 +284,42 @@ def calculate_passenger_consolidation_time(departing_passengers):
     return departing_passengers[-1].waiting_room_arrival_time - departing_passengers[0].waiting_room_arrival_time
 
 
+from typing import List, Set
+def get_departing_passengers(system_manager: object, actions: List[int]) -> Set[int]:
+    """
+    Compute the set of departing passengers.
+    """
+    # If actions is empty, return an empty set
+    if len(actions) == 0:
+        return set()
+    departing_passengers = set()
+    for aircraft_id, aircraft in system_manager.aircraft_agents.items():
+        if actions[aircraft_id] < len(system_manager.vertiport_ids):
+            departing_passengers.update(get_waiting_pax_id_helper(
+                vertiports=system_manager.vertiports,
+                exclude_pax_ids=departing_passengers,
+                origin_vertiport_id=aircraft.current_vertiport_id,
+                destination_vertiport_id=get_destination_vertiport_id(system_manager=system_manager, 
+                                                                           aircraft_id=aircraft_id, 
+                                                                           actions=actions)
+            ))
+    return departing_passengers
+
+
+def get_waiting_pax_id_helper(vertiports: Dict, origin_vertiport_id: str, destination_vertiport_id: str, exclude_pax_ids: List = []):
+    """
+    Get the ids of the waiting passengers up to aircraft capacity
+    """
+    return vertiports[origin_vertiport_id].get_waiting_passenger_ids(destination=destination_vertiport_id, exclude_pax_ids=exclude_pax_ids)
+    
+
+def get_destination_vertiport_id(system_manager: object, aircraft_id: int, actions: List[int]) -> int:
+    """
+    Get the destination vertiport id for a given aircraft.
+    """
+    return system_manager.vertiport_index_to_id_map[actions[aircraft_id]]
+
+
 def remove_larger_keys(dic1, dic2):
     # Deletes all the keys in dic1 that are greater than the highest key of dic2
     for key in list(dic1.keys()):

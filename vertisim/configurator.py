@@ -18,6 +18,7 @@ class EntitySubState(BaseModel):
 
 class VertiportStates(BaseModel):
     num_waiting_passengers: Dict[str, int]
+    num_spilled_passengers: Dict[str, int]
     fato: Optional[EntitySubState] = None
     park: EntitySubState = None
     taxi: EntitySubState = None
@@ -27,12 +28,15 @@ class VertiportStates(BaseModel):
     num_flight_requests: int
     num_available_fato: int
     num_available_parking_pad: int
-    total_passenger_waiting_time: float
+    num_available_charger: int
+    # total_passenger_waiting_time: float
+    total_pax_waiting_time_per_od: Dict[str, float]
     expected_pax: Dict[str, float]
     aircraft_status: Dict[int, int]
     num_holding_aircraft: int
-    avg_pax_waiting_time: Dict[str, float]
-    std_pax_waiting_time: Dict[str, float]
+    # avg_pax_waiting_time: Dict[str, float]
+    # std_pax_waiting_time: Dict[str, float]
+    # time_to_next_available_charger: float
 
 class VertiportConfig:
 
@@ -72,6 +76,7 @@ class VertiportConfig:
         self.departure_fix_resource = simpy.Resource(self.env, capacity=1)
         self.holding_times = defaultdict(defaultdict)
         self.active_charging_processes = [] # min-heap for active charging sessions at the vertiport
+        self.spilled_passengers_dict = {dest: 0 for dest in self.vertiport_ids if dest != self.vertiport_id}
         self.num_aircraft = 0
         self.aircraft_departure_queue_count = 0
         self.num_flight_requests = 0
@@ -115,6 +120,12 @@ class VertiportConfig:
         Returns the number of available parking pads.
         """
         return len(self.parking_space_store.items)
+    
+    def get_charger_availability(self):
+        """
+        Returns the number of available chargers.
+        """
+        return self.charger_resource.capacity - len(self.active_charging_processes)
     
     def get_parking_pad_occupancy(self):
         """
@@ -263,21 +274,22 @@ class VertiportConfig:
                             total_weighted_waiting_time += self.env.now - passenger.waiting_room_arrival_time
         return VertiportConfig.unit_helper(unit=unit, value=total_weighted_waiting_time)
     
-    def get_total_linear_waiting_cost(self, unit='hour', exclude_pax_ids: list=[]) -> float:
+    def get_total_linear_waiting_cost(self, unit='hour', exclude_pax_ids: list=[]) -> Dict:
         """
         Returns the total waiting time of all passengers in the vertiport in the given unit.
         """
-        total_waiting_time = 0
+        total_waiting_time = {destination: 0 for destination in self.waiting_room_stores.keys()}
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
                 if passenger.passenger_id not in exclude_pax_ids:
-                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
+                    total_waiting_time[passenger.destination_vertiport_id] += self.env.now - passenger.waiting_room_arrival_time
         for flight_request_store in self.flight_request_stores.values():
             for passenger in flight_request_store.items:
                 if passenger.passenger_id not in exclude_pax_ids:
-                    total_waiting_time += self.env.now - passenger.waiting_room_arrival_time
-
-        return VertiportConfig.unit_helper(unit=unit, value=total_waiting_time)
+                    total_waiting_time[passenger.destination_vertiport_id] += self.env.now - passenger.waiting_room_arrival_time
+        for destination in total_waiting_time.keys():
+            total_waiting_time[destination] = VertiportConfig.unit_helper(unit=unit, value=total_waiting_time[destination])
+        return total_waiting_time
     
     def get_total_exponential_waiting_cost(self, unit='hour', exclude_pax_ids: list=[]) -> float:
         """
@@ -337,11 +349,12 @@ class VertiportConfig:
         """
         waiting_passenger_ids = []
         waiting_room_store = self.waiting_room_stores[destination]
-        for count, passenger in enumerate(waiting_room_store.items):
+        count = 0
+        for _, passenger in enumerate(waiting_room_store.items):
             if count < self.aircraft_capacity and passenger.passenger_id not in exclude_pax_ids:
                 waiting_passenger_ids.append(passenger.passenger_id)
+                count += 1
         return waiting_passenger_ids
-
 
     def get_waiting_room_count(self):
         """
@@ -357,7 +370,7 @@ class VertiportConfig:
             for aircraft in aircraft_agents.values()
         }
 
-    def get_vertiport_states(self, aircraft_agents, reward_function_parameters):
+    def get_vertiport_states(self, aircraft_agents, reward_function_parameters, departing_passengers=None) -> Dict:
         """
         Will be deprecated in the future.
         """
@@ -400,15 +413,23 @@ class VertiportConfig:
         for destination, expected_pax in self.get_expected_pax_arrivals_for_vertiport().items():
             entity_states['expected_pax'][destination] = expected_pax
 
-        entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
+        # entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 
         entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
         entity_states['num_holding_aircraft'] = self.num_holding_aircraft
 
-        entity_states['avg_pax_waiting_time'] = round(self.average_pax_waiting_time(reward_function_parameters), 2)
+        # entity_states['avg_pax_waiting_time'] = self.average_pax_waiting_time(reward_function_parameters)
 
-        entity_states['std_pax_waiting_time'] = round(self.std_pax_waiting_time(reward_function_parameters), 2)
+        # entity_states['std_pax_waiting_time'] = self.std_pax_waiting_time(reward_function_parameters)
+
+        entity_states['num_available_charger'] = self.get_charger_availability()
+
+        entity_states['num_spilled_passengers'] = self.spilled_passengers_dict
+
+        entity_states['total_pax_waiting_time_per_od'] = self.get_total_waiting_time(reward_function_parameters=reward_function_parameters, exclude_pax_ids=departing_passengers)
+
+        # entity_states['time_to_next_available_charger'] = self.get_next_available_charger_time()
 
         # Validate and serialize the data using Pydantic
         valid_entity_states = VertiportStates(**entity_states)
@@ -416,13 +437,14 @@ class VertiportConfig:
         # Return the validated data
         return valid_entity_states.dict()  
 
-    def get_total_waiting_time(self, reward_function_parameters):
+    def get_total_waiting_time(self, reward_function_parameters, exclude_pax_ids):
         """
         Returns the waiting time cost of the vertiport.
         """
         return self.get_waiting_time_cost(unit=reward_function_parameters['waiting_time_cost_unit'],
                                           last_decision_time=None,
-                                          type=reward_function_parameters['waiting_time_cost_type'])
+                                          type=reward_function_parameters['waiting_time_cost_type'],
+                                          exclude_pax_ids=exclude_pax_ids)
     
     def average_pax_waiting_time(self, reward_function_parameters):
         """
@@ -438,8 +460,8 @@ class VertiportConfig:
             if waiting_pax_count[destination] != 0:
                 waiting_times[destination] /= waiting_pax_count[destination]
             # Convert the waiting times to the desired unit                
-            waiting_times[destination] = VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
-                                                                     value=waiting_times[destination])            
+            waiting_times[destination] = round(VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
+                                                                     value=waiting_times[destination]), 2)            
         return waiting_times
     
     def std_pax_waiting_time(self, reward_function_parameters):
@@ -455,11 +477,11 @@ class VertiportConfig:
             waiting_times[destination] = np.std(waiting_times[destination])
 
             # Convert the waiting times to the desired unit                
-            waiting_times[destination] = VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
-                                                                     value=waiting_times[destination])            
+            waiting_times[destination] = round(VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
+                                                                     value=waiting_times[destination]), 2)            
         return waiting_times
     
-    def get_expected_pax_arrivals_for_vertiport(self):
+    def get_expected_pax_arrivals_for_vertiport(self) -> Dict:
         """
         Returns the expected passenger arrivals for each route.
         """

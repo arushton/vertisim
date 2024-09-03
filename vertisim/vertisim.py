@@ -120,15 +120,17 @@ class VertiSim:
         Run the simulation for one timestep.
         """
         # Get the number of triggers for this step
-        total_triggers = sum(action != 0 for action in actions)
+        # total_triggers = sum(action != 0 for action in actions)
         # Apply the actions and rewards at the same time to keep the Markov property
         self.env.process(self.apply_action_reward(actions=actions))
         # Advance to the next stopping event. The returned state and reward pair should be
         # the state and reward after all the actions are applied.
-        if self.config['external_optimization_params']['periodic_time_step']:
-            return self.advance_periodically()
-        else:
-            return self.advance_to_next_stopping_event(total_triggers)
+
+        return self.advance_to_next_stopping_event_and_stop_periodically()
+        # if self.config['external_optimization_params']['periodic_time_step']:
+        #     return self.advance_periodically()
+        # else:
+        #     return self.advance_to_next_stopping_event()
 
     def apply_action_reward(self, actions: Enum):
         """
@@ -142,6 +144,11 @@ class VertiSim:
         N+1: Do nothing
         """
         self.sim_setup.logger.warning(f"Action: {[self.action_dict[action] for action in actions]}")
+        self.sim_setup.system_manager.actions = actions
+
+        # If a passenger has been waiting for more than X minutes, remove them from the waiting room.
+        if self.sim_setup.system_manager.external_optimization_params['spill_optimization']:
+            self.sim_setup.system_manager.remove_spilled_passengers()
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -323,7 +330,7 @@ class VertiSim:
             self.env.step()
 
             if stop_event.triggered:
-                self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                self.sim_setup.logger.error(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Return the states
                 reward = round(self.reward_function.reward, 2)
                 self.reward_function.reset_rewards()
@@ -336,7 +343,7 @@ class VertiSim:
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
 
 
-    def advance_to_next_stopping_event(self, total_triggers):
+    def advance_to_next_stopping_event(self):
         """
         Runs the simulation until the next defined stopping event.
         Rewards the agent right after the each action is completed.
@@ -365,6 +372,48 @@ class VertiSim:
 
         self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
+
+    def advance_to_next_stopping_event_and_stop_periodically(self):
+        """
+        Runs the simulation until the next defined stopping event.
+        Rewards the agent right after the each action is completed.
+        Rewards the agent separately for each action.
+        """
+        periodic_stop_event = self.schedule_periodic_stop_event()
+
+        while self._should_continue_simulation():
+            # Step the simulation
+            self.env.step()
+
+            # Check for periodic stop event
+            if periodic_stop_event.triggered:
+                self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                reward = round(self.reward_function.reward, 2)
+                self.reward_function.reset_rewards()
+
+                self.sim_setup.logger.warning(f"Reward: {reward}")
+                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
+                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
+                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+            
+            # Check for other stopping events
+            if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
+                # Pop the event on top of the queue
+                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
+                self.sim_setup.logger.warning(f"Triggered event: {event_name}")
+                # Reset the event
+                self._reset_event(event_name)
+                # Return the states
+                reward = round(self.reward_function.reward, 2)
+                self.reward_function.reset_rewards()
+
+                self.sim_setup.logger.warning(f"Reward: {reward}")
+                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
+                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
+                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+
+        self.finalize_simulation()
+        return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
 
     def _should_continue_simulation(self):
         return (self.env.peek() < self.max_sim_time and 

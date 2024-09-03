@@ -39,3 +39,6 @@ class InstanceManager:
     
     def get_performance_metrics(self):
         return self.sim_instance.get_performance_metrics()
+
+    def get_vertiport_ids_distances(self):
+        return self.sim_instance.sim_setup.vertiport_ids, self.sim_instance.sim_setup.vertiport_distances

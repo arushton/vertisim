@@ -1037,8 +1037,8 @@ class Aircraft:
         self.check_for_state_action_violation()
 
         if not self.system_manager.sim_mode == 'offline_optimization':
-            # aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
-            #                                                        tail_number=self.tail_number)
+            aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
+                                                                   tail_number=self.tail_number)
             
             # If it is the first charging process, then add the pre-charging process time (fixed charging cost).
             if self.is_first_time_charge:
@@ -1339,7 +1339,7 @@ class Aircraft:
             # Meaning that aircraft is is in the air. None of the locations
             return len(self.get_vertiport_list())
         
-    def get_od_pair_and_loc(self):
+    def get_od_pair_and_loc(self) -> int:
         """
         Obtains the origin-destination pair of the aircraft. If the aircraft is on the ground, 
         then the od_pair is the current vertiport.
@@ -1419,6 +1419,7 @@ from pydantic import BaseModel
 class AircraftState(BaseModel):
     flight_direction: int
     location: int
+    od_pair: int
     soc: int
     time_to_arrival: int
     holding_time: float

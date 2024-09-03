@@ -15,7 +15,8 @@ class RLSystemManager(BaseSystemManager):
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 vertiport_id_to_index_map,
+                 vertiport_id_to_index_map: Dict,
+                 vertiport_index_to_id_map: Dict,
                  num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
@@ -42,6 +43,7 @@ class RLSystemManager(BaseSystemManager):
                         vertiports=vertiports,
                         vertiport_ids=vertiport_ids,
                         vertiport_id_to_index_map=vertiport_id_to_index_map,
+                        vertiport_index_to_id_map=vertiport_index_to_id_map,                        
                         num_initial_aircraft=num_initial_aircraft,
                         scheduler=scheduler,
                         wind=wind,
@@ -66,9 +68,10 @@ class RLSystemManager(BaseSystemManager):
         self.stopping_events = stopping_events
         self.truncation_events = truncation_events
         self.truncation_event = truncation_event
+        self.actions = []
         self.trip_counter = 0
         self.trip_counter_tracker = 0
-        self.spill_counter = 0
+        self.spill_counter = {(origin, destination): 0 for origin in vertiport_ids for destination in vertiport_ids}
         self.total_demand = 0
         self.trip_time_counter = 0
         self.holding_time_counter = 0
@@ -382,9 +385,6 @@ class RLSystemManager(BaseSystemManager):
 
     def aircraft_charging_process(self, aircraft: object):
         
-        # Put aircraft into available aircraft store
-        self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
-                                                        aircraft=aircraft)
         # Charge the aircraft
         yield self.env.process(
             aircraft.charge_aircraft(
@@ -433,26 +433,23 @@ class RLSystemManager(BaseSystemManager):
 
         yield self.env.timeout(0)
 
-    def check_passenger_max_waiting_time_threshold(self):
+    def remove_spilled_passengers(self):
         """
-        Checks all of the waiting rooms. If there are passengers who are waiting
-        more than self.sim_params['max_passenger_waiting_time'], it creates a flight for those passengers immediately.
+        Remove the spilled passengers from the waiting rooms.
         """
-        max_waiting_time = sec_to_ms(self.sim_params['max_passenger_waiting_time'])
-        while True:
-            yield self.env.timeout(max_waiting_time / 2)
-
-            for origin, vertiport in self.vertiports.items():
-                for destination, wr_store in vertiport.waiting_room_stores.items():
-                    num_agents_in_the_wr = len(wr_store.items)
-                    if num_agents_in_the_wr > 0:
-                        for waiting_passenger in wr_store.items:
-                            if self.env.now - waiting_passenger.waiting_room_arrival_time >= max_waiting_time:
-                                # Get the passenger from the waiting room store
-                                wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
-                                # Penalize for passenger spill
-                                self.spill_counter += 1
-                                print(f"Passenger spill: passenger {waiting_passenger.passenger_id} at time: {miliseconds_to_hms(self.env.now)}")
+        for origin, vertiport in self.vertiports.items():
+            for destination, wr_store in vertiport.waiting_room_stores.items():
+                num_agents_in_the_wr = len(wr_store.items)
+                if num_agents_in_the_wr > 0:
+                    for waiting_passenger in wr_store.items:
+                        if self.env.now - waiting_passenger.waiting_room_arrival_time >= sec_to_ms(self.sim_params['max_passenger_waiting_time']):
+                            # Remove the passenger from the waiting room store
+                            wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
+                            # Penalize for passenger spill
+                            self.spill_counter[(origin, destination)] += 1
+                            self.logger.debug(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min. Time: {self.env.now}')
+                            # Update the spilled passenger counter at at the vertiport
+                            self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """

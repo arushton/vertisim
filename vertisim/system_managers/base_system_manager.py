@@ -12,14 +12,15 @@ import pandas as pd
 from enum import Enum
 from collections import defaultdict
 from ..utils.calc_required_charge_time_from_required_energy import calc_required_charge_time_from_required_energy
-from typing import List, Union
+from typing import List, Union, Dict
 
 class BaseSystemManager:
     def __init__(self,
                  env: simpy.Environment,
                  vertiports: Dict,
                  vertiport_ids: List, 
-                 vertiport_id_to_index_map,
+                 vertiport_id_to_index_map: Dict,
+                 vertiport_index_to_id_map: Dict,
                  num_initial_aircraft: int,                                 
                  scheduler: object,
                  wind: object,
@@ -40,6 +41,7 @@ class BaseSystemManager:
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
         self.vertiport_id_to_index_map = vertiport_id_to_index_map
+        self.vertiport_index_to_id_map = vertiport_index_to_id_map
         self.num_initial_aircraft = num_initial_aircraft
         self.scheduler = scheduler
         self.wind = wind
@@ -929,3 +931,15 @@ class BaseSystemManager:
     
     def check_all_waiting_rooms_empty(self):
         return all(vertiport.is_waiting_room_empty() for vertiport in self.vertiports.values())
+    
+    def remove_passengers_from_waiting_room(self):
+        """
+        Checks passenger waiting times. If a passenger has been waiting for more 
+        than X minutes, remove them from the waiting room.
+        """
+        for vertiport_id, vertiport in self.vertiports.items():
+            for waiting_room in vertiport.waiting_room_stores.values():
+                for passenger in waiting_room.items:
+                    if self.env.now - passenger.waiting_room_arrival_time > self.sim_params['max_passenger_waiting_time']:
+                        waiting_room.remove(passenger)
+                        self.logger.info(f"Passenger {passenger.passenger_id} has been removed from the waiting room at vertiport {vertiport_id} due to long waiting time.")

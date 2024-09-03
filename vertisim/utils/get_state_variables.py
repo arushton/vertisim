@@ -3,7 +3,7 @@ from collections import defaultdict
 import json
 import subprocess
 from .units import ms_to_min, ms_to_hr
-from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
+from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys, get_departing_passengers
 import numpy as np
 from pydantic import BaseModel
 
@@ -32,7 +32,7 @@ def get_simulator_states(
     aircraft_agents: Dict[int, Any],
     num_initial_aircraft: int,
     simulation_states: Dict[str, Any],
-    reward_function_parameters: Dict[str, Any],
+    reward_function_parameters: Dict[str, Any]
 ) -> Dict:
     """
     Get the states for simulation entities.
@@ -42,6 +42,7 @@ def get_simulator_states(
     - aircraft_agents: Dictionary containing aircraft agent details.
     - num_aircraft: Total number of aircraft expected in simulation.
     - simulation_states: Dict List of state keys to be filtered from the results.
+    - reward_function_parameters: Dict containing reward function parameters.
 
     Returns:
     - Dictionary containing filtered states for vertiports, aircrafts, and environment.
@@ -59,11 +60,14 @@ def get_simulator_states(
         for tail_number, aircraft in aircraft_agents.items()
     }
 
+    departing_passengers = get_departing_passengers(system_manager=system_manager, actions=system_manager.actions)
+
     vertiport_states = {
         vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, 
                                             keys=simulation_states['vertiport_states'],
                                             aircraft_agents=aircraft_agents,
-                                            reward_function_parameters=reward_function_parameters)
+                                            reward_function_parameters=reward_function_parameters,
+                                            departing_passengers=departing_passengers)
         for vertiport_id, vertiport in vertiports.items()
     }
 
