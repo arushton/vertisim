@@ -126,7 +126,12 @@ class VertiSim:
         # Advance to the next stopping event. The returned state and reward pair should be
         # the state and reward after all the actions are applied.
 
-        return self.advance_to_next_stopping_event_and_stop_periodically()
+        if self.config['external_optimization_params']['periodic_and_event_driven']:
+            return self.advance_to_next_stopping_event_and_stop_periodically()
+        elif self.config['external_optimization_params']['periodic_time_step']:
+            return self.advance_periodically()
+        else:
+            return self.advance_to_next_stopping_event()
         # if self.config['external_optimization_params']['periodic_time_step']:
         #     return self.advance_periodically()
         # else:
@@ -209,11 +214,11 @@ class VertiSim:
                 soc_increment = new_soc - aircraft.soc
 
             can_do_any = (aircraft.status == AircraftStatus.IDLE and 
-                          aircraft.soc <= 100-soc_increment and 
+                          aircraft.soc <= 95-soc_increment and 
                           aircraft.soc >= self.config['aircraft_params']['min_reserve_soc'])
             
             can_fly_and_do_nothing = (aircraft.status == AircraftStatus.IDLE and
-                                      aircraft.soc > 100-soc_increment)
+                                      aircraft.soc > 95-soc_increment)
             
             # Can do any action
             if can_do_any:
@@ -307,8 +312,13 @@ class VertiSim:
         Schedule a stopping event at a fixed interval.
         """
         interval = sec_to_ms(self.config['external_optimization_params']['periodic_time_step'])
+        # Calculate time until the next multiple of interval
+        time_to_next_multiple = interval - (self.env.now % interval)
+        if time_to_next_multiple == 0:
+            time_to_next_multiple = interval  # If it's exactly a multiple, schedule for the next interval
+
         stop_event = self.env.event()
-        self.env.process(self.trigger_stop_event_after_interval(stop_event, interval))
+        self.env.process(self.trigger_stop_event_after_interval(stop_event, time_to_next_multiple))
         return stop_event
 
     def trigger_stop_event_after_interval(self, event, interval):
@@ -384,17 +394,6 @@ class VertiSim:
         while self._should_continue_simulation():
             # Step the simulation
             self.env.step()
-
-            # Check for periodic stop event
-            if periodic_stop_event.triggered:
-                self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
-                reward = round(self.reward_function.reward, 2)
-                self.reward_function.reset_rewards()
-
-                self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
-                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
-                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
             
             # Check for other stopping events
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
@@ -411,6 +410,17 @@ class VertiSim:
                 self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
                 self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+            
+            # Check for periodic stop event
+            if periodic_stop_event.triggered:
+                self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                reward = round(self.reward_function.reward, 2)
+                self.reward_function.reset_rewards()
+
+                self.sim_setup.logger.warning(f"Reward: {reward}")
+                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
+                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
+                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()            
 
         self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
@@ -427,15 +437,22 @@ class VertiSim:
         # self.sim_setup.logger.warning(f"Is all waiting rooms empty: {self.sim_setup.system_manager.check_all_waiting_rooms_empty()}")
         # self.sim_setup.logger.warning(f"Is all passenger travelled: {self.sim_setup.system_manager.is_all_passenger_travelled()}")
         # self.sim_setup.logger.warning(f"Total travelled passengers: {self.sim_setup.system_manager.trip_counter_tracker}")
-        if bool(
-            self.sim_setup.system_manager.passenger_arrival_complete
-            and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
-            and self.sim_setup.system_manager.is_all_passenger_travelled()):
-
-            # self.sim_setup.logger.warning("Demand satisfied")
-            self.sim_setup.logger.error(self.sim_setup.log_brief_metrics())
-            self.terminal_event.succeed()
-            return True
+        if self.config['external_optimization_params']['spill_optimization']:
+            # Check if last passenger has arrived and all waiting rooms are empty
+            if bool(self.sim_setup.system_manager.passenger_arrival_complete 
+                    and self.sim_setup.system_manager.check_all_waiting_rooms_empty()):
+                self.sim_setup.logger.error(self.sim_setup.log_brief_metrics())
+                self.terminal_event.succeed()                
+                return True
+        else:
+            if bool(
+                self.sim_setup.system_manager.passenger_arrival_complete
+                and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
+                and self.sim_setup.system_manager.is_all_passenger_travelled()):
+                # self.sim_setup.logger.warning("Demand satisfied")
+                self.sim_setup.logger.error(self.sim_setup.log_brief_metrics())
+                self.terminal_event.succeed()
+                return True
         return False
     
     def _reset_event(self, event_name):

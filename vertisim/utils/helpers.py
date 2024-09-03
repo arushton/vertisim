@@ -285,25 +285,25 @@ def calculate_passenger_consolidation_time(departing_passengers):
 
 
 from typing import List, Set
-def get_departing_passengers(system_manager: object, actions: List[int]) -> Set[int]:
-    """
-    Compute the set of departing passengers.
-    """
-    # If actions is empty, return an empty set
-    if len(actions) == 0:
-        return set()
-    departing_passengers = set()
-    for aircraft_id, aircraft in system_manager.aircraft_agents.items():
-        if actions[aircraft_id] < len(system_manager.vertiport_ids):
-            departing_passengers.update(get_waiting_pax_id_helper(
-                vertiports=system_manager.vertiports,
-                exclude_pax_ids=departing_passengers,
-                origin_vertiport_id=aircraft.current_vertiport_id,
-                destination_vertiport_id=get_destination_vertiport_id(system_manager=system_manager, 
-                                                                           aircraft_id=aircraft_id, 
-                                                                           actions=actions)
-            ))
-    return departing_passengers
+# def get_departing_passengers(system_manager: object, actions: List[int]) -> Set[int]:
+#     """
+#     Compute the set of departing passengers.
+#     """
+#     # If actions is empty, return an empty set
+#     if len(actions) == 0:
+#         return set()
+#     departing_passengers = set()
+#     for aircraft_id, aircraft in system_manager.aircraft_agents.items():
+#         if actions[aircraft_id] < len(system_manager.vertiport_ids):
+#             departing_passengers.update(get_waiting_pax_id_helper(
+#                 vertiports=system_manager.vertiports,
+#                 exclude_pax_ids=departing_passengers,
+#                 origin_vertiport_id=aircraft.current_vertiport_id,
+#                 destination_vertiport_id=get_destination_vertiport_id(system_manager=system_manager, 
+#                                                                            aircraft_id=aircraft_id, 
+#                                                                            actions=actions)
+#             ))
+#     return departing_passengers
 
 
 def get_waiting_pax_id_helper(vertiports: Dict, origin_vertiport_id: str, destination_vertiport_id: str, exclude_pax_ids: List = []):

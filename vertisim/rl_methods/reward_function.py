@@ -33,7 +33,7 @@ class RewardFunction:
         # Spit cost
         spill_cost = self._calculate_spill_cost()
         # Calculate the reward
-        self.reward = waiting_time_cost + holding_time_cost + energy_cost + spill_cost
+        self.reward = holding_time_cost + energy_cost + spill_cost
 
     def dollar_cost_reward(self, actions: List[int]) -> None:
         # Reward Function: Profit = Revenue - (Energy Cost + Operating Cost)
@@ -151,6 +151,8 @@ class RewardFunction:
                     origin_vertiport_id=aircraft.current_vertiport_id,
                     destination_vertiport_id=self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)
                 ))
+        
+        self.sim_setup.system_manager.departing_passenger_tracker = departing_passengers
         return departing_passengers
     
     def _get_total_departing_pax_count(self, departing_passengers: Set) -> int:

@@ -64,6 +64,7 @@ class BaseSystemManager:
         self.taxi_resource = simpy.Resource(self.env, 1)
         self.aircraft_battery_models = self.build_aircraft_battery_models()
         self.passenger_arrival_complete = False
+        self.last_passenger_id = None
 
     def get_aircraft_count(self) -> int:
         return sum(

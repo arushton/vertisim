@@ -441,7 +441,8 @@ class SimSetup:
                 'truncation_events': self.truncation_events,
                 'truncation_event': self.truncation_event,
                 'sim_mode': system_manager_type,
-                'periodic_stopping': not is_none(self.external_optimization_params['periodic_time_step'])
+                'periodic_stopping': not is_none(self.external_optimization_params['periodic_time_step']),
+                'periodic_and_event_driven': self.external_optimization_params['periodic_and_event_driven']
             },
             'offline_optimization': {
                 'env': self.env,

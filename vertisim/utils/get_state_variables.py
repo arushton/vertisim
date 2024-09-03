@@ -3,7 +3,7 @@ from collections import defaultdict
 import json
 import subprocess
 from .units import ms_to_min, ms_to_hr
-from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys, get_departing_passengers
+from .helpers import get_passenger_id_str_from_passenger_list, careful_round, filter_nested_dict_by_given_keys
 import numpy as np
 from pydantic import BaseModel
 
@@ -60,7 +60,7 @@ def get_simulator_states(
         for tail_number, aircraft in aircraft_agents.items()
     }
 
-    departing_passengers = get_departing_passengers(system_manager=system_manager, actions=system_manager.actions)
+    departing_passengers = system_manager.departing_passenger_tracker
 
     vertiport_states = {
         vertiport_id: filter_and_get_states(get_states_func=vertiport.get_vertiport_states, 

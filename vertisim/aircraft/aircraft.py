@@ -1062,6 +1062,7 @@ class Aircraft:
         # self.system_manager.reward += 100
         # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")
         if self.system_manager.sim_mode == 'rl':
+            self.logger.warning(f'charging_end_event is triggered for {self.tail_number} time {self.env.now}')
             self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
 

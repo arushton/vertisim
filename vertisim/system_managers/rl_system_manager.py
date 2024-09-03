@@ -37,7 +37,8 @@ class RLSystemManager(BaseSystemManager):
                  truncation_events: Dict,
                  truncation_event: simpy.Event,
                  sim_mode: str = 'rl',
-                 periodic_stopping: bool = False
+                 periodic_stopping: bool = False,
+                 periodic_and_event_driven: bool = False
                  ):
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -65,9 +66,11 @@ class RLSystemManager(BaseSystemManager):
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.external_optimization_params = external_optimization_params
         self.periodic_stopping = periodic_stopping
+        self.periodic_and_event_driven = periodic_and_event_driven
         self.stopping_events = stopping_events
         self.truncation_events = truncation_events
         self.truncation_event = truncation_event
+        self.departing_passenger_tracker = set()
         self.actions = []
         self.trip_counter = 0
         self.trip_counter_tracker = 0
@@ -378,8 +381,6 @@ class RLSystemManager(BaseSystemManager):
                 self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                                 aircraft=aircraft)
                 aircraft.status = AircraftStatus.IDLE
-                self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
-                self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
             else:
                 raise ValueError('Unknown initial process for the aircraft')        
 
@@ -424,12 +425,14 @@ class RLSystemManager(BaseSystemManager):
         # Log the passenger's arrival
         self.passenger_logger.info(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
-        # if len(passengers_waiting_room.items) > 1:
-        # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time: {self.env.now}")
         event_name=f"passenger_arrival_event_{passenger.passenger_id % 100}"
-        self.logger.debug(f'passenger_arrival_event is triggered for {passenger.passenger_id} time: {self.env.now}')
+        self.logger.debug(f'passenger_arrival_event is triggered for passenger {passenger.passenger_id} time: {self.env.now}')
         # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")        
         self.trigger_stopping_event(event_name=event_name)
+
+        if passenger.passenger_id == self.last_passenger_id:
+            self.passenger_arrival_complete = True
+            self.logger.warning(f'Passenger arrival process is completed. Last passenger id: {self.last_passenger_id}')        
 
         yield self.env.timeout(0)
 
@@ -443,11 +446,11 @@ class RLSystemManager(BaseSystemManager):
                 if num_agents_in_the_wr > 0:
                     for waiting_passenger in wr_store.items:
                         if self.env.now - waiting_passenger.waiting_room_arrival_time >= sec_to_ms(self.sim_params['max_passenger_waiting_time']):
+                            self.logger.warning(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
                             # Remove the passenger from the waiting room store
                             wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
                             # Penalize for passenger spill
                             self.spill_counter[(origin, destination)] += 1
-                            self.logger.debug(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min. Time: {self.env.now}')
                             # Update the spilled passenger counter at at the vertiport
                             self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
 
@@ -455,10 +458,11 @@ class RLSystemManager(BaseSystemManager):
         """
         Trigger the stopping event.
         """
-        if self.periodic_stopping:
+        if self.periodic_stopping and not self.periodic_and_event_driven:
             return
         if id is not None:
             event_name = f"{event_name}_{id}"
+
         self.triggered_stopping_event_queue.append(event_name)
         self.stopping_events[event_name].succeed()
 
