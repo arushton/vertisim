@@ -76,7 +76,7 @@ def get_simulator_states(
                                                                time=system_manager.env.now)
     
     additional_states = {
-        'sim_time': round(ms_to_hr(system_manager.env.now), 2) if 'sim_time' in simulation_states['additional_states'] else 0,
+        'sim_time': round(ms_to_hr(system_manager.env.now), 3) if 'sim_time' in simulation_states['additional_states'] else 0,
     }
 
     simulator_states = {

@@ -33,7 +33,7 @@ class RewardFunction:
         # Spit cost
         spill_cost = self._calculate_spill_cost()
         # Calculate the reward
-        self.reward = holding_time_cost + energy_cost + spill_cost
+        self.reward = waiting_time_cost + holding_time_cost + energy_cost + spill_cost
 
     def dollar_cost_reward(self, actions: List[int]) -> None:
         # Reward Function: Profit = Revenue - (Energy Cost + Operating Cost)
@@ -327,10 +327,15 @@ class RewardFunction:
 
         # Flush the holding time of the aircraft
         for aircraft in self.sim_setup.system_manager.aircraft_agents.values():
-            if aircraft.status != AircraftStatus.FLY:
+            if aircraft.status != AircraftStatus.HOLD:
                 aircraft.holding_time = None
                 aircraft.holding_start_time = None
                 aircraft.holding_end_time = None
+
+        # Flush the spill passenger count
+        for vertiport in self.sim_setup.vertiports.values():
+            for destination in vertiport.spilled_passengers_dict:
+                vertiport.spilled_passengers_dict[destination] = 0
 
 
 # from typing import List, Dict

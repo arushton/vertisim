@@ -153,7 +153,7 @@ class VertiSim:
 
         # If a passenger has been waiting for more than X minutes, remove them from the waiting room.
         if self.sim_setup.system_manager.external_optimization_params['spill_optimization']:
-            self.sim_setup.system_manager.remove_spilled_passengers()
+            self.sim_setup.system_manager.remove_spilled_passengers(actions=actions)
 
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -342,7 +342,7 @@ class VertiSim:
             if stop_event.triggered:
                 self.sim_setup.logger.error(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Return the states
-                reward = round(self.reward_function.reward, 2)
+                reward = round(self.reward_function.reward, 3)
                 self.reward_function.reset_rewards()
 
                 self.sim_setup.logger.warning(f"Reward: {reward}")
@@ -372,7 +372,7 @@ class VertiSim:
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
-                reward = round(self.reward_function.reward, 2)
+                reward = round(self.reward_function.reward, 3)
                 self.reward_function.reset_rewards()
 
                 self.sim_setup.logger.warning(f"Reward: {reward}")
@@ -403,18 +403,20 @@ class VertiSim:
                 # Reset the event
                 self._reset_event(event_name)
                 # Return the states
-                reward = round(self.reward_function.reward, 2)
+                reward = round(self.reward_function.reward, 3)
+                current_state = self.get_current_state()
+                action_mask = self.action_mask()
                 self.reward_function.reset_rewards()
 
                 self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
-                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
-                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+                self.sim_setup.logger.warning(f"Current state: {pformat(current_state)}")
+                self.sim_setup.logger.warning(f"Action mask: {action_mask}")
+                return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask
             
             # Check for periodic stop event
             if periodic_stop_event.triggered:
                 self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
-                reward = round(self.reward_function.reward, 2)
+                reward = round(self.reward_function.reward, 3)
                 self.reward_function.reset_rewards()
 
                 self.sim_setup.logger.warning(f"Reward: {reward}")
@@ -423,7 +425,7 @@ class VertiSim:
                 return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()            
 
         self.finalize_simulation()
-        return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
+        return self.get_current_state(), round(self.reward_function.reward, 3), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
 
     def _should_continue_simulation(self):
         return (self.env.peek() < self.max_sim_time and 

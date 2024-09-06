@@ -35,7 +35,7 @@ class VertiportStates(BaseModel):
     aircraft_status: Dict[int, int]
     num_holding_aircraft: int
     # avg_pax_waiting_time: Dict[str, float]
-    # std_pax_waiting_time: Dict[str, float]
+    std_pax_waiting_time_per_od: Dict[str, float]
     # time_to_next_available_charger: float
 
 class VertiportConfig:
@@ -419,9 +419,9 @@ class VertiportConfig:
 
         entity_states['num_holding_aircraft'] = self.num_holding_aircraft
 
-        # entity_states['avg_pax_waiting_time'] = self.average_pax_waiting_time(reward_function_parameters)
+        # entity_states['avg_pax_waiting_time_per_od'] = self.average_pax_waiting_time(reward_function_parameters)
 
-        # entity_states['std_pax_waiting_time'] = self.std_pax_waiting_time(reward_function_parameters)
+        entity_states['std_pax_waiting_time_per_od'] = self.std_pax_waiting_time_per_od(reward_function_parameters)
 
         entity_states['num_available_charger'] = self.get_charger_availability()
 
@@ -446,14 +446,14 @@ class VertiportConfig:
                                           type=reward_function_parameters['waiting_time_cost_type'],
                                           exclude_pax_ids=exclude_pax_ids)
     
-    def average_pax_waiting_time(self, reward_function_parameters):
+    def average_pax_waiting_time_per_od(self, reward_function_parameters):
         """
         Returns the average pax waiting time at each waiting room
         """
         waiting_times = {destination: 0 for destination in self.waiting_room_stores.keys()}
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                waiting_times[passenger.destination] += self.env.now - passenger.waiting_room_arrival_time
+                waiting_times[passenger.destination_vertiport_id] += self.env.now - passenger.waiting_room_arrival_time
         # Calculate the average waiting time for each waiting room
         waiting_pax_count = self.get_waiting_passenger_count()
         for destination in waiting_times.keys():
@@ -464,14 +464,14 @@ class VertiportConfig:
                                                                      value=waiting_times[destination]), 2)            
         return waiting_times
     
-    def std_pax_waiting_time(self, reward_function_parameters):
+    def std_pax_waiting_time_per_od(self, reward_function_parameters):
         """
         Returns the standard deviation of pax waiting time at each waiting room
         """
         waiting_times = {destination: [] for destination in self.waiting_room_stores.keys()}
         for waiting_room_store in self.waiting_room_stores.values():
             for passenger in waiting_room_store.items:
-                waiting_times[passenger.destination].append(self.env.now - passenger.waiting_room_arrival_time)
+                waiting_times[passenger.destination_vertiport_id].append(self.env.now - passenger.waiting_room_arrival_time)
         # Calculate the standard deviation of waiting time for each waiting room
         for destination in waiting_times.keys():
             waiting_times[destination] = np.std(waiting_times[destination])
