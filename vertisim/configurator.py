@@ -474,11 +474,11 @@ class VertiportConfig:
                 waiting_times[passenger.destination_vertiport_id].append(self.env.now - passenger.waiting_room_arrival_time)
         # Calculate the standard deviation of waiting time for each waiting room
         for destination in waiting_times.keys():
-            waiting_times[destination] = np.std(waiting_times[destination])
+            waiting_times[destination] = max(0, np.std(waiting_times[destination]))
 
             # Convert the waiting times to the desired unit                
             waiting_times[destination] = round(VertiportConfig.unit_helper(unit=reward_function_parameters['waiting_time_cost_unit'],
-                                                                     value=waiting_times[destination]), 2)            
+                                                                     value=waiting_times[destination]), 2)   
         return waiting_times
     
     def get_expected_pax_arrivals_for_vertiport(self) -> Dict:

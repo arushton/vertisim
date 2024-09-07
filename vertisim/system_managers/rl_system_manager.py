@@ -442,14 +442,14 @@ class RLSystemManager(BaseSystemManager):
         or if there are more passengers than the flight's capacity.
         """
         # First identify which flights are scheduled and the capacity of each flight direction
-        scheduled_flights = {(origin, destination): 0 for origin in self.vertiport_ids for destination in self.vertiport_ids}
+        scheduled_flights = {(origin, destination): 0 for origin in self.vertiport_ids for destination in self.vertiport_ids if origin != destination}
         for aircraft_id, aircraft in self.aircraft_agents.items():
             if actions[aircraft_id] < len(self.vertiport_ids):
                 origin = aircraft.current_vertiport_id
                 destination = self.vertiport_index_to_id_map[actions[aircraft_id]]
                 scheduled_flights[(origin, destination)] += aircraft.passenger_capacity
 
-        # Now remove passengers only if there are no scheduled flights or the waiting passengers exceed flight capacity
+        # Remove passengers only if there are no scheduled flights or the waiting passengers exceed flight capacity
         for origin, vertiport in self.vertiports.items():
             for destination, wr_store in vertiport.waiting_room_stores.items():
                 num_agents_in_the_wr = len(wr_store.items)
@@ -462,7 +462,7 @@ class RLSystemManager(BaseSystemManager):
                     num_over_waiting_passengers = len(over_waiting_passengers)
 
                     # Check if there's a scheduled flight from origin to destination
-                    if (origin, destination) in scheduled_flights:
+                    if scheduled_flights[(origin, destination)] > 0:
                         # Get the passenger capacity of the flight
                         flight_capacity = scheduled_flights[(origin, destination)]
 
@@ -472,7 +472,8 @@ class RLSystemManager(BaseSystemManager):
                             excess_passengers = num_over_waiting_passengers - flight_capacity
                             for _ in range(excess_passengers):
                                 spilled_passenger = over_waiting_passengers.pop(0)  # Remove the first passenger in excess
-                                self.logger.warning(f'Passenger {spilled_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - spilled_passenger.waiting_room_arrival_time)} min.')
+                                self.logger.warning(f'Excess passenger {spilled_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - spilled_passenger.waiting_room_arrival_time)} min.')
+                                self.logger.warning(f'Flight capacity: {flight_capacity}. Number of over-waiting passengers: {num_over_waiting_passengers}. Number of excess passengers: {excess_passengers}. Flights scheduled: {scheduled_flights}')
                                 # Remove the passenger from the waiting room store
                                 wr_store.get(lambda x: x.passenger_id == spilled_passenger.passenger_id)
                                 # Penalize for passenger spill
@@ -486,6 +487,8 @@ class RLSystemManager(BaseSystemManager):
                         # If no flight is scheduled, spill all over-waiting passengers
                         for waiting_passenger in over_waiting_passengers:
                             self.logger.warning(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
+                            self.logger.warning(f'Number of over-waiting passengers: {num_over_waiting_passengers}. Flights scheduled: {scheduled_flights}')
+
                             # Remove the passenger from the waiting room store
                             wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
                             # Penalize for passenger spill

@@ -417,12 +417,14 @@ class VertiSim:
             if periodic_stop_event.triggered:
                 self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 reward = round(self.reward_function.reward, 3)
+                current_state = self.get_current_state()
+                action_mask = self.action_mask()
                 self.reward_function.reset_rewards()
 
                 self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
-                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
-                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()            
+                self.sim_setup.logger.warning(f"Current state: {pformat(current_state)}")
+                self.sim_setup.logger.warning(f"Action mask: {action_mask}")
+                return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask          
 
         self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 3), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
