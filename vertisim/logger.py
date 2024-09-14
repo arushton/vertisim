@@ -106,6 +106,7 @@ class Logger:
         self.remove_empty_log_file(log_file)
 
     def remove_empty_log_file(self, file_path):
-        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+        # If file size is less than 3KB then remove the file
+        if os.path.exists(file_path) and os.path.getsize(file_path) <= 3072:
             os.remove(file_path)
             print(f"Removed empty log file: {file_path}")                        
