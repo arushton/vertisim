@@ -45,7 +45,7 @@ class EventSaver:
         self.flying_aircraft_counter = defaultdict(dict)
         self.passenger_trip_time_tracker = defaultdict(dict)
         self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-        self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 0} for flight_direction in flight_directions}
+        self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 50} for flight_direction in flight_directions}
 
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -118,17 +118,25 @@ class EventSaver:
         if self.env.now < hr_to_ms(2):
             self.update_average_energy_consumption(flight_direction, energy_consumption)
 
-    def update_average_energy_consumption(self, flight_direction, new_energy_consumption):
+    def update_average_energy_consumption(self, flight_direction: str, new_energy_consumption: float, alpha: float = 0.1):
+        """
+        Update the average energy consumption using an exponentially weighted average (EWA).
+        
+        Args:
+        - flight_direction: The direction of the flight (e.g., OD pair).
+        - new_energy_consumption: The energy consumption for the latest flight.
+        - alpha: The weighting factor (0 < alpha <= 1). Default is 0.1.
+        """
         # Check if the flight direction is in the dictionary
         if flight_direction in self.average_energy_consumption_per_od_pair:
-            # Update the sum of energy consumption
-            self.average_energy_consumption_per_od_pair[flight_direction]['sum'] += new_energy_consumption
-            # Update the count of updates
-            self.average_energy_consumption_per_od_pair[flight_direction]['count'] += 1
-            # Calculate the new average
-            count = self.average_energy_consumption_per_od_pair[flight_direction]['count']
-            total_sum = self.average_energy_consumption_per_od_pair[flight_direction]['sum']
-            self.average_energy_consumption_per_od_pair[flight_direction]['average'] = total_sum / count
+            # Get the current average energy consumption
+            previous_average = self.average_energy_consumption_per_od_pair[flight_direction]['average']
+            
+            # Calculate the new exponentially weighted average
+            new_average_energy_consumption = round((1 - alpha) * new_energy_consumption + alpha * previous_average, 2)
+            
+            # Update the average energy consumption with the new value
+            self.average_energy_consumption_per_od_pair[flight_direction]['average'] = new_average_energy_consumption
 
     def save_flight_phase_energy(self, flight_direction, flight_id, flight_phase, energy):
         # If the value exists, add the new value to the existing value

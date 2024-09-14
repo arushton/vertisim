@@ -115,14 +115,27 @@ class BaseSystemManager:
                     dd[f"{origin_id}_{destination_id}"] = inner_dict(estimated_time)
         return dd    
     
-    def update_flight_duration(self, flight_direction: str, flight_duration: float):        
-        # Update total duration and number of flights.
+    def update_flight_duration(self, flight_direction: str, flight_duration: float, alpha: float = 0.1):
+        """
+        Update the average flight duration using an exponentially weighted average (EWA).
+        
+        Args:
+        - flight_direction: The direction of the flight (e.g., OD pair).
+        - flight_duration: The duration of the latest flight.
+        - alpha: The weighting factor (0 < alpha <= 1). Default is 0.1.
+        """
+        # Get the current average flight duration for the direction.
+        previous_average = self.get_average_flight_time(flight_direction)
+        
+        # Calculate the new exponentially weighted average.
+        new_average_flight_duration = round((1 - alpha) * flight_duration + alpha * previous_average, 2)
+        
+        # Update the average flight time.
+        self.set_average_flight_time(flight_direction, new_average_flight_duration)
+        
+        # Increase the total flight duration and the number of flights.
         self.increase_total_flight_duration(flight_direction, flight_duration)
         self.increase_flight_count(flight_direction)
-        
-        # Recalculate and update average flight duration.
-        average_flight_duration = round(self.get_total_flight_time(flight_direction) / self.get_flight_count(flight_direction), 2)
-        self.set_average_flight_time(flight_direction, average_flight_duration)
 
     def get_average_flight_time(self, flight_direction: str) -> float:
         """
@@ -171,7 +184,7 @@ class BaseSystemManager:
         Compute the average flight time (in seconds) based on distance and aircraft speed.
         """
         flight_distance = miles_to_m(self.get_mission_length(origin_id, destination_id))
-        return flight_distance / cruise_speed * 1.25        
+        return flight_distance / cruise_speed * 2.2    
     
     def assign_fato(self, vertiport_id: Any, parking_space: str, fato_id: str = None, rule: str = 'min') -> str:
         """
@@ -610,7 +623,7 @@ class BaseSystemManager:
 
     def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
         waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
-        self.passenger_logger.info(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
+        self.passenger_logger.debug(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
                                     f" Passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}"
                                     f" Their waiting room arrival times: {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}"
                                     f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in waiting_room.items]}") 
@@ -619,7 +632,7 @@ class BaseSystemManager:
             departing_passengers.extend(self.scheduler.last_call_check(
                 current_waiting_room=waiting_room,
                 num_departing_passengers=len(departing_passengers))) 
-        self.passenger_logger.info(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
+        self.passenger_logger.debug(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
         return departing_passengers        
 
     def retrieve_aircraft(self, origin_vertiport_id, tail_number=None) -> object:
@@ -648,7 +661,7 @@ class BaseSystemManager:
                 self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                         idle_time=idle_time)
                 aircraft.save_process_time(event='idle', process_time=idle_time)
-                self.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
+                self.logger.debug(f'Saved idle time of {miliseconds_to_hms(idle_time)} between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
         else:
             if not aircraft.charged_during_turnaround:
                 idle_time = aircraft.env.now - aircraft.arrival_time
@@ -658,7 +671,7 @@ class BaseSystemManager:
             self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                      idle_time=aircraft.idle_time)
             aircraft.save_process_time(event='idle', process_time=idle_time)
-            self.logger.info(f'Saved idle time {miliseconds_to_hms(idle_time)} between charging end or arrival and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')            
+            self.logger.debug(f'Saved idle time {miliseconds_to_hms(idle_time)} between charging end or arrival and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')            
 
     def parking_pad_request(self, aircraft: object, parking_space_id: Any = None):
         # parking space reservation for landing
@@ -752,6 +765,7 @@ class BaseSystemManager:
         taxi_end_time = self.env.now
         self.save_taxi_time(aircraft=aircraft, taxi_time=taxi_end_time-taxi_start_time)
         aircraft.save_process_time(event='taxi', process_time=taxi_end_time-taxi_start_time)
+        aircraft.taxi_duration = taxi_end_time - taxi_start_time
 
     def update_flight_info(self, aircraft: object):
         self.event_saver.update_flight_tracker(vertiport_id=aircraft.origin_vertiport_id)

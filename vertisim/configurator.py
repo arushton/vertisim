@@ -31,7 +31,7 @@ class VertiportStates(BaseModel):
     num_available_charger: int
     # total_passenger_waiting_time: float
     total_pax_waiting_time_per_od: Dict[str, float]
-    expected_pax: Dict[str, float]
+    expected_pax_arr_per_od: Dict[str, float]
     aircraft_status: Dict[int, int]
     num_holding_aircraft: int
     # avg_pax_waiting_time: Dict[str, float]
@@ -374,7 +374,7 @@ class VertiportConfig:
         """
         Will be deprecated in the future.
         """
-        entity_states = {'num_waiting_passengers': {}, 'expected_pax': {}}
+        entity_states = {'num_waiting_passengers': {}, 'expected_pax_arr_per_od': {}}
 
         for fato in self.fato_store.items:
             entity_states[fato.resource_id] = {'num_jobs_in_service': fato.fato_resource.count,
@@ -411,7 +411,7 @@ class VertiportConfig:
         #                                                                                       route=f'{self.vertiport_id}_{destination}')
 
         for destination, expected_pax in self.get_expected_pax_arrivals_for_vertiport().items():
-            entity_states['expected_pax'][destination] = expected_pax
+            entity_states['expected_pax_arr_per_od'][destination] = expected_pax
 
         # entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 

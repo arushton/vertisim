@@ -55,6 +55,7 @@ class VertiSim:
             self.setup_for_rl()
 
         self.status = True
+        self.last_decision_time = -1
 
     def setup_for_rl(self):
         # self.actions = create_action_enum(self.sim_setup.vertiport_ids)        
@@ -88,7 +89,7 @@ class VertiSim:
 
     def finalize_simulation(self):
         if self.config['sim_mode']['rl'] and self.config['sim_params']['print_brief_metrics']:
-            self.sim_setup.log_brief_metrics(print_metrics=True)
+            self.sim_setup.log_brief_metrics(print_metrics=self.config['sim_params']['print_brief_metrics'])
                     
         if not self.sim_setup.sim_mode['rl']:
             self.print_total_time_to_run()
@@ -148,13 +149,13 @@ class VertiSim:
         N: Idle to charge
         N+1: Do nothing
         """
-        self.sim_setup.logger.warning(f"Action: {[self.action_dict[action] for action in actions]}")
+        self.sim_setup.logger.info(f"Action: {[self.action_dict[action] for action in actions]}")
         self.sim_setup.system_manager.actions = actions
 
         # If a passenger has been waiting for more than X minutes, remove them from the waiting room.
         if self.sim_setup.system_manager.external_optimization_params['spill_optimization']:
             self.sim_setup.system_manager.remove_spilled_passengers(actions=actions)
-
+            
         process_list = []
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             # Charge the aircraft
@@ -171,6 +172,7 @@ class VertiSim:
                 aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
                 aircraft.origin_vertiport_id = aircraft.current_vertiport_id
                 aircraft.destination_vertiport_id = self.sim_setup.vertiport_index_to_id_map[actions[aircraft_id]]
+                self.sim_setup.logger.debug(f"Aircraft {aircraft_id} will fly from {aircraft.origin_vertiport_id} to {aircraft.destination_vertiport_id}")
             else:
                 raise ValueError(f"Invalid action: {actions[aircraft_id]}")
                 
@@ -208,9 +210,12 @@ class VertiSim:
                 soc_increment = self.config['aircraft_params']['soc_increment_per_charge_event']
             elif self.config['external_optimization_params']['charge_time_per_charge_event'] is not None:
                 charge_lookup_table = self.sim_setup.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
-                new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(charge_time=sec_to_ms(self.config['external_optimization_params']['charge_time_per_charge_event']), 
-                                                                        initial_soc=aircraft.soc,
-                                                                        df=charge_lookup_table)
+
+                new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
+                    charge_time=sec_to_ms(self.config['external_optimization_params']['charge_time_per_charge_event']), 
+                    initial_soc=aircraft.soc,
+                    df=charge_lookup_table)
+                
                 soc_increment = new_soc - aircraft.soc
 
             can_do_any = (aircraft.status == AircraftStatus.IDLE and 
@@ -272,7 +277,7 @@ class VertiSim:
                     # Check if there are enough idling aircraft at the destination vertiport, and no passenger at the current vertiport
                     if num_aircraft * self.config['aircraft_params']['pax'] >= expected_lookahead_dest_demand and \
                         dest_demand_from_origin == 0 and \
-                            current_vertiport.num_holding_aircraft == 0:
+                            current_vertiport.get_parking_pad_availability() > 0:
                         # Mask out the flight action to the destination vertiport
                         destination_mask[dest_vertiport_index] = 0
 
@@ -340,18 +345,11 @@ class VertiSim:
             self.env.step()
 
             if stop_event.triggered:
-                self.sim_setup.logger.error(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                self.sim_setup.logger.info(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Return the states
-                reward = round(self.reward_function.reward, 3)
-                self.reward_function.reset_rewards()
-
-                self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
-                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
-                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+                return self.return_state_reward_mask()
             
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
-
 
     def advance_to_next_stopping_event(self):
         """
@@ -368,17 +366,9 @@ class VertiSim:
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
                 event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-                self.sim_setup.logger.warning(f"Triggered event: {event_name}")
-                # Reset the event
-                self._reset_event(event_name)
+                self.sim_setup.logger.info(f"Triggered event: {event_name}")
                 # Return the states
-                reward = round(self.reward_function.reward, 3)
-                self.reward_function.reset_rewards()
-
-                self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(self.get_current_state())}")
-                self.sim_setup.logger.warning(f"Action mask: {self.action_mask()}")
-                return self.get_current_state(), reward, self.is_terminated(), self.is_truncated(), self.action_mask()
+                return self.return_state_reward_mask()
 
         self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
@@ -395,36 +385,35 @@ class VertiSim:
             # Step the simulation
             self.env.step()
             
-            # Check for other stopping events
+            # Check for other stopping events. Triggering events are added to the queue with event name and occurence time (event_name, event_time)
             if len(self.sim_setup.system_manager.triggered_stopping_event_queue):
                 # Pop the event on top of the queue
-                event_name = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
-                self.sim_setup.logger.warning(f"Triggered event: {event_name}")
-                # Reset the event
-                self._reset_event(event_name)
-                # Return the states
-                reward = round(self.reward_function.reward, 3)
-                current_state = self.get_current_state()
-                action_mask = self.action_mask()
-                self.reward_function.reset_rewards()
+                event_name, event_time = self.sim_setup.system_manager.triggered_stopping_event_queue.pop()  
 
-                self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(current_state)}")
-                self.sim_setup.logger.warning(f"Action mask: {action_mask}")
-                return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask
+                # Check if we already made a decision at this time
+                if event_time == self.last_decision_time:
+                    continue  # Skip this event as a decision was already made for this time 
+
+                self.sim_setup.logger.info(f"Triggered event: {event_name}")
+
+                # Store the current simulation time when making a decision
+                self.last_decision_time = event_time            
+
+                # Return the states
+                return self.return_state_reward_mask()
             
             # Check for periodic stop event
             if periodic_stop_event.triggered:
-                self.sim_setup.logger.warning(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
-                reward = round(self.reward_function.reward, 3)
-                current_state = self.get_current_state()
-                action_mask = self.action_mask()
-                self.reward_function.reset_rewards()
+                # Check if we already made a decision at this time
+                if self.env.now == self.last_decision_time:
+                    continue  # Skip the periodic stop event if a decision was already made
+                
+                self.sim_setup.logger.info(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                
+                # Store the current simulation time when making a decision
+                self.last_decision_time = self.env.now
 
-                self.sim_setup.logger.warning(f"Reward: {reward}")
-                self.sim_setup.logger.warning(f"Current state: {pformat(current_state)}")
-                self.sim_setup.logger.warning(f"Action mask: {action_mask}")
-                return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask          
+                return self.return_state_reward_mask()       
 
         self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 3), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
@@ -434,6 +423,20 @@ class VertiSim:
                 (not self.terminal_event.triggered and 
                 not self.truncation_event.triggered and
                 not self._check_demand_satisfied()))
+    
+    def return_state_reward_mask(self):
+        """
+        Return the state, reward, and action mask.
+        """
+        reward = round(self.reward_function.reward, 3)
+        current_state = self.get_current_state()
+        action_mask = self.action_mask()
+        self.reward_function.reset_rewards()
+
+        self.sim_setup.logger.info(f"Reward: {reward}")
+        self.sim_setup.logger.info(f"Current state: {pformat(current_state)}")
+        self.sim_setup.logger.debug(f"Action mask: {action_mask}")    
+        return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask    
     
     def _check_demand_satisfied(self):
         # If system_manager.passenger_arrival_complete == True and if there is no passenger left in the waiting rooms of the vertiports, succeed the terminal event
@@ -445,7 +448,7 @@ class VertiSim:
             # Check if last passenger has arrived and all waiting rooms are empty
             if bool(self.sim_setup.system_manager.passenger_arrival_complete 
                     and self.sim_setup.system_manager.check_all_waiting_rooms_empty()):
-                self.sim_setup.logger.error(self.sim_setup.log_brief_metrics())
+                self.sim_setup.logger.info(self.sim_setup.log_brief_metrics())
                 self.terminal_event.succeed()                
                 return True
         else:
@@ -454,7 +457,7 @@ class VertiSim:
                 and self.sim_setup.system_manager.check_all_waiting_rooms_empty()
                 and self.sim_setup.system_manager.is_all_passenger_travelled()):
                 # self.sim_setup.logger.warning("Demand satisfied")
-                self.sim_setup.logger.error(self.sim_setup.log_brief_metrics())
+                self.sim_setup.logger.info(self.sim_setup.log_brief_metrics())
                 self.terminal_event.succeed()
                 return True
         return False
@@ -498,12 +501,9 @@ class VertiSim:
         # print("Gettting the instance initial state")
         while self.sim_setup.system_manager.get_available_aircraft_count() < self.sim_setup.system_manager.num_initial_aircraft:          
             self.env.step()
-            for event_name, event in self.stopping_events.items():
-                if event.triggered:  
-                    # Reset the event
-                    self._reset_event(event_name) 
-                    # Pop them out from the triggered event queue
-                    self.sim_setup.system_manager.triggered_stopping_event_queue.pop()
+            while len(self.sim_setup.system_manager.triggered_stopping_event_queue)>0:   
+                # Pop them out from the triggered event queue
+                self.sim_setup.system_manager.triggered_stopping_event_queue.pop()          
         return self.get_current_state()
 
     @staticmethod

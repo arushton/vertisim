@@ -170,7 +170,7 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
             aircraft.ground_holding_end_time = self.env.now
             aircraft.idle_time += ground_holding_time
             aircraft.save_process_time(event='idle', process_time=ground_holding_time)
-            self.logger.info(f'Saved idle time of {miliseconds_to_hms(ground_holding_time)} for ground holding for aircraft {aircraft.tail_number} at {aircraft.location}.')
+            self.logger.debug(f'Saved idle time of {miliseconds_to_hms(ground_holding_time)} for ground holding for aircraft {aircraft.tail_number} at {aircraft.location}.')
             self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
             aircraft.detailed_status = 'idle'
             # Put aircraft into available aircraft store

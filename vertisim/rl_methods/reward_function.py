@@ -35,18 +35,25 @@ class RewardFunction:
         # Calculate the reward
         self.reward = waiting_time_cost + holding_time_cost + energy_cost + spill_cost
 
+    def simplified_spill_reward(self, actions: List[int]) -> None:
+        # Spit cost
+        self.reward = self._calculate_spill_cost()
+
     def dollar_cost_reward(self, actions: List[int]) -> None:
         # Reward Function: Profit = Revenue - (Energy Cost + Operating Cost)
         revenue = self._calculate_revenue(actions)
         energy_cost = self._calculate_energy_cost(actions)
         operating_cost = self._calculate_operating_cost(actions)
-        self.reward = revenue - (energy_cost + operating_cost)            
+        spill_cost = self._calculate_spill_cost()
+        self.reward = revenue - (energy_cost + operating_cost + spill_cost)         
 
     def compute_reward(self, actions: List[int]) -> None:
         """
         Calculate the reward based on the provided actions.
         """
-        self.spill_reward(actions)
+        self.dollar_cost_reward(actions)
+        # self.simplified_spill_reward(actions)
+        # self.spill_reward(actions)
         
         # departing_passengers = self._get_departing_passengers(actions)
 
@@ -113,7 +120,7 @@ class RewardFunction:
         """
         Get the departing passengers count for Origin-destination pair.
         """
-        dest_departing_pax_pair = {}
+        dest_departing_pax_pair = {(origin_id, dest_id): set() for origin_id in self.sim_setup.vertiports.keys() for dest_id in self.sim_setup.vertiports.keys() if origin_id != dest_id}
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
             if actions[aircraft_id] < self.sim_setup.num_vertiports():
                 dest_vertiport_id = self._get_destination_vertiport_id(aircraft_id=aircraft_id, actions=actions)

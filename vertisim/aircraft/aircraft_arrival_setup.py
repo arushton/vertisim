@@ -437,7 +437,7 @@ class AircraftArrivalSetup:
         # Save aircraft in aircraft_agent dictionary.
         self.system_manager.aircraft_agents[aircraft.tail_number] = aircraft
 
-        self.vertiport_logger.info(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
+        self.vertiport_logger.debug(f"Aircraft {aircraft.tail_number}, state: {aircraft.detailed_status}, SOC: {aircraft.soc}, target SOC: {aircraft.target_soc}, location: {aircraft.location}.")
 
         yield self.env.process(self.initiate_aircraft(aircraft=aircraft))
         

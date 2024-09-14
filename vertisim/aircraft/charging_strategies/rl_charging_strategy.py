@@ -83,7 +83,7 @@ class RLChargingStrategy(BaseChargingStrategy):
             idle_time = aircraft.env.now - aircraft.charging_end_time
         aircraft.idle_time += idle_time
         aircraft.save_process_time(event='idle', process_time=idle_time)
-        aircraft.logger.info(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {aircraft.tail_number} at {aircraft.location}.')
+        aircraft.logger.debug(f'Saved idle time of {miliseconds_to_hms(idle_time)} between arrival and charging for aircraft {aircraft.tail_number} at {aircraft.location}.')
 
         aircraft.detailed_status = 'charging'
         charge_time = self.get_charging_time(aircraft=aircraft)

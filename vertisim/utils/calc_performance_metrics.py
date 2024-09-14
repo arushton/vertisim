@@ -13,8 +13,8 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
         trip_times[vertiport_id]['passenger_trip_time']['max'] = ms_to_min(np.max(waiting_times))
         trip_times[vertiport_id]['passenger_trip_time']['min'] = ms_to_min(np.min(waiting_times))
     try:
-        logger.error("Passenger trip time stats (mins):")
-        logger.error("----------------------------------")
+        logger.info("Passenger trip time stats (mins):")
+        logger.info("----------------------------------")
         df = pd.DataFrame(
             {
                 'mean': trip_times[vertiport_id]['passenger_trip_time']['mean'],
@@ -25,8 +25,8 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
             } for vertiport_id in trip_times.keys()
         )
         df.index = trip_times.keys()
-        logger.error(df)
-        logger.error("")
+        logger.info(df)
+        logger.info("")
         
         if print_metrics:
             print("Passenger trip time stats (mins):")
@@ -48,8 +48,8 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
         waiting_times_dict[vertiport_id]['passenger_waiting_time']['min'] = ms_to_min(np.min(waiting_times))
     
     try:
-        logger.error("Passenger waiting time stats (mins):")
-        logger.error("-------------------------------------")
+        logger.info("Passenger waiting time stats (mins):")
+        logger.info("-------------------------------------")
         df = pd.DataFrame(
             {
                 'Vertiport ID': vertiport_id,
@@ -60,9 +60,9 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
                 'min': waiting_times_dict[vertiport_id]['passenger_waiting_time']['min']
             } for vertiport_id in waiting_times_dict.keys()
         )
-        logger.error(df)
-        logger.error("-------------------------------------")
-        logger.error("")
+        logger.info(df)
+        logger.info("-------------------------------------")
+        logger.info("")
 
         if print_metrics:
             print("Passenger waiting time stats (mins):")

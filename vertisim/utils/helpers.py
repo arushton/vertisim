@@ -3,7 +3,7 @@ import math
 import numpy as np
 import os
 from enum import Enum
-from ..utils.units import sec_to_ms, ms_to_hr, ms_to_sec
+from ..utils.units import sec_to_ms, ms_to_hr, ms_to_sec, sec_to_hr
 from typing import List, Union, Dict, Any, Optional
 import re
 import pandas as pd # For type hinting
@@ -586,17 +586,17 @@ def expected_pax_arrivals(arrival_df, demand_type, current_time, look_ahead_time
 
         if route in arrival_df.columns:
             lambda_rate = interval[route]
-            expected_arrivals = round(ms_to_hr(lambda_rate * look_ahead_time))  # Convert to hours
+            expected_arrivals = round(lambda_rate * ms_to_hr(look_ahead_time))  # Convert to hours
             return expected_arrivals
         else:
             return "Route not found"
-    elif demand_type == 'scheduled' or 'autoregressive':
+    elif demand_type in ['scheduled', 'autoregressive']:
         # Filter the data for the specified origin and destination
         filtered_data = arrival_df[(arrival_df['origin_vertiport_id'] == origin) & (arrival_df['destination_vertiport_id'] == destination)]
 
         # Filter the data to only include arrivals within the specified window
-        time_window_data = filtered_data[(filtered_data['passenger_arrival_time'] >= current_time - look_ahead_time) & 
-                                        (filtered_data['passenger_arrival_time'] < current_time)]
+        time_window_data = filtered_data[(filtered_data['passenger_arrival_time'] >= ms_to_sec(current_time)) & 
+                                        (filtered_data['passenger_arrival_time'] < ms_to_sec(current_time) + ms_to_sec(look_ahead_time))]
 
         # Estimate the expected arrivals in the next 10 minutes
         return len(time_window_data)
