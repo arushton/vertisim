@@ -223,7 +223,7 @@ class Aircraft:
         if value in self.system_manager.vertiport_ids:
             self._origin_vertiport_id = value
         else:
-            raise ValueError(f"Vertiport with id {value} does not exist in the vertiport network")
+            raise ValueError(f"Vertiport with id {value} does not exist in the vertiport network. Aircraft {self.tail_number} cannot be assigned to this vertiport.")
         
     @property
     def destination_vertiport_id(self):

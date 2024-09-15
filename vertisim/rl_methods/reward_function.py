@@ -42,7 +42,10 @@ class RewardFunction:
     def dollar_cost_reward(self, actions: List[int]) -> None:
         # Reward Function: Profit = Revenue - (Energy Cost + Operating Cost)
         revenue = self._calculate_revenue(actions)
-        energy_cost = self._calculate_energy_cost(actions)
+        if self.config['external_optimization_params']['reward_function_parameters']['usd_energy_per_kwh'] != 0:
+            energy_cost = self._calculate_energy_cost(actions)
+        else:
+            energy_cost = 0
         operating_cost = self._calculate_operating_cost(actions)
         spill_cost = self._calculate_spill_cost()
         self.reward = revenue - (energy_cost + operating_cost + spill_cost)         
