@@ -38,7 +38,7 @@ class OnDemandSystemManager(BaseSystemManager):
                  logger: object,
                  aircraft_logger: object,
                  passenger_logger: object,
-                 sim_mode: str = 'ondemand'):
+                 sim_mode: Dict):
 
         super().__init__(env=env,
                         vertiports=vertiports,

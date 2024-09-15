@@ -36,7 +36,7 @@ class RLSystemManager(BaseSystemManager):
                  stopping_events: Dict,
                  truncation_events: Dict,
                  truncation_event: simpy.Event,
-                 sim_mode: str = 'rl',
+                 sim_mode: Dict,
                  periodic_stopping: bool = False,
                  periodic_and_event_driven: bool = False
                  ):

@@ -264,7 +264,7 @@ class RewardFunction:
         """
         Calculate the reward for charging.
         """
-        if aircraft.system_manager.sim_mode == 'rl':
+        if aircraft.system_manager.sim_mode['rl']:
             return rl_utils.charge_reward(
                 current_soc=aircraft.soc,
                 soc_reward_threshold=aircraft.charging_strategy.soc_reward_threshold

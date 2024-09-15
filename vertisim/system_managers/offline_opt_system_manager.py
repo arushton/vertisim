@@ -30,7 +30,7 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
                  logger: object,
                  aircraft_logger: object,
                  passenger_logger: object,
-                 sim_mode: str = 'offline_optimization',
+                 sim_mode: Dict,
                  external_optimization_params: Dict = None):
         
         super().__init__(env=env,

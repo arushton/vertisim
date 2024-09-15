@@ -523,32 +523,6 @@ class VertiSim:
             action = action // n_actions
         return list(reversed(multidiscrete_action))   
     
-
-    # def set_action_space(self, config: Dict) -> gym.spaces.Discrete:
-    #     """
-    #     Creates the action space for each aircraft.
-    #     """
-    #     n_actions = self.get_action_count()
-    #     # n_aircraft = self.get_aircraft_count(config=config)
-    #     # return gym.spaces.MultiDiscrete([n_actions] * n_aircraft)
-    #     return gym.spaces.Discrete(n_actions)
-    
-    # def set_observation_space(self) -> gym.spaces.Box:
-    #     # Vertiport states
-    #     # Get the number of vertiports
-    #     num_vertiports = len(self.config['network_and_demand_params']['vertiports'])
-
-    #     # Get number of aircraft defined in the config file
-    #     num_aircraft = self.get_aircraft_count()
-
-    #     # Get the total number of state variables
-    #     total_state_variables = num_vertiports * self.get_vertiport_state_variable_count() +\
-    #                             num_aircraft * self.get_aircraft_state_variable_count() +\
-    #                             num_vertiports * self.get_environmental_state_variable_count()
-        
-    #     # Return the observation space
-    #     return gym.spaces.Box(low=0, high=np.inf, shape=(total_state_variables,), dtype=np.float32)
-    
     def get_aircraft_count(self) -> int:
         return sum(
             vertiport['aircraft_arrival_process']['num_initial_aircraft_at_vertiport']

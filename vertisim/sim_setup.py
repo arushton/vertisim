@@ -413,7 +413,7 @@ class SimSetup:
                 'logger': self.logger,
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
-                'sim_mode': system_manager_type
+                'sim_mode': self.sim_mode
             },
             'rl': {
                 'env': self.env,
@@ -440,7 +440,7 @@ class SimSetup:
                 'stopping_events': self.stopping_events,
                 'truncation_events': self.truncation_events,
                 'truncation_event': self.truncation_event,
-                'sim_mode': system_manager_type,
+                'sim_mode': self.sim_mode,
                 'periodic_stopping': not is_none(self.external_optimization_params['periodic_time_step']),
                 'periodic_and_event_driven': self.external_optimization_params['periodic_and_event_driven']
             },
@@ -465,7 +465,7 @@ class SimSetup:
                 'logger': self.logger,
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
-                'sim_mode': system_manager_type,
+                'sim_mode': self.sim_mode,
                 'external_optimization_params': self.external_optimization_params
             },
         }

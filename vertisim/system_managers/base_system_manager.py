@@ -36,7 +36,7 @@ class BaseSystemManager:
                  logger: object,
                  aircraft_logger: object,
                  passenger_logger: object,
-                 sim_mode: str):
+                 sim_mode: Dict):
         self.env = env
         self.vertiports = vertiports
         self.vertiport_ids = vertiport_ids
@@ -805,7 +805,7 @@ class BaseSystemManager:
         for passenger in aircraft.passengers_onboard:
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='boarding_start')
 
-        if not aircraft.charged_during_turnaround and self.sim_mode != 'offline_optimization':
+        if not aircraft.charged_during_turnaround and not self.sim_mode['offline_optimization']:
             yield self.env.process(aircraft.embark_passengers())
             aircraft.save_process_time(event='boarding', process_time=self.env.now-aircraft.flight_allocation_time)
 

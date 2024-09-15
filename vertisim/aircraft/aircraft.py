@@ -112,7 +112,7 @@ class Aircraft:
         self.battery_capacity = self.aircraft_params['battery_capacity']
 
         self.ground_taxi_speed = self.aircraft_params['ground_taxi_speed']
-        self.taxi_duration = sec_to_ms(30) # 30 seconds initial value. This will be updated as simulation progresses.
+        self.taxi_duration = sec_to_ms(0.01) # 30 seconds initial value. This will be updated as simulation progresses.
 
         # -------- Not used ------------
         self.hover_altitude = aircraft_params['hover_altitude']
@@ -788,10 +788,14 @@ class Aircraft:
         """Defines the take-off process of an aircraft."""
         self.preflight_soc = self.soc
         yield self.env.process(self.initial_takeoff_procedure(take_off_fato_id))
+        if self.system_manager.sim_mode['optim_rl_comparison']:
+            self.release_fato_and_departure_fix()
         yield self.env.process(self.hover_climb_phase())
         yield self.env.process(self.climb_transition_phase())
+
         # Release the FATO pad and departure fix resource after reaching to the nextNode
-        self.release_fato_and_departure_fix()
+        if not self.system_manager.sim_mode['optim_rl_comparison']:
+            self.release_fato_and_departure_fix()
 
         # # If the simulation is running by an optimization algorithm, then this will
         # # trigger this event and the optimization algorithm will make a decision.
@@ -1026,7 +1030,7 @@ class Aircraft:
         Checks whether the aircraft is in a state that it can perform the action.
         If not penalizes the agent and triggers a truncation event.
         """
-        if self.system_manager.sim_mode == 'rl' \
+        if self.system_manager.sim_mode['rl'] \
             and self.tail_number not in self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.current_vertiport_id):
             print(f"Truncation: Aircraft {self.tail_number} at {self.location} is not in the available list: {self.system_manager.get_available_aircraft_tail_numbers(vertiport_id=self.current_vertiport_id)}. Status: {self.status}")
             self.system_manager.truncation_penalty += 1
@@ -1037,7 +1041,7 @@ class Aircraft:
         # Check whether the aircraft is in a state that it can perform the action.
         self.check_for_state_action_violation()
 
-        if not self.system_manager.sim_mode == 'offline_optimization':
+        if not self.system_manager.sim_mode['offline_optimization']:
             aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
                                                                    tail_number=self.tail_number)
             
@@ -1062,7 +1066,7 @@ class Aircraft:
         self.is_process_completed = True
         # self.system_manager.reward += 100
         # print(f"Charged aircraft {self.tail_number} at {self.destination_vertiport_id}")
-        if self.system_manager.sim_mode == 'rl':
+        if self.system_manager.sim_mode['rl']:
             self.logger.info(f'charging_end_event is triggered for {self.tail_number} time {self.env.now}')
             self.system_manager.trigger_stopping_event(event_name="charging_end_event", id=self.tail_number)
       
@@ -1079,7 +1083,7 @@ class Aircraft:
         """
         if self.soc-self.convert_kwh_soc(kwh) < 1:
             soc_update = self.soc
-            if self.system_manager.sim_mode == 'rl' and self.soc_at_zero_event_triggered == False:
+            if self.system_manager.sim_mode['rl'] and self.soc_at_zero_event_triggered == False:
                 print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(max(self.soc-self.convert_kwh_soc(kwh),0), 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
                 self.soc_at_zero_event_triggered = True
                 self.system_manager.truncation_penalty += 1
