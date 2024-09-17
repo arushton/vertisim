@@ -199,8 +199,7 @@ class VertiportConfig:
             for passenger in waiting_room_store.items:
                 waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
                 bin_index = int(waiting_time // bin_size)
-                print(f"{miliseconds_to_hms(self.env.now)}: Flight request store - Passenger {passenger.passenger_id} has waiting time {waiting_time} and is placed in bin {bin_index}")
-
+                
                 # Ensure bin_index does not exceed the maximum index
                 if bin_index >= self.num_waiting_time_bins + 1:
                     bin_index = self.num_waiting_time_bins
