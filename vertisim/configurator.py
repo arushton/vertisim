@@ -7,7 +7,7 @@ from .charger_model import ChargerModel
 from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
-from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms, sec_to_ms
+from .utils.units import ms_to_min, ms_to_sec, ms_to_hr, min_to_ms, sec_to_ms, sec_to_min
 from .utils.read_files import read_input_file
 from .utils.helpers import miliseconds_to_hms, expected_pax_arrivals
 from pydantic import BaseModel
@@ -29,7 +29,6 @@ class VertiportStates(BaseModel):
     num_available_fato: int
     num_available_parking_pad: int
     num_available_charger: int
-    # total_passenger_waiting_time: float
     total_pax_waiting_time_per_od: Dict[str, float]
     expected_pax_arr_per_od: Dict[str, float]
     aircraft_status: Dict[int, int]
@@ -37,6 +36,7 @@ class VertiportStates(BaseModel):
     # avg_pax_waiting_time: Dict[str, float]
     std_pax_waiting_time_per_od: Dict[str, float]
     # time_to_next_available_charger: float
+    waiting_time_bins: Dict[str, List[int]]
 
 class VertiportConfig:
 
@@ -48,7 +48,8 @@ class VertiportConfig:
                  vertiport_ids: list,
                  network_and_demand: dict,
                  aircraft_capacity: int,
-                 pax_waiting_time_threshold: int = 600):
+                 pax_waiting_time_threshold: int = 600,
+                 num_waiting_time_bins: int = 10):
         self.env = env
         self.vertiport_id = vertiport_id
         self.vertiport_data = vertiport_data
@@ -58,6 +59,7 @@ class VertiportConfig:
         self.network_and_demand = network_and_demand
         self.aircraft_capacity = aircraft_capacity
         self.pax_waiting_time_threshold = pax_waiting_time_threshold
+        self.num_waiting_time_bins = num_waiting_time_bins
         self.demand_type = self.get_demand_type()         
         self.pax_arrival_df = None
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
@@ -176,6 +178,44 @@ class VertiportConfig:
             return 0
         holding_times = [self.env.now - holding_time for holding_time in extract_dict_values(self.holding_times)]
         return VertiportConfig.unit_helper(unit=unit, value=sum(holding_times))
+    
+    def get_pax_waiting_time_bins(self) -> Dict:
+        """
+        Returns the number of passengers in each waiting time bin for each flight direction.
+        The number of bins is provided externally using self.num_waiting_time_bins.
+        Passengers with waiting times equal to or exceeding the threshold are placed in the last bin.
+        """
+        # Calculate bin_size based on the threshold and the number of bins
+        bin_size = sec_to_min(self.pax_waiting_time_threshold) / self.num_waiting_time_bins
+
+        # Initialize the waiting time bins for each destination
+        waiting_time_bins = {
+            destination: [0 for _ in range(self.num_waiting_time_bins)]
+            for destination in self.waiting_room_stores.keys()
+        }
+
+        # Process passengers in the waiting rooms
+        for destination, waiting_room_store in self.waiting_room_stores.items():
+            for passenger in waiting_room_store.items:
+                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                bin_index = int(waiting_time // bin_size)
+                # Ensure bin_index does not exceed the maximum index
+                if bin_index >= self.num_waiting_time_bins:
+                    bin_index = self.num_waiting_time_bins - 1
+                waiting_time_bins[destination][bin_index] += 1
+
+        # Process passengers in the flight request stores
+        for destination, flight_request_store in self.flight_request_stores.items():
+            for passenger in flight_request_store.items:
+                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                bin_index = int(waiting_time // bin_size)
+                # Ensure bin_index does not exceed the maximum index
+                if bin_index >= self.num_waiting_time_bins:
+                    bin_index = self.num_waiting_time_bins - 1
+                waiting_time_bins[destination][bin_index] += 1
+
+        return waiting_time_bins
+
     
     def get_waiting_time_cost(self, unit:str, last_decision_time: float, type:str, exclude_pax_ids: list=[]):
         """
@@ -428,6 +468,8 @@ class VertiportConfig:
         entity_states['num_spilled_passengers'] = self.spilled_passengers_dict
 
         entity_states['total_pax_waiting_time_per_od'] = self.get_total_waiting_time(reward_function_parameters=reward_function_parameters, exclude_pax_ids=departing_passengers)
+
+        entity_states['waiting_time_bins'] = self.get_pax_waiting_time_bins()
 
         # entity_states['time_to_next_available_charger'] = self.get_next_available_charger_time()
 

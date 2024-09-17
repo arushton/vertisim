@@ -242,7 +242,8 @@ class SimSetup:
             vertiport_ids=self.vertiport_ids,
             network_and_demand=self.network_and_demand_params,
             aircraft_capacity=self.aircraft_params['pax'],
-            pax_waiting_time_threshold=self.sim_params['max_passenger_waiting_time']
+            pax_waiting_time_threshold=self.sim_params['max_passenger_waiting_time'],
+            num_waiting_time_bins=self.external_optimization_params['num_waiting_time_bins']
         )
     
     def create_event_saver(self):
