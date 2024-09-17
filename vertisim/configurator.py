@@ -190,7 +190,7 @@ class VertiportConfig:
 
         # Initialize the waiting time bins for each destination
         waiting_time_bins = {
-            destination: [0 for _ in range(self.num_waiting_time_bins)]
+            destination: [0 for _ in range(self.num_waiting_time_bins + 1)]
             for destination in self.waiting_room_stores.keys()
         }
 
@@ -199,9 +199,11 @@ class VertiportConfig:
             for passenger in waiting_room_store.items:
                 waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
                 bin_index = int(waiting_time // bin_size)
+                print(f"{miliseconds_to_hms(self.env.now)}: Flight request store - Passenger {passenger.passenger_id} has waiting time {waiting_time} and is placed in bin {bin_index}")
+
                 # Ensure bin_index does not exceed the maximum index
-                if bin_index >= self.num_waiting_time_bins:
-                    bin_index = self.num_waiting_time_bins - 1
+                if bin_index >= self.num_waiting_time_bins + 1:
+                    bin_index = self.num_waiting_time_bins
                 waiting_time_bins[destination][bin_index] += 1
 
         # Process passengers in the flight request stores
@@ -210,8 +212,8 @@ class VertiportConfig:
                 waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
                 bin_index = int(waiting_time // bin_size)
                 # Ensure bin_index does not exceed the maximum index
-                if bin_index >= self.num_waiting_time_bins:
-                    bin_index = self.num_waiting_time_bins - 1
+                if bin_index >= self.num_waiting_time_bins + 1:
+                    bin_index = self.num_waiting_time_bins
                 waiting_time_bins[destination][bin_index] += 1
 
         return waiting_time_bins
