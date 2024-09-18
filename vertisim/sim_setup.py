@@ -29,7 +29,7 @@ from .logger import Logger
 from .run_step_by_step_simulation import run_step_by_step_simulation
 from .utils.create_output_folders import create_output_folders
 from .utils.get_aircraft_count import get_aircraft_count
-from .utils.calc_performance_metrics import calculate_passenger_trip_time_stats, calculate_passenger_waiting_time_stats
+from .utils.calc_performance_metrics import calculate_passenger_trip_time_stats, calculate_passenger_waiting_time_stats, log_and_print_spilled_passengers
 from .utils.bundle_passenger_related_distributions import bundle_distributions
 from .utils.calc_vertiport_distances_from_lat_lng import calc_vertiport_distances
 from .utils.helpers import set_seed, get_random_id, create_dict_for_fixes, is_none, cache_to_file
@@ -558,6 +558,11 @@ class SimSetup:
         calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker=self.event_saver.performance_metrics()['passenger_waiting_time'],
                                                logger=self.logger,
                                                print_metrics=print_metrics)
+        # If spill option is enabled, print the number of spilled passengers
+        if self.external_optimization_params['spill_optimization']:
+            log_and_print_spilled_passengers(self.event_saver.performance_metrics()['spilled_passenger_tracker'],
+                                             self.logger,
+                                             print_metrics)
                     
 
     def save_results(self, performance_metrics):

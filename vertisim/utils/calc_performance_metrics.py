@@ -37,7 +37,7 @@ def calculate_passenger_trip_time_stats(passenger_trip_time_tracker, flight_dire
     except:
         pass
 
-def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logger, print_metrics=False):
+def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logger, print_metrics):
     waiting_times_dict = defaultdict(lambda: defaultdict(dict))
     for vertiport_id, data in passenger_waiting_time_tracker.items():
         waiting_times = np.array(list(data.values()))
@@ -72,3 +72,32 @@ def calculate_passenger_waiting_time_stats(passenger_waiting_time_tracker, logge
             print("")
     except:
         pass
+
+
+def log_and_print_spilled_passengers(spilled_passengers, logger, print_metrics):
+    try:
+        # Create DataFrame
+        df = pd.DataFrame(list(spilled_passengers.items()), columns=['Flight Dir', 'Spilled Passengers'])
+        
+        # Calculate total spilled passengers
+        total_spilled = df['Spilled Passengers'].sum()
+        
+        # Append a new row for the total
+        total_row = pd.DataFrame({'Flight Dir': ['Total'], 'Spilled Passengers': [total_spilled]})
+        df = pd.concat([df, total_row], ignore_index=True)
+        
+        logger.info("Spilled passengers:")
+        logger.info("-------------------")
+        logger.info(df)
+        logger.info("-------------------")
+        logger.info("")
+    
+        if print_metrics:
+            print("Spilled passengers:")
+            print("-------------------")
+            print(df)
+            print("-------------------")
+            print("")
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+

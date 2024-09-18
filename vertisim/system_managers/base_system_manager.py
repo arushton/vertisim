@@ -768,7 +768,8 @@ class BaseSystemManager:
         aircraft.taxi_duration = taxi_end_time - taxi_start_time
 
     def update_flight_info(self, aircraft: object):
-        self.event_saver.update_flight_tracker(vertiport_id=aircraft.origin_vertiport_id)
+        self.event_saver.update_flight_tracker(origin=aircraft.origin_vertiport_id,
+                                               destination=aircraft.destination_vertiport_id)
         self.event_saver.update_load_factor_tracker(vertiport_id=aircraft.origin_vertiport_id, 
                                                     load_factor=len(aircraft.passengers_onboard))
         

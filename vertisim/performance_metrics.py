@@ -52,6 +52,7 @@ class PerformanceMetrics:
         self.load_factor_tracker = performance_metric_trackers['load_factor_tracker']
         self.passenger_count_tracker = performance_metric_trackers['passenger_count_tracker']
         self.passenger_time_tracker = performance_metric_trackers['passenger_time_tracker']
+        self.spilled_passenger_tracker = performance_metric_trackers['spilled_passenger_tracker']
         self.aircraft_energy_consumption_tracker = performance_metric_trackers['aircraft_energy_consumption_tracker']
         self.passenger_trip_times = performance_metric_trackers['passenger_trip_time_tracker']
         self.repositioning_counter = performance_metric_trackers['repositioning_counter']
@@ -80,6 +81,8 @@ class PerformanceMetrics:
             self.compute_empty_flights()
             self.compute_aircraft_idle_time_stats()
             self.calculate_passenger_departure_queue_waiting_times_stats()
+            self.save_n_spilled_passengers()
+            self.save_n_flights()
         self.calculate_aircraft_arrival_queue_count_stats()
         self.calculate_aircraft_departure_queue_count_stats()
         self.compute_average_and_total_aircraft_throughput()
@@ -131,7 +134,13 @@ class PerformanceMetrics:
 
         # df.to_csv(f'{self.output_folder_path}/passenger_waiting_time.csv')   
 
+    def save_n_spilled_passengers(self):
+        for flight_dir in self.flight_directions:
+            self.performance_metrics[flight_dir]['n_spilled'] = self.spilled_passenger_tracker[flight_dir]
 
+    def save_n_flights(self):
+        for flight_dir in self.flight_directions:
+            self.performance_metrics[flight_dir]['n_flights'] = self.flight_count_tracker[flight_dir]
 
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
@@ -406,7 +415,11 @@ class PerformanceMetrics:
                                      in self.flight_and_time_tracker[vertiport_id].items()
                                      )    
                 self.performance_metrics[vertiport_id]['aircraft_throughput']['mean'] = round(total_aircraft / total_sim_time, 2)
-                self.performance_metrics[vertiport_id]['aircraft_throughput']['total'] = self.flight_count_tracker[vertiport_id]
+                # Get the values from flight_count_tracker keys that start with vertiport_id. The keys are in the format of origin_destination
+                keys = [key for key in self.flight_count_tracker.keys() if key.startswith(vertiport_id)]
+                self.performance_metrics[vertiport_id]['aircraft_throughput']['total'] = sum(
+                    self.flight_count_tracker[key] for key in keys
+                )
         else:
             first, second = self.get_time_interval(total_sim_time)
             interval_length = second - first
@@ -420,8 +433,12 @@ class PerformanceMetrics:
                     <= self.sim_start_timestamp + second * self.hour
                 )
                 self.performance_metrics[vertiport_id]['aircraft_throughput']['mean'] = total_aircraft / interval_length
-                self.performance_metrics[vertiport_id]['aircraft_throughput']['total'] = self.flight_count_tracker[vertiport_id]
-
+                # Get the values from flight_count_tracker keys that start with vertiport_id. The keys are in the format of origin_destination
+                keys = [key for key in self.flight_count_tracker.keys() if key.startswith(vertiport_id)]
+                self.performance_metrics[vertiport_id]['aircraft_throughput']['total'] = sum(
+                    self.flight_count_tracker[key] for key in keys
+                )
+                
     def compute_aircraft_throughput_for_each_hour(self):
         # Computes the aircraft throughput for each hour
         total_sim_time = self.calculate_total_simulated_time() 

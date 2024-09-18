@@ -40,11 +40,11 @@ def save_performance_metrics(simulation_params: dict,
                              simulationID: str,
                              flight_directions: list) -> str:
 
-    output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/db/vertisimDatabase.sqlite"
+    output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/vertisimDatabase.sqlite"
     print(f"Saving performance metrics to {output_path}\n")
     # If path doesn't exist, create it
-    if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db"):
-        os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite/db", exist_ok=True)
+    if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite"):
+        os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite", exist_ok=True)
 
     conn = create_connection(output_path)
     assert conn, 'Could not establish database connection.'
@@ -74,7 +74,7 @@ def save_performance_metrics(simulation_params: dict,
         print(f"Error: {err}")
     
     # --- PERFORMANCE METRICS TABLE --- 
-    metric_names = ['EnergyConsumptionMean', 'EnergyConsumptionMedian', 'EnergyConsumptionStd', 'EnergyConsumptionMax', 'EnergyConsumptionMin', 'EnergyConsumptionTotal', 'FlightDurationMean', 'FlightDurationMedian', 'FlightDurationStd', 'FlightDurationMax', 'FlightDurationMin', 'TripTimeMean', 'TripTimeMedian', 'TripTimeStd', 'TripTimeMax', 'TripTimeMin']
+    metric_names = ['EnergyConsumptionMean', 'EnergyConsumptionStd', 'EnergyConsumptionTotal', 'FlightDurationMean', 'FlightDurationMedian', 'FlightDurationStd', 'FlightDurationMax', 'FlightDurationMin','WaitingTimeMean', 'WaitingTimeMedian','WaitingTimeStd', 'WaitingTimeMax', 'WaitingTimeMin', 'TripTimeMean', 'TripTimeMedian', 'TripTimeStd', 'TripTimeMax', 'TripTimeMin', 'NSpilled', 'NFlights']
 
     try:
         # Create the table with dynamic columns
@@ -96,23 +96,32 @@ def save_performance_metrics(simulation_params: dict,
             energy_metrics = metrics_for_flight['energy_consumption']
             flight_duration_metrics = metrics_for_flight['flight_duration']
             trip_time_metrics = metrics_for_flight['passenger_trip_time']
+            n_spilled = metrics_for_flight['n_spilled']
+            n_flights = metrics_for_flight['n_flights']
+            # Flight direction is in the format 'origin_destination'. Split it into two separate columns
+            origin, _ = flight_dir.split('_')
+            waiting_time_metrics = performance_metrics[origin]['passenger_waiting_time']
             metric_values = [
                 energy_metrics['mean'], 
-                energy_metrics['median'], 
                 energy_metrics['std'],
-                energy_metrics['max'], 
-                energy_metrics['min'], 
                 energy_metrics['total'],
                 flight_duration_metrics['mean'], 
-                flight_duration_metrics['median'], 
+                flight_duration_metrics['median'],
                 flight_duration_metrics['std'],
-                flight_duration_metrics['max'], 
+                flight_duration_metrics['max'],
                 flight_duration_metrics['min'],
+                waiting_time_metrics['mean'],
+                waiting_time_metrics['median'],
+                waiting_time_metrics['std'],
+                waiting_time_metrics['max'],
+                waiting_time_metrics['min'],                
                 trip_time_metrics['mean'],
                 trip_time_metrics['median'],
                 trip_time_metrics['std'],
                 trip_time_metrics['max'],
-                trip_time_metrics['min']
+                trip_time_metrics['min'],
+                n_spilled,
+                n_flights
             ]
     
             placeholder = ', '.join(['?'] * (len(metric_values) + 2))

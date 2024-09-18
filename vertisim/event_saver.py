@@ -46,6 +46,7 @@ class EventSaver:
         self.passenger_trip_time_tracker = defaultdict(dict)
         self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 50} for flight_direction in flight_directions}
+        self.spilled_passenger_tracker = {flight_direction: 0 for flight_direction in flight_directions}
 
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -76,6 +77,7 @@ class EventSaver:
             'aircraft_charging_times': self.aircraft_charging_times,
             'aircraft_taxi_times': self.aircraft_taxi_times,
             'fato_usage_tracker': self.fato_usage_tracker,
+            'spilled_passenger_tracker': self.spilled_passenger_tracker,
             'flight_and_time_tracker': self.flight_and_time_tracker,
             'flight_count_tracker': self.flight_count_tracker,
             'flight_duration_tracker': self.flight_duration_tracker,
@@ -150,12 +152,12 @@ class EventSaver:
                                      sim_time=self.env.now)
         self.flight_duration_tracker[flight_direction][time] = flight_duration
 
-    def update_flight_tracker(self, vertiport_id):
+    def update_flight_tracker(self, origin, destination):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
-        self.flight_and_time_tracker[vertiport_id][time] = 1
-        self.flight_count_tracker[vertiport_id] += 1
+        self.flight_and_time_tracker[origin][time] = 1
+        self.flight_count_tracker[f"{origin}_{destination}"] += 1
 
     def update_load_factor_tracker(self, vertiport_id, load_factor):
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
@@ -205,6 +207,9 @@ class EventSaver:
         # Get the last value from the dictionary and add the queue_update to it
         last_value = list(self.passenger_departure_queue_count[vertiport_id].values())[-1]
         self.passenger_departure_queue_count[vertiport_id][time] = last_value + queue_update
+
+    def update_spilled_passenger_counter(self, flight_dir) -> None:
+        self.spilled_passenger_tracker[flight_dir] += 1
 
     def update_aircraft_arrival_queue_counter(self, vertiport_id: Any, queue_update: int) -> None:
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,

@@ -472,6 +472,7 @@ class RLSystemManager(BaseSystemManager):
                             excess_passengers = num_over_waiting_passengers - flight_capacity
                             for _ in range(excess_passengers):
                                 spilled_passenger = over_waiting_passengers.pop(0)  # Remove the first passenger in excess
+                                self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
                                 self.logger.info(f'Excess passenger {spilled_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - spilled_passenger.waiting_room_arrival_time)} min.')
                                 self.logger.info(f'Flight capacity: {flight_capacity}. Number of over-waiting passengers: {num_over_waiting_passengers}. Number of excess passengers: {excess_passengers}. Flights scheduled: {scheduled_flights}')
                                 # Remove the passenger from the waiting room store
@@ -491,6 +492,7 @@ class RLSystemManager(BaseSystemManager):
 
                             # Remove the passenger from the waiting room store
                             wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
+                            self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
                             # Penalize for passenger spill
                             self.spill_counter[(origin, destination)] += 1
                             # Update the spilled passenger counter at the vertiport

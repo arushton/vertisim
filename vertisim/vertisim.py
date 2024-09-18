@@ -42,9 +42,7 @@ class VertiSim:
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
                                   truncation_events=self.truncation_events,
-                                  truncation_event=self.truncation_event)    
-        # Initiate flow entities and create events
-        # initiate_flow_entities(sim_setup=self.sim_setup)       
+                                  truncation_event=self.truncation_event)        
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
@@ -91,9 +89,9 @@ class VertiSim:
         if self.config['sim_mode']['rl'] and self.config['sim_params']['print_brief_metrics']:
             self.sim_setup.log_brief_metrics(print_metrics=self.config['sim_params']['print_brief_metrics'])
                     
-        if not self.sim_setup.sim_mode['rl']:
+        if (not self.sim_setup.sim_mode['rl'] or self.sim_setup.output_params['save_output']):
             self.print_total_time_to_run()
-            if self.env.now > 0:
+            if self.env.now > 10:
                 performance_metrics = self.sim_setup.calculate_performance_metrics()
                 self.sim_setup.save_results(performance_metrics)
 
@@ -349,6 +347,7 @@ class VertiSim:
                 # Return the states
                 return self.return_state_reward_mask()
             
+        self.finalize_simulation()
         return self.get_current_state(), round(self.reward_function.reward, 2), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)    
 
     def advance_to_next_stopping_event(self):
