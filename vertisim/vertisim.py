@@ -195,7 +195,7 @@ class VertiSim:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft=aircraft, 
                                                                                                     destination_vertiport_id=destination_vertiport_id,
                                                                                                     departing_passengers=departing_passengers)))
-        yield self.env.all_of(process_list)     
+        yield self.env.all_of(process_list)    
 
     def action_mask(self, initial_state=False, final_state=False):
         """
@@ -573,3 +573,38 @@ class VertiSim:
     
     def get_performance_metrics(self):
         return fetch_latest_data_from_db(db_path="sqlite/db/vertisimDatabase.sqlite")
+    
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Remove sim_instance to prevent pickling non-picklable objects
+        state['env'] = None
+        state['sim_setup'] = None
+        return state
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Reinitialize sim_instance
+        self.env = simpy.Environment()
+        self.terminal_event, self.truncation_event, self.truncation_events, self.stopping_events = self.set_simulation_events(env=self.env, config=self.config)
+
+        self.sim_start_time = time.time()
+        self.sim_setup = SimSetup(env=self.env,
+                                  sim_params=self.config['sim_params'],
+                                  sim_mode=self.config['sim_mode'],
+                                  external_optimization_params=self.config['external_optimization_params'],
+                                  network_and_demand_params=self.config['network_and_demand_params'],
+                                  airspace_params=self.config['airspace_params'],
+                                  passenger_params=self.config['passenger_params'],
+                                  aircraft_params=self.config['aircraft_params'],
+                                  output_params=self.config['output_params'],
+                                  stopping_events=self.stopping_events,
+                                  truncation_events=self.truncation_events,
+                                  truncation_event=self.truncation_event)        
+        # Set the max simulation time
+        self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
+
+        if self.config['sim_mode']['rl']:
+            self.setup_for_rl()
+
+        self.status = True
+        self.last_decision_time = -1
