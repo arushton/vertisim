@@ -46,7 +46,7 @@ class Logger:
         # Stop propagation to parent logger
         self.logger.propagate = False 
         # Logger timestamp
-        self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')          
+        self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]
 
         if enable_logging:
             # Set the logging level
@@ -110,3 +110,11 @@ class Logger:
         if os.path.exists(file_path) and os.path.getsize(file_path) <= 1024*5:
             os.remove(file_path)
             print(f"Removed empty log file: {file_path}")                        
+
+class NullLogger:
+    def debug(self, *args, **kwargs): pass
+    def info(self, *args, **kwargs): pass
+    def warning(self, *args, **kwargs): pass
+    def error(self, *args, **kwargs): pass
+    def critical(self, *args, **kwargs): pass
+    def finalize_logging(self): pass

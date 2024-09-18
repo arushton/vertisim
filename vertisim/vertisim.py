@@ -25,7 +25,8 @@ from .run_step_by_step_simulation import run_step_by_step_simulation, run_steps_
 class VertiSim:
     def __init__(self, 
                  env: simpy.Environment, 
-                 config: Dict):
+                 config: Dict,
+                 reset: bool = False):
         self.env = env
         self.config = config
         self.terminal_event, self.truncation_event, self.truncation_events, self.stopping_events = self.set_simulation_events(env=self.env, config=self.config)
@@ -42,7 +43,8 @@ class VertiSim:
                                   output_params=config['output_params'],
                                   stopping_events=self.stopping_events,
                                   truncation_events=self.truncation_events,
-                                  truncation_event=self.truncation_event)        
+                                  truncation_event=self.truncation_event,
+                                  reset=reset)        
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
@@ -151,7 +153,7 @@ class VertiSim:
         self.sim_setup.system_manager.actions = actions
 
         # If a passenger has been waiting for more than X minutes, remove them from the waiting room.
-        if self.sim_setup.system_manager.external_optimization_params['spill_optimization']:
+        if self.sim_setup.system_manager.external_optimization_params['spill_optimization'] and self.env.now > 0:
             self.sim_setup.system_manager.remove_spilled_passengers(actions=actions)
             
         process_list = []
@@ -175,7 +177,10 @@ class VertiSim:
                 raise ValueError(f"Invalid action: {actions[aircraft_id]}")
                 
         # Compute the reward
-        self.reward_function.compute_reward(actions=actions)
+        if self.env.now == 0:
+            self.reward_function.reward = 0
+        else:
+            self.reward_function.compute_reward(actions=actions)
 
         # Apply the actions
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
@@ -190,7 +195,7 @@ class VertiSim:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft=aircraft, 
                                                                                                     destination_vertiport_id=destination_vertiport_id,
                                                                                                     departing_passengers=departing_passengers)))
-        yield self.env.all_of(process_list)    
+        yield self.env.all_of(process_list)     
 
     def action_mask(self, initial_state=False, final_state=False):
         """

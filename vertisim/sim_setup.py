@@ -25,7 +25,7 @@ from .save_output import save_output
 from .scheduler import Scheduler
 from .wind.wind import Wind
 from .utils.units import mph_to_metersec, degrees_to_radians
-from .logger import Logger
+from .logger import Logger, NullLogger
 from .run_step_by_step_simulation import run_step_by_step_simulation
 from .utils.create_output_folders import create_output_folders
 from .utils.get_aircraft_count import get_aircraft_count
@@ -56,7 +56,8 @@ class SimSetup:
                  output_params: Dict,
                  stopping_events: Dict = None,
                  truncation_events: Dict = None,
-                 truncation_event: simpy.Event = None):
+                 truncation_event: simpy.Event = None,
+                 reset=False):
         self.sim_params = sim_params
         self.sim_mode = sim_mode
         self.external_optimization_params = external_optimization_params
@@ -77,7 +78,7 @@ class SimSetup:
         self.flush_cache()
         self.env = env
         self.output_folder_path = create_output_folders(self.output_params['output_folder_path'])
-        self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers()
+        self.logger, self.aircraft_logger, self.passenger_logger, self.vertiport_logger = self.create_loggers(reset)
         self.stopping_events = stopping_events
         self.vertiport_layouts = self.create_vertiport_layout()      
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids 
@@ -109,10 +110,12 @@ class SimSetup:
             vertiport_distance_cache.clear()
             node_locations_cache.clear()
 
-    def create_loggers(self):
+    def create_loggers(self, reset):
         """
         Sets the loggers
         """
+        if reset:
+            return NullLogger(), NullLogger(), NullLogger(), NullLogger()
         logger = Logger(output_folder_path=self.output_folder_path)
         logger.create_logger(name='main', 
                              env=self.env, 
