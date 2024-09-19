@@ -1397,7 +1397,7 @@ class Aircraft:
             'flight_direction': self.get_flight_direction_index(),
             'location': self.get_aircraft_location_for_state(),
             'od_pair': self.get_od_pair_and_loc(),
-            'soc': int(self.soc),
+            'soc': self.soc,
             'time_to_arrival': self.estimate_time_to_arrival(),
             'holding_time': self.get_holding_time(),
             'num_passengers': len(self.passengers_onboard),
@@ -1424,7 +1424,7 @@ class AircraftState(BaseModel):
     flight_direction: int
     location: int
     od_pair: int
-    soc: int
+    soc: float
     time_to_arrival: float
     holding_time: float
     num_passengers: int

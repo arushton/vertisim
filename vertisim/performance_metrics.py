@@ -57,6 +57,7 @@ class PerformanceMetrics:
         self.passenger_trip_times = performance_metric_trackers['passenger_trip_time_tracker']
         self.repositioning_counter = performance_metric_trackers['repositioning_counter']
         self.total_charge_time_counter = performance_metric_trackers['total_charge_time_counter']
+        self.reward_tracker = performance_metric_trackers['reward_tracker']
         self.output_folder_path = self.get_save_path()
         self.vertiport_ids = vertiport_ids
         self.flight_directions = flight_directions
@@ -83,6 +84,7 @@ class PerformanceMetrics:
             self.calculate_passenger_departure_queue_waiting_times_stats()
             self.save_n_spilled_passengers()
             self.save_n_flights()
+            self.save_reward_stats()
         self.calculate_aircraft_arrival_queue_count_stats()
         self.calculate_aircraft_departure_queue_count_stats()
         self.compute_average_and_total_aircraft_throughput()
@@ -133,6 +135,11 @@ class PerformanceMetrics:
                                     data_dict=df)
 
         # df.to_csv(f'{self.output_folder_path}/passenger_waiting_time.csv')   
+
+    def save_reward_stats(self):
+        for flight_dir in self.flight_directions:
+            self.performance_metrics[flight_dir]['mean_reward'] = self.reward_tracker['mean_reward']
+            self.performance_metrics[flight_dir]['total_reward'] = self.reward_tracker['total_reward']
 
     def save_n_spilled_passengers(self):
         for flight_dir in self.flight_directions:

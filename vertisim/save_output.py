@@ -74,7 +74,28 @@ def save_performance_metrics(simulation_params: dict,
         print(f"Error: {err}")
     
     # --- PERFORMANCE METRICS TABLE --- 
-    metric_names = ['EnergyConsumptionMean', 'EnergyConsumptionStd', 'EnergyConsumptionTotal', 'FlightDurationMean', 'FlightDurationMedian', 'FlightDurationStd', 'FlightDurationMax', 'FlightDurationMin','WaitingTimeMean', 'WaitingTimeMedian','WaitingTimeStd', 'WaitingTimeMax', 'WaitingTimeMin', 'TripTimeMean', 'TripTimeMedian', 'TripTimeStd', 'TripTimeMax', 'TripTimeMin', 'NSpilled', 'NFlights']
+    metric_names = ['EnergyConsumptionMean', 
+                    'EnergyConsumptionStd', 
+                    'EnergyConsumptionTotal', 
+                    'FlightDurationMean', 
+                    'FlightDurationMedian', 
+                    'FlightDurationStd', 
+                    'FlightDurationMax', 
+                    'FlightDurationMin',
+                    'WaitingTimeMean', 
+                    'WaitingTimeMedian',
+                    'WaitingTimeStd', 
+                    'WaitingTimeMax', 
+                    'WaitingTimeMin', 
+                    'TripTimeMean', 
+                    'TripTimeMedian', 
+                    'TripTimeStd', 
+                    'TripTimeMax', 
+                    'TripTimeMin', 
+                    'NSpilled', 
+                    'NFlights', 
+                    'MeanReward', 
+                    'TotalReward']
 
     try:
         # Create the table with dynamic columns
@@ -101,6 +122,8 @@ def save_performance_metrics(simulation_params: dict,
             # Flight direction is in the format 'origin_destination'. Split it into two separate columns
             origin, _ = flight_dir.split('_')
             waiting_time_metrics = performance_metrics[origin]['passenger_waiting_time']
+            mean_reward = metrics_for_flight['mean_reward']
+            total_reward = metrics_for_flight['total_reward']
             metric_values = [
                 energy_metrics['mean'], 
                 energy_metrics['std'],
@@ -121,7 +144,9 @@ def save_performance_metrics(simulation_params: dict,
                 trip_time_metrics['max'],
                 trip_time_metrics['min'],
                 n_spilled,
-                n_flights
+                n_flights,
+                mean_reward,
+                total_reward
             ]
     
             placeholder = ', '.join(['?'] * (len(metric_values) + 2))

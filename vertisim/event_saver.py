@@ -47,6 +47,7 @@ class EventSaver:
         self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 50} for flight_direction in flight_directions}
         self.spilled_passenger_tracker = {flight_direction: 0 for flight_direction in flight_directions}
+        self.reward_tracker = {'step': 0, 'mean_reward': 0, 'total_reward': 0}
 
         for vertiport_id, _ in self.vertiports.items():
             self.aircraft_arrival_queue_count[vertiport_id][self.sim_start_timestamp] = 0
@@ -91,7 +92,8 @@ class EventSaver:
             'total_charge_time_counter': self.total_charge_time_counter,
             'passenger_trip_time_tracker': self.passenger_trip_time_tracker,
             'aircraft_process_time_tracker': self.aircraft_process_time_tracker,
-            'flight_phase_energy_consumption_tracker': self.flight_phase_energy_consumption_tracker
+            'flight_phase_energy_consumption_tracker': self.flight_phase_energy_consumption_tracker,
+            'reward_tracker': self.reward_tracker
         }
 
     def update_flying_aircraft_counter(self, flight_update: int):

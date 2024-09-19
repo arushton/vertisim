@@ -348,7 +348,6 @@ class VertiSim:
             self.env.step()
 
             if stop_event.triggered:
-                self.sim_setup.logger.info(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Return the states
                 return self.return_state_reward_mask()
             
@@ -437,6 +436,8 @@ class VertiSim:
         action_mask = self.action_mask()
         self.reward_function.reset_rewards()
 
+        self.update_reward_tracker(reward)
+
         self.sim_setup.logger.info(f"Reward: {reward}")
         self.sim_setup.logger.info(f"Current state: {pformat(current_state)}")
         self.sim_setup.logger.debug(f"Action mask: {action_mask}")    
@@ -509,6 +510,18 @@ class VertiSim:
                 # Pop them out from the triggered event queue
                 self.sim_setup.system_manager.triggered_stopping_event_queue.pop()          
         return self.get_current_state()
+    
+    def update_reward_tracker(self, reward):
+        """
+        Update the reward tracker.
+        """
+        # Increase the step by one
+        self.sim_setup.event_saver.reward_tracker['step'] += 1
+        # Add the reward to the cumulative sum
+        self.sim_setup.event_saver.reward_tracker['total_reward'] += reward
+        # Update the mean reward
+        self.sim_setup.event_saver.reward_tracker['mean_reward'] = \
+            self.sim_setup.event_saver.reward_tracker['total_reward'] / self.sim_setup.event_saver.reward_tracker['step']
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):

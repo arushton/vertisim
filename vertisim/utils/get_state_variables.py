@@ -60,6 +60,10 @@ def get_simulator_states(
         for tail_number, aircraft in aircraft_agents.items()
     }
 
+    # Scale down the soc values to 0-10 for each aircraft in the aircraft_states
+    for aircraft_id, aircraft_state in aircraft_states.items():
+        aircraft_states[aircraft_id]['soc'] = round(aircraft_state['soc'] / 10, 3)
+
     departing_passengers = system_manager.departing_passenger_tracker
 
     vertiport_states = {
