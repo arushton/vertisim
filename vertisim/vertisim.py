@@ -44,7 +44,8 @@ class VertiSim:
                                   stopping_events=self.stopping_events,
                                   truncation_events=self.truncation_events,
                                   truncation_event=self.truncation_event,
-                                  reset=reset)        
+                                  reset=reset)  
+            
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
@@ -115,6 +116,19 @@ class VertiSim:
         if not self.terminal_event.triggered:
             self.sim_setup.logger.finalize_logging()
             return self.terminal_event.succeed()
+        
+    def close(self):
+        """
+        Close the VertiSim simulation and release all resources.
+        """
+        # Close any SimPy environment resources if necessary
+        if hasattr(self, 'env') and self.env is not None:
+            # Perform any necessary cleanup on the SimPy environment
+            self.env = None  # SimPy environments don't require explicit closure
+        
+        # Close any loggers or files
+        if hasattr(self, 'sim_setup') and self.sim_setup is not None:
+            self.sim_setup = None   
     
     def step(self, actions):
         """

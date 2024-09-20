@@ -44,6 +44,14 @@ class InstanceManager:
             "action_mask": response[4]
         }
     
+    def close(self):
+        """
+        Close the VertiSim instance and release all resources.
+        """
+        if hasattr(self, 'sim_instance') and self.sim_instance is not None:
+            self.sim_instance.close()
+            self.sim_instance = None  # Optional: Help garbage collection    
+    
     def get_performance_metrics(self):
         return self.sim_instance.get_performance_metrics()
 
