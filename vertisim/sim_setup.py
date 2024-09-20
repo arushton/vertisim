@@ -83,7 +83,7 @@ class SimSetup:
         self.vertiport_layouts = self.create_vertiport_layout()      
         self.vertiport_ids = self.get_vertiport_ids() # List of vertiport ids 
         self.vertiport_id_config = '_'.join(self.vertiport_ids)
-        self.vertiport_index_to_id_map = SimSetup.create_vertiport_id_index_mapping(self.vertiport_ids)    
+        self.vertiport_index_to_id_map = self.create_vertiport_id_index_mapping(self.vertiport_ids)    
         self.vertiport_id_to_index_map = {v: k for k, v in self.vertiport_index_to_id_map.items()}   
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
         self.check_inputs()
@@ -165,11 +165,11 @@ class SimSetup:
         """
         return list(self.network_and_demand_params['vertiports'].keys()) 
 
-    @staticmethod
-    def create_vertiport_id_index_mapping(vertiport_ids: List):
+    def create_vertiport_id_index_mapping(self, vertiport_ids: List):
         """
         Creates a mapping between vertiport ids and their index in the list
         """
+        self.logger.debug(f"Vertiport ids: {dict(enumerate(vertiport_ids))}")
         return dict(enumerate(vertiport_ids))
     
     def create_wind(self):

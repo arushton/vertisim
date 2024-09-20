@@ -209,14 +209,17 @@ class VertiSim:
                 process_list.append(self.env.process(self.sim_setup.system_manager.reserve_aircraft(aircraft=aircraft, 
                                                                                                     destination_vertiport_id=destination_vertiport_id,
                                                                                                     departing_passengers=departing_passengers)))
-        yield self.env.all_of(process_list)    
+        yield self.env.all_of(process_list)   
 
     def action_mask(self, initial_state=False, final_state=False):
         """
         Create the action mask for the current state of the simulation.
-        [Fly, Charge, Do nothing]
+        [Fly: list, Charge: int, Do nothing: int]
         """
         mask = []
+
+        enforced_od_pairs = set()
+
         for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
 
             current_vertiport_id = aircraft.current_vertiport_id
@@ -237,7 +240,7 @@ class VertiSim:
 
             can_do_any = (aircraft.status == AircraftStatus.IDLE and 
                           aircraft.soc <= 95-soc_increment and 
-                          aircraft.soc >= self.config['aircraft_params']['min_reserve_soc'])
+                          aircraft.soc > self.config['aircraft_params']['min_reserve_soc'])
             
             can_fly_and_do_nothing = (aircraft.status == AircraftStatus.IDLE and
                                       aircraft.soc > 95-soc_increment)
@@ -264,7 +267,7 @@ class VertiSim:
             elif aircraft.status == AircraftStatus.CHARGE or aircraft.status == AircraftStatus.FLY or aircraft.status == AircraftStatus.HOLD:
                 destination_mask = [0] * self.sim_setup.num_vertiports()
                 # aircraft_mask = destination_mask + [0, 1]     
-                non_flight_actions = [0, 1]         
+                non_flight_actions = [0, 1]  
             
             # If flight actions are enabled, check for further conditions
             if sum(destination_mask) != 0:
@@ -283,11 +286,7 @@ class VertiSim:
                     dest_vertiport_index = self.sim_setup.vertiport_id_to_index_map[dest_vertiport_id]
                     # Get the number of expected passengers at the destination vertiport
                     expected_lookahead_dest_demand = current_and_lookahead_pax_count(dest_vertiport)
-                    # # Get the number of expected inflow demand to the destination vertiport
-                    # expected_lookahead_inflow_demand = get_inflow_demand_to_vertiport(
-                    #     destination_vertiport_id=vertiport_id, 
-                    #     system_manager=self.sim_setup.system_manager)   
-                    # Get the demand from origin vertiport to the destination vertiport
+                    # Get the number of passengers from the current vertiport to the destination vertiport
                     dest_demand_from_origin = current_vertiport.get_waiting_passenger_count()[dest_vertiport_id]
                     # Get the number of aircraft at the destination vertiport                
                     num_aircraft = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_vertiport_id)
@@ -298,11 +297,27 @@ class VertiSim:
                         # Mask out the flight action to the destination vertiport
                         destination_mask[dest_vertiport_index] = 0
 
-                    # Mask out destinations if the aircraft cannot fly to them with min reserve
+                    # Get passengers waiting time bins for the origin-destination pair
+                    waiting_time_bins = current_vertiport.get_pax_waiting_time_bins()
+                    passengers_in_last_bin = waiting_time_bins[dest_vertiport_id][-1]   
+                    # Get the flight energy required for the origin-destination pair
                     flight_soc_required = self.sim_setup.event_saver.average_energy_consumption_per_od_pair[
-                        f"{current_vertiport_id}_{dest_vertiport_id}"]['average'] / aircraft.battery_capacity * 100
+                        f"{current_vertiport_id}_{dest_vertiport_id}"]['average'] / aircraft.battery_capacity * 100                    
+
+                    # Check if there's a passenger in the last waiting bin and no flight has been forced yet
+                    if passengers_in_last_bin > 0 and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs:
+                        # Check if there is an idling aircraft at the origin vertiport and sufficient SoC                        
+                        if aircraft.soc >= flight_soc_required + self.config['aircraft_params']['min_reserve_soc']:
+                            # Enforce flight action, mask out non-flight actions
+                            enforced_od_pairs.add((current_vertiport_id, dest_vertiport_id))
+                            destination_mask = [0] * self.sim_setup.num_vertiports()
+                            destination_mask[dest_vertiport_index] = 1
+                            non_flight_actions = [0, 0]
+                            break
+
+                    # Mask out destinations if the aircraft cannot fly to them with min reserve
                     if aircraft.soc < flight_soc_required + self.config['aircraft_params']['min_reserve_soc']:
-                        destination_mask[dest_vertiport_index] = 0                        
+                        destination_mask[dest_vertiport_index] = 0                   
 
                 if current_vertiport.get_parking_pad_availability() == 0 and \
                         (can_do_any or can_fly_and_do_nothing):
@@ -452,6 +467,7 @@ class VertiSim:
 
         self.update_reward_tracker(reward)
 
+        # Convert the state to human readable format: Convert aircraft status to aircraft state ENUMs, convert aircraft od_pair to vertiport ids and flight directions
         self.sim_setup.logger.info(f"Reward: {reward}")
         self.sim_setup.logger.info(f"Current state: {pformat(current_state)}")
         self.sim_setup.logger.debug(f"Action mask: {action_mask}")    
