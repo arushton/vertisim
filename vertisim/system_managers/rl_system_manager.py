@@ -75,7 +75,7 @@ class RLSystemManager(BaseSystemManager):
         self.trip_counter = 0
         self.trip_counter_tracker = 0
         self.spill_counter = {(origin, destination): 0 for origin in vertiport_ids for destination in vertiport_ids}
-        self.total_demand = 0
+        self.total_demand = None
         self.trip_time_counter = 0
         self.holding_time_counter = 0
         self.truncation_penalty = 0
@@ -457,7 +457,7 @@ class RLSystemManager(BaseSystemManager):
                     # Identify passengers that have waited too long
                     over_waiting_passengers = [
                         passenger for passenger in wr_store.items
-                        if self.env.now - passenger.waiting_room_arrival_time >= sec_to_ms(self.sim_params['max_passenger_waiting_time'])
+                        if self.env.now - passenger.waiting_room_arrival_time >= sec_to_ms(self.sim_params['max_passenger_waiting_time'] - 60) # To account for the included flying pax waiting time
                     ]
                     num_over_waiting_passengers = len(over_waiting_passengers)
 

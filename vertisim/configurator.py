@@ -186,34 +186,27 @@ class VertiportConfig:
         Passengers with waiting times equal to or exceeding the threshold are placed in the last bin.
         """
         # Calculate bin_size based on the threshold and the number of bins
-        bin_size = sec_to_min(self.pax_waiting_time_threshold) / self.num_waiting_time_bins
+        bin_size = (sec_to_min(self.pax_waiting_time_threshold))/ self.num_waiting_time_bins
 
         # Initialize the waiting time bins for each destination
         waiting_time_bins = {
-            destination: [0 for _ in range(self.num_waiting_time_bins + 1)]
+            destination: [0 for _ in range(self.num_waiting_time_bins)]
             for destination in self.waiting_room_stores.keys()
         }
 
-        # Process passengers in the waiting rooms
-        for destination, waiting_room_store in self.waiting_room_stores.items():
-            for passenger in waiting_room_store.items:
-                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
-                bin_index = int(waiting_time // bin_size)
-                
-                # Ensure bin_index does not exceed the maximum index
-                if bin_index >= self.num_waiting_time_bins + 1:
-                    bin_index = self.num_waiting_time_bins
-                waiting_time_bins[destination][bin_index] += 1
-
-        # Process passengers in the flight request stores
-        for destination, flight_request_store in self.flight_request_stores.items():
-            for passenger in flight_request_store.items:
-                waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
-                bin_index = int(waiting_time // bin_size)
-                # Ensure bin_index does not exceed the maximum index
-                if bin_index >= self.num_waiting_time_bins + 1:
-                    bin_index = self.num_waiting_time_bins
-                waiting_time_bins[destination][bin_index] += 1
+        # Process passengers in the waiting rooms and flight request stores
+        for store_type in [self.waiting_room_stores, self.flight_request_stores]:
+            for destination, store in store_type.items():
+                for passenger in store.items:
+                    waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
+                    
+                    # Place passengers in bins, with those waiting exactly 10 minutes in the last bin
+                    if waiting_time < 10:
+                        bin_index = int(waiting_time // bin_size)
+                    else:
+                        bin_index = self.num_waiting_time_bins - 1
+                    
+                    waiting_time_bins[destination][bin_index] += 1
 
         return waiting_time_bins
 

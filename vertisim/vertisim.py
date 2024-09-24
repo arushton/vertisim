@@ -45,7 +45,7 @@ class VertiSim:
                                   truncation_events=self.truncation_events,
                                   truncation_event=self.truncation_event,
                                   reset=reset)  
-            
+
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
         # The status of the simulation provides information whether the simulation running or not
@@ -181,11 +181,14 @@ class VertiSim:
                 aircraft.is_process_completed = True
             # Fly to the vertiport
             elif actions[aircraft_id] < self.sim_setup.num_vertiports():
-                aircraft.status = AircraftStatus.FLY  
-                aircraft.is_process_completed = False
                 aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
                 aircraft.origin_vertiport_id = aircraft.current_vertiport_id
                 aircraft.destination_vertiport_id = self.sim_setup.vertiport_index_to_id_map[actions[aircraft_id]]
+
+                assert aircraft.current_vertiport_id != aircraft.destination_vertiport_id, f"Invalid action!: Origin vertiport assigned as destination."
+
+                aircraft.status = AircraftStatus.FLY  
+                aircraft.is_process_completed = False
                 self.sim_setup.logger.debug(f"Aircraft {aircraft_id} will fly from {aircraft.origin_vertiport_id} to {aircraft.destination_vertiport_id}")
             else:
                 raise ValueError(f"Invalid action: {actions[aircraft_id]}")
@@ -215,134 +218,160 @@ class VertiSim:
         """
         Create the action mask for the current state of the simulation.
         [Fly: list, Charge: int, Do nothing: int]
-        """
-        mask = []
-
-        enforced_od_pairs = set()
-
-        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
-
-            current_vertiport_id = aircraft.current_vertiport_id
-            current_vertiport = self.sim_setup.vertiports[current_vertiport_id]
-            current_vertiport_index = self.sim_setup.vertiport_id_to_index_map[current_vertiport_id]  
-
-            if self.config['external_optimization_params']['soc_increment_per_charge_event'] is not None:
-                soc_increment = self.config['aircraft_params']['soc_increment_per_charge_event']
-            elif self.config['external_optimization_params']['charge_time_per_charge_event'] is not None:
-                charge_lookup_table = self.sim_setup.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
-
-                new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
-                    charge_time=sec_to_ms(self.config['external_optimization_params']['charge_time_per_charge_event']), 
-                    initial_soc=aircraft.soc,
-                    df=charge_lookup_table)
-                
-                soc_increment = new_soc - aircraft.soc
-
-            can_do_any = (aircraft.status == AircraftStatus.IDLE and 
-                          aircraft.soc <= 95-soc_increment and 
-                          aircraft.soc > self.config['aircraft_params']['min_reserve_soc'])
-            
-            can_fly_and_do_nothing = (aircraft.status == AircraftStatus.IDLE and
-                                      aircraft.soc > 95-soc_increment)
-            
-            # Can do any action
-            if can_do_any:
-                destination_mask = [1 if destination != current_vertiport_id
-                                    else 0 for destination in self.sim_setup.vertiport_ids]
-                # aircraft_mask = destination_mask + [1, 1]
-                non_flight_actions = [1, 1]
-            # Can only charge
-            elif aircraft.status == AircraftStatus.IDLE \
-                    and aircraft.soc <= self.config['aircraft_params']['min_reserve_soc']:
-                destination_mask = [0] * self.sim_setup.num_vertiports()
-                # aircraft_mask = destination_mask + [1, 0]
-                non_flight_actions = [1, 0]
-            # Can fly and do nothing
-            elif can_fly_and_do_nothing:
-                destination_mask = [1 if destination != current_vertiport_id 
-                                    else 0 for destination in self.sim_setup.vertiport_ids] 
-                # aircraft_mask = destination_mask + [0, 1] 
-                non_flight_actions = [0, 1]         
-            # Can do nothing  
-            elif aircraft.status == AircraftStatus.CHARGE or aircraft.status == AircraftStatus.FLY or aircraft.status == AircraftStatus.HOLD:
-                destination_mask = [0] * self.sim_setup.num_vertiports()
-                # aircraft_mask = destination_mask + [0, 1]     
-                non_flight_actions = [0, 1]  
-            
-            # If flight actions are enabled, check for further conditions
-            if sum(destination_mask) != 0:
-
-                # Check if there is no demand at the aircraft's vertiport and it's not over capacity
-                if current_and_lookahead_pax_count(current_vertiport) == 0 and current_vertiport.get_parking_pad_availability() > 0:
-                    destination_mask = [0] * self.sim_setup.num_vertiports()
-
-                # Check if there are enough idling aircraft at the destination, no passengers, and no holding aircraft at the current vertiport
-                for dest_vertiport_id in self.sim_setup.vertiport_ids:
-                    if dest_vertiport_id == current_vertiport_id:
-                        continue
-                    # Get the destination vertiport object
-                    dest_vertiport = self.sim_setup.vertiports[dest_vertiport_id]
-                    # Get the index of the destination vertiport
-                    dest_vertiport_index = self.sim_setup.vertiport_id_to_index_map[dest_vertiport_id]
-                    # Get the number of expected passengers at the destination vertiport
-                    expected_lookahead_dest_demand = current_and_lookahead_pax_count(dest_vertiport)
-                    # Get the number of passengers from the current vertiport to the destination vertiport
-                    dest_demand_from_origin = current_vertiport.get_waiting_passenger_count()[dest_vertiport_id]
-                    # Get the number of aircraft at the destination vertiport                
-                    num_aircraft = self.sim_setup.system_manager.get_num_aircraft_at_vertiport(vertiport_id=dest_vertiport_id)
-                    # Check if there are enough idling aircraft at the destination vertiport, and no passenger at the current vertiport
-                    if num_aircraft * self.config['aircraft_params']['pax'] >= expected_lookahead_dest_demand and \
-                        dest_demand_from_origin == 0 and \
-                            current_vertiport.get_parking_pad_availability() > 0:
-                        # Mask out the flight action to the destination vertiport
-                        destination_mask[dest_vertiport_index] = 0
-
-                    # Get passengers waiting time bins for the origin-destination pair
-                    waiting_time_bins = current_vertiport.get_pax_waiting_time_bins()
-                    passengers_in_last_bin = waiting_time_bins[dest_vertiport_id][-1]   
-                    # Get the flight energy required for the origin-destination pair
-                    flight_soc_required = self.sim_setup.event_saver.average_energy_consumption_per_od_pair[
-                        f"{current_vertiport_id}_{dest_vertiport_id}"]['average'] / aircraft.battery_capacity * 100                    
-
-                    # Check if there's a passenger in the last waiting bin and no flight has been forced yet
-                    if passengers_in_last_bin > 0 and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs:
-                        # Check if there is an idling aircraft at the origin vertiport and sufficient SoC                        
-                        if aircraft.soc >= flight_soc_required + self.config['aircraft_params']['min_reserve_soc']:
-                            # Enforce flight action, mask out non-flight actions
-                            enforced_od_pairs.add((current_vertiport_id, dest_vertiport_id))
-                            destination_mask = [0] * self.sim_setup.num_vertiports()
-                            destination_mask[dest_vertiport_index] = 1
-                            non_flight_actions = [0, 0]
-                            break
-
-                    # Mask out destinations if the aircraft cannot fly to them with min reserve
-                    if aircraft.soc < flight_soc_required + self.config['aircraft_params']['min_reserve_soc']:
-                        destination_mask[dest_vertiport_index] = 0                   
-
-                if current_vertiport.get_parking_pad_availability() == 0 and \
-                        (can_do_any or can_fly_and_do_nothing):
-                    # Enable flight action to all vertiports except the current one
-                    destination_mask = [1 if idx != current_vertiport_index else 0 for idx in range(self.sim_setup.num_vertiports())]
-
-            # Add the destination mask to the mask
-            mask.extend(destination_mask)
-            # Add the non-flight actions to the mask
-            mask.extend(non_flight_actions)
         
-
+        Returns:
+            List[int]: A flattened list representing the mask where 1 allows the action and 0 masks it.
+        """
+        # Pre-cache frequently accessed attributes for faster access
+        system_manager = self.sim_setup.system_manager
+        aircraft_agents = system_manager.aircraft_agents
+        num_aircraft = len(aircraft_agents)
+        num_vertiports = self.sim_setup.num_vertiports()
+        vertiport_ids = self.sim_setup.vertiport_ids
+        vertiport_id_to_index_map = self.sim_setup.vertiport_id_to_index_map
+        vertiport_index_to_id_map = self.sim_setup.vertiport_index_to_id_map
+        min_reserve_soc = self.config['aircraft_params']['min_reserve_soc']
+        battery_capacity = self.config['aircraft_params']['battery_capacity']
+        
+        # Cache SOC and charge increment configurations
+        soc_increment_per_charge_event = self.config['external_optimization_params'].get('soc_increment_per_charge_event')
+        charge_time_per_charge_event = self.config['external_optimization_params'].get('charge_time_per_charge_event')
+        
+        # Precompute flight_soc_required for all OD pairs to avoid redundant calculations
+        flight_soc_required_map = {}
+        average_energy_consumption = self.sim_setup.event_saver.average_energy_consumption_per_od_pair
+        for od_pair, consumption in average_energy_consumption.items():
+            flight_soc_required_map[od_pair] = (consumption['average'] / battery_capacity) * 100  # Percentage
+        
+        # Initialize the mask as a NumPy array for efficient operations
+        # Each aircraft has (num_vertiports + 2) actions
+        mask = np.zeros((num_aircraft, num_vertiports + 2), dtype=int)
+        
         if initial_state:
-            # Set the flight actions to 0 for all aircrafts
-            for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
-                mask[i:i+self.sim_setup.num_vertiports()] = [0] * self.sim_setup.num_vertiports()
+            # All flight actions are masked (0), Charge and Do Nothing are allowed (1)
+            mask[:, num_vertiports:num_vertiports+2] = 1
+            return mask.flatten().tolist()
         
         if final_state:
-            # Only do nothing for all aircraft
-            for i in range(0, len(mask), self.sim_setup.num_vertiports() + 2):
-                mask[i:i+self.sim_setup.num_vertiports()] = [0] * self.sim_setup.num_vertiports()
-                mask[i+self.sim_setup.num_vertiports()+1] = 1
+            # Only Do Nothing is allowed (1), others are masked (0)
+            mask[:, num_vertiports+1] = 1
+            return mask.flatten().tolist()
+        
+        # Dictionaries to track enforced OD pairs and aircraft SoC
+        enforced_od_pairs = set()
+        aircraft_soc_map = {}  # {vertiport_id: [(aircraft_id, soc), ...]}
+        
+        # First pass: Determine initial masks and populate aircraft_soc_map
+        for idx, (aircraft_id, aircraft) in enumerate(aircraft_agents.items()):
+            current_vertiport_id = aircraft.current_vertiport_id
+            current_vertiport = self.sim_setup.vertiports.get(current_vertiport_id)
+            
+            # Determine SOC increment
+            if soc_increment_per_charge_event is not None:
+                soc_increment = self.config['aircraft_params']['soc_increment_per_charge_event']
+            elif charge_time_per_charge_event is not None:
+                charge_lookup_table = system_manager.aircraft_battery_models[current_vertiport_id]
+                new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
+                    charge_time=sec_to_ms(charge_time_per_charge_event),
+                    initial_soc=aircraft.soc,
+                    df=charge_lookup_table
+                )
+                soc_increment = new_soc - aircraft.soc
+            else:
+                raise ValueError("Invalid config for soc_increment_per_charge_event or charge_time_per_charge_event. One must be specified.")
+            
+            # Define conditions
+            can_do_any = (
+                aircraft.status == AircraftStatus.IDLE and 
+                aircraft.soc <= 95 - soc_increment and 
+                aircraft.soc > min_reserve_soc
+            )
+            
+            can_fly_and_do_nothing = (
+                aircraft.status == AircraftStatus.IDLE and
+                aircraft.soc > 95 - soc_increment
+            )
+            
+            # Initialize flight_mask and non_flight_actions
+            if can_do_any:
+                # Allow flying to any vertiport except the current one
+                flight_mask = np.ones(num_vertiports, dtype=int)
+                current_index = vertiport_id_to_index_map[current_vertiport_id]
+                flight_mask[current_index] = 0  # Mask current vertiport
+                non_flight_actions = [1, 1]  # Allow Charge and Do Nothing
+                # Populate aircraft_soc_map for potential enforced flights
+                aircraft_soc_map.setdefault(current_vertiport_id, []).append((idx, aircraft.soc))
+            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc <= min_reserve_soc:
+                # Can only Charge
+                flight_mask = np.zeros(num_vertiports, dtype=int)
+                non_flight_actions = [1, 0]  # Allow Charge only
+            elif can_fly_and_do_nothing:
+                # Can Fly and Do Nothing
+                flight_mask = np.ones(num_vertiports, dtype=int)
+                current_index = vertiport_id_to_index_map[current_vertiport_id]
+                flight_mask[current_index] = 0  # Mask current vertiport
+                non_flight_actions = [0, 1]  # Allow Do Nothing only
+                # Populate aircraft_soc_map for potential enforced flights
+                aircraft_soc_map.setdefault(current_vertiport_id, []).append((idx, aircraft.soc))
+            elif aircraft.status in [AircraftStatus.CHARGE, AircraftStatus.FLY, AircraftStatus.HOLD]:
+                # Can only Do Nothing
+                flight_mask = np.zeros(num_vertiports, dtype=int)
+                non_flight_actions = [0, 1]  # Allow Do Nothing only
+            else:
+                raise ValueError(f"Invalid aircraft status: {aircraft.status}")
+            
+            # Disable flight actions to destinations that the aircraft cannot fly to based on SoC
+            for dest_vertiport_id in vertiport_ids:
+                if dest_vertiport_id == current_vertiport_id:
+                    continue  # Already handled by masking current vertiport
+                od_pair = f"{current_vertiport_id}_{dest_vertiport_id}"
+                flight_soc_required = flight_soc_required_map.get(od_pair, 0)
+                if flight_soc_required > aircraft.soc:
+                    dest_index = vertiport_id_to_index_map[dest_vertiport_id]
+                    flight_mask[dest_index] = 0  # Mask the action
+            
+            # Update the mask for the current aircraft
+            mask[idx, :num_vertiports] = flight_mask
+            mask[idx, num_vertiports:num_vertiports+2] = non_flight_actions
+
+        # If waiting_time_bins is in the states of the simulation, use it to determine enforced flights
+        if "waiting_time_bins" in self.config['sim_params']['simulation_states']['vertiport_states']:            
+            # Second pass: Process enforced flights and update masks
+            for current_vertiport_id, aircraft_list in aircraft_soc_map.items():
+                current_vertiport = self.sim_setup.vertiports[current_vertiport_id]
+                waiting_time_bins = current_vertiport.get_pax_waiting_time_bins()
+                
+                for dest_vertiport_id in vertiport_ids:
+                    if dest_vertiport_id == current_vertiport_id:
+                        continue
                     
-        # Flatten the mask
-        return np.array(mask).flatten().tolist()     
+                    passengers_in_last_bin = waiting_time_bins[dest_vertiport_id][-1]
+                    if passengers_in_last_bin > 0 and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs:
+                        dest_index = vertiport_id_to_index_map.get(dest_vertiport_id)
+                        
+                        # Find the aircraft with the highest SoC that can make the flight
+                        suitable_aircraft = [
+                            (idx, soc) for idx, soc in aircraft_list 
+                            if soc >= flight_soc_required_map.get(f"{current_vertiport_id}_{dest_vertiport_id}", 0) + min_reserve_soc
+                        ]
+                        
+                        if suitable_aircraft:
+                            # Select the aircraft with the highest SoC
+                            selected_idx, _ = max(suitable_aircraft, key=lambda x: x[1])
+                            # Enforce the flight by allowing only the specific destination
+                            enforced_od_pairs.add((current_vertiport_id, dest_vertiport_id))
+                            
+                            # Update the mask: allow only the enforced destination and mask all other actions
+                            enforced_flight_mask = np.zeros(num_vertiports, dtype=int)
+                            enforced_flight_mask[dest_index] = 1
+                            mask[selected_idx, :num_vertiports] = enforced_flight_mask
+                            mask[selected_idx, num_vertiports:num_vertiports+2] = [0, 0]  # Disable Charge and Do Nothing
+                            
+                            # Remove the aircraft from the list to prevent multiple assignments
+                            aircraft_list.remove((selected_idx, _))
+        
+        # Convert the mask to a flattened list
+        return mask.flatten().tolist()
 
     def schedule_periodic_stop_event(self):
         """
@@ -461,6 +490,7 @@ class VertiSim:
         Return the state, reward, and action mask.
         """
         reward = round(self.reward_function.reward, 3)
+
         current_state = self.get_current_state()
         action_mask = self.action_mask()
         self.reward_function.reset_rewards()
@@ -538,7 +568,9 @@ class VertiSim:
             self.env.step()
             while len(self.sim_setup.system_manager.triggered_stopping_event_queue)>0:   
                 # Pop them out from the triggered event queue
-                self.sim_setup.system_manager.triggered_stopping_event_queue.pop()          
+                self.sim_setup.system_manager.triggered_stopping_event_queue.pop() 
+        # Set the total demand after initialization
+        self.total_demand = self.sim_setup.system_manager.total_demand
         return self.get_current_state()
     
     def update_reward_tracker(self, reward):

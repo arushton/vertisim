@@ -90,6 +90,7 @@ class SimSetup:
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
 
         self.airspace = self.create_airspace()  
+        self.logger.debug(f"Flight directions: {self.airspace.flight_directions}")
         self.wind = self.create_wind()    
         self.node_locations = self.build_node_locations_dict()
         self.structural_entity_groups = self.merge_structural_entity_groups()

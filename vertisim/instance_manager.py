@@ -31,7 +31,7 @@ class InstanceManager:
         return {"initial_state": initial_state, "action_mask": action_mask}
         
     def step(self, actions):
-        self._setup_sim_instance()
+        # self._setup_sim_instance()
         if self.config["sim_mode"]["client_server"]:
             return self.sim_instance.step(actions)  
         else:
