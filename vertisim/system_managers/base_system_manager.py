@@ -661,7 +661,7 @@ class BaseSystemManager:
                 self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                         idle_time=idle_time)
                 aircraft.save_process_time(event='idle', process_time=idle_time)
-                self.logger.debug(f'Saved idle time of {miliseconds_to_hms(idle_time)} between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
+                # self.logger.debug(f'Saved idle time of {miliseconds_to_hms(idle_time)} between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
         else:
             if not aircraft.charged_during_turnaround:
                 idle_time = aircraft.env.now - aircraft.arrival_time
@@ -671,7 +671,7 @@ class BaseSystemManager:
             self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                      idle_time=aircraft.idle_time)
             aircraft.save_process_time(event='idle', process_time=idle_time)
-            self.logger.debug(f'Saved idle time {miliseconds_to_hms(idle_time)} between charging end or arrival and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')            
+            # self.logger.debug(f'Saved idle time {miliseconds_to_hms(idle_time)} between charging end or arrival and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')            
 
     def parking_pad_request(self, aircraft: object, parking_space_id: Any = None):
         # parking space reservation for landing

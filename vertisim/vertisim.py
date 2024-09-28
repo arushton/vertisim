@@ -5,7 +5,7 @@ from .aircraft.aircraft import AircraftStatus
 from .utils.helpers import get_stopping_events, get_truncation_events, miliseconds_to_hms, \
     create_action_enum, convert_action_values_to_enum, create_action_dict, reverse_dict, \
         current_and_lookahead_pax_count, get_total_waiting_passengers_at_vertiport, \
-        get_inflow_demand_to_vertiport
+        get_inflow_demand_to_vertiport, extract_dict_values
 import time
 import numpy as np
 import gymnasium as gym
@@ -57,12 +57,13 @@ class VertiSim:
 
         self.status = True
         self.last_decision_time = -1
+        self.decision_making_interval = sec_to_ms(config['external_optimization_params']['periodic_time_step'])        
 
     def setup_for_rl(self):
         # self.actions = create_action_enum(self.sim_setup.vertiport_ids)        
         self.action_dict = create_action_dict(self.sim_setup.vertiport_ids)
         self.reverse_action_dict = reverse_dict(self.action_dict)
-        self.reward_function = RewardFunction(config=self.config, reverse_action_dict=self.reverse_action_dict, sim_setup=self.sim_setup)
+        self.reward_function = RewardFunction(config=self.config, reverse_action_dict=self.reverse_action_dict, sim_setup=self.sim_setup, logger=self.sim_setup.logger)
 
     def set_simulation_events(self, env, config):
         """
@@ -349,7 +350,8 @@ class VertiSim:
                     if dest_vertiport_id == current_vertiport_id:
                         continue
                     
-                    passengers_in_last_bin = waiting_time_bins[dest_vertiport_id][-1]
+                    passengers_in_last_bin = sum(waiting_time_bins[dest_vertiport_id][-self.decision_making_interval:])
+                    # passengers_in_last_bin = waiting_time_bins[dest_vertiport_id][-1]
                     if passengers_in_last_bin > 0 and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs:
                         dest_index = vertiport_id_to_index_map.get(dest_vertiport_id)
                         
@@ -381,11 +383,10 @@ class VertiSim:
         """
         Schedule a stopping event at a fixed interval.
         """
-        interval = sec_to_ms(self.config['external_optimization_params']['periodic_time_step'])
         # Calculate time until the next multiple of interval
-        time_to_next_multiple = interval - (self.env.now % interval)
+        time_to_next_multiple = self.decision_making_interval - (self.env.now % self.decision_making_interval)
         if time_to_next_multiple == 0:
-            time_to_next_multiple = interval  # If it's exactly a multiple, schedule for the next interval
+            time_to_next_multiple = self.decision_making_interval  # If it's exactly a multiple, schedule for the next interval
 
         stop_event = self.env.event()
         self.env.process(self.trigger_stop_event_after_interval(stop_event, time_to_next_multiple))
@@ -413,13 +414,11 @@ class VertiSim:
     def advance_periodically_ondemand(self):
         """
         Advance the simulation for fixed intervals and make decisions.
-        """
-        interval = sec_to_ms(self.config['external_optimization_params']['periodic_time_step'])
-        
+        """        
         while self._should_continue_simulation():
             # Schedule the next stop event
             stop_event = self.env.event()
-            self.env.process(self.trigger_stop_event_after_interval_ondemand(stop_event, interval))
+            self.env.process(self.trigger_stop_event_after_interval_ondemand(stop_event, self.decision_making_interval))
             
             # Advance the simulation until the stop event is triggered
             while not stop_event.triggered and self._should_continue_simulation():
@@ -428,8 +427,8 @@ class VertiSim:
             if self._should_continue_simulation():
                 self.sim_setup.logger.info(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Make on-demand decision
-                self.env.process(self.sim_setup.system_manager.make_ondemand_decision())
-        
+                self.env.process(self.sim_setup.system_manager.make_ondemand_decision())   
+
     def advance_periodically(self):
         """
         Advance the simulation for a fixed interval and return the state and reward.
@@ -525,8 +524,11 @@ class VertiSim:
         """
         Return the state, reward, and action mask.
         """
-        reward = round(self.reward_function.reward, 3)
+        if self.config['external_optimization_params']['periodic_time_step'] != 60:
+            # Need to calculate spill separeately
+            self.reward_function.add_spill_cost()
 
+        reward = round(self.reward_function.reward, 3)
         current_state = self.get_current_state()
         action_mask = self.action_mask()
         self.reward_function.reset_rewards()

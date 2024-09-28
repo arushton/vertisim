@@ -72,7 +72,7 @@ class RLSystemManager(BaseSystemManager):
         self.actions = []
         self.trip_counter = 0
         self.trip_counter_tracker = 0
-        self.spill_counter = {(origin, destination): 0 for origin in vertiport_ids for destination in vertiport_ids}
+        self.spill_counter = {(origin, destination): 0 for origin in vertiport_ids for destination in vertiport_ids if origin != destination}
         self.total_demand = None
         self.trip_time_counter = 0
         self.holding_time_counter = 0
@@ -158,9 +158,9 @@ class RLSystemManager(BaseSystemManager):
 
         # Start the passenger departure process
         if departing_passengers:
-            self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
+            # self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
             self.env.process(self.initiate_passenger_departure(departing_passengers=departing_passengers))
-            self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
+            # self.logger.debug(f'|{flight_id}| Completed: Passengers arrived at the boarding gate at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id} flight.')
 
         # # Trigger the stopping event for aircraft departure
         # self.logger.debug(f'aircraft_departure_event is triggered for {aircraft.tail_number} time {self.env.now}')
@@ -189,9 +189,9 @@ class RLSystemManager(BaseSystemManager):
         
         # Request arrival fix resource
         arrival_fix_usage_request, arrival_fix_resource = self.request_fix_resource(flight_direction=aircraft.flight_direction, operation_type='arrival')
-        self.logger.debug(f'Aircraft {aircraft.tail_number} requesting arrival fix resource at {aircraft.destination_vertiport_id}.'
-                         f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
-                         f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
+        # self.logger.debug(f'Aircraft {aircraft.tail_number} requesting arrival fix resource at {aircraft.destination_vertiport_id}.'
+        #                  f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
+        #                  f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
         # Trigger the stopping event
         # self.logger.debug(f'aircraft_faf_arrival_event is triggered at {aircraft.destination_vertiport_id} time {self.env.now}')
         # self.trigger_stopping_event(event_name="aircraft_faf_arrival_event", id=aircraft.destination_vertiport_id)
@@ -201,7 +201,7 @@ class RLSystemManager(BaseSystemManager):
 
         # Wait until getting the arrival fix usage request
         yield arrival_fix_usage_request
-        self.logger.debug(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')
+        # self.logger.debug(f'Aircraft {aircraft.tail_number} has been assigned to the arrival fix resource at {aircraft.destination_vertiport_id}')
 
         aircraft.status = AircraftStatus.FLY
 
@@ -282,7 +282,7 @@ class RLSystemManager(BaseSystemManager):
             aircraft.passengers_onboard = []
                     
             # Trigger the stopping event
-            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
+            # self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
 
         # Only FATO case and starting point is not a FATO
@@ -439,7 +439,7 @@ class RLSystemManager(BaseSystemManager):
         Remove the spilled passengers from the waiting rooms only if there's no scheduled flight,
         or if there are more passengers than the flight's capacity.
         """
-        self.logger.debug(f'Removing spilled passengers at {miliseconds_to_hms(self.env.now)}')
+        # self.logger.debug(f'Checking potential spilled passengers at {miliseconds_to_hms(self.env.now)}')
 
         max_waiting_time_threshold = sec_to_ms(self.sim_params['max_passenger_waiting_time']) 
         # First identify which flights are scheduled and the capacity of each flight direction
@@ -473,40 +473,44 @@ class RLSystemManager(BaseSystemManager):
                             excess_passengers = num_over_waiting_passengers - flight_capacity
                             for _ in range(excess_passengers):
                                 spilled_passenger = over_waiting_passengers.pop(0)  # Remove the first passenger in excess
-                                self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
-                                self.logger.info(f'Excess passenger {spilled_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - spilled_passenger.waiting_room_arrival_time)} min.')
-                                self.logger.info(f'Flight capacity: {flight_capacity}. Number of over-waiting passengers: {num_over_waiting_passengers}. Number of excess passengers: {excess_passengers}. Flights scheduled: {scheduled_flights}')
+
                                 # Remove the passenger from the waiting room store
-                                wr_store.get(lambda x: x.passenger_id == spilled_passenger.passenger_id)
-                                # Penalize for passenger spill
-                                self.spill_counter[(origin, destination)] += 1
-                                # Update the spilled passenger counter at the vertiport
-                                self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
+                                self.spill_passenger(spilled_passenger, origin, destination)
+                                # self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
+                                # self.logger.info(f'Excess passenger {spilled_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - spilled_passenger.waiting_room_arrival_time)} min.')
+                                # self.logger.info(f'Flight capacity: {flight_capacity}. Number of over-waiting passengers: {num_over_waiting_passengers}. Number of excess passengers: {excess_passengers}. Flights scheduled: {scheduled_flights}')
+                                # # Remove the passenger from the waiting room store
+                                # wr_store.get(lambda x: x.passenger_id == spilled_passenger.passenger_id)
+                                # # Penalize for passenger spill
+                                # self.spill_counter[(origin, destination)] += 1
+                                # # Update the spilled passenger counter at the vertiport
+                                # self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
                         else:
                             # If there's enough capacity, keep the passengers
                             continue
                     else:
                         # If no flight is scheduled, spill all over-waiting passengers
                         for waiting_passenger in over_waiting_passengers:
-                            self.logger.info(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
-                            self.logger.info(f'Number of over-waiting passengers: {num_over_waiting_passengers}. Flights scheduled: {scheduled_flights}')
+                            self.spill_passenger(waiting_passenger, origin, destination)
+                            # self.logger.info(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
+                            # self.logger.info(f'Number of over-waiting passengers: {num_over_waiting_passengers}. Flights scheduled: {scheduled_flights}')
 
-                            # Remove the passenger from the waiting room store
-                            wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
-                            self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
-                            # Penalize for passenger spill
-                            self.spill_counter[(origin, destination)] += 1
-                            # Update the spilled passenger counter at the vertiport
-                            self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
-
+                            # # Remove the passenger from the waiting room store
+                            # wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
+                            # self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
+                            # # Penalize for passenger spill
+                            # self.spill_counter[(origin, destination)] += 1
+                            # # Update the spilled passenger counter at the vertiport
+                            # self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
+        # yield self.env.timeout(0)
 
     def check_passenger_max_waiting_time_threshold(self):
         """
         Remove passengers who have waited longer than the maximum waiting time threshold.
         """
-        while True:
-            max_waiting_time_threshold = sec_to_ms(self.sim_params['max_passenger_waiting_time'] - min_to_sec(1))  # To account for the included flying pax waiting time
+        max_waiting_time_threshold = sec_to_ms(self.sim_params['max_passenger_waiting_time'] - min_to_sec(1))  # To account for the included flying pax waiting time
 
+        while True:
             yield self.env.timeout(min_to_ms(1))
             # Do not operate at the multiples of 5 minutes
             if self.env.now % min_to_ms(5) == 0:
@@ -525,14 +529,25 @@ class RLSystemManager(BaseSystemManager):
                             if self.env.now - passenger.waiting_room_arrival_time >= max_waiting_time_threshold
                         ]
                         for waiting_passenger in over_waiting_passengers:
-                            self.logger.info(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
-                            # Remove the passenger from the waiting room store
-                            wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
-                            self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
-                            # Penalize for passenger spill
-                            self.spill_counter[(origin, destination)] += 1
-                            # Update the spilled passenger counter at the vertiport
-                            self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
+                            self.spill_passenger(waiting_passenger, origin, destination)
+
+    def spill_passenger(self, passenger, origin, destination):
+        """
+        Handle the spillover of a passenger.
+        """
+        self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
+        self.logger.info(f'Passenger {passenger.passenger_id} spilled at {origin} after waiting {ms_to_min(self.env.now - passenger.waiting_room_arrival_time)} min. Waiting time of the passengers: {[ms_to_min(self.env.now - p.waiting_room_arrival_time) for p in self.vertiports[origin].waiting_room_stores[destination].items]}')
+        self.spill_counter[(origin, destination)] += 1
+        self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)] 
+        self.logger.debug(f"Spilled passenger dict: {self.vertiports[origin].spilled_passengers_dict}")
+        self.remove_pax_from_waiting_room(origin, destination, passenger)
+
+    def remove_pax_from_waiting_room(self, origin, destination, passenger):
+        """
+        Remove the passenger from the waiting room.
+        """
+        self.vertiports[origin].waiting_room_stores[destination].get(lambda x: x.passenger_id == passenger.passenger_id)
+        self.logger.debug(f'Passenger {passenger.passenger_id} has been removed from the waiting room at {origin} vertiport.')
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """

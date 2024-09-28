@@ -19,22 +19,22 @@ class EntitySubState(BaseModel):
 class VertiportStates(BaseModel):
     num_waiting_passengers: Dict[str, int]
     num_spilled_passengers: Dict[str, int]
-    fato: Optional[EntitySubState] = None
-    park: EntitySubState = None
-    taxi: EntitySubState = None
-    arrival_fix: EntitySubState
-    departure_fix: EntitySubState
-    num_aircraft: int
-    num_flight_requests: int
-    num_available_fato: int
-    num_available_parking_pad: int
-    num_available_charger: int
-    total_pax_waiting_time_per_od: Dict[str, float]
+    # fato: Optional[EntitySubState] = None
+    # park: EntitySubState = None
+    # taxi: EntitySubState = None
+    # arrival_fix: EntitySubState
+    # departure_fix: EntitySubState
+    # num_aircraft: int
+    # num_flight_requests: int
+    # num_available_fato: int
+    # num_available_parking_pad: int
+    # num_available_charger: int
+    # total_pax_waiting_time_per_od: Dict[str, float]
     expected_pax_arr_per_od: Dict[str, float]
-    aircraft_status: Dict[int, int]
-    num_holding_aircraft: int
+    # aircraft_status: Dict[int, int]
+    # num_holding_aircraft: int
     # avg_pax_waiting_time: Dict[str, float]
-    std_pax_waiting_time_per_od: Dict[str, float]
+    # std_pax_waiting_time_per_od: Dict[str, float]
     # time_to_next_available_charger: float
     waiting_time_bins: Dict[str, List[int]]
 
@@ -410,30 +410,32 @@ class VertiportConfig:
         """
         entity_states = {'num_waiting_passengers': {}, 'expected_pax_arr_per_od': {}}
 
-        for fato in self.fato_store.items:
-            entity_states[fato.resource_id] = {'num_jobs_in_service': fato.fato_resource.count,
-                                            'num_jobs_in_queue': len(fato.fato_resource.queue)}
+        # for fato in self.fato_store.items:
+        #     entity_states[fato.resource_id] = {'num_jobs_in_service': fato.fato_resource.count,
+        #                                     'num_jobs_in_queue': len(fato.fato_resource.queue)}
 
-        if self.parking_space_store is not None:
-            entity_states['park'] = {'num_jobs_in_service': self.get_parking_pad_occupancy(),
-                                    'num_jobs_in_queue': self.get_parking_pad_queue_length()}
+        # if self.parking_space_store is not None:
+        #     entity_states['park'] = {'num_jobs_in_service': self.get_parking_pad_occupancy(),
+        #                             'num_jobs_in_queue': self.get_parking_pad_queue_length()}
 
-        if self.taxiway_node_store is not None:
-            entity_states['taxi'] = {'num_jobs_in_service': len(self.taxiway_node_store.items),
-                                    'num_jobs_in_queue': len(self.taxiway_node_store.get_queue)}
+        # if self.taxiway_node_store is not None:
+        #     entity_states['taxi'] = {'num_jobs_in_service': len(self.taxiway_node_store.items),
+        #                             'num_jobs_in_queue': len(self.taxiway_node_store.get_queue)}
 
-        entity_states['arrival_fix'] = {'num_jobs_in_service': self.arrival_fix_resource.count,
-                                        'num_jobs_in_queue': len(self.arrival_fix_resource.queue)}
+        # entity_states['arrival_fix'] = {'num_jobs_in_service': self.arrival_fix_resource.count,
+        #                                 'num_jobs_in_queue': len(self.arrival_fix_resource.queue)}
 
-        entity_states['departure_fix'] = {'num_jobs_in_service': self.departure_fix_resource.count,
-                                        'num_jobs_in_queue': len(self.departure_fix_resource.queue)}
+        # entity_states['departure_fix'] = {'num_jobs_in_service': self.departure_fix_resource.count,
+        #                                 'num_jobs_in_queue': len(self.departure_fix_resource.queue)}
 
-        entity_states['num_aircraft'] = self.num_aircraft
-        entity_states['num_flight_requests'] = self.num_flight_requests
-        entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
-        entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
+        # entity_states['num_aircraft'] = self.num_aircraft
+        # entity_states['num_flight_requests'] = self.num_flight_requests
+        # entity_states['num_available_fato'] = self.get_num_fato() - self.get_fato_occupancy()
+        # entity_states['num_available_parking_pad'] = self.get_parking_pad_availability()
 
         entity_states['num_waiting_passengers'] = self.get_waiting_passenger_count()
+
+        entity_states['num_spilled_passengers'] = self.spilled_passengers_dict        
 
         # waiting_passenger_counts = self.get_waiting_passenger_count()
         # for destination, waiting_passenger_count in waiting_passenger_counts.items():
@@ -449,19 +451,17 @@ class VertiportConfig:
 
         # entity_states['total_passenger_waiting_time'] = round(self.get_total_waiting_time(reward_function_parameters), 2)
 
-        entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
+        # entity_states['aircraft_status'] = self.get_aircraft_status(aircraft_agents)
 
-        entity_states['num_holding_aircraft'] = self.num_holding_aircraft
+        # entity_states['num_holding_aircraft'] = self.num_holding_aircraft
 
         # entity_states['avg_pax_waiting_time_per_od'] = self.average_pax_waiting_time(reward_function_parameters)
 
-        entity_states['std_pax_waiting_time_per_od'] = self.std_pax_waiting_time_per_od(reward_function_parameters)
+        # entity_states['std_pax_waiting_time_per_od'] = self.std_pax_waiting_time_per_od(reward_function_parameters)
 
-        entity_states['num_available_charger'] = self.get_charger_availability()
+        # entity_states['num_available_charger'] = self.get_charger_availability()
 
-        entity_states['num_spilled_passengers'] = self.spilled_passengers_dict
-
-        entity_states['total_pax_waiting_time_per_od'] = self.get_total_waiting_time(reward_function_parameters=reward_function_parameters, exclude_pax_ids=departing_passengers)
+        # entity_states['total_pax_waiting_time_per_od'] = self.get_total_waiting_time(reward_function_parameters=reward_function_parameters, exclude_pax_ids=departing_passengers)
 
         entity_states['waiting_time_bins'] = self.get_pax_waiting_time_bins()
 
