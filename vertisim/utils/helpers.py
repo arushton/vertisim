@@ -719,7 +719,7 @@ def reverse_dict(d):
     return {v: k for k, v in d.items()}
 
 
-def current_and_lookahead_pax_count(vertiport: object):
+def current_and_lookahead_pax_count(vertiport: object) -> int:
     """
     Get the current and lookahead pax count for the given vertiport.
     """

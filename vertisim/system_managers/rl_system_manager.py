@@ -6,7 +6,7 @@ from collections import deque
 import numpy as np
 import random
 from ..utils.get_state_variables import get_simulator_states
-from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min
+from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min, min_to_sec, min_to_ms
 from ..utils.helpers import get_random_process_id, miliseconds_to_hms, careful_round, duplicate_str
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 
@@ -34,7 +34,6 @@ class RLSystemManager(BaseSystemManager):
                  aircraft_logger: object,
                  passenger_logger: object,
                  stopping_events: Dict,
-                 truncation_events: Dict,
                  truncation_event: simpy.Event,
                  sim_mode: Dict,
                  periodic_stopping: bool = False,
@@ -68,7 +67,6 @@ class RLSystemManager(BaseSystemManager):
         self.periodic_stopping = periodic_stopping
         self.periodic_and_event_driven = periodic_and_event_driven
         self.stopping_events = stopping_events
-        self.truncation_events = truncation_events
         self.truncation_event = truncation_event
         self.departing_passenger_tracker = set()
         self.actions = []
@@ -81,7 +79,7 @@ class RLSystemManager(BaseSystemManager):
         self.truncation_penalty = 0
         self.charge_reward = 0
         self.triggered_stopping_event_queue = deque()
-        # self.env.process(self.check_passenger_max_waiting_time_threshold())
+        self.env.process(self.check_passenger_max_waiting_time_threshold())
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -441,6 +439,9 @@ class RLSystemManager(BaseSystemManager):
         Remove the spilled passengers from the waiting rooms only if there's no scheduled flight,
         or if there are more passengers than the flight's capacity.
         """
+        self.logger.debug(f'Removing spilled passengers at {miliseconds_to_hms(self.env.now)}')
+
+        max_waiting_time_threshold = sec_to_ms(self.sim_params['max_passenger_waiting_time']) 
         # First identify which flights are scheduled and the capacity of each flight direction
         scheduled_flights = {(origin, destination): 0 for origin in self.vertiport_ids for destination in self.vertiport_ids if origin != destination}
         for aircraft_id, aircraft in self.aircraft_agents.items():
@@ -457,7 +458,7 @@ class RLSystemManager(BaseSystemManager):
                     # Identify passengers that have waited too long
                     over_waiting_passengers = [
                         passenger for passenger in wr_store.items
-                        if self.env.now - passenger.waiting_room_arrival_time >= sec_to_ms(self.sim_params['max_passenger_waiting_time'] - 60) # To account for the included flying pax waiting time
+                        if self.env.now - passenger.waiting_room_arrival_time >= max_waiting_time_threshold # To account for the included flying pax waiting time
                     ]
                     num_over_waiting_passengers = len(over_waiting_passengers)
 
@@ -498,6 +499,40 @@ class RLSystemManager(BaseSystemManager):
                             # Update the spilled passenger counter at the vertiport
                             self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
 
+
+    def check_passenger_max_waiting_time_threshold(self):
+        """
+        Remove passengers who have waited longer than the maximum waiting time threshold.
+        """
+        while True:
+            max_waiting_time_threshold = sec_to_ms(self.sim_params['max_passenger_waiting_time'] - min_to_sec(1))  # To account for the included flying pax waiting time
+
+            yield self.env.timeout(min_to_ms(1))
+            # Do not operate at the multiples of 5 minutes
+            if self.env.now % min_to_ms(5) == 0:
+                self.logger.debug(f'Skipping passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
+                continue
+
+            self.logger.debug(f'Checking passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
+
+            for origin, vertiport in self.vertiports.items():
+                for destination, wr_store in vertiport.waiting_room_stores.items():
+                    num_agents_in_the_wr = len(wr_store.items)
+                    if num_agents_in_the_wr > 0:
+                        # Identify passengers that have waited too long
+                        over_waiting_passengers = [
+                            passenger for passenger in wr_store.items
+                            if self.env.now - passenger.waiting_room_arrival_time >= max_waiting_time_threshold
+                        ]
+                        for waiting_passenger in over_waiting_passengers:
+                            self.logger.info(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
+                            # Remove the passenger from the waiting room store
+                            wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
+                            self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
+                            # Penalize for passenger spill
+                            self.spill_counter[(origin, destination)] += 1
+                            # Update the spilled passenger counter at the vertiport
+                            self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """

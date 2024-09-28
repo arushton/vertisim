@@ -97,6 +97,7 @@ class VertiSim:
             if self.env.now > 10:
                 performance_metrics = self.sim_setup.calculate_performance_metrics()
                 self.sim_setup.save_results(performance_metrics)
+                self.sim_setup.log_brief_metrics(print_metrics=self.config['sim_params']['print_brief_metrics'])
 
     def run_uninterrupted_simulation(self):
         """
@@ -105,8 +106,11 @@ class VertiSim:
         if self.sim_setup.sim_mode['offline_optimization']:
             self.env.run()
         else:
-            while self._should_continue_simulation():
-                self.env.step()
+            if self.config['external_optimization_params']['periodic_time_step']:
+                self.advance_periodically_ondemand()
+            else:
+                while self._should_continue_simulation():
+                    self.env.step()
             # self.env.run(until=self.max_sim_time)
 
     def reset(self):
@@ -335,7 +339,7 @@ class VertiSim:
             mask[idx, num_vertiports:num_vertiports+2] = non_flight_actions
 
         # If waiting_time_bins is in the states of the simulation, use it to determine enforced flights
-        if "waiting_time_bins" in self.config['sim_params']['simulation_states']['vertiport_states']:            
+        if "waiting_time_bins" in self.config['sim_params']['simulation_states']['vertiport_states'] and self.config['sim_params']['algorithm'] not in ['RandomPolicy', 'VertiSimHeuristics']:            
             # Second pass: Process enforced flights and update masks
             for current_vertiport_id, aircraft_list in aircraft_soc_map.items():
                 current_vertiport = self.sim_setup.vertiports[current_vertiport_id]
@@ -394,6 +398,38 @@ class VertiSim:
         yield self.env.timeout(interval)
         event.succeed()
 
+    def trigger_stop_event_after_interval_ondemand(self, event, interval):
+        """
+        Process to trigger a given event after a specified interval.
+        """
+        # Calculate time until the next multiple of interval
+        time_to_next_multiple = interval - (self.env.now % interval)
+        if time_to_next_multiple == 0:
+            time_to_next_multiple = interval  # If it's exactly a multiple, schedule for the next interval
+
+        yield self.env.timeout(time_to_next_multiple)
+        event.succeed()
+
+    def advance_periodically_ondemand(self):
+        """
+        Advance the simulation for fixed intervals and make decisions.
+        """
+        interval = sec_to_ms(self.config['external_optimization_params']['periodic_time_step'])
+        
+        while self._should_continue_simulation():
+            # Schedule the next stop event
+            stop_event = self.env.event()
+            self.env.process(self.trigger_stop_event_after_interval_ondemand(stop_event, interval))
+            
+            # Advance the simulation until the stop event is triggered
+            while not stop_event.triggered and self._should_continue_simulation():
+                self.env.step()
+            
+            if self._should_continue_simulation():
+                self.sim_setup.logger.info(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
+                # Make on-demand decision
+                self.env.process(self.sim_setup.system_manager.make_ondemand_decision())
+        
     def advance_periodically(self):
         """
         Advance the simulation for a fixed interval and return the state and reward.

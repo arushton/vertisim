@@ -1041,7 +1041,7 @@ class Aircraft:
         # Check whether the aircraft is in a state that it can perform the action.
         self.check_for_state_action_violation()
 
-        if not self.system_manager.sim_mode['offline_optimization']:
+        if self.system_manager.sim_mode['rl']:
             aircraft = yield self.system_manager.retrieve_aircraft(origin_vertiport_id=self.current_vertiport_id,
                                                                    tail_number=self.tail_number)
             
@@ -1051,14 +1051,14 @@ class Aircraft:
 
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
-                                                                        shared_charger=shared_charger))
-            
-            self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.current_vertiport_id, aircraft=self) 
-        
+                                                                        shared_charger=shared_charger))        
         else:
             yield self.env.process(self.charging_strategy.charge_aircraft(aircraft=self, 
                                                                         parking_space=parking_space, 
-                                                                        shared_charger=shared_charger))   
+                                                                        shared_charger=shared_charger)) 
+        self.system_manager.put_aircraft_into_available_aircraft_store(vertiport_id=self.current_vertiport_id, aircraft=self) 
+
+  
             
         self.is_first_time_charge = False            
         # Set the aircraft status to idle

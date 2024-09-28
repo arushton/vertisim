@@ -300,10 +300,8 @@ class AircraftArrivalSetup:
     def create_aircraft_arrival(self):
         # Create aircraft arrival process.
         aircraft_schedule = self.setup_aircraft_schedule()
-        self.logger.debug("Success: Aircraft arrival schedule loaded from file.")
 
         charge_schedule = self.setup_charge_schedule()
-        self.logger.debug("Success: Aircraft charging schedule loaded from file.")
 
         if charge_schedule is None:
             self.logger.debug("No charging schedule is provided. The arrival schedule will read tail numbers from the file.")

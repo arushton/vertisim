@@ -54,8 +54,12 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         easier to follow which resource is being used by which aircraft.
         """
         # TODO: Write tests for all cases
-        if (not aircraft.target_soc_constant and aircraft.soc >= aircraft.aircraft_params['min_reserve_soc']) or (aircraft.target_soc_constant and aircraft.soc >= aircraft.target_soc_constant):
+        if aircraft.soc >= aircraft.aircraft_params['min_reserve_soc']:
             return self._check_skip_charging(aircraft)
+        # else:
+
+        # if (not aircraft.target_soc_constant and aircraft.soc >= aircraft.aircraft_params['min_reserve_soc']) or (aircraft.target_soc_constant and aircraft.soc >= aircraft.target_soc_constant):
+        #     return self._check_skip_charging(aircraft)
         aircraft.status = AircraftStatus.CHARGE
 
         # If the chargers are shared, request all of the chargers that the parking pad has access to.

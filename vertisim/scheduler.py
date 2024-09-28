@@ -103,7 +103,21 @@ class Scheduler:
                                                           num_departing_passengers=self.aircraft_capacity)
         else:
             return None
-
+        
+    def check_flight_request_stores(self) -> Dict:
+        """
+        Checks all the self.vertiports[origin_vertiport_id].flight_request_stores[destination_vertiport_id].items
+        and return the departing passenger objects
+        """
+        departing_passenger_groups = defaultdict(lambda: defaultdict(list))
+        for origin, vertiport in self.vertiports.items():
+            for destination, fr_store in vertiport.flight_request_stores.items():
+                departing_passenger_groups[origin][destination] = []
+                num_agents_in_the_fr = len(fr_store.items)
+                if num_agents_in_the_fr > 0:
+                    for passenger in fr_store.items:
+                        departing_passenger_groups[origin][destination].append(passenger)
+        return departing_passenger_groups
 
     def last_call_check(self, current_waiting_room, num_departing_passengers):
         """

@@ -6,6 +6,7 @@ import json
 from typing import Dict, List
 import pandas as pd
 import os
+import re
 from .utils.json_formatter import create_trajectory_json
 from .utils.helpers import get_str_before_first_occurrence_of_char
 
@@ -27,20 +28,54 @@ def save_output(simulation_params: dict,
     if simulation_params['sim_params']['save_trajectories']:
         save_trajectories(trajectories=trajectories,
                           simulation_params=simulation_params,
-                          output_dir=simulation_params['output_params']['output_folder_path'])                
+                          output_dir=simulation_params['output_params']['output_folder_path'])     
+
+    # Extract simulated date from filename
+    simulated_date = extract_date_from_filename(filename=simulation_params['network_and_demand_params']['passenger_schedule_file_path']) 
+    # Get the number of aircraft
+    num_aircraft = get_num_aircraft(network_and_demand_params=simulation_params['network_and_demand_params'])          
     
     # Save performance metrics
     save_performance_metrics(simulation_params=simulation_params,
                                 performance_metrics=performance_metrics,
                                 simulationID=simulationID,
-                                flight_directions=flight_directions)
+                                flight_directions=flight_directions,
+                                simulated_date=simulated_date,
+                                algorithm=simulation_params['sim_params']['algorithm'],
+                                num_aircraft=num_aircraft, 
+                                performance_metrics_db_name=simulation_params['output_params']['performance_metrics_db_name'])
     
+def extract_date_from_filename(filename: str) -> str:
+    if not filename:
+        return None
+    # Define a regex pattern that matches digits with an underscore, such as '5_23'
+    pattern = r'(\d+_\d+)'
+    
+    # Search for the pattern in the filename
+    match = re.search(pattern, filename)
+    
+    # If a match is found, return the first match group
+    if match:
+        return match.group(1)
+    else:
+        return None
+
+def get_num_aircraft(network_and_demand_params: dict) -> int:
+    return sum(
+        vertiport['aircraft_arrival_process']['num_initial_aircraft_at_vertiport']
+        for _, vertiport in network_and_demand_params['vertiports'].items()
+    )
+
 def save_performance_metrics(simulation_params: dict,
                              performance_metrics: defaultdict,
                              simulationID: str,
-                             flight_directions: list) -> str:
+                             flight_directions: list,
+                             simulated_date: str,
+                             algorithm: str,
+                             num_aircraft: int,
+                             performance_metrics_db_name: str) -> str:
 
-    output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/vertisimDatabase.sqlite"
+    output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/{performance_metrics_db_name}.sqlite"
     print(f"Saving performance metrics to {output_path}\n")
     # If path doesn't exist, create it
     if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite"):
@@ -74,7 +109,10 @@ def save_performance_metrics(simulation_params: dict,
         print(f"Error: {err}")
     
     # --- PERFORMANCE METRICS TABLE --- 
-    metric_names = ['EnergyConsumptionMean', 
+    metric_names = ['SimulatedDate',
+                    'Algorithm',
+                    'NumAircraft',
+                    'EnergyConsumptionMean', 
                     'EnergyConsumptionStd', 
                     'EnergyConsumptionTotal', 
                     'FlightDurationMean', 
@@ -125,6 +163,9 @@ def save_performance_metrics(simulation_params: dict,
             mean_reward = metrics_for_flight['mean_reward']
             total_reward = metrics_for_flight['total_reward']
             metric_values = [
+                simulated_date,
+                algorithm,
+                num_aircraft,
                 energy_metrics['mean'], 
                 energy_metrics['std'],
                 energy_metrics['total'],

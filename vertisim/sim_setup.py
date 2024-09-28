@@ -409,6 +409,7 @@ class SimSetup:
                 'airspace': self.airspace,
                 'taxi_config': self.taxi_config,
                 'sim_params': self.sim_params,
+                'external_optimization_params': self.external_optimization_params,
                 'output_params': self.output_params,
                 'aircraft_params': self.aircraft_params,
                 'vertiport_distances': self.vertiport_distances,
@@ -443,7 +444,6 @@ class SimSetup:
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
                 'stopping_events': self.stopping_events,
-                'truncation_events': self.truncation_events,
                 'truncation_event': self.truncation_event,
                 'sim_mode': self.sim_mode,
                 'periodic_stopping': not is_none(self.external_optimization_params['periodic_time_step']),
@@ -573,7 +573,7 @@ class SimSetup:
         # Save the results
         save_output(simulation_params={
                         'sim_params': self.sim_params,
-                        'network_and_demand': self.network_and_demand_params,
+                        'network_and_demand_params': self.network_and_demand_params,
                         'passenger_params': self.passenger_params,
                         'aircraft_params': self.aircraft_params,
                         'airspace_params': self.airspace_params,

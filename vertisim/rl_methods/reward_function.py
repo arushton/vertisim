@@ -48,7 +48,8 @@ class RewardFunction:
             energy_cost = 0
         operating_cost = self._calculate_operating_cost(actions)
         spill_cost = self._calculate_spill_cost()
-        repositioning_reward = self.calculate_repositioning_reward(actions)
+        # repositioning_reward = self.calculate_repositioning_reward(actions)
+        repositioning_reward = self.calculate_repositioning_reward_with_limited_info(actions)
         self.reward = repositioning_reward + revenue - (energy_cost + operating_cost + spill_cost)         
 
     def compute_reward(self, actions: List[int]) -> None:
@@ -419,7 +420,7 @@ class RewardFunction:
         return False
 
 
-    def calculate_repositioning_reward(self, actions: List[int]) -> float:
+    def new_calculate_repositioning_reward(self, actions: List[int]) -> float:
         """
         Calculates a repositioning reward based on vertiport states, actions, and near-future demand.
         
@@ -484,6 +485,81 @@ class RewardFunction:
 
         if repositioning_reward != 0:
             system_manager.logger.debug(f"Simplified repositioning reward: {repositioning_reward}")
+
+        return repositioning_reward
+    
+
+    def calculate_repositioning_reward_with_limited_info(self, actions: List[int]) -> float:
+        """
+        Calculates a repositioning reward based on vertiport states, actions, and current passenger counts.
+        
+        This function encourages dynamic repositioning by considering:
+        1. Current passenger demand at each vertiport
+        2. Current aircraft distribution
+        3. Network balance based on current demand
+        
+        Args:
+        actions (List[int]): A list of action indices representing current actions for each aircraft.
+        
+        Returns:
+        float: The total repositioning reward.
+        """
+        repositioning_reward = 0
+        vertiports = self.sim_setup.vertiports
+        system_manager = self.sim_setup.system_manager
+        total_aircraft_count = len(system_manager.aircraft_agents)
+        reward_param = self.config['external_optimization_params']['reward_function_parameters']['repositioning_reward']
+
+        # Map actions to destination vertiport IDs
+        destination_ids = [self._get_destination_vertiport_id(aircraft_id, actions) for aircraft_id, action in enumerate(actions) if action < self.sim_setup.num_vertiports()]
+        flights_per_destination = Counter(destination_ids)
+
+        if not flights_per_destination:
+            return 0
+
+        # Calculate total current demand across all vertiports
+        total_current_demand = sum(vertiport.get_total_waiting_passenger_count() for vertiport in vertiports.values())
+        
+        # Calculate ideal aircraft distribution based on current demand
+        ideal_distribution = {v_id: vertiport.get_total_waiting_passenger_count() / max(1, total_current_demand) for v_id, vertiport in vertiports.items()}
+
+        for origin_vertiport_id, origin_vertiport in vertiports.items():
+            for destination_id, destination_vertiport in vertiports.items():
+                if origin_vertiport_id == destination_id:
+                    continue
+
+                # Get current demand
+                current_demand = destination_vertiport.get_total_waiting_passenger_count()
+                if current_demand == 0:
+                    continue
+
+                # Check current aircraft distribution
+                current_aircraft_count = system_manager.get_num_aircraft_at_vertiport(vertiport_id=destination_id)
+                ideal_aircraft_count = ideal_distribution[destination_id] * total_aircraft_count
+
+                # Calculate demand satisfaction rate
+                # We'll use a more conservative estimate since we don't have future demand information
+                demand_satisfaction_rate = min(1, (current_aircraft_count * 4) / max(1, current_demand))  # Assuming 4 seats per aircraft
+
+                # Calculate urgency factor
+                # This factor increases as the number of waiting passengers increases
+                urgency_factor = min(1, current_demand / (4 * max(1, current_aircraft_count)))
+
+                # Calculate repositioning score
+                reposition_score = (
+                    (1 - demand_satisfaction_rate) * 0.4 +  # Demand satisfaction
+                    (ideal_aircraft_count - current_aircraft_count) / max(1, ideal_aircraft_count) * 0.3 +  # Network balance
+                    urgency_factor * 0.3  # Urgency based on current demand
+                )
+
+                # Apply repositioning reward
+                num_flights = flights_per_destination.get(destination_id, 0)
+                if num_flights == 1:  # We still encourage at most one flight per destination
+                    trip_length = self._lookup_trip_length(origin_id=origin_vertiport_id, destination_id=destination_id)
+                    repositioning_reward += reward_param * trip_length * reposition_score
+
+        if repositioning_reward != 0:
+            system_manager.logger.debug(f"Current demand repositioning reward: {repositioning_reward}")
 
         return repositioning_reward
 
