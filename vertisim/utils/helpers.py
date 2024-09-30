@@ -10,6 +10,8 @@ import pandas as pd # For type hinting
 import pkg_resources
 import functools
 import pickle
+import json
+import yaml
 
 
 def set_seed(seed=None, how='instant'):
@@ -43,6 +45,34 @@ def cache_to_file(filename):
         return wrapper
     return decorator
 
+def read_config_file(file_path: str) -> bool:
+    if file_path.endswith(".yaml"):
+        rl_config = read_yaml_file(file_path)
+    elif file_path.endswith(".json"):
+        rl_config = read_json_file(file_path)
+    else:
+        raise ValueError(f"config path must be either yaml or json file. Received {file_path}")
+    return rl_config
+
+
+def read_json_file(json_path: str) -> Dict:
+    """
+    Reads a json file and returns the config as a dictionary.
+    :param json_path: (str) The path to the json file
+    :return: (dict) The config
+    """
+    with open(json_path, "r") as f:
+        return json.load(f)
+    
+def read_yaml_file(yaml_path: str) -> dict:
+    """
+    Reads a yaml file and returns the config as a dictionary.
+    :param yaml_path: (str) The path to the yaml file
+    :return: (dict) The config
+    """
+    with open(yaml_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
+    return config
 
 def is_none(value):
     return value is None

@@ -186,7 +186,7 @@ class VertiportConfig:
         Passengers with waiting times equal to or exceeding the threshold are placed in the last bin.
         """
         # Calculate bin_size based on the threshold and the number of bins
-        bin_size = (sec_to_min(self.pax_waiting_time_threshold))/ self.num_waiting_time_bins
+        bin_size = int(sec_to_min(self.pax_waiting_time_threshold)/ self.num_waiting_time_bins)
 
         # Initialize the waiting time bins for each destination
         waiting_time_bins = {

@@ -1401,7 +1401,7 @@ class Aircraft:
             'time_to_arrival': self.estimate_time_to_arrival(),
             'holding_time': self.get_holding_time(),
             'num_passengers': len(self.passengers_onboard),
-            'status': self.status.value,
+            'status': 3 if self.status.value == 4 else self.status.value,
             'is_process_completed': int(self.is_process_completed),
             'is_first_time_charge': int(self.is_first_time_charge)
         }

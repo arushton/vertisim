@@ -1,7 +1,7 @@
 from typing import List, Dict, Set
 import numpy as np
 from ..aircraft.aircraft import AircraftStatus
-from ..utils.units import sec_to_ms
+from ..utils.units import sec_to_ms, sec_to_min
 from ..utils import rl_utils
 from ..utils.helpers import (
     current_and_lookahead_pax_count,
@@ -10,6 +10,7 @@ from ..utils.helpers import (
     extract_dict_values
 )
 from collections import Counter
+import math
 
 class RewardFunction:
     def __init__(self, config: Dict, reverse_action_dict: Dict, sim_setup: object, logger: object) -> None:
@@ -49,9 +50,9 @@ class RewardFunction:
             energy_cost = 0
         operating_cost = self._calculate_operating_cost(actions)
         spill_cost = self._calculate_spill_cost()
-        # repositioning_reward = self.calculate_repositioning_reward(actions)
-        repositioning_reward = self.calculate_repositioning_reward_with_limited_info(actions)
-        self.reward = repositioning_reward + revenue - (energy_cost + operating_cost + spill_cost)         
+        repositioning_reward = self._calculate_repositioning_reward(actions)
+        charge_reward = self._apply_charge_rewards(actions)
+        self.reward = repositioning_reward + revenue + charge_reward - (energy_cost + operating_cost + spill_cost)         
 
     def compute_reward(self, actions: List[int]) -> None:
         """
@@ -202,6 +203,16 @@ class RewardFunction:
         total_trip_length = self._calculate_total_flight_distance(actions)        
         self._apply_trip_and_flight_cost_reward(pax_count, total_trip_length)
 
+    def _apply_charge_rewards(self, actions: List[int]) -> None:
+        """
+        Apply charge-based rewards and penalties.
+        """
+        charge_reward = 0
+        for aircraft_id, aircraft in self.sim_setup.system_manager.aircraft_agents.items():
+            if actions[aircraft_id] == self.reverse_action_dict['CHARGE']:
+                charge_reward += self._get_charge_reward(aircraft)
+        return charge_reward
+
     def _apply_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         """
         Apply flight-based rewards and penalties.
@@ -274,9 +285,11 @@ class RewardFunction:
         Calculate the reward for charging.
         """
         if aircraft.system_manager.sim_mode['rl']:
+            current_demand = sum(current_and_lookahead_pax_count(vertiport) for vertiport in aircraft.system_manager.vertiports.values()) 
             return rl_utils.charge_reward(
                 current_soc=aircraft.soc,
-                soc_reward_threshold=aircraft.charging_strategy.soc_reward_threshold
+                soc_reward_threshold=aircraft.charging_strategy.soc_reward_threshold,
+                current_demand=current_demand
             ) * self.config['external_optimization_params']['reward_function_parameters']['charge_reward']
         return 0
 
@@ -353,6 +366,7 @@ class RewardFunction:
         repositioning_reward = 0
         vertiports = self.sim_setup.vertiports
         system_manager = self.sim_setup.system_manager
+        num_seats = self.config['aircraft_params']['pax']
 
         # Extract the reward parameter once to avoid repeated dictionary lookups
         reward_param = self.config['external_optimization_params']['reward_function_parameters']['repositioning_reward']
@@ -367,6 +381,16 @@ class RewardFunction:
         # Precompute the number of flights per destination using Counter for efficiency
         flights_per_destination = Counter(destination_ids)
 
+        # Get departing passengers for all flights
+        dest_departing_pax_pair = self._get_destination_departing_pax_pair(actions)
+
+        # Identify repositioning flights (empty flights)
+        repositioning_flights = [
+            (system_manager.aircraft_agents[aircraft_id].origin_vertiport_id, self._get_destination_vertiport_id(aircraft_id, actions))
+            for aircraft_id, action in enumerate(actions)
+            if action < self.sim_setup.num_vertiports() and self._is_empty_flight(aircraft_id, actions, dest_departing_pax_pair)
+        ]
+
         if len(flights_per_destination) == 0:
             return 0        
 
@@ -376,30 +400,42 @@ class RewardFunction:
                 if origin_vertiport_id == destination_id:
                     continue  # Skip same origin and destination
 
+                demand_at_destination = current_and_lookahead_pax_count(destination_vertiport)
+
+                if (origin_vertiport_id, destination_id) not in repositioning_flights:
+                    continue
+
                 # Check if there is a passenger demand at the destination
                 if current_and_lookahead_pax_count(destination_vertiport) == 0:
                     continue
 
-                # Check if destination is already occupied
+                # Check if the supply at the destination is already enough
                 num_aircraft = system_manager.get_num_aircraft_at_vertiport(vertiport_id=destination_id)
-                if num_aircraft != 0:
+                if (self._flying_aircraft_count_to_destination(destination_id) + num_aircraft) * num_seats >= demand_at_destination:
                     continue
 
-                # # Check if any aircraft is already flying to the destination
-                # if self._is_aircraft_flying_to_destination(destination_id):
-                #     continue
+                # If the origin future demand is greater than the supply, then skip the repositioning
+                origin_future_demand = origin_vertiport.get_total_expected_pax_arrival_count()
+                if origin_future_demand > (system_manager.get_num_aircraft_at_vertiport(vertiport_id=origin_vertiport_id) \
+                                           + self._flying_aircraft_count_to_destination(origin_vertiport_id)) * num_seats:
+                    continue
 
-                # Retrieve the number of flights to this destination
-                num_flights = flights_per_destination.get(destination_id, 0)
-                if num_flights != 1:
-                    continue  # Only consider destinations with exactly one flight
+                # # Retrieve the number of flights to this destination
+                # num_flights = flights_per_destination.get(destination_id, 0)
+                # if num_flights != 1:
+                #     continue  # Only consider destinations with exactly one flight
+
+                # origin_demand = origin_vertiport.get_total_waiting_passenger_count()
+                # origin_seat_supply = system_manager.get_num_aircraft_at_vertiport(vertiport_id=origin_vertiport_id) * num_seats
+                # if origin_demand > origin_seat_supply:
+                #     continue
 
                 # Lookup trip length once for the valid origin-destination pair
                 trip_length = self._lookup_trip_length(origin_id=origin_vertiport_id, destination_id=destination_id)
                 repositioning_reward += reward_param * trip_length
 
         if repositioning_reward != 0:
-            system_manager.logger.debug(f"Repositioning reward is processed.")
+            system_manager.logger.debug(f"Repositioning reward is processed: {round(repositioning_reward, 2)}")
 
         return repositioning_reward
 
@@ -425,6 +461,17 @@ class RewardFunction:
                 aircraft.flight_direction == f"{aircraft.current_vertiport_id}_{dest_vertiport_id}":
                 return True
         return False
+    
+    def _flying_aircraft_count_to_destination(self, dest_vertiport_id: int) -> int:
+        """
+        Get the number of aircraft flying to the destination vertiport.
+        """
+        flying_aircraft_count = 0
+        for aircraft in self.sim_setup.system_manager.aircraft_agents.values():
+            if aircraft.status == AircraftStatus.FLY and \
+                aircraft.flight_direction == f"{aircraft.current_vertiport_id}_{dest_vertiport_id}":
+                flying_aircraft_count += 1
+        return flying_aircraft_count
 
 
     def new_calculate_repositioning_reward(self, actions: List[int]) -> float:
@@ -830,3 +877,120 @@ class RewardFunction:
                     break
         
         return updated_waiting_bins
+    
+
+
+    def simplified_repositioning_reward(self, actions: List[int]) -> float:
+        """
+        Calculates a simplified reward for empty repositioning flights.
+        
+        Args:
+        actions (List[int]): A list of action indices representing current actions for each aircraft.
+        
+        Returns:
+        float: The total repositioning reward.
+        """
+        repositioning_reward = 0
+        seat_capacity = self.config['aircraft_params']['pax']
+        vertiports = self.sim_setup.vertiports
+        system_manager = self.sim_setup.system_manager
+        reward_param = self.config['external_optimization_params']['reward_function_parameters']['repositioning_reward']
+        
+        # Get departing passengers for all flights
+        dest_departing_pax_pair = self._get_destination_departing_pax_pair(actions)
+        
+        # Identify repositioning flights (empty flights)
+        repositioning_flights = [
+            (aircraft_id, self._get_destination_vertiport_id(aircraft_id, actions))
+            for aircraft_id, action in enumerate(actions)
+            if action < self.sim_setup.num_vertiports() and self._is_empty_flight(aircraft_id, actions, dest_departing_pax_pair)
+        ]
+
+        for aircraft_id, destination_id in repositioning_flights:
+            origin_vertiport_id = system_manager.aircraft_agents[aircraft_id].current_vertiport_id
+            origin_vertiport = vertiports[origin_vertiport_id]
+            destination_vertiport = vertiports[destination_id]
+
+            # Calculate demand imbalance
+            origin_demand = origin_vertiport.get_total_expected_pax_arrival_count() + sum(sum(bins) for bins in origin_vertiport.get_pax_waiting_time_bins().values())
+            dest_demand = destination_vertiport.get_total_expected_pax_arrival_count() + sum(sum(bins) for bins in destination_vertiport.get_pax_waiting_time_bins().values())
+            
+            origin_supply = system_manager.get_num_aircraft_at_vertiport(vertiport_id=origin_vertiport_id) * seat_capacity
+            dest_supply = system_manager.get_num_aircraft_at_vertiport(vertiport_id=destination_id) * seat_capacity
+
+            origin_imbalance = max(0, origin_demand - origin_supply) / max(1, origin_demand)
+            dest_imbalance = max(0, dest_demand - dest_supply) / max(1, dest_demand)
+
+            # Only reward if destination imbalance is greater than origin imbalance
+            if dest_imbalance > origin_imbalance:
+                imbalance_difference = dest_imbalance - origin_imbalance
+                trip_length = self._lookup_trip_length(origin_id=origin_vertiport_id, destination_id=destination_id)
+                repositioning_reward += reward_param * trip_length * imbalance_difference
+
+        return repositioning_reward
+    
+
+
+
+    def repositioning_reward_future_demand(self, actions: List[int]) -> float:
+        """
+        Calculates repositioning reward based on future demand, considering timing constraints.
+        
+        Args:
+        actions (List[int]): A list of action indices representing current actions for each aircraft.
+        
+        Returns:
+        float: The total repositioning reward.
+        """
+        repositioning_reward = 0
+        seat_capacity = self.config['aircraft_params']['pax']
+        vertiports = self.sim_setup.vertiports
+        system_manager = self.sim_setup.system_manager
+        reward_param = self.config['external_optimization_params']['reward_function_parameters']['repositioning_reward']
+        decision_making_interval = sec_to_min(self.config['external_optimization_params']['periodic_time_step'])
+        
+        # Get departing passengers for all flights
+        dest_departing_pax_pair = self._get_destination_departing_pax_pair(actions)
+        
+        # Identify repositioning flights (empty flights)
+        repositioning_flights = [
+            (aircraft_id, self._get_destination_vertiport_id(aircraft_id, actions))
+            for aircraft_id, action in enumerate(actions)
+            if action < self.sim_setup.num_vertiports() and self._is_empty_flight(aircraft_id, actions, dest_departing_pax_pair)
+        ]
+        
+        for aircraft_id, destination_id in repositioning_flights:
+            origin_vertiport_id = system_manager.aircraft_agents[aircraft_id].current_vertiport_id
+            origin_vertiport = vertiports[origin_vertiport_id]
+            destination_vertiport = vertiports[destination_id]
+            
+            # Time until aircraft is available at destination
+            flight_duration = system_manager.get_average_flight_time(flight_direction=f"{origin_vertiport_id}_{destination_id}")
+            
+            # **Assess Future Demand at Destination Vertiport**
+            future_demand = destination_vertiport.get_total_expected_pax_arrival_count()
+            
+            # **Assess Supply at Destination Vertiport**
+            future_supply = system_manager.get_num_aircraft_at_vertiport(vertiport_id=destination_id)
+            
+            # **Calculate Potential Spill at Destination**
+            potential_spill = max(0, future_demand - (future_supply * seat_capacity))
+            
+            # **Assess Impact on Origin Vertiport**
+            # Ensure repositioning doesn't cause spill at the origin
+            origin_future_demand = origin_vertiport.get_total_expected_pax_arrival_count()
+            origin_future_supply = (system_manager.get_num_aircraft_at_vertiport(vertiport_id=origin_vertiport_id) - 1)
+            
+            origin_potential_spill = max(0, origin_future_demand - (origin_future_supply * seat_capacity))
+            
+            # **Only consider repositioning if it reduces net spill**
+            net_spill_reduction = potential_spill - origin_potential_spill
+            
+            if net_spill_reduction > 0:
+                # **Calculate Reward**
+                repositioning_reward += reward_param * net_spill_reduction
+            else:
+                # Repositioning doesn't reduce net spill; no reward
+                continue
+        
+        return repositioning_reward

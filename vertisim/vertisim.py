@@ -232,11 +232,14 @@ class VertiSim:
         aircraft_agents = system_manager.aircraft_agents
         num_aircraft = len(aircraft_agents)
         num_vertiports = self.sim_setup.num_vertiports()
+        seat_capacity = self.sim_setup.aircraft_params['pax']
         vertiport_ids = self.sim_setup.vertiport_ids
         vertiport_id_to_index_map = self.sim_setup.vertiport_id_to_index_map
         vertiport_index_to_id_map = self.sim_setup.vertiport_index_to_id_map
         min_reserve_soc = self.config['aircraft_params']['min_reserve_soc']
         battery_capacity = self.config['aircraft_params']['battery_capacity']
+        num_waiting_time_bins = self.config['sim_params']['quadratic_states']['waiting_time_bins']
+
         
         # Cache SOC and charge increment configurations
         soc_increment_per_charge_event = self.config['external_optimization_params'].get('soc_increment_per_charge_event')
@@ -265,11 +268,25 @@ class VertiSim:
         # Dictionaries to track enforced OD pairs and aircraft SoC
         enforced_od_pairs = set()
         aircraft_soc_map = {}  # {vertiport_id: [(aircraft_id, soc), ...]}
+
+        # Calculate aircraft supply and demand at each vertiport
+        aircraft_supply = {vertiport_id: 0 for vertiport_id in vertiport_ids}
+        passenger_demand = {vertiport_id: 0 for vertiport_id in vertiport_ids}
         
+        for aircraft in aircraft_agents.values():
+            if aircraft.status == AircraftStatus.IDLE:
+                aircraft_supply[aircraft.current_vertiport_id] += seat_capacity
+        
+        for vertiport in system_manager.vertiports.values():
+            passenger_demand[vertiport.vertiport_id] = vertiport.get_total_waiting_passenger_count()        
+        
+        # Check if there's any demand at the vertiports
+        no_demand_in_system = not any(current_and_lookahead_pax_count(vertiport) for vertiport in system_manager.vertiports.values()) 
+
         # First pass: Determine initial masks and populate aircraft_soc_map
         for idx, (aircraft_id, aircraft) in enumerate(aircraft_agents.items()):
             current_vertiport_id = aircraft.current_vertiport_id
-            current_vertiport = self.sim_setup.vertiports.get(current_vertiport_id)
+            current_vertiport = system_manager.vertiports[current_vertiport_id]
             
             # Determine SOC increment
             if soc_increment_per_charge_event is not None:
@@ -306,7 +323,10 @@ class VertiSim:
                 non_flight_actions = [1, 1]  # Allow Charge and Do Nothing
                 # Populate aircraft_soc_map for potential enforced flights
                 aircraft_soc_map.setdefault(current_vertiport_id, []).append((idx, aircraft.soc))
-            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc <= min_reserve_soc:
+            
+            # If the aircraft is idle and its SoC is below the minimum reserve SoC + the minimum value in flight_soc_required dict, it can only charge
+
+            elif aircraft.status == AircraftStatus.IDLE and aircraft.soc <= min_reserve_soc + min(flight_soc_required_map.values()):
                 # Can only Charge
                 flight_mask = np.zeros(num_vertiports, dtype=int)
                 non_flight_actions = [1, 0]  # Allow Charge only
@@ -330,29 +350,63 @@ class VertiSim:
                 if dest_vertiport_id == current_vertiport_id:
                     continue  # Already handled by masking current vertiport
                 od_pair = f"{current_vertiport_id}_{dest_vertiport_id}"
-                flight_soc_required = flight_soc_required_map.get(od_pair, 0)
+                flight_soc_required = flight_soc_required_map.get(od_pair, 0) + min_reserve_soc
                 if flight_soc_required > aircraft.soc:
                     dest_index = vertiport_id_to_index_map[dest_vertiport_id]
                     flight_mask[dest_index] = 0  # Mask the action
+
+            # If there's no demand at any vertiport, allow only charge and Do Nothing
+            if no_demand_in_system:
+                flight_mask = np.zeros(num_vertiports, dtype=int)
+
+            for dest_vertiport_id in vertiport_ids:
+                if dest_vertiport_id == current_vertiport_id:
+                    continue
+                dest_index = vertiport_id_to_index_map[dest_vertiport_id]
+
+                # If aircraft supply at destination is enough and no spill at origin
+                if (aircraft_supply[dest_vertiport_id] >= passenger_demand[dest_vertiport_id] and 
+                    not self.will_passengers_spill(vertiport=current_vertiport, 
+                                                   dest_vertiport_id=dest_vertiport_id, 
+                                                   num_waiting_time_bins=num_waiting_time_bins)):
+                    flight_mask[dest_index] = 0
+
+            # If there's no demand at the destination and no spill at the origin
+            expected_arrivals = current_vertiport.get_total_expected_pax_arrival_count()
+            other_vertiports_expected_arrivals = sum(
+                vertiport.get_total_expected_pax_arrival_count() 
+                for v_id, vertiport in system_manager.vertiports.items() 
+                if v_id != current_vertiport_id
+            )
+            if (expected_arrivals > 0 and 
+                other_vertiports_expected_arrivals == 0 and 
+                not self.will_passengers_spill(vertiport=current_vertiport, 
+                                               num_waiting_time_bins=num_waiting_time_bins)):
+                flight_mask[dest_index] = 0
             
             # Update the mask for the current aircraft
             mask[idx, :num_vertiports] = flight_mask
             mask[idx, num_vertiports:num_vertiports+2] = non_flight_actions
+
+
 
         # If waiting_time_bins is in the states of the simulation, use it to determine enforced flights
         if "waiting_time_bins" in self.config['sim_params']['simulation_states']['vertiport_states'] and self.config['sim_params']['algorithm'] not in ['RandomPolicy', 'VertiSimHeuristics']:            
             # Second pass: Process enforced flights and update masks
             for current_vertiport_id, aircraft_list in aircraft_soc_map.items():
                 current_vertiport = self.sim_setup.vertiports[current_vertiport_id]
-                waiting_time_bins = current_vertiport.get_pax_waiting_time_bins()
                 
                 for dest_vertiport_id in vertiport_ids:
                     if dest_vertiport_id == current_vertiport_id:
                         continue
                     
-                    passengers_in_last_bin = sum(waiting_time_bins[dest_vertiport_id][-self.decision_making_interval:])
+                    total_pax_count = current_vertiport.get_total_waiting_passenger_count()
                     # passengers_in_last_bin = waiting_time_bins[dest_vertiport_id][-1]
-                    if passengers_in_last_bin > 0 and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs:
+                    if (self.will_passengers_spill(vertiport=current_vertiport, 
+                                                   dest_vertiport_id=dest_vertiport_id, 
+                                                   num_waiting_time_bins=num_waiting_time_bins) \
+                                                    and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs) \
+                        or (total_pax_count >= seat_capacity and (current_vertiport_id, dest_vertiport_id) not in enforced_od_pairs):
                         dest_index = vertiport_id_to_index_map.get(dest_vertiport_id)
                         
                         # Find the aircraft with the highest SoC that can make the flight
@@ -378,6 +432,32 @@ class VertiSim:
         
         # Convert the mask to a flattened list
         return mask.flatten().tolist()
+        
+    def will_passengers_spill(self, vertiport, num_waiting_time_bins, dest_vertiport_id=None):
+        """
+        Check if passengers will spill at the vertiport.
+
+        Args:
+            vertiport: The vertiport object.
+            dest_vertiport_id (optional): The ID of the destination vertiport. If provided, check for spills to this destination only.
+        
+        Returns:
+            bool: True if passengers will spill, False otherwise.
+        """
+        waiting_time_bins = vertiport.get_pax_waiting_time_bins()
+        threshold_index = -int(num_waiting_time_bins / 2)
+
+        if dest_vertiport_id is not None:
+            bins = waiting_time_bins.get(dest_vertiport_id, [])
+            spill_pax_count = sum(bins[threshold_index:])
+            return spill_pax_count > 0
+        else:
+            # Use any() for early exit upon finding any spill
+            return any(
+                sum(bins[threshold_index:]) > 0
+                for bins in waiting_time_bins.values()
+            )
+
 
     def schedule_periodic_stop_event(self):
         """
