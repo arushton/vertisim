@@ -45,7 +45,7 @@ class EventSaver:
         self.flying_aircraft_counter = defaultdict(dict)
         self.passenger_trip_time_tracker = defaultdict(dict)
         self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-        self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 50} for flight_direction in flight_directions}
+        self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 15} for flight_direction in flight_directions}
         self.spilled_passenger_tracker = {flight_direction: 0 for flight_direction in flight_directions}
         self.reward_tracker = {'step': 0, 'mean_reward': 0, 'total_reward': 0}
 

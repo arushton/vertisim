@@ -7,7 +7,7 @@ from .units import sec_to_min
 def charge_reward(current_soc, soc_reward_threshold, current_demand):
     # Rewards the charging action if the current state of charge is below the threshold
     if current_demand == 0:
-        return round(5-(current_soc/100), 2)
+        return round(10-(current_soc/100), 2)
     else:
         if current_soc <= soc_reward_threshold:
             return round(1-(current_soc/100), 2)

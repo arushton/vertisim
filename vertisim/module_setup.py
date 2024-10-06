@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 
-def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) -> Dict:
+def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str, flush_cache: bool) -> Dict:
     layout_file_path = network_and_demand['vertiport_layout_file_path']
     vertiport_layouts = defaultdict(dict)
     for vertiport_id, vertiport_data in network_and_demand['vertiports'].items():
@@ -14,7 +14,8 @@ def create_vertiport_layouts(network_and_demand: Dict, output_folder_path: str) 
         vertiport_layout = VertiportLayout(file_path=layout_file_path, 
                                            layout_type=layout,
                                            vertiport_id=vertiport_id,
-                                           output_folder_path=output_folder_path)
+                                           output_folder_path=output_folder_path,
+                                           flush_cache=flush_cache)
         vertiport_layouts[vertiport_id] = vertiport_layout
     return vertiport_layouts
 

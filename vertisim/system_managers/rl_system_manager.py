@@ -37,7 +37,8 @@ class RLSystemManager(BaseSystemManager):
                  truncation_event: simpy.Event,
                  sim_mode: Dict,
                  periodic_stopping: bool = False,
-                 periodic_and_event_driven: bool = False
+                 periodic_and_event_driven: bool = False,
+                 flight_directions_dict: Dict = None
                  ):
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -59,7 +60,8 @@ class RLSystemManager(BaseSystemManager):
                         logger=logger,
                         aircraft_logger=aircraft_logger,
                         passenger_logger=passenger_logger,
-                        sim_mode=sim_mode
+                        sim_mode=sim_mode,
+                        flight_directions_dict=flight_directions_dict
                         )
         
         self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
@@ -80,6 +82,8 @@ class RLSystemManager(BaseSystemManager):
         self.charge_reward = 0
         self.triggered_stopping_event_queue = deque()
         self.env.process(self.check_passenger_max_waiting_time_threshold())
+
+    
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -513,7 +517,7 @@ class RLSystemManager(BaseSystemManager):
         while True:
             yield self.env.timeout(min_to_ms(1))
             # Do not operate at the multiples of 5 minutes
-            if self.env.now % min_to_ms(5) == 0:
+            if self.env.now % sec_to_ms(self.external_optimization_params['periodic_time_step']) == 0:
                 self.logger.debug(f'Skipping passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
                 continue
 

@@ -739,9 +739,10 @@ def convert_action_list_to_enum(action_list: List, action_enum: Enum):
 
 
 def create_action_dict(vertiport_ids):
-    action_dict = {idx: vertiport_id for idx, vertiport_id in enumerate(vertiport_ids)}
-    action_dict[len(vertiport_ids)] = 'CHARGE'
-    action_dict[len(vertiport_ids) + 1] = 'DO_NOTHING'
+    sorted_vertiport_ids = sorted(vertiport_ids)
+    action_dict = {idx: vertiport_id for idx, vertiport_id in enumerate(sorted_vertiport_ids)}
+    action_dict[len(sorted_vertiport_ids)] = 'CHARGE'
+    action_dict[len(sorted_vertiport_ids) + 1] = 'DO_NOTHING'
     return action_dict
 
 

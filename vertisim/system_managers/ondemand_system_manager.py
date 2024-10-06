@@ -2,7 +2,7 @@ from .base_system_manager import BaseSystemManager
 import simpy
 import networkx as nx
 from typing import Any, Dict, Generator, Optional
-from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, min_to_ms, sec_to_min
+from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, min_to_ms, sec_to_min, min_to_sec
 from ..utils.distribution_generator import DistributionGenerator
 from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
@@ -40,7 +40,8 @@ class OnDemandSystemManager(BaseSystemManager):
                  logger: object,
                  aircraft_logger: object,
                  passenger_logger: object,
-                 sim_mode: Dict):
+                 sim_mode: Dict,
+                 flight_directions_dict: Dict):
 
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -62,18 +63,19 @@ class OnDemandSystemManager(BaseSystemManager):
                         logger=logger,
                         aircraft_logger=aircraft_logger,
                         passenger_logger=passenger_logger,
-                        sim_mode=sim_mode
+                        sim_mode=sim_mode,
+                        flight_directions_dict=flight_directions_dict
                         )
         self.aircraft_agents = {}
         self.passenger_agents = {}
         self.taxi_resource = simpy.Resource(self.env, 1)
         self.charging_time_distribution = self.build_charging_time_distribution()
         self.aircraft_battery_models = self.build_aircraft_battery_models()      
-        if (
-            not self.sim_params['only_aircraft_simulation']
-            and self.sim_params['max_passenger_waiting_time']
-        ):
-            self.env.process(self.remove_spilled_passengers())
+        # if (
+        #     not self.sim_params['only_aircraft_simulation']
+        #     and self.external_optimization_params['spill_optimization']
+        # ):
+        #     self.env.process(self.remove_spilled_passengers())
         
         self.trip_counter_tracker = 0
         self.total_demand = 0
@@ -97,19 +99,19 @@ class OnDemandSystemManager(BaseSystemManager):
                           destination_vertiport_id: int, 
                           passengers_waiting_room: simpy.Store) -> Generator:
         if departing_passengers := self.scheduler.check_waiting_room(current_waiting_room=passengers_waiting_room):
-            # Save passenger group completion time
-            for passenger in departing_passengers:
-                self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_consolidation')
+            # # Save passenger group completion time
+            # for passenger in departing_passengers:
+            #     self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_consolidation')
 
-            # Save passenger consolidation time
-            self.event_saver.save_passenger_group_consolidation_time(
-                vertiport_id=origin_vertiport_id,
-                passenger_ids=get_passenger_ids_from_passenger_list(departing_passengers),
-                wr_number=destination_vertiport_id,
-                consolidation_time=calculate_passenger_consolidation_time(departing_passengers)
-            )
+            # # Save passenger consolidation time
+            # self.event_saver.save_passenger_group_consolidation_time(
+            #     vertiport_id=origin_vertiport_id,
+            #     passenger_ids=get_passenger_ids_from_passenger_list(departing_passengers),
+            #     wr_number=destination_vertiport_id,
+            #     consolidation_time=calculate_passenger_consolidation_time(departing_passengers)
+            # )
 
-            self.logger.debug(f"Passengers {[passenger.passenger_id for passenger in departing_passengers]} are ready to depart from {origin_vertiport_id} to {destination_vertiport_id}")
+            # self.logger.debug(f"Passengers {[passenger.passenger_id for passenger in departing_passengers]} are ready to depart from {origin_vertiport_id} to {destination_vertiport_id}")
 
             # Put passengers into the flight request queue
             for passenger in departing_passengers:
@@ -125,7 +127,7 @@ class OnDemandSystemManager(BaseSystemManager):
                 departing_passengers=departing_passengers)
                 )
         
-        if self.sim_params['fleet_rebalancing']:
+        if self.sim_params['fleet_rebalancing'] and not self.external_optimization_params['periodic_time_step']:
             num_available_aircraft_at_origin = self.check_num_available_aircraft(origin_vertiport_id)
             num_available_aircraft_at_dest = self.check_num_available_aircraft(destination_vertiport_id)
             num_pax_groups = int(self.get_num_waiting_passengers(origin_vertiport_id) / self.aircraft_params['pax'])
@@ -150,7 +152,7 @@ class OnDemandSystemManager(BaseSystemManager):
     def reserve_aircraft(self, 
                          origin_vertiport_id: Any, 
                          destination_vertiport_id: int, 
-                         departing_passengers: list) -> Generator:
+                         departing_passengers: list) -> Generator:        
         # Start tracking aircraft allocation time
         aircraft_allocation_start_time = self.env.now
         # Update the vertiport flight request state
@@ -230,11 +232,13 @@ class OnDemandSystemManager(BaseSystemManager):
 
     
     def remove_spilled_passengers(self):
-        max_waiting_time = sec_to_ms(self.sim_params['max_passenger_waiting_time'] - 60) # Subtract 1 min to account for exceeding the max waiting time by 1 min
+        # TODO: You just need to do this check after the decision making time step if you remove the pax that will spill until the next decision making time step!
+
+        max_waiting_time = sec_to_ms(self.sim_params['max_passenger_waiting_time'] - min_to_sec(1)) # Subtract 1 min to account for exceeding the max waiting time by 1 min
         while True:
             yield self.env.timeout(min_to_ms(1))  # Check every minute
             # If the time is the multiple of the decision making time step, skip the spillover process
-            if self.external_optimization_params['periodic_time_step'] and self.env.now % sec_to_ms(self.external_optimization_params['periodic_time_step']) == 0:
+            if self.env.now % sec_to_ms(self.external_optimization_params['periodic_time_step']) == 0:
                 self.logger.debug(f"Skipping spillover process at time {miliseconds_to_hms(self.env.now)}")
                 continue
         
@@ -247,7 +251,7 @@ class OnDemandSystemManager(BaseSystemManager):
                         pax_in_wr = self.get_pax_for_od_pair(origin, destination)
                         passengers_exceeding_wait = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time > max_waiting_time]
                         for passenger in passengers_exceeding_wait:
-                            self.env.process(self.spill_passenger(passenger, origin, destination))
+                            self.spill_passenger(passenger, origin, destination)
 
     def make_ondemand_decision(self):
         """
@@ -267,16 +271,17 @@ class OnDemandSystemManager(BaseSystemManager):
                 if origin != destination:
                     # Get the total number of passengers in the waiting room
                     pax_in_wr = self.get_pax_for_od_pair(origin, destination)
+
+                    # Check if any passenger has exceeded max waiting time
+                    passengers_exceeding_wait = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time > max_waiting_time]
+                    # Add the passengers that are going to exceed the max waiting time by the next decision making time step. 
+                    pax_will_exceed_waiting_time_threshold = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time \
+                                                                + decision_making_time_step > max_waiting_time and p not in passengers_exceeding_wait]
+                    # Merge the two lists
+                    passengers_exceeding_wait += pax_will_exceed_waiting_time_threshold
+                                        
                     # If there are available aircraft, create flights for passengers exceeding max waiting time
                     while pax_in_wr and available_aircraft[origin] > 0:
-                        # Check if any passenger has exceeded max waiting time
-                        passengers_exceeding_wait = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time > max_waiting_time]
-                        # Add the passengers that are going to exceed the max waiting time by the next decision making time step. 
-                        pax_will_exceed_waiting_time_threshold = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time \
-                                                                  + decision_making_time_step > max_waiting_time and p not in passengers_exceeding_wait]
-                        # Merge the two lists
-                        passengers_exceeding_wait += pax_will_exceed_waiting_time_threshold
-                        
                         # Check if there are any waiting rooms with more than equal to aircraft seat capacity number of passengers or any passengers exceeding max waiting time
                         if passengers_exceeding_wait or len(pax_in_wr) >= self.aircraft_params['pax']:
                             # Create a flight with up to seat_capacity passengers
@@ -292,8 +297,11 @@ class OnDemandSystemManager(BaseSystemManager):
 
                     # If there are still passengers exceeding wait time but no available aircraft, spill them
                     remaining_exceeded_wait = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time > max_waiting_time]
+                    pax_will_exceed_waiting_time_threshold = [p for p in pax_in_wr if self.env.now - p.waiting_room_arrival_time \
+                                                                + decision_making_time_step > max_waiting_time and p not in remaining_exceeded_wait]
+                    remaining_exceeded_wait += pax_will_exceed_waiting_time_threshold
                     for passenger in remaining_exceeded_wait:
-                        self.env.process(self.spill_passenger(passenger, origin, destination))
+                        self.spill_passenger(passenger, origin, destination)
 
         self.env.process(self.consider_repositioning_flights())
         yield self.env.timeout(0)
@@ -306,7 +314,7 @@ class OnDemandSystemManager(BaseSystemManager):
         self.logger.info(f'Passenger {passenger.passenger_id} spilled at {origin} after waiting {ms_to_min(self.env.now - passenger.waiting_room_arrival_time)} min.')
         self.spill_counter[(origin, destination)] += 1
         self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)] 
-        yield self.env.process(self.remove_pax_from_waiting_room(origin, destination, passenger, for_flight=False))
+        self.remove_pax_from_waiting_room(origin, destination, passenger, for_flight=False)
 
     def create_flight(self, origin, destination, passengers):
         """
@@ -315,7 +323,7 @@ class OnDemandSystemManager(BaseSystemManager):
         for passenger in passengers:
             self.event_saver.save_agent_state(agent=passenger, agent_type='passenger', event='passenger_departure')
             # Remove passengers from the waiting room
-            yield self.env.process(self.remove_pax_from_waiting_room(origin, destination, passenger))
+            self.remove_pax_from_waiting_room(origin, destination, passenger)
         
         # Create flight process
         yield self.env.process(self.reserve_aircraft(origin_vertiport_id=origin,
@@ -329,7 +337,7 @@ class OnDemandSystemManager(BaseSystemManager):
         waiting_room = self.vertiports[origin].waiting_room_stores[destination]
         if not for_flight:
             self.logger.info(f'Will remove passenger from waiting room at {origin}. Pax waiting times: {[{p.passenger_id: ms_to_min(self.env.now - p.waiting_room_arrival_time)} for p in waiting_room.items]}')
-        yield waiting_room.get(lambda x: x.passenger_id == passenger.passenger_id)   
+        waiting_room.get(lambda x: x.passenger_id == passenger.passenger_id)   
         # waiting_room.items.remove(passenger)   
         if not for_flight:  
             self.logger.info(f'Passenger {passenger.passenger_id} removed from the waiting room at {origin}. Waiting passengers: {[p.passenger_id for p in waiting_room.items]}')
@@ -346,56 +354,11 @@ class OnDemandSystemManager(BaseSystemManager):
         """
         return len(self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id].items)
     
-    # def consider_repositioning_flights(self):
-    #     total_aircraft_count = sum(self.check_num_available_aircraft(v_id) for v_id in self.vertiport_ids)
-    #     total_demand = sum(self.get_adjusted_demand(v_id) for v_id in self.vertiport_ids)
-
-    #     system_utilization = self.calculate_system_utilization()
-        
-    #     ideal_distribution = {v_id: self.get_adjusted_demand(v_id) / max(1, total_demand) for v_id in self.vertiport_ids}
-
-    #     for origin in self.vertiport_ids:
-    #         available_aircraft = self.check_num_available_aircraft(origin)
-    #         if available_aircraft == 0:
-    #             continue
-
-    #         best_destination = None
-    #         best_score = -float('inf')
-
-    #         for destination in self.vertiport_ids:
-    #             if origin == destination:
-    #                 continue
-
-    #             if self.env.now - self.last_repositioning_time[origin][destination] < self.repositioning_cooldown:
-    #                 continue
-
-    #             score = self.calculate_repositioning_score(origin, destination, ideal_distribution, total_aircraft_count)
-    #             if score > best_score:
-    #                 best_score = score
-    #                 best_destination = destination
-
-    #         repositioning_threshold = self.calculate_dynamic_threshold(system_utilization)
-    #         if best_destination and best_score > repositioning_threshold:
-    #             self.env.process(self.create_repositioning_flight(origin, best_destination))
-    #             self.last_repositioning_time[origin][best_destination] = self.env.now
-
-    #     yield self.env.timeout(0)
-
-    def calculate_system_utilization(self):
-        total_aircraft = sum(len(self.aircraft_agents) for _ in self.vertiport_ids)
-        flying_aircraft = sum(self.count_aircraft_flying_to_destination(v_id) for v_id in self.vertiport_ids)
-        return flying_aircraft / max(1, total_aircraft)
-    
-    def calculate_dynamic_threshold(self, system_utilization):
-        # Increase threshold as system utilization increases
-        return self.base_repositioning_threshold + (system_utilization * 0.2)
-
-
     def consider_repositioning_flights(self):
         """
         Decides whether to create repositioning flights based on current and future demand and aircraft distribution.
         """
-        REPOSITIONING_THRESHOLD = 0.2  # Adjust this value as needed
+        REPOSITIONING_THRESHOLD = 0.1  # Adjust this value as needed
 
         total_aircraft_count = sum(self.check_num_available_aircraft(v_id) for v_id in self.vertiport_ids)
         total_demand = sum(self.get_adjusted_demand(v_id) for v_id in self.vertiport_ids)
@@ -425,24 +388,6 @@ class OnDemandSystemManager(BaseSystemManager):
 
         yield self.env.timeout(0)
 
-    def get_adjusted_demand(self, vertiport_id: str) -> int:
-        current_and_future_demand = current_and_lookahead_pax_count(self.vertiports[vertiport_id])
-        flying_to_vertiport = self.count_aircraft_flying_to_destination(vertiport_id)
-        
-        # Adjust demand by subtracting passengers that will be served by flying aircraft
-        adjusted_demand = max(0, current_and_future_demand - flying_to_vertiport * self.aircraft_params['pax'])
-        return adjusted_demand
-    
-    def count_aircraft_flying_to_destination(self, dest_vertiport_id: str) -> int:
-        """
-        Count the number of aircraft flying to the destination vertiport.
-        """
-        return sum(
-            1 for aircraft in self.aircraft_agents.values()
-            if aircraft.status == AircraftStatus.FLY and
-            aircraft.flight_direction.split('_')[1] == dest_vertiport_id
-        )
-
     def calculate_repositioning_score(self, origin, destination, ideal_distribution, total_aircraft_count):
         current_aircraft_count = self.check_num_available_aircraft(destination)
         flying_to_destination = self.count_aircraft_flying_to_destination(destination)
@@ -467,7 +412,7 @@ class OnDemandSystemManager(BaseSystemManager):
 
         score = (1 - demand_satisfaction_rate) * demand_weight + network_balance_score * balance_weight
 
-        if abs(network_balance_score) < 0.01 and abs(1 - demand_satisfaction_rate) < 0.01:
+        if abs(network_balance_score) < 0.15 and abs(1 - demand_satisfaction_rate) < 0.15:
             return -0.1  # Demand is perfectly balanced
 
         origin_surplus = self.check_num_available_aircraft(origin) - (ideal_distribution[origin] * total_aircraft_count)
@@ -479,6 +424,132 @@ class OnDemandSystemManager(BaseSystemManager):
         # score *= cost_factor
 
         return score
+
+    def calculate_system_utilization(self):
+        total_aircraft = sum(len(self.aircraft_agents) for _ in self.vertiport_ids)
+        flying_aircraft = sum(self.count_aircraft_flying_to_destination(v_id) for v_id in self.vertiport_ids)
+        return flying_aircraft / max(1, total_aircraft)
+    
+    def calculate_dynamic_threshold(self, system_utilization):
+        # Increase threshold as system utilization increases
+        return self.base_repositioning_threshold + (system_utilization * 0.2)
+
+
+    # def consider_repositioning_flights(self):
+    #     """
+    #     Decides whether to create repositioning flights based on current and future demand and aircraft distribution.
+    #     """
+    #     REPOSITIONING_THRESHOLD = 0.2  # Adjust this value as needed
+
+    #     total_aircraft_count = sum(self.check_num_available_aircraft(v_id) for v_id in self.vertiport_ids)
+    #     total_demand = sum(self.get_adjusted_future_demand(v_id) for v_id in self.vertiport_ids)
+
+    #     # Calculate ideal aircraft distribution based on current and future demand
+    #     ideal_distribution = {v_id: self.get_adjusted_future_demand(v_id) / max(1, total_demand) for v_id in self.vertiport_ids}
+
+    #     for origin in self.vertiport_ids:
+
+    #         available_aircraft = self.check_num_available_aircraft(origin)
+    #         if available_aircraft == 0:
+    #             continue
+
+    #         # If the supply is less than demand, don't reposition aircraft from this vertiport
+    #         if self.supply_demand_difference(origin) < 0:
+    #             continue
+
+    #         for destination in self.vertiport_ids:
+    #             if origin == destination:
+    #                 continue
+
+    #             best_destination = None
+    #             best_score = -float('inf')
+
+    #             score = self.calculate_repositioning_score(origin, destination, ideal_distribution, total_aircraft_count)
+    #             if score > best_score:
+    #                 best_score = score
+    #                 best_destination = destination
+
+    #         if best_destination and best_score > REPOSITIONING_THRESHOLD:
+    #             # Calculate the optimal number of aircraft to reposition
+    #             current_aircraft_count = self.check_num_available_aircraft(best_destination)
+    #             flying_to_destination = self.count_aircraft_flying_to_destination(best_destination)
+    #             ideal_aircraft_count = ideal_distribution[best_destination] * total_aircraft_count
+                
+    #             num_to_reposition = min(
+    #                 available_aircraft,
+    #                 max(0, int(ideal_aircraft_count - (current_aircraft_count + flying_to_destination)))
+    #             )
+                
+    #             # Create repositioning flights for the calculated number of aircraft
+    #             for _ in range(num_to_reposition):
+    #                 self.env.process(self.create_repositioning_flight(origin, best_destination))
+
+
+    #     yield self.env.timeout(0)
+
+    # def calculate_repositioning_score(self, origin, destination, ideal_distribution, total_aircraft_count):
+    #     """
+    #     Calculate a refined score for repositioning an aircraft from origin to destination.
+    #     """
+    #     # Calculate the supply-demand difference at the destination
+    #     destination_difference = self.supply_demand_difference_for_future(destination)
+        
+    #     if destination_difference <= 0:
+    #         return -1.0  # No need for repositioning if destination has enough or too many aircraft
+        
+    #     # Calculate the ideal number of aircraft for the destination
+    #     ideal_aircraft_count = ideal_distribution[destination] * total_aircraft_count
+        
+    #     # Calculate current aircraft at destination (including those flying there)
+    #     current_aircraft_count = self.check_num_available_aircraft(destination)
+    #     flying_to_destination = self.count_aircraft_flying_to_destination(destination)
+    #     total_destination_aircraft = current_aircraft_count + flying_to_destination
+        
+    #     # Calculate network imbalance
+    #     network_imbalance = (ideal_aircraft_count - total_destination_aircraft) * self.aircraft_params['pax']
+        
+    #     # Calculate origin's capacity to provide aircraft
+    #     origin_surplus = self.supply_demand_difference_for_future(origin)
+    #     if origin_surplus >= 0:
+    #         origin_capacity = min(origin_surplus, self.check_num_available_aircraft(origin) * self.aircraft_params['pax'])
+    #     else:
+    #         return -1.0  # Origin can't provide aircraft if it has a deficit
+        
+    #     # Calculate the score based on destination need and network balance
+    #     score = min(destination_difference, network_imbalance, origin_capacity)
+        
+    #     # Normalize the score
+    #     normalized_score = score / self.aircraft_params['pax']
+        
+    #     return normalized_score
+
+    def get_adjusted_demand(self, vertiport_id: str) -> int:
+        return max(0, self.supply_demand_difference(vertiport_id))
+    
+    def supply_demand_difference(self, vertiport_id: str) -> int:
+        current_and_future_demand = current_and_lookahead_pax_count(self.vertiports[vertiport_id])
+        flying_to_vertiport = self.count_aircraft_flying_to_destination(vertiport_id)
+        num_available_aircraft = self.check_num_available_aircraft(vertiport_id)
+        return current_and_future_demand - (num_available_aircraft + flying_to_vertiport) * self.aircraft_params['pax']
+    
+    def get_adjusted_future_demand(self, vertiport_id: str) -> int:
+        return max(0, self.supply_demand_difference_for_future(vertiport_id))
+    
+    def supply_demand_difference_for_future(self, vertiport_id: str) -> int:
+        future_demand = self.vertiports[vertiport_id].get_total_expected_pax_arrival_count()
+        flying_to_vertiport = self.count_aircraft_flying_to_destination(vertiport_id)
+        num_available_aircraft = self.check_num_available_aircraft(vertiport_id)
+        return future_demand - (num_available_aircraft + flying_to_vertiport) * self.aircraft_params['pax']
+    
+    def count_aircraft_flying_to_destination(self, dest_vertiport_id: str) -> int:
+        """
+        Count the number of aircraft flying to the destination vertiport.
+        """
+        return sum(
+            1 for aircraft in self.aircraft_agents.values()
+            if aircraft.status == AircraftStatus.FLY and
+            aircraft.flight_direction.split('_')[1] == dest_vertiport_id
+        )
 
     def get_total_demand_for_vertiport(self, vertiport_id):
         """
@@ -592,7 +663,7 @@ class OnDemandSystemManager(BaseSystemManager):
         self.logger.debug(f'Aircraft {aircraft.tail_number} requesting arrival fix resource at {aircraft.destination_vertiport_id}.'
                          f' Number of holding aircraft queued at {aircraft.destination_vertiport_id}: {len(arrival_fix_resource.queue)}'
                          f' Number of available aircraft at {aircraft.destination_vertiport_id}: {self.check_num_available_aircraft(aircraft.destination_vertiport_id)}')
-        if self.sim_params['fleet_rebalancing'] and not self.sim_mode['optim_rl_comparison']:
+        if self.sim_params['fleet_rebalancing'] and not self.external_optimization_params['periodic_time_step']:
             self.check_holding_aircraft(flight_direction=aircraft.flight_direction,
                                         origin_vertiport_id=aircraft.origin_vertiport_id,
                                         destination_vertiport_id=aircraft.destination_vertiport_id)
@@ -653,7 +724,7 @@ class OnDemandSystemManager(BaseSystemManager):
 
             self.trip_counter_tracker += len(aircraft.passengers_onboard)
 
-            if self.sim_mode['optim_rl_comparison']:
+            if self.sim_mode['optim_rl_comparison'] and self.external_optimization_params['flight_duration_constant']:
                 # Check optimizer and simulation flight time compatibility
                 if aircraft.flight_duration and self.env.now - aircraft.pushback_time < \
                     sec_to_ms(self.external_optimization_params['flight_duration_constant']):

@@ -15,7 +15,7 @@ import diskcache as dc
 cache = dc.Cache('/tmp/vertiport_layout_cache')
 
 class VertiportLayout:
-    def __init__(self, file_path: str, output_folder_path: str, layout_type: str, vertiport_id: str):
+    def __init__(self, file_path: str, output_folder_path: str, layout_type: str, vertiport_id: str, flush_cache: bool = False):
         self.file_path = file_path
         self.output_folder_path = output_folder_path
         self.layout_type = layout_type
@@ -25,6 +25,9 @@ class VertiportLayout:
         self.edge_list = []
         self.node_sizes = []
         self.color_map = []
+
+        if flush_cache:
+            self.flush_cache()
 
         cache_key = f'vertiport_layout_cache_{self.layout_type}'
         if cache_key in cache:
@@ -53,6 +56,11 @@ class VertiportLayout:
 
             self.save_to_cache(cache_key)
 
+    def flush_cache(self):
+        cache_key = f'vertiport_layout_cache_{self.layout_type}'
+        if cache_key in cache:
+            cache.delete(cache_key)
+        
     def save_to_cache(self, cache_key):
         cache_data = {
             'G': self.G,
@@ -269,7 +277,7 @@ class VertiportLayout:
         return list(self.G.edges)
     
     def compute_terminal_airspace_radius(self):
-        # Compute the terminal airspace radius
+        # Compute the terminal airspace radiusc
         return haversine_dist(self.fato_lat_lngs['fato_lat'].iloc[0], 
                               self.fato_lat_lngs['fato_lon'].iloc[0],
                               self.approach_fix_lat_lng['approach_fix_lat'].iloc[0], 

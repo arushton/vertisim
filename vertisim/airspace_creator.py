@@ -12,6 +12,7 @@ class AirspaceCreator:
         self.vertiport_distances = vertiport_distances
         self.cruise_altitude = cruise_altitude
         if airspace_params['airspace_layout_file_path'] is None:
+            self.check_waypoint_logic()
             self.num_waypoints_per_airlink = self.determine_num_waypoints()
             self.airlinks_start_end_points = self.get_airlinks_start_end_points()
             self.waypoint_ids, self.flight_directions = self.create_waypoint_ids()
@@ -20,6 +21,9 @@ class AirspaceCreator:
         else:
             self.waypoint_ids, self.waypoint_locations, self.flight_directions = self.read_waypoint_locations_from_file()
 
+    def check_waypoint_logic(self):
+        if self.airspace_params['fixed_num_airlinks'] and self.airspace_params['airlink_segment_length_mile']:
+            raise ValueError("Both fixed_num_airlinks and airlink_segment_length_mile cannot be set. Please set only one.")
 
     def read_waypoint_locations_from_file(self):
         waypoints = read_input_file(file_path=self.airspace_params['airspace_layout_file_path'])
@@ -88,13 +92,16 @@ class AirspaceCreator:
         Computes the required number of waypoints for each airlink in the vertiport_distances DataFrame.
         """
         num_waypoints_per_airlink = defaultdict(dict)
-        for _, row in self.vertiport_distances.iterrows():
-            origin_terminal_airspace_radius = self.vertiports[row['origin_vertiport_id']].vertiport_layout.terminal_airspace_radius
-            destination_terminal_airspace_radius = self.vertiports[row['destination_vertiport_id']].vertiport_layout.terminal_airspace_radius
-            airlink_length = row['distance_miles'] - origin_terminal_airspace_radius - destination_terminal_airspace_radius
-            num_waypoints = int(airlink_length / self.airspace_params['airlink_segment_length_mile']) - 1
-            num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints # + 4 # Add 2 for the origin and destination vertiports and 2 for the departure and arrival fix
-        return num_waypoints_per_airlink
+        if self.airspace_params['fixed_num_airlinks']:
+            return {row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']: self.airspace_params['fixed_num_airlinks'] for _, row in self.vertiport_distances.iterrows()}
+        elif self.airspace_params['airlink_segment_length_mile']:
+            for _, row in self.vertiport_distances.iterrows():
+                origin_terminal_airspace_radius = self.vertiports[row['origin_vertiport_id']].vertiport_layout.terminal_airspace_radius
+                destination_terminal_airspace_radius = self.vertiports[row['destination_vertiport_id']].vertiport_layout.terminal_airspace_radius
+                airlink_length = row['distance_miles'] - origin_terminal_airspace_radius - destination_terminal_airspace_radius
+                num_waypoints = int(airlink_length / self.airspace_params['airlink_segment_length_mile']) - 1
+                num_waypoints_per_airlink[row['origin_vertiport_id'] + '_' + row['destination_vertiport_id']] = num_waypoints # + 4 # Add 2 for the origin and destination vertiports and 2 for the departure and arrival fix
+            return num_waypoints_per_airlink
 
     def get_airlinks_start_end_points(self):
         airlinks_start_end_endpoints = defaultdict(dict)
@@ -130,7 +137,10 @@ class AirspaceCreator:
             flight_directions.add(flight_direction)
             origin = flight_direction.split('_')[0]
             destination = flight_direction.split('_')[1]
-            num_waypoints = num_waypoints + 4
+            if self.airspace_params['fixed_num_airlinks']:
+                num_waypoints = 4 + self.airspace_params['fixed_num_airlinks']
+            else:
+                num_waypoints = num_waypoints + 4
             for i in range(num_waypoints):
                 if i == num_waypoints-1:
                     waypoint_ids[flight_direction].append(f'{destination}_hover_fix')

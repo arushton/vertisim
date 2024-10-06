@@ -69,6 +69,7 @@ class PerformanceMetrics:
         # path = '../../output/performance_metrics'
         # if not os.path.exists(path):
         #     os.makedirs(path)
+        self.initialize_performance_metrics()
 
         if not self.only_aircraft_simulation:
             self.calculate_passenger_consolidation_time_stats()
@@ -101,8 +102,6 @@ class PerformanceMetrics:
 
         if verbose and not self.client_server_mode:
             self.print_verbose_performance_metrics()
-        elif not self.client_server_mode:
-            self.print_performance_metrics()
 
         # TODO: Remove all save to csv methods from this file. save_output should be the only method that saves to csv
         # df = pd.DataFrame(self.flight_and_time_tracker)
@@ -149,45 +148,78 @@ class PerformanceMetrics:
         for flight_dir in self.flight_directions:
             self.performance_metrics[flight_dir]['n_flights'] = self.flight_count_tracker[flight_dir]
 
+    def initialize_performance_metrics(self):
+        default_metrics = {
+            'mean': -1,
+            'median': -1,
+            'std': -1,
+            'max': -1,
+            'min': -1,
+            'total': -1  # Add 'total' if needed for specific statistics
+        }
+        default_short_metrics = {
+            'mean': -1,
+            'total': -1,
+        }
+        # Initialize for all vertiports
+        for vertiport_id in self.vertiport_ids:
+            self.performance_metrics[vertiport_id] = {
+                'passenger_consolidation_time': default_metrics.copy(),
+                'passenger_waiting_time': default_metrics.copy(),
+                'passenger_transfer_time': default_metrics.copy(),
+                'passenger_departure_queue_count': default_metrics.copy(),
+                'passenger_departure_queue_waiting_times': default_metrics.copy(),
+                'aircraft_arrival_queue_count': default_metrics.copy(),
+                'aircraft_departure_queue_count': default_metrics.copy(),
+                'aircraft_holding_times': default_metrics.copy(),
+                'load_factor': default_metrics.copy(),
+                'aircraft_idle_time': default_metrics.copy(),
+                'charge_time': default_metrics.copy(),
+                'average_taxi_time': -1,
+                'average_aircraft_turnaround_time': -1,
+                'tlof_time': -1,
+                'passenger_throughput': -1,
+                'average_passenger_throughput': -1,
+                'empty_flights': -1,
+                'aircraft_throughput': default_short_metrics.copy(),
+                'fato_utilization': -1
+                # Add more metrics as required
+            }
+        # Initialize for all flight directions
+        for flight_direction in self.flight_directions:
+            self.performance_metrics[flight_direction] = {
+                'flight_duration': default_metrics.copy(),
+                'energy_consumption': default_metrics.copy(),
+                'passenger_trip_time': default_metrics.copy()
+                # Add more metrics as required
+            }
+
+
     def calculate_passenger_consolidation_time_stats(self): 
         for vertiport_id, data in self.passenger_consolidation_time.items():
             if consolidation_times := [
                 details['consolidation_time'] for details in data.values()
-            ]:
+                ]:
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['mean'] = ms_to_min(np.mean(consolidation_times))
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['median'] = ms_to_min(np.median(consolidation_times))
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['std'] = ms_to_min(np.std(consolidation_times))
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['max'] = ms_to_min(np.max(consolidation_times))
                 self.performance_metrics[vertiport_id]['passenger_consolidation_time']['min'] = ms_to_min(np.min(consolidation_times))
-            else:
-                self.performance_metrics[vertiport_id]['passenger_consolidation_time']['mean'] = -1
-                self.performance_metrics[vertiport_id]['passenger_consolidation_time']['median'] = -1
-                self.performance_metrics[vertiport_id]['passenger_consolidation_time']['std'] = -1
-                self.performance_metrics[vertiport_id]['passenger_consolidation_time']['max'] = -1
-                self.performance_metrics[vertiport_id]['passenger_consolidation_time']['min'] = -1
 
     def calculate_passenger_waiting_time_stats(self):
         # Creates a dataframe for passenger waiting time statistics including mean, median, standard deviation,
         for vertiport_id, data in self.passenger_waiting_time.items():
             waiting_times = np.array(list(data.values()))
-            if waiting_times.size > 0:
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['mean'] = ms_to_min(np.mean(waiting_times))
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['median'] = ms_to_min(np.median(waiting_times))
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['std'] = ms_to_min(np.std(waiting_times))
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['max'] = ms_to_min(np.max(waiting_times))
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['min'] = ms_to_min(np.min(waiting_times))
-            else:
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['mean'] = -1
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['median'] = -1
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['std'] = -1
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['max'] = -1
-                self.performance_metrics[vertiport_id]['passenger_waiting_time']['min'] = -1
+            self.performance_metrics[vertiport_id]['passenger_waiting_time']['mean'] = ms_to_min(np.mean(waiting_times))
+            self.performance_metrics[vertiport_id]['passenger_waiting_time']['median'] = ms_to_min(np.median(waiting_times))
+            self.performance_metrics[vertiport_id]['passenger_waiting_time']['std'] = ms_to_min(np.std(waiting_times))
+            self.performance_metrics[vertiport_id]['passenger_waiting_time']['max'] = ms_to_min(np.max(waiting_times))
+            self.performance_metrics[vertiport_id]['passenger_waiting_time']['min'] = ms_to_min(np.min(waiting_times))
 
     def calculate_passenger_transfer_time_stats(self):
         # Creates a dataframe for passenger transfer time statistics including mean, median, standard deviation,
         for vertiport_id, data in self.passenger_transfer_time.items():
             transfer_times = np.array(list(data.values()))
-
             self.performance_metrics[vertiport_id]['passenger_transfer_time']['mean'] = ms_to_min(np.mean(transfer_times))
             self.performance_metrics[vertiport_id]['passenger_transfer_time']['median'] = ms_to_min(np.median(transfer_times))
             self.performance_metrics[vertiport_id]['passenger_transfer_time']['std'] = ms_to_min(np.std(transfer_times))
@@ -200,7 +232,6 @@ class PerformanceMetrics:
         # Creates a dataframe for passenger trip time statistics including mean, median, standard deviation,
         for flight_direction, data in self.passenger_trip_times.items():
             trip_times = np.array(list(data.values()))
-
             self.performance_metrics[flight_direction]['passenger_trip_time']['mean'] = ms_to_min(np.mean(trip_times))
             self.performance_metrics[flight_direction]['passenger_trip_time']['median'] = ms_to_min(np.median(trip_times))
             self.performance_metrics[flight_direction]['passenger_trip_time']['std'] = ms_to_min(np.std(trip_times))
@@ -284,20 +315,22 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['aircraft_holding_times']['min'] = ms_to_min(np.min(waiting_times))
 
     def compute_load_factor_stats(self):
-        for vertiport_id, load_factors in self.load_factor_tracker.items():
+        for vertiport_id, data in self.load_factor_tracker.items():
+            load_factors = np.array(data)
+            self.performance_metrics[vertiport_id]['load_factor']['mean'] = np.mean(load_factors)
+            self.performance_metrics[vertiport_id]['load_factor']['median'] = np.median(load_factors)
+            self.performance_metrics[vertiport_id]['load_factor']['std'] = np.std(load_factors)
             self.performance_metrics[vertiport_id]['load_factor']['max'] = np.max(load_factors)
             self.performance_metrics[vertiport_id]['load_factor']['min'] = np.min(load_factors)
-            self.performance_metrics[vertiport_id]['load_factor']['mean'] = np.mean(load_factors)
 
     def compute_aircraft_idle_time_stats(self):
-        df = pd.DataFrame(self.aircraft_idle_time_tracker)
         for vertiport_id, data in self.aircraft_idle_time_tracker.items():
-            idle_times = list(data.values())
-            self.performance_metrics[vertiport_id]['aircraft_idle_time']['max'] = ms_to_min(np.max(idle_times))
-            self.performance_metrics[vertiport_id]['aircraft_idle_time']['min'] = ms_to_min(np.min(idle_times))
+            idle_times = np.array(list(data.values()))
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['mean'] = ms_to_min(np.mean(idle_times))
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['median'] = ms_to_min(np.median(idle_times))
             self.performance_metrics[vertiport_id]['aircraft_idle_time']['std'] = ms_to_min(np.std(idle_times))
+            self.performance_metrics[vertiport_id]['aircraft_idle_time']['max'] = ms_to_min(np.max(idle_times))
+            self.performance_metrics[vertiport_id]['aircraft_idle_time']['min'] = ms_to_min(np.min(idle_times))
 
     def compute_charge_time_stats(self):
         # Computes the average charge time
@@ -317,9 +350,12 @@ class PerformanceMetrics:
 
     def compute_average_taxi_time(self):
         # Computes the average taxi time
-        for vertiport_id, data in self.aircraft_taxi_times.items():
-            taxi_times = list(data.values())
-            self.performance_metrics[vertiport_id]['average_taxi_time'] = ms_to_min(np.mean(taxi_times))
+        for vertiport_id in self.vertiport_ids:
+            taxi_times = np.array(list(self.aircraft_taxi_times[vertiport_id].values()))
+            if taxi_times.size > 0:
+                self.performance_metrics[vertiport_id]['average_taxi_time'] = ms_to_min(np.mean(taxi_times))
+            else:
+                self.performance_metrics[vertiport_id]['average_taxi_time'] = 0
 
     def compute_turnaround_duration(self):
         # Computes the average aircraft turnaround time
@@ -653,6 +689,8 @@ class PerformanceMetrics:
             } for flight_direction in self.flight_duration_tracker.keys()
         )
         df.index = self.flight_duration_tracker.keys()
+
+        # df.to_csv('output/performance_metrics/flight_duration.csv')
         print(df)
         print("")
 
@@ -671,6 +709,7 @@ class PerformanceMetrics:
             } for flight_direction in self.aircraft_energy_consumption_tracker.keys()
         )
         df.index = self.aircraft_energy_consumption_tracker.keys()
+        # df.to_csv('output/performance_metrics/energy_consumption.csv')
         print(df)
         print("")
 

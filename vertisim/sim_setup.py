@@ -6,7 +6,7 @@ import time
 
 # from utils.defaults import sim_params, network_and_demand, vertiport_params, aircraft_params, output_params
 import simpy
-from typing import Dict, List
+from typing import Dict, List, Union
 import pandas as pd
 import numpy as np
 from collections import defaultdict
@@ -37,6 +37,7 @@ from .utils.import_aircraft_energy_consumption_data import import_aircraft_energ
 from .utils.setup_distributions import setup_passenger_distributions
 from .utils.units import sec_to_ms, ms_to_min
 import diskcache as dc
+from enum import Enum, auto
 
 
 vertiport_distance_cache = dc.Cache('/tmp/vertiport_distance_cache')
@@ -88,9 +89,8 @@ class SimSetup:
         self.vertiport_distances = self.compute_vertiport_distances() # pd.DataFrame of vertiport connectivity, locations and distances
         self.check_inputs()
         self.vertiports = self.create_vertiports() # Dictionary of vertiport entities
-
-        self.airspace = self.create_airspace()  
-        self.logger.debug(f"Flight directions: {self.airspace.flight_directions}")
+        self.flight_directions_list, self.flight_directions_dict = self.get_flight_directions(self.vertiport_ids)
+        self.airspace = self.create_airspace()
         self.wind = self.create_wind()    
         self.node_locations = self.build_node_locations_dict()
         self.structural_entity_groups = self.merge_structural_entity_groups()
@@ -155,7 +155,8 @@ class SimSetup:
         """
         # Create vertiport layouts
         vertiport_layouts = create_vertiport_layouts(network_and_demand=self.network_and_demand_params,
-                                                     output_folder_path=self.output_folder_path)
+                                                     output_folder_path=self.output_folder_path,
+                                                     flush_cache=self.sim_params['flush_cache'])
         if self.sim_params['verbose']:
             print("Success: Vertiport layout(s) created.")
         return vertiport_layouts
@@ -170,8 +171,24 @@ class SimSetup:
         """
         Creates a mapping between vertiport ids and their index in the list
         """
-        self.logger.debug(f"Vertiport ids: {dict(enumerate(vertiport_ids))}")
-        return dict(enumerate(vertiport_ids))
+        sorted_vertiport_ids = sorted(vertiport_ids)
+        self.logger.debug(f"Vertiport ids: {dict(enumerate(sorted_vertiport_ids))}")
+        return dict(enumerate(sorted_vertiport_ids))
+    
+    def get_flight_directions(self, vertiport_ids: List) -> Union[List, Dict]:
+        """
+        Returns the flight directions
+        """
+        sorted_vertiport_ids = sorted(vertiport_ids)
+        # Create a dictionary for flight directions with incremental integers
+        flight_directions = {
+            f"{origin}_{destination}": i
+            for i, (origin, destination) in enumerate(
+                (origin, destination) for origin in sorted_vertiport_ids for destination in sorted_vertiport_ids if origin != destination
+            )
+        }
+        self.logger.debug(f"Flight directions: {flight_directions}")
+        return list(flight_directions.keys()), flight_directions
     
     def create_wind(self):
         """
@@ -260,7 +277,7 @@ class SimSetup:
                           sim_start_timestamp=self.sim_start_timestamp, 
                           sim_params=self.sim_params,
                           node_locations=self.node_locations,
-                          flight_directions=self.airspace.flight_directions)    
+                          flight_directions=self.flight_directions_list)    
 
     def set_taxi_operations_config(self):
         """
@@ -419,7 +436,8 @@ class SimSetup:
                 'logger': self.logger,
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
-                'sim_mode': self.sim_mode
+                'sim_mode': self.sim_mode,
+                'flight_directions_dict': self.flight_directions_dict
             },
             'rl': {
                 'env': self.env,
@@ -447,7 +465,8 @@ class SimSetup:
                 'truncation_event': self.truncation_event,
                 'sim_mode': self.sim_mode,
                 'periodic_stopping': not is_none(self.external_optimization_params['periodic_time_step']),
-                'periodic_and_event_driven': self.external_optimization_params['periodic_and_event_driven']
+                'periodic_and_event_driven': self.external_optimization_params['periodic_and_event_driven'],
+                'flight_directions_dict': self.flight_directions_dict
             },
             'offline_optimization': {
                 'env': self.env,
@@ -471,7 +490,8 @@ class SimSetup:
                 'aircraft_logger': self.aircraft_logger,
                 'passenger_logger': self.passenger_logger,
                 'sim_mode': self.sim_mode,
-                'external_optimization_params': self.external_optimization_params
+                'external_optimization_params': self.external_optimization_params,
+                'flight_directions_dict': self.flight_directions_dict                
             },
         }
 
@@ -546,7 +566,7 @@ class SimSetup:
                                   is_network_simulation=self.sim_params['network_simulation'],
                                   performance_metric_trackers=self.event_saver.performance_metrics(),
                                   vertiport_ids=self.vertiport_ids,
-                                  flight_directions=self.airspace.flight_directions,
+                                  flight_directions=self.flight_directions_list,
                                   sim_id=self.sim_id,
                                   sim_end_timestamp=self.env.now,
                                   client_server_mode=self.sim_mode['rl'],
@@ -585,7 +605,7 @@ class SimSetup:
                     },
                     performance_metrics=performance_metrics,
                     simulationID=self.sim_id,
-                    flight_directions=self.airspace.flight_directions
+                    flight_directions=self.flight_directions_list
                 )
         # print(f"Success: Results are saved in {output_path}.")
 

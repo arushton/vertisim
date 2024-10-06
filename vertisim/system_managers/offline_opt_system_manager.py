@@ -31,7 +31,8 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
                  aircraft_logger: object,
                  passenger_logger: object,
                  sim_mode: Dict,
-                 external_optimization_params: Dict = None):
+                 external_optimization_params: Dict = None,
+                 flight_directions_dict: Dict = None):
         
         super().__init__(env=env,
                         vertiports=vertiports,
@@ -53,7 +54,8 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
                         logger=logger,
                         aircraft_logger=aircraft_logger,
                         passenger_logger=passenger_logger,
-                        sim_mode=sim_mode
+                        sim_mode=sim_mode,
+                        flight_directions_dict=flight_directions_dict
                         )        
 
         self.external_optimization_params = external_optimization_params

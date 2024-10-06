@@ -19,7 +19,6 @@ class Airspace:
         self.airlink_capacity = airlink_capacity
         self.airlink_segment_length_mile_miles = airlink_segment_length_mile_miles
         self.waypoint_ids = waypoint_ids
-        self.flight_directions = list(waypoint_ids.keys())
         self.waypoint_locations = waypoint_locations
         self.flight_directions = flight_directions
         self.waypoint_distances = Airspace.compute_distances_bw_waypoints(waypoint_ids=self.waypoint_ids, 

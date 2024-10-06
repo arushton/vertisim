@@ -446,7 +446,8 @@ class Aircraft:
         return [self.forward_velocity, np.mean([self.vertical_velocity, self.max_vertical_velocity])]
 
     def descend_to_final_approach_fix(self, final_approach_fix):  
-        horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, final_approach_fix)  
+        horizontal_distance, vertical_distance = self.horizontal_and_vertical_distance(self.location, final_approach_fix) 
+        # print(f'Flight direction: {self.flight_direction}. Current location: {self.location}, Final approach fix: {final_approach_fix}. Horizontal distance: {horizontal_distance}, vertical distance: {vertical_distance}. Forward velocity: {self.forward_velocity}, Vertical velocity: {self.vertical_velocity}') 
 
         assert self.forward_velocity == self.aircraft_params['cruise_speed'], f'Forward velocity is not equal to cruise speed. Forward velocity: {self.forward_velocity}, cruise speed: {self.aircraft_params["cruise_speed"]}'
         
@@ -1328,12 +1329,11 @@ class Aircraft:
         return self.system_manager.vertiport_ids
     
     def get_flight_direction_index(self) -> int:
-        flight_directions = list(self.system_manager.airspace.flight_directions)
         # If aircraft is on the ground, idling or charging then the flight direction is None.
         if self.status == AircraftStatus.IDLE or self.status == AircraftStatus.CHARGE or self.flight_direction is None:
             # +1 is for the None flight direction
-            return len(flight_directions)
-        return flight_directions.index(self.flight_direction)
+            return len(self.system_manager.flight_directions_dict)
+        return self.system_manager.flight_directions_dict[self.flight_direction]
     
     def get_aircraft_location_for_state(self) -> int:
         current_vertiport = self.get_aircraft_vertiport()
@@ -1349,7 +1349,7 @@ class Aircraft:
         then the od_pair is the current vertiport.
         """
         flight_direction_index = self.get_flight_direction_index()
-        vertiport_start_index = len(self.system_manager.airspace.flight_directions)
+        vertiport_start_index = len(self.system_manager.flight_directions_dict)
 
         if self.status != AircraftStatus.IDLE and self.status != AircraftStatus.CHARGE and self.flight_direction is not None:
             return flight_direction_index

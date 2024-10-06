@@ -43,7 +43,8 @@ def save_output(simulation_params: dict,
                                 simulated_date=simulated_date,
                                 algorithm=simulation_params['sim_params']['algorithm'],
                                 num_aircraft=num_aircraft, 
-                                performance_metrics_db_name=simulation_params['output_params']['performance_metrics_db_name'])
+                                performance_metrics_db_name=simulation_params['output_params']['performance_metrics_db_name'],
+                                brief_metrics=simulation_params['output_params']['brief_metrics'])
     
 def extract_date_from_filename(filename: str) -> str:
     if not filename:
@@ -73,7 +74,8 @@ def save_performance_metrics(simulation_params: dict,
                              simulated_date: str,
                              algorithm: str,
                              num_aircraft: int,
-                             performance_metrics_db_name: str) -> str:
+                             performance_metrics_db_name: str,
+                             brief_metrics: bool) -> str:
 
     output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/{performance_metrics_db_name}.sqlite"
     print(f"Saving performance metrics to {output_path}\n")
@@ -109,99 +111,148 @@ def save_performance_metrics(simulation_params: dict,
         print(f"Error: {err}")
     
     # --- PERFORMANCE METRICS TABLE --- 
-    metric_names = ['SimulatedDate',
-                    'Algorithm',
-                    'NumAircraft',
-                    'EnergyConsumptionMean', 
-                    'EnergyConsumptionStd', 
-                    'EnergyConsumptionTotal', 
-                    'FlightDurationMean', 
-                    'FlightDurationMedian', 
-                    'FlightDurationStd', 
-                    'FlightDurationMax', 
-                    'FlightDurationMin',
-                    'WaitingTimeMean', 
-                    'WaitingTimeMedian',
-                    'WaitingTimeStd', 
-                    'WaitingTimeMax', 
-                    'WaitingTimeMin', 
-                    'TripTimeMean', 
-                    'TripTimeMedian', 
-                    'TripTimeStd', 
-                    'TripTimeMax', 
-                    'TripTimeMin', 
-                    'NSpilled', 
-                    'NFlights', 
-                    'MeanReward', 
-                    'TotalReward']
+    if not brief_metrics:
+        metric_names = ['SimulatedDate',
+                        'Algorithm',
+                        'NumAircraft',
+                        'EnergyConsumptionMean', 
+                        'EnergyConsumptionStd', 
+                        'EnergyConsumptionTotal', 
+                        'FlightDurationMean', 
+                        'FlightDurationMedian', 
+                        'FlightDurationStd', 
+                        'FlightDurationMax', 
+                        'FlightDurationMin',
+                        'WaitingTimeMean', 
+                        'WaitingTimeMedian',
+                        'WaitingTimeStd', 
+                        'WaitingTimeMax', 
+                        'WaitingTimeMin', 
+                        'TripTimeMean', 
+                        'TripTimeMedian', 
+                        'TripTimeStd', 
+                        'TripTimeMax', 
+                        'TripTimeMin', 
+                        'NSpilled', 
+                        'NFlights', 
+                        'MeanReward', 
+                        'TotalReward']
 
-    try:
-        # Create the table with dynamic columns
-        columns = ', '.join([f"{metric} FLOAT" for metric in metric_names])
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS PerformanceMetrics (
-            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            SimulationID VARCHAR(8),
-            FlightDirection TEXT,
-            {columns},
-            FOREIGN KEY (SimulationID) REFERENCES Simulation(SimulationID));
-        """)
-    except sqlite3.Error as err:
-        print(f"Error: {err}")
-        
-    try:
-        for flight_dir in flight_directions:
-            metrics_for_flight = performance_metrics[flight_dir]
-            energy_metrics = metrics_for_flight['energy_consumption']
-            flight_duration_metrics = metrics_for_flight['flight_duration']
-            trip_time_metrics = metrics_for_flight['passenger_trip_time']
-            n_spilled = metrics_for_flight['n_spilled']
-            n_flights = metrics_for_flight['n_flights']
-            # Flight direction is in the format 'origin_destination'. Split it into two separate columns
-            origin, _ = flight_dir.split('_')
-            waiting_time_metrics = performance_metrics[origin]['passenger_waiting_time']
-            mean_reward = metrics_for_flight['mean_reward']
-            total_reward = metrics_for_flight['total_reward']
-            metric_values = [
-                simulated_date,
-                algorithm,
-                num_aircraft,
-                energy_metrics['mean'], 
-                energy_metrics['std'],
-                energy_metrics['total'],
-                flight_duration_metrics['mean'], 
-                flight_duration_metrics['median'],
-                flight_duration_metrics['std'],
-                flight_duration_metrics['max'],
-                flight_duration_metrics['min'],
-                waiting_time_metrics['mean'],
-                waiting_time_metrics['median'],
-                waiting_time_metrics['std'],
-                waiting_time_metrics['max'],
-                waiting_time_metrics['min'],                
-                trip_time_metrics['mean'],
-                trip_time_metrics['median'],
-                trip_time_metrics['std'],
-                trip_time_metrics['max'],
-                trip_time_metrics['min'],
-                n_spilled,
-                n_flights,
-                mean_reward,
-                total_reward
-            ]
+        try:
+            # Create the table with dynamic columns
+            columns = ', '.join([f"{metric} FLOAT" for metric in metric_names])
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS PerformanceMetrics (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                SimulationID VARCHAR(8),
+                FlightDirection TEXT,
+                {columns},
+                FOREIGN KEY (SimulationID) REFERENCES Simulation(SimulationID));
+            """)
+        except sqlite3.Error as err:
+            print(f"Error: {err}")
+            
+        try:
+            for flight_dir in flight_directions:
+                metrics_for_flight = performance_metrics[flight_dir]
+                energy_metrics = metrics_for_flight['energy_consumption']
+                flight_duration_metrics = metrics_for_flight['flight_duration']
+                trip_time_metrics = metrics_for_flight['passenger_trip_time']
+                n_spilled = metrics_for_flight['n_spilled']
+                n_flights = metrics_for_flight['n_flights']
+                # Flight direction is in the format 'origin_destination'. Split it into two separate columns
+                origin, _ = flight_dir.split('_')
+                waiting_time_metrics = performance_metrics[origin]['passenger_waiting_time']
+                mean_reward = metrics_for_flight['mean_reward']
+                total_reward = metrics_for_flight['total_reward']
+                metric_values = [
+                    simulated_date,
+                    algorithm,
+                    num_aircraft,
+                    energy_metrics['mean'], 
+                    energy_metrics['std'],
+                    energy_metrics['total'],
+                    flight_duration_metrics['mean'], 
+                    flight_duration_metrics['median'],
+                    flight_duration_metrics['std'],
+                    flight_duration_metrics['max'],
+                    flight_duration_metrics['min'],
+                    waiting_time_metrics['mean'],
+                    waiting_time_metrics['median'],
+                    waiting_time_metrics['std'],
+                    waiting_time_metrics['max'],
+                    waiting_time_metrics['min'],                
+                    trip_time_metrics['mean'],
+                    trip_time_metrics['median'],
+                    trip_time_metrics['std'],
+                    trip_time_metrics['max'],
+                    trip_time_metrics['min'],
+                    n_spilled,
+                    n_flights,
+                    mean_reward,
+                    total_reward
+                ]
     
             placeholder = ', '.join(['?'] * (len(metric_values) + 2))
             sql_insert_query = f"INSERT INTO PerformanceMetrics (SimulationID, FlightDirection, {', '.join(metric_names)}) VALUES ({placeholder});"
             cursor.execute(sql_insert_query, [simulationID, flight_dir] + metric_values)
             
-    except sqlite3.Error as err:
-        print(f"Error: {err}")
+        except sqlite3.Error as err:
+            print(f"Error: {err}")
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return os.getcwd() + output_path
     
-    return os.getcwd() + output_path
+    else:
+        metric_names = ['SimulatedDate',
+                        'Algorithm',
+                        'NumAircraft',
+                        'NSpilled', 
+                        'NFlights']
+        try:
+            # Create the table with dynamic columns
+            columns = ', '.join([f"{metric} FLOAT" for metric in metric_names])
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS PerformanceMetrics (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                SimulationID VARCHAR(8),
+                FlightDirection TEXT,
+                {columns},
+                FOREIGN KEY (SimulationID) REFERENCES Simulation(SimulationID));
+            """)
+        except sqlite3.Error as err:
+            print(f"Error: {err}")
+            
+        try:
+            n_spilled = 0
+            n_flights = 0
+            for flight_dir in flight_directions:
+                n_spilled += performance_metrics[flight_dir]['n_spilled']
+                n_flights += performance_metrics[flight_dir]['n_flights']
+                
+            metric_values = [
+                simulated_date,
+                algorithm,
+                num_aircraft,
+                n_spilled,
+                n_flights
+            ]
+    
+            placeholder = ', '.join(['?'] * (len(metric_values) + 2))
+            sql_insert_query = f"INSERT INTO PerformanceMetrics (SimulationID, FlightDirection, {', '.join(metric_names)}) VALUES ({placeholder});"
+            cursor.execute(sql_insert_query, [simulationID, flight_dir] + metric_values)
+
+        except sqlite3.Error as err:
+            print(f"Error: {err}")
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return os.getcwd() + output_path
 
 
 def save_trajectories(trajectories: Dict,
