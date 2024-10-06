@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument('-ec', '--env_config', type=str, help='Path to the config.json file')
     parser.add_argument('-br', '--batch_run', action='store_true', help='Run the simulation in batch')
     parser.add_argument('-nc', '--n_cores', type=int, help='Number of cores to run the simulation on', default=1)
+    parser.add_argument('-paxp', '--passenger_schedule_path', type=str, help='Path to the passenger schedule file', default=None)
     return parser.parse_args()
 
 def runner(config):
@@ -38,7 +39,7 @@ if __name__ == '__main__':
     print(f"Running VertiSimHeuristics")
 
     if args.batch_run:
-        passenger_schedule_folder = "vertisim/vertisim/input/passenger/spill_demand/1_hub_8_spoke"
+        passenger_schedule_folder = args.passenger_schedule_path
         csv_files = glob.glob(os.path.join(passenger_schedule_folder, "*.csv"))
 
         print(f"Running simulations in batch mode on {args.n_cores} cores")

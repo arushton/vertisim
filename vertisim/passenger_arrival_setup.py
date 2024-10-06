@@ -26,7 +26,7 @@ class PassengerArrivalSetup:
         self.aircraft_params = aircraft_params
         self.network_simulation = network_simulation
         self.passenger_logger = passenger_logger
-
+        self.passenger_arrival_schedule = self.create_passenger_arrival_schedule()
 
     @staticmethod
     def check_passenger_arrival_schedule(passenger_arrival_schedule: pd.DataFrame):
@@ -118,15 +118,18 @@ class PassengerArrivalSetup:
         for vertiport_id in self.vertiport_ids:
             self.system_manager.vertiports[vertiport_id].pax_arrival_df = passenger_arrival_schedule
 
-    def create_passenger_arrival(self):
+    def create_passenger_arrival_schedule(self):
         # Setup passenger arrival schedule.
         passenger_arrival_schedule = self.setup_passenger_arrival()
         # Get the passenger ID on the last row of the passenger arrival schedule.
         self.system_manager.last_passenger_id = passenger_arrival_schedule['passenger_id'].iloc[-1]
         # Set the total number of passengers in the system.
+        self.total_demand = len(passenger_arrival_schedule)
         self.system_manager.total_demand = len(passenger_arrival_schedule)
         self.system_manager.logger.info(f"Total number of passengers: {self.system_manager.total_demand}")
+        return passenger_arrival_schedule
 
+    def create_passenger_arrival(self):
         if not self.network_simulation:
             if self.aircraft_params['time_charging']:
                 charging_time = self.aircraft_params['time_charging']
@@ -152,13 +155,13 @@ class PassengerArrivalSetup:
             yield self.env.timeout(sec_to_ms(time_to_fill_vertiport))
 
         # Create passenger arrival process.
-        for passenger_id in passenger_arrival_schedule.passenger_id:
+        for passenger_id in self.passenger_arrival_schedule.passenger_id:
             # Get the passenger's interarrival time
-            interarrival_time = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'interarrival_time'].values[0]
+            interarrival_time = self.passenger_arrival_schedule.loc[self.passenger_arrival_schedule.passenger_id == passenger_id, 'interarrival_time'].values[0]
             # Get the passenger's origin vertiport id
-            origin_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'origin_vertiport_id'].values[0]
+            origin_vertiport_id = self.passenger_arrival_schedule.loc[self.passenger_arrival_schedule.passenger_id == passenger_id, 'origin_vertiport_id'].values[0]
             # Get the passenger's destination vertiport id
-            destination_vertiport_id = passenger_arrival_schedule.loc[passenger_arrival_schedule.passenger_id == passenger_id, 'destination_vertiport_id'].values[0]
+            destination_vertiport_id = self.passenger_arrival_schedule.loc[self.passenger_arrival_schedule.passenger_id == passenger_id, 'destination_vertiport_id'].values[0]
             # Get the location of the passenger
             passenger_location = f'{origin_vertiport_id}_ENTRANCE'
 

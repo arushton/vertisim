@@ -10,19 +10,22 @@ import re
 from .utils.json_formatter import create_trajectory_json
 from .utils.helpers import get_str_before_first_occurrence_of_char
 
-def create_connection(db_file: str):
+def create_connection(db_file: str, timeout: int = 30):
+    """Create a database connection to the SQLite database specified by db_file with the specified timeout."""
     try:
-        with sqlite3.connect(db_file) as conn:
-            return conn
+        conn = sqlite3.connect(db_file, timeout=timeout)
+        conn.execute("PRAGMA journal_mode=WAL;")  # Enable Write-Ahead Logging for better concurrency
+        return conn
     except sqlite3.Error as e:
-        print(e)
+        print(f"SQLite error: {e}")
         return None
     
 def save_output(simulation_params: dict, 
                 trajectories: dict,
                 performance_metrics: defaultdict, 
                 simulationID: str, 
-                flight_directions: list) -> str:
+                flight_directions: list,
+                num_pax: int) -> str:
 
     # Save trajectories
     if simulation_params['sim_params']['save_trajectories']:
@@ -41,6 +44,7 @@ def save_output(simulation_params: dict,
                                 simulationID=simulationID,
                                 flight_directions=flight_directions,
                                 simulated_date=simulated_date,
+                                num_pax=num_pax,
                                 algorithm=simulation_params['sim_params']['algorithm'],
                                 num_aircraft=num_aircraft, 
                                 performance_metrics_db_name=simulation_params['output_params']['performance_metrics_db_name'],
@@ -72,40 +76,45 @@ def save_performance_metrics(simulation_params: dict,
                              simulationID: str,
                              flight_directions: list,
                              simulated_date: str,
+                             num_pax: int,
                              algorithm: str,
                              num_aircraft: int,
                              performance_metrics_db_name: str,
                              brief_metrics: bool) -> str:
 
-    output_path = f"{simulation_params['output_params']['output_folder_path']}/sqlite/{performance_metrics_db_name}.sqlite"
-    print(f"Saving performance metrics to {output_path}\n")
-    # If path doesn't exist, create it
-    if not os.path.exists(f"{simulation_params['output_params']['output_folder_path']}/sqlite"):
-        os.makedirs(f"{simulation_params['output_params']['output_folder_path']}/sqlite", exist_ok=True)
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    config = dumps(simulation_params)
+
+    output_path = os.path.join(
+        simulation_params['output_params']['output_folder_path'], 
+        "sqlite", f"{performance_metrics_db_name}.sqlite"
+    )
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     conn = create_connection(output_path)
     assert conn, 'Could not establish database connection.'
     cursor = conn.cursor()
     
-    # --- SIMULATION TABLE ---
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    config = dumps(simulation_params)
-        
+    # --- SIMULATION TABLE ---        
     try:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Simulation (
                 SimulationID VARCHAR(8) PRIMARY KEY,
                 Config TEXT,
-                Timestamp DATETIME
+                Timestamp DATETIME,
+                NumPax INTEGER
             );
         """)
         
         cursor.execute("SELECT SimulationID FROM Simulation WHERE SimulationID = ?", (simulationID,))
         data=cursor.fetchone()
         if data is None:
-            cursor.execute("INSERT INTO Simulation (SimulationID, Config, Timestamp) VALUES (?, ?, ?)", (simulationID, config, timestamp))
+            cursor.execute("INSERT INTO Simulation (SimulationID, Config, Timestamp, NumPax) VALUES (?, ?, ?, ?)", 
+                           (simulationID, config, timestamp, num_pax)
+            )
         else:
-            cursor.execute("UPDATE Simulation SET Timestamp = ?, Config = ? WHERE SimulationID = ?", (timestamp, config, simulationID))
+            cursor.execute("UPDATE Simulation SET Timestamp = ?, Config = ?, NumPax = ? WHERE SimulationID = ?", (timestamp, config, num_pax, simulationID))
             
     except sqlite3.Error as err:
         print(f"Error: {err}")
