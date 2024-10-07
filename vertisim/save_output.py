@@ -36,7 +36,16 @@ def save_output(simulation_params: dict,
     # Extract simulated date from filename
     simulated_date = extract_date_from_filename(filename=simulation_params['network_and_demand_params']['passenger_schedule_file_path']) 
     # Get the number of aircraft
-    num_aircraft = get_num_aircraft(network_and_demand_params=simulation_params['network_and_demand_params'])          
+    num_aircraft = get_num_aircraft(network_and_demand_params=simulation_params['network_and_demand_params'])  
+
+    if simulation_params['output_params']['only_return_brief_metrics']:
+        return return_brief_metrics(performance_metrics=performance_metrics,
+                                    simulationID=simulationID,
+                                    flight_directions=flight_directions,
+                                    simulated_date=simulated_date,
+                                    num_pax=num_pax,
+                                    algorithm=simulation_params['sim_params']['algorithm'],
+                                    num_aircraft=num_aircraft)       
     
     # Save performance metrics
     save_performance_metrics(simulation_params=simulation_params,
@@ -263,6 +272,29 @@ def save_performance_metrics(simulation_params: dict,
 
         return os.getcwd() + output_path
 
+def return_brief_metrics(performance_metrics: defaultdict,
+                         simulationID: str,
+                         flight_directions: list,
+                         simulated_date: str,
+                         num_pax: int,
+                         algorithm: str,
+                         num_aircraft: int) -> str:
+        n_spilled = 0
+        n_flights = 0
+        for flight_dir in flight_directions:
+            n_spilled += performance_metrics[flight_dir]['n_spilled']
+            n_flights += performance_metrics[flight_dir]['n_flights']
+
+        return {
+            'SimulationID': simulationID,
+            'SimulatedDate': simulated_date,
+            'Algorithm': algorithm,
+            'NumAircraft': num_aircraft,
+            'NSpilled': n_spilled,
+            'NFlights': n_flights,
+            'NumPax': num_pax
+        }
+                         
 
 def save_trajectories(trajectories: Dict,
                       simulation_params: Dict,

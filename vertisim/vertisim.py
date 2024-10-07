@@ -84,6 +84,10 @@ class VertiSim:
     def run(self):
         # This only runs uninterrupted simulation. No distinction for online optimization
         self.run_uninterrupted_simulation()          
+
+        if self.config['output_params']['only_return_brief_metrics']:
+            return self.finalize_simulation()
+        
         self.finalize_simulation()
         # performance_metrics = self.sim_setup.calculate_performance_metrics()
         # self.sim_setup.save_results(performance_metrics)
@@ -97,8 +101,10 @@ class VertiSim:
             self.print_total_time_to_run()
             if self.env.now > 10:
                 performance_metrics = self.sim_setup.calculate_performance_metrics()
-                self.sim_setup.save_results(performance_metrics)
                 self.sim_setup.log_brief_metrics(print_metrics=self.config['sim_params']['print_brief_metrics'])
+                if self.config['output_params']['only_return_brief_metrics']:
+                    return self.sim_setup.save_results(performance_metrics)
+                self.sim_setup.save_results(performance_metrics)
 
     def run_uninterrupted_simulation(self):
         """

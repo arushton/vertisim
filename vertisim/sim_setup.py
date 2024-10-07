@@ -590,24 +590,45 @@ class SimSetup:
                     
 
     def save_results(self, performance_metrics):
-        # Save the results
-        save_output(simulation_params={
-                        'sim_params': self.sim_params,
-                        'network_and_demand_params': self.network_and_demand_params,
-                        'passenger_params': self.passenger_params,
-                        'aircraft_params': self.aircraft_params,
-                        'airspace_params': self.airspace_params,
-                        'output_params': self.output_params
-                    },
-                    trajectories={
-                        'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
-                        'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory                        
-                    },
-                    performance_metrics=performance_metrics,
-                    simulationID=self.sim_id,
-                    flight_directions=self.flight_directions_list,
-                    num_pax=self.passenger_arrival_process.total_demand
-                )
+        if self.output_params['only_return_brief_metrics']:
+            # Save the results
+            return  save_output(simulation_params={
+                            'sim_params': self.sim_params,
+                            'network_and_demand_params': self.network_and_demand_params,
+                            'passenger_params': self.passenger_params,
+                            'aircraft_params': self.aircraft_params,
+                            'airspace_params': self.airspace_params,
+                            'output_params': self.output_params
+                        },
+                        trajectories={
+                            'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
+                            'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory                        
+                        },
+                        performance_metrics=performance_metrics,
+                        simulationID=self.sim_id,
+                        flight_directions=self.flight_directions_list,
+                        num_pax=self.passenger_arrival_process.total_demand
+                    )
+        else:
+            # Save the results
+            save_output(simulation_params={
+                            'sim_params': self.sim_params,
+                            'network_and_demand_params': self.network_and_demand_params,
+                            'passenger_params': self.passenger_params,
+                            'aircraft_params': self.aircraft_params,
+                            'airspace_params': self.airspace_params,
+                            'output_params': self.output_params
+                        },
+                        trajectories={
+                            'aircraft_agent_trajectory': self.event_saver.aircraft_agent_trajectory,
+                            'passenger_agent_trajectory': self.event_saver.passenger_agent_trajectory                        
+                        },
+                        performance_metrics=performance_metrics,
+                        simulationID=self.sim_id,
+                        flight_directions=self.flight_directions_list,
+                        num_pax=self.passenger_arrival_process.total_demand
+                    )
+        
         # print(f"Success: Results are saved in {output_path}.")
 
 
