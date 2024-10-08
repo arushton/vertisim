@@ -126,6 +126,8 @@ class BaseSystemManager:
         - flight_duration: The duration of the latest flight.
         - alpha: The weighting factor (0 < alpha <= 1). Default is 0.1.
         """
+        if self.sim_params['light_simulation'] and self.average_flight_durations_per_od_pair[flight_direction]['num_flights'] > 20:
+            return
         # Get the current average flight duration for the direction.
         previous_average = self.get_average_flight_time(flight_direction)
         
@@ -186,7 +188,7 @@ class BaseSystemManager:
         Compute the average flight time (in seconds) based on distance and aircraft speed.
         """
         flight_distance = miles_to_m(self.get_mission_length(origin_id, destination_id))
-        return flight_distance / cruise_speed * 2.2    
+        return flight_distance / cruise_speed * 2   
     
     def assign_fato(self, vertiport_id: Any, parking_space: str, fato_id: str = None, rule: str = 'min') -> str:
         """

@@ -276,6 +276,7 @@ class SimSetup:
                           vertiports=self.vertiports, 
                           sim_start_timestamp=self.sim_start_timestamp, 
                           sim_params=self.sim_params,
+                          battery_capacity=self.aircraft_params['battery_capacity'],
                           node_locations=self.node_locations,
                           flight_directions=self.flight_directions_list)    
 

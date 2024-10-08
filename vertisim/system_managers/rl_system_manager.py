@@ -82,8 +82,6 @@ class RLSystemManager(BaseSystemManager):
         self.charge_reward = 0
         self.triggered_stopping_event_queue = deque()
         self.env.process(self.check_passenger_max_waiting_time_threshold())
-
-    
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -110,7 +108,7 @@ class RLSystemManager(BaseSystemManager):
         self.vertiports[aircraft.current_vertiport_id].num_flight_requests += 1           
         # Log the aircraft allocation process
         flight_id = get_random_process_id()
-        self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}')
+        # self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}')
         # Get the intended pushback time of the aircraft
         pushback_time = self.env.now             
         # Retrieve aircraft from the store
@@ -136,10 +134,11 @@ class RLSystemManager(BaseSystemManager):
         # Measure and save the aircraft allocation time
         self.save_aircraft_allocation_time(aircraft.current_vertiport_id, aircraft, aircraft_allocation_start_time)
         # Log the aircraft allocation process
-        self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
+        # self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
         # Save aircraft allocation and idle times
-        self.save_aircraft_times(origin_vertiport_id=aircraft.current_vertiport_id, aircraft=aircraft)
+        if not self.sim_params['light_simulation']:
+            self.save_aircraft_times(origin_vertiport_id=aircraft.current_vertiport_id, aircraft=aircraft)
 
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers     

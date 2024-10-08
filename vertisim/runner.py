@@ -7,9 +7,11 @@ import simpy
 import sqlite3
 from collections import defaultdict
 from .utils.helpers import read_config_file
-
+import argparse
 import glob
 import os
+from queue import Empty
+import time
 
 # Constants for database
 QUEUE_TIMEOUT = 5  # Timeout in seconds for reading from queue
@@ -110,6 +112,7 @@ def save_results_to_db(cursor, results):
         print(f"SQLite error: {e}")
 
 if __name__ == '__main__':
+    start_time = time.time()  # Start time of the code execution
     args = parse_args()
 
     if args.env_config:
@@ -144,8 +147,11 @@ if __name__ == '__main__':
     else:
         runner(env_config, queue)
 
-    
     # Signal the database writer process to shut down
     queue.put(None)
     db_process.join()
     print("All simulations completed, and database writer has shut down.")
+
+    end_time = time.time()  # End time of the code execution
+    run_time = end_time - start_time  # Calculate the code run time
+    print(f"Code run time: {round(run_time/60, 1)} minutes")
