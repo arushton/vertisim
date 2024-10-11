@@ -218,6 +218,12 @@ class SimSetup:
 
         vertiport_distance_cache[cache_key] = vertiport_distances
 
+        # Write vertiport distances to a file
+        # if self.sim_params['flush_cache']:
+        # Get the root folder path
+        root_folder_path = os.getcwd()
+        vertiport_distances.to_csv(os.path.join(root_folder_path, f'cache/{cache_key}_distances.csv'), index=False)
+
         return vertiport_distances
     
     def num_vertiports(self):

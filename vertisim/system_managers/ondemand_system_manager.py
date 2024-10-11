@@ -413,7 +413,7 @@ class OnDemandSystemManager(BaseSystemManager):
         score = (1 - demand_satisfaction_rate) * demand_weight + network_balance_score * balance_weight
 
         if abs(network_balance_score) < 0.15 and abs(1 - demand_satisfaction_rate) < 0.15:
-            return -0.1  # Demand is perfectly balanced
+            return -1  # Demand is perfectly balanced
 
         origin_surplus = self.check_num_available_aircraft(origin) - (ideal_distribution[origin] * total_aircraft_count)
         if origin_surplus <= 0:

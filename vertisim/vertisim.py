@@ -375,7 +375,7 @@ class VertiSim:
         return self.get_current_state(), round(self.reward_function.reward, 3), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
 
     def _should_continue_simulation(self):
-        return (self.env.peek() < self.max_sim_time and 
+        return (self.env.peek() < self.max_sim_time or 
                 (not self.terminal_event.triggered and 
                 not self.truncation_event.triggered and
                 not self._check_demand_satisfied()))
@@ -397,7 +397,7 @@ class VertiSim:
 
         # Convert the state to human readable format: Convert aircraft status to aircraft state ENUMs, convert aircraft od_pair to vertiport ids and flight directions
         self.sim_setup.logger.info(f"Reward: {reward}")
-        self.sim_setup.logger.info(f"Current state: {pformat(current_state)}")
+        self.sim_setup.logger.info(f"Current state: {pformat(current_state, width=150)}")
         self.sim_setup.logger.debug(f"Action mask: {action_mask}")    
         return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask    
     
