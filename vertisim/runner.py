@@ -12,20 +12,14 @@ import glob
 import os
 from queue import Empty
 import time
+import re
 
 # Constants for database
 QUEUE_TIMEOUT = 5  # Timeout in seconds for reading from queue
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Run VertiSim with a configuration file')
-    parser.add_argument('-ec', '--env_config', type=str, help='Path to the config.json file')
-    parser.add_argument('-br', '--batch_run', action='store_true', help='Run the simulation in batch')
-    parser.add_argument('-nc', '--n_cores', type=int, help='Number of cores to run the simulation on', default=1)
-    parser.add_argument('-paxp', '--passenger_schedule_folder', type=str, help='Path to the passenger schedule file', default=None)
-    return parser.parse_args()
-
 def runner(config, queue, passenger_schedule_file_path=None):
     config['network_and_demand_params']['passenger_schedule_file_path'] = passenger_schedule_file_path
+    print(f"Running simulation for pax file: {passenger_schedule_file_path}")
     env = simpy.Environment()
     vertisim = VertiSim(env=env, config=config)
     results = vertisim.run()
@@ -111,17 +105,7 @@ def save_results_to_db(cursor, results):
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
 
-if __name__ == '__main__':
-    start_time = time.time()  # Start time of the code execution
-    args = parse_args()
-
-    if args.env_config:
-        env_config = read_config_file(args.env_config)
-        env_config['sim_params']['algorithm'] = "VertiSimHeuristics"
-    else:
-        raise ValueError("Please provide a configuration file")
-
-    print(f"Running VertiSimHeuristics")
+def create_multi_process_runner(env_config, args):
 
     # Create a Manager for the queue
     manager = Manager()
@@ -155,3 +139,47 @@ if __name__ == '__main__':
     end_time = time.time()  # End time of the code execution
     run_time = end_time - start_time  # Calculate the code run time
     print(f"Code run time: {round(run_time/60, 1)} minutes")
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Run VertiSim with a configuration file')
+    parser.add_argument('-ec', '--env_config', type=str, help='Path to the config.json file', default=None)
+    parser.add_argument('-br', '--batch_run', action='store_true', help='Run the simulation in batch')
+    parser.add_argument('-nc', '--n_cores', type=int, help='Number of cores to run the simulation on', default=1)
+    parser.add_argument('-paxp', '--passenger_schedule_folder', type=str, help='Path to the passenger schedule file', default=None)
+    parser.add_argument('-sp', '--sweep_path', type=str, help='Run the simulation in sweep mode', default=None)
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    start_time = time.time()  # Start time of the code execution
+    args = parse_args()
+
+    if args.sweep_path:
+        # Read all the configuration files in the sweep path
+        config_files = glob.glob(os.path.join(args.sweep_path, "*.json"))
+        if len(config_files) == 0:
+            raise ValueError(f"No JSON files found in folder: {args.sweep_path}")
+        # Extract the hub, spoke and demand configuration from the file name. Filenames: config_ondemand_1_hub_8_spoke_40_a_2000_d.json
+        pattern = r"config_ondemand_(\d+)_hub_(\d+)_spoke_\d+_a_(\d+)_d"
+        for config_file in config_files:
+            file_name = os.path.basename(config_file)
+            match = re.match(pattern, file_name)
+
+            if match:
+                hub = int(match.group(1))
+                spoke = int(match.group(2))
+                demand = int(match.group(3))
+                args.passenger_schedule_folder = f"vertisim/vertisim/input/passenger/spill_demand/{hub}_hub_{spoke}_spoke_{demand}"
+                config = read_config_file(config_file)
+                print(f"Running simulation with config: {config_file}")
+                create_multi_process_runner(config, args)
+            else:
+                print(f"Filename {file_name} does not match the pattern {pattern}")
+
+
+    elif args.env_config:
+        env_config = read_config_file(args.env_config)
+        env_config['sim_params']['algorithm'] = "VertiSimHeuristics"
+        create_multi_process_runner(env_config, args)
+    else:
+        raise ValueError("Please provide a configuration file")
+
