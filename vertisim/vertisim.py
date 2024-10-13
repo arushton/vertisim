@@ -275,19 +275,25 @@ class VertiSim:
         """
         Advance the simulation for fixed intervals and make decisions.
         """        
-        while self._should_continue_simulation():
+        while self._should_continue_simulation_ondemand():
             # Schedule the next stop event
             stop_event = self.env.event()
             self.env.process(self.trigger_stop_event_after_interval_ondemand(stop_event, self.decision_making_interval))
             
             # Advance the simulation until the stop event is triggered
-            while not stop_event.triggered and self._should_continue_simulation():
+            while not stop_event.triggered and self._should_continue_simulation_ondemand():
                 self.env.step()
             
-            if self._should_continue_simulation():
+            if self._should_continue_simulation_ondemand():
                 self.sim_setup.logger.info(f"Periodic time step: {miliseconds_to_hms(self.env.now)}")
                 # Make on-demand decision
-                self.env.process(self.sim_setup.system_manager.make_ondemand_decision())   
+                self.env.process(self.sim_setup.system_manager.make_ondemand_decision()) 
+
+    def _should_continue_simulation_ondemand(self):
+        return (self.env.now < self.max_sim_time and 
+                (not self.terminal_event.triggered and 
+                not self.truncation_event.triggered and
+                not self._check_demand_satisfied()))
 
     def advance_periodically(self):
         """
@@ -375,7 +381,7 @@ class VertiSim:
         return self.get_current_state(), round(self.reward_function.reward, 3), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
 
     def _should_continue_simulation(self):
-        return (self.env.peek() < self.max_sim_time or 
+        return (self.env.peek() < self.max_sim_time and 
                 (not self.terminal_event.triggered and 
                 not self.truncation_event.triggered and
                 not self._check_demand_satisfied()))
@@ -396,7 +402,7 @@ class VertiSim:
         self.update_reward_tracker(reward)
 
         # Convert the state to human readable format: Convert aircraft status to aircraft state ENUMs, convert aircraft od_pair to vertiport ids and flight directions
-        self.sim_setup.logger.info(f"Reward: {reward}")
+        self.sim_setup.logger.info(f"Reward: {dict(enumerate(reward))}")
         self.sim_setup.logger.info(f"Current state: {pformat(current_state, width=150)}")
         self.sim_setup.logger.debug(f"Action mask: {action_mask}")    
         return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask    
@@ -476,12 +482,12 @@ class VertiSim:
         Update the reward tracker.
         """
         # Increase the step by one
-        self.sim_setup.event_saver.reward_tracker['step'] += 1
+        self.sim_setup.event_saver.rl_['step'] += 1
         # Add the reward to the cumulative sum
-        self.sim_setup.event_saver.reward_tracker['total_reward'] += reward
+        self.sim_setup.event_saver.rl_reward_tracker['total_reward'] += reward
         # Update the mean reward
-        self.sim_setup.event_saver.reward_tracker['mean_reward'] = \
-            self.sim_setup.event_saver.reward_tracker['total_reward'] / self.sim_setup.event_saver.reward_tracker['step']
+        self.sim_setup.event_saver.rl_reward_tracker['mean_reward'] = \
+            self.sim_setup.event_saver.rl_reward_tracker['total_reward'] / self.sim_setup.event_saver.rl_reward_tracker['step']
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):

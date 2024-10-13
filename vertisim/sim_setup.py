@@ -578,6 +578,7 @@ class SimSetup:
                                   sim_end_timestamp=self.env.now,
                                   client_server_mode=self.sim_mode['rl'],
                                   sim_params=self.sim_params,
+                                  sim_mode=self.sim_mode,
                                   output_params=self.output_params,
                                   verbose=self.sim_params['verbose']).performance_metrics
     

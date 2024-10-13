@@ -1,6 +1,7 @@
 from .base_system_manager import BaseSystemManager
 from typing import Any, List, Union, Dict
 import simpy
+import pandas as pd
 from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round, flatten_dict, write_to_db
 from ..aircraft.aircraft import AircraftStatus
@@ -23,7 +24,7 @@ class OfflineOptimizationSystemManager(BaseSystemManager):
                  sim_params: Dict,
                  output_params: Dict,
                  aircraft_params: Dict,
-                 vertiport_distances: Dict,
+                 vertiport_distances: pd.DataFrame,
                  passenger_distributions: Dict,                 
                  event_saver: object,
                  node_locations: Dict,

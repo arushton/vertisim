@@ -13,26 +13,27 @@ import os
 from queue import Empty
 import time
 import re
+import pandas as pd
 
 # Constants for database
-QUEUE_TIMEOUT = 5  # Timeout in seconds for reading from queue
+QUEUE_TIMEOUT = 1  # Timeout in seconds for reading from queue
 
-def runner(config, queue, passenger_schedule_file_path=None):
+def runner(config, results_list=None, passenger_schedule_file_path=None):
     config['network_and_demand_params']['passenger_schedule_file_path'] = passenger_schedule_file_path
     print(f"Running simulation for pax file: {passenger_schedule_file_path}")
     env = simpy.Environment()
     vertisim = VertiSim(env=env, config=config)
     results = vertisim.run()
 
-    if results:
-        queue.put(results)
+    if results and results_list is not None:
+        results_list.append(results)
 
-def run_simulation_with_config(config_path, base_config):
+def run_simulation_with_config(config_path, base_config, results_list):
     config = base_config.copy()
     config['network_and_demand_params']['passenger_schedule_file_path'] = config_path
     config['sim_params']['logging'] = False
     print(f"Running simulation with config: {config_path}")
-    runner(config)
+    runner(config, results_list)
 
 def db_writer(queue, db_file):
     """Process that writes data to the SQLite database from the queue."""
@@ -79,12 +80,13 @@ def save_results_to_db(cursor, results):
                 NumAircraft INTEGER,
                 NSpilled INTEGER,
                 NFlights INTEGER,
-                NumPax INTEGER
+                NumPax INTEGER,
+                Reward REAL
             );
         """)
         # Insert or update the simulation results in the database
         cursor.execute("""
-            INSERT INTO Simulation (SimulationID, SimulatedDate, Algorithm, NumAircraft, NSpilled, NFlights, NumPax)
+            INSERT INTO Simulation (SimulationID, SimulatedDate, Algorithm, NumAircraft, NSpilled, NFlights, NumPax, Reward)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(SimulationID) DO UPDATE SET
             SimulatedDate=excluded.SimulatedDate,
@@ -92,7 +94,8 @@ def save_results_to_db(cursor, results):
             NumAircraft=excluded.NumAircraft,
             NSpilled=excluded.NSpilled,
             NFlights=excluded.NFlights,
-            NumPax=excluded.NumPax;
+            NumPax=excluded.NumPax,
+            Reward=excluded.Reward;
         """, (
             results['SimulationID'],
             results['SimulatedDate'],
@@ -100,41 +103,49 @@ def save_results_to_db(cursor, results):
             results['NumAircraft'],
             results['NSpilled'],
             results['NFlights'],
-            results['NumPax']
+            results['NumPax'],
+            results['Reward']
         ))
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
 
 def create_multi_process_runner(env_config, args):
 
-    # Create a Manager for the queue
-    manager = Manager()
-    queue = manager.Queue()
-
-    # Start the database writer process
-    db_file = f"{env_config['output_params']['performance_metrics_db_name']}.sqlite"
-    db_process = Process(target=db_writer, args=(queue, db_file))
-    db_process.start()
-
     if args.batch_run:
-        passenger_schedule_folder = args.passenger_schedule_folder
-        csv_files = glob.glob(os.path.join(passenger_schedule_folder, "*.csv"))
+        # Create a Manager for the queue
+        manager = Manager()
+        results_list = manager.list()
+        # queue = manager.Queue()
+
+        # # Start the database writer process
+        # db_file = f"{env_config['output_params']['performance_metrics_db_name']}.sqlite"
+        # db_process = Process(target=db_writer, args=(queue, db_file))
+        # db_process.start()
+
+
+        passenger_schedule_file = args.passenger_schedule_file
+        csv_files = glob.glob(os.path.join(passenger_schedule_file, "*.csv"))
 
         if len(csv_files) == 0:
-            raise ValueError(f"No CSV files found in folder: {passenger_schedule_folder}")
+            raise ValueError(f"No CSV files found in folder: {passenger_schedule_file}")
 
         print(f"Running simulations in batch mode on {args.n_cores} cores")
         
         # Create a pool of workers and run the simulations in parallel
         with Pool(processes=args.n_cores) as pool:
-            pool.starmap(runner, [(env_config, queue, passenger_schedule_file_path) for passenger_schedule_file_path in csv_files])
-    else:
-        runner(env_config, queue)
+            pool.starmap(runner, [(env_config, results_list, passenger_schedule_file_path) for passenger_schedule_file_path in csv_files])
 
-    # Signal the database writer process to shut down
-    queue.put(None)
-    db_process.join()
-    print("All simulations completed, and database writer has shut down.")
+        # Signal the database writer process to shut down
+        # queue.put(None)
+        # db_process.join()
+        df = pd.DataFrame(list(results_list))
+        df.to_csv("results.csv", index=False)
+        print("All simulations completed, and database writer has shut down.")
+    else:
+        queue = None
+        if args.passenger_schedule_file:
+            env_config['network_and_demand_params']['passenger_schedule_file_path'] = args.passenger_schedule_file
+        runner(env_config, queue)
 
     end_time = time.time()  # End time of the code execution
     run_time = end_time - start_time  # Calculate the code run time
@@ -145,7 +156,7 @@ def parse_args():
     parser.add_argument('-ec', '--env_config', type=str, help='Path to the config.json file', default=None)
     parser.add_argument('-br', '--batch_run', action='store_true', help='Run the simulation in batch')
     parser.add_argument('-nc', '--n_cores', type=int, help='Number of cores to run the simulation on', default=1)
-    parser.add_argument('-paxp', '--passenger_schedule_folder', type=str, help='Path to the passenger schedule file', default=None)
+    parser.add_argument('-paxp', '--passenger_schedule_file', type=str, help='Path to the passenger schedule file', default=None)
     parser.add_argument('-sp', '--sweep_path', type=str, help='Run the simulation in sweep mode', default=None)
     return parser.parse_args()
 
@@ -168,7 +179,7 @@ if __name__ == '__main__':
                 hub = int(match.group(1))
                 spoke = int(match.group(2))
                 demand = int(match.group(3))
-                args.passenger_schedule_folder = f"vertisim/vertisim/input/passenger/spill_demand/{hub}_hub_{spoke}_spoke_{demand}"
+                args.passenger_schedule_file = f"vertisim/vertisim/input/passenger/spill_demand/{hub}_hub_{spoke}_spoke_{demand}"
                 config = read_config_file(config_file)
                 print(f"Running simulation with config: {config_file}")
                 create_multi_process_runner(config, args)

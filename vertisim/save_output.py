@@ -229,7 +229,8 @@ def save_performance_metrics(simulation_params: dict,
                         'Algorithm',
                         'NumAircraft',
                         'NSpilled', 
-                        'NFlights']
+                        'NFlights',
+                        'Reward']
         try:
             # Create the table with dynamic columns
             columns = ', '.join([f"{metric} FLOAT" for metric in metric_names])
@@ -250,13 +251,15 @@ def save_performance_metrics(simulation_params: dict,
             for flight_dir in flight_directions:
                 n_spilled += performance_metrics[flight_dir]['n_spilled']
                 n_flights += performance_metrics[flight_dir]['n_flights']
+                reward = performance_metrics[flight_dir]['total_reward']
                 
             metric_values = [
                 simulated_date,
                 algorithm,
                 num_aircraft,
                 n_spilled,
-                n_flights
+                n_flights,
+                reward
             ]
     
             placeholder = ', '.join(['?'] * (len(metric_values) + 2))
@@ -284,6 +287,7 @@ def return_brief_metrics(performance_metrics: defaultdict,
         for flight_dir in flight_directions:
             n_spilled += performance_metrics[flight_dir]['n_spilled']
             n_flights += performance_metrics[flight_dir]['n_flights']
+            reward = performance_metrics[flight_dir]['total_reward']
 
         return {
             'SimulationID': simulationID,
@@ -292,7 +296,8 @@ def return_brief_metrics(performance_metrics: defaultdict,
             'NumAircraft': num_aircraft,
             'NSpilled': n_spilled,
             'NFlights': n_flights,
-            'NumPax': num_pax
+            'NumPax': num_pax,
+            'Reward': reward
         }
                          
 

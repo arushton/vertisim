@@ -97,6 +97,10 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         aircraft.charged_during_turnaround = True
         aircraft.logger.debug(f"Finished Charging: Aircraft {aircraft.tail_number} at {aircraft.current_vertiport_id}. Previous SoC: {round(old_soc, 2)}, New SoC: {careful_round(aircraft.soc, 2)}")
 
+        # Log the charge reward
+        reward = 0.25 * (aircraft.soc - old_soc) * aircraft.aircraft_params['battery_capacity'] / 100
+        aircraft.event_saver.ondemand_reward_tracker['total_reward'] += reward
+
     def _check_skip_charging(self, aircraft):
         aircraft.set_charging_time_trackers()
         aircraft.event_saver.save_agent_state(agent=self, agent_type='aircraft', event='no_charge_needed')

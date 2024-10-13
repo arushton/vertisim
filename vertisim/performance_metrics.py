@@ -22,6 +22,7 @@ class PerformanceMetrics:
                 sim_id, 
                 sim_end_timestamp,
                 sim_params,
+                sim_mode,
                 output_params,
                 client_server_mode,
                 verbose=False):
@@ -32,6 +33,7 @@ class PerformanceMetrics:
         self.client_server_mode = client_server_mode
         self.sim_params = sim_params
         self.output_params = output_params
+        self.sim_mode = sim_mode
         self.performance_metric_trackers = performance_metric_trackers
         self.passenger_consolidation_time = performance_metric_trackers['passenger_consolidation_time']
         self.passenger_departure_queue_count = performance_metric_trackers['passenger_departure_queue_count']
@@ -57,7 +59,8 @@ class PerformanceMetrics:
         self.passenger_trip_times = performance_metric_trackers['passenger_trip_time_tracker']
         self.repositioning_counter = performance_metric_trackers['repositioning_counter']
         self.total_charge_time_counter = performance_metric_trackers['total_charge_time_counter']
-        self.reward_tracker = performance_metric_trackers['reward_tracker']
+        self.rl_reward_tracker = performance_metric_trackers['rl_reward_tracker']
+        self.ondemand_reward_tracker = performance_metric_trackers['ondemand_reward_tracker']
         self.output_folder_path = self.get_save_path()
         self.vertiport_ids = vertiport_ids
         self.flight_directions = flight_directions
@@ -136,9 +139,13 @@ class PerformanceMetrics:
         # df.to_csv(f'{self.output_folder_path}/passenger_waiting_time.csv')   
 
     def save_reward_stats(self):
-        for flight_dir in self.flight_directions:
-            self.performance_metrics[flight_dir]['mean_reward'] = self.reward_tracker['mean_reward']
-            self.performance_metrics[flight_dir]['total_reward'] = self.reward_tracker['total_reward']
+        if self.sim_mode['rl']:
+            for flight_dir in self.flight_directions:
+                self.performance_metrics[flight_dir]['mean_reward'] = self.rl_reward_tracker['mean_reward']
+                self.performance_metrics[flight_dir]['total_reward'] = self.rl_reward_tracker['total_reward']
+        elif self.sim_mode['ondemand']:
+            for flight_dir in self.flight_directions:
+                self.performance_metrics[flight_dir]['total_reward'] = self.ondemand_reward_tracker['total_reward']
 
     def save_n_spilled_passengers(self):
         for flight_dir in self.flight_directions:

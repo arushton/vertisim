@@ -4,6 +4,7 @@ from ..aircraft.aircraft import AircraftStatus
 from typing import Dict, List, Any
 from collections import deque
 import numpy as np
+import pandas as pd
 import random
 from ..utils.get_state_variables import get_simulator_states
 from ..utils.units import sec_to_ms, ms_to_sec, ms_to_min, miles_to_m, sec_to_min, min_to_sec, min_to_ms
@@ -26,7 +27,7 @@ class RLSystemManager(BaseSystemManager):
                  external_optimization_params: Dict,
                  output_params: Dict,
                  aircraft_params: Dict,
-                 vertiport_distances: Dict,
+                 vertiport_distances: pd.DataFrame,
                  passenger_distributions: Dict,                 
                  event_saver: object,
                  node_locations: Dict,

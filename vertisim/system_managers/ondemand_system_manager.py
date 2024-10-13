@@ -33,7 +33,7 @@ class OnDemandSystemManager(BaseSystemManager):
                  external_optimization_params: Dict,
                  output_params: Dict,
                  aircraft_params: Dict,
-                 vertiport_distances: Dict,
+                 vertiport_distances: pd.DataFrame,
                  passenger_distributions: Dict,                 
                  event_saver: object,
                  node_locations: Dict,
@@ -195,6 +195,8 @@ class OnDemandSystemManager(BaseSystemManager):
         self.save_passenger_times(origin_vertiport_id=origin_vertiport_id, passengers=aircraft.passengers_onboard) 
         self.passenger_logger.info(f"Passenger waiting times for flight from {origin_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
 
+        self.calculate_flight_reward(origin_vertiport_id, destination_vertiport_id, len(departing_passengers))
+
         # Start the passenger departure process
         if departing_passengers:
             # self.logger.debug(f'|{flight_id}| Started: Passengers exited the waiting room at vertiport {origin_vertiport_id} for {destination_vertiport_id} flight.')
@@ -207,6 +209,17 @@ class OnDemandSystemManager(BaseSystemManager):
                                                     origin_vertiport_id=origin_vertiport_id, 
                                                     destination_vertiport_id=destination_vertiport_id)
         )        
+
+    def calculate_flight_reward(self, origin_vertiport_id: str, destination_vertiport_id: str, num_passengers: int):
+        # Get the distance between the origin and destination vertiports
+        distance = self.get_mission_length(origin_vertiport_id, destination_vertiport_id)
+        # Calculate the reward for the flight
+        usd_per_mile = self.external_optimization_params['reward_function_parameters']['usd_pax_mile']
+        base_fare = self.external_optimization_params['reward_function_parameters']['usd_base_fare']
+        usd_casm = self.external_optimization_params['reward_function_parameters']['usd_casm']
+        num_seats = self.aircraft_params['pax']
+        reward = (base_fare + usd_per_mile * distance) * num_passengers - (usd_casm * distance * num_seats)
+        self.event_saver.ondemand_reward_tracker['total_reward'] += reward
 
     def check_passenger_max_waiting_time_threshold(self):
         if departing_passenger_groups := self.scheduler.check_max_waiting_time_threshold(

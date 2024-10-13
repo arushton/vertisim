@@ -33,7 +33,7 @@ class OnDemandSystemManager(BaseSystemManager):
                  external_optimization_params: Dict,
                  output_params: Dict,
                  aircraft_params: Dict,
-                 vertiport_distances: Dict,
+                 vertiport_distances: pd.DataFrame,
                  passenger_distributions: Dict,                 
                  event_saver: object,
                  node_locations: Dict,
