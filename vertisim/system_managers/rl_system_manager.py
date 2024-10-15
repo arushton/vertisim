@@ -72,6 +72,7 @@ class RLSystemManager(BaseSystemManager):
         self.stopping_events = stopping_events
         self.truncation_event = truncation_event
         self.departing_passenger_tracker = set()
+        self.decision_making_interval = sec_to_ms(self.external_optimization_params['periodic_time_step'])
         self.actions = []
         self.trip_counter = 0
         self.trip_counter_tracker = 0
@@ -82,7 +83,7 @@ class RLSystemManager(BaseSystemManager):
         self.truncation_penalty = 0
         self.charge_reward = 0
         self.triggered_stopping_event_queue = deque()
-        self.env.process(self.check_passenger_max_waiting_time_threshold())
+        # self.env.process(self.check_passenger_max_waiting_time_threshold())
     
     def get_random_destination(self, aircraft: object):
         # If the destination vertiport is not assigned, then randomly choose one
@@ -462,7 +463,7 @@ class RLSystemManager(BaseSystemManager):
                     # Identify passengers that have waited too long
                     over_waiting_passengers = [
                         passenger for passenger in wr_store.items
-                        if self.env.now - passenger.waiting_room_arrival_time >= max_waiting_time_threshold # To account for the included flying pax waiting time
+                        if self.env.now - passenger.waiting_room_arrival_time + self.decision_making_interval > max_waiting_time_threshold + ms_to_sec(1) # To account for the included flying pax waiting time
                     ]
                     num_over_waiting_passengers = len(over_waiting_passengers)
 

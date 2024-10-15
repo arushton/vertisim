@@ -124,7 +124,7 @@ class EventSaver:
             return
         
         # Convert the energy consumption from kWh to SoC
-        energy_consumption_soc = energy_consumption * self.battery_capacity * 100
+        energy_consumption_soc = energy_consumption * self.battery_capacity / 100
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.aircraft_energy_consumption_tracker[flight_direction])

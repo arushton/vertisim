@@ -127,9 +127,9 @@ class VertiSim:
         """
         Reset the simulation.
         """
-        if not self.terminal_event.triggered:
-            self.sim_setup.logger.finalize_logging()
-            return self.terminal_event.succeed()
+        # if not self.terminal_event.triggered:
+        self.sim_setup.logger.finalize_logging()
+        return self.terminal_event.succeed()
         
     def close(self):
         """
@@ -177,7 +177,8 @@ class VertiSim:
         N: Idle to charge
         N+1: Do nothing
         """
-        self.sim_setup.logger.info(f"Action: {[self.action_dict[action] for action in actions]}")
+        action_dict = {i: self.action_dict[action] for i, action in enumerate(actions)}
+        self.sim_setup.logger.info(f"Action: {action_dict}")
         self.sim_setup.system_manager.actions = actions
 
         # If a passenger has been waiting for more than X minutes, remove them from the waiting room.
@@ -402,9 +403,11 @@ class VertiSim:
         self.update_reward_tracker(reward)
 
         # Convert the state to human readable format: Convert aircraft status to aircraft state ENUMs, convert aircraft od_pair to vertiport ids and flight directions
-        self.sim_setup.logger.info(f"Reward: {dict(enumerate(reward))}")
+        self.sim_setup.logger.info(f"Reward: {reward}")
         self.sim_setup.logger.info(f"Current state: {pformat(current_state, width=150)}")
-        self.sim_setup.logger.debug(f"Action mask: {action_mask}")    
+        masks = np.array(action_mask).reshape(self.num_aircraft, -1)
+        masks_log = {i: masks[i].tolist() for i in range(self.num_aircraft)}
+        self.sim_setup.logger.debug(f"Action mask: {masks_log}")    
         return current_state, reward, self.is_terminated(), self.is_truncated(), action_mask    
     
     def _check_demand_satisfied(self):
@@ -482,7 +485,7 @@ class VertiSim:
         Update the reward tracker.
         """
         # Increase the step by one
-        self.sim_setup.event_saver.rl_['step'] += 1
+        self.sim_setup.event_saver.rl_reward_tracker['step'] += 1
         # Add the reward to the cumulative sum
         self.sim_setup.event_saver.rl_reward_tracker['total_reward'] += reward
         # Update the mean reward

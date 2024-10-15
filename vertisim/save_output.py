@@ -9,8 +9,10 @@ import os
 import re
 from .utils.json_formatter import create_trajectory_json
 from .utils.helpers import get_str_before_first_occurrence_of_char
+import psycopg2
+from psycopg2 import sql
 
-def create_connection(db_file: str, timeout: int = 30):
+def create_sqlite_connection(db_file: str, timeout: int = 30):
     """Create a database connection to the SQLite database specified by db_file with the specified timeout."""
     try:
         conn = sqlite3.connect(db_file, timeout=timeout)
@@ -18,6 +20,21 @@ def create_connection(db_file: str, timeout: int = 30):
         return conn
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
+        return None
+    
+def create_postgres_connection(dbname: str):
+    """Create a connection to a PostgreSQL database."""
+    try:
+        conn = psycopg2.connect(
+            dbname=dbname,
+            user='emin',
+            password='emin',
+            host='localhost',
+            port='5432'
+        )
+        return conn
+    except psycopg2.Error as e:
+        print(f"PostgreSQL error: {e}")
         return None
     
 def save_output(simulation_params: dict, 
@@ -38,27 +55,38 @@ def save_output(simulation_params: dict,
     # Get the number of aircraft
     num_aircraft = get_num_aircraft(network_and_demand_params=simulation_params['network_and_demand_params'])  
 
-    if simulation_params['output_params']['only_return_brief_metrics']:
+    if simulation_params['output_params']['database_format'] == 'postgresql':
+        write_metrics_to_postgres(dbname=simulation_params['output_params']['performance_metrics_db_name'],
+                          performance_metrics=performance_metrics,
+                          simulationID=simulationID,
+                          flight_directions=flight_directions,
+                          simulated_date=simulated_date,
+                          num_pax=num_pax,
+                          algorithm=simulation_params['sim_params']['algorithm'],
+                          num_aircraft=num_aircraft)
+        return
+
+    elif simulation_params['output_params']['only_return_brief_metrics']:
         return return_brief_metrics(performance_metrics=performance_metrics,
                                     simulationID=simulationID,
                                     flight_directions=flight_directions,
                                     simulated_date=simulated_date,
                                     num_pax=num_pax,
                                     algorithm=simulation_params['sim_params']['algorithm'],
-                                    num_aircraft=num_aircraft)       
-    
-    # Save performance metrics
-    save_performance_metrics(simulation_params=simulation_params,
-                                performance_metrics=performance_metrics,
-                                simulationID=simulationID,
-                                flight_directions=flight_directions,
-                                simulated_date=simulated_date,
-                                num_pax=num_pax,
-                                algorithm=simulation_params['sim_params']['algorithm'],
-                                num_aircraft=num_aircraft, 
-                                performance_metrics_db_name=simulation_params['output_params']['performance_metrics_db_name'],
-                                brief_metrics=simulation_params['output_params']['brief_metrics'])
-    
+                                    num_aircraft=num_aircraft)
+    else:       
+        # Save performance metrics
+        save_performance_metrics(simulation_params=simulation_params,
+                                    performance_metrics=performance_metrics,
+                                    simulationID=simulationID,
+                                    flight_directions=flight_directions,
+                                    simulated_date=simulated_date,
+                                    num_pax=num_pax,
+                                    algorithm=simulation_params['sim_params']['algorithm'],
+                                    num_aircraft=num_aircraft, 
+                                    performance_metrics_db_name=simulation_params['output_params']['performance_metrics_db_name'],
+                                    brief_metrics=simulation_params['output_params']['brief_metrics'])
+        
 def extract_date_from_filename(filename: str) -> str:
     if not filename:
         return None
@@ -101,7 +129,7 @@ def save_performance_metrics(simulation_params: dict,
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    conn = create_connection(output_path)
+    conn = create_sqlite_connection(output_path)
     assert conn, 'Could not establish database connection.'
     cursor = conn.cursor()
     
@@ -112,18 +140,19 @@ def save_performance_metrics(simulation_params: dict,
                 SimulationID VARCHAR(8) PRIMARY KEY,
                 Config TEXT,
                 Timestamp DATETIME,
-                NumPax INTEGER
+                NumPax INTEGER,
+                Reward REAL
             );
         """)
         
         cursor.execute("SELECT SimulationID FROM Simulation WHERE SimulationID = ?", (simulationID,))
         data=cursor.fetchone()
         if data is None:
-            cursor.execute("INSERT INTO Simulation (SimulationID, Config, Timestamp, NumPax) VALUES (?, ?, ?, ?)", 
-                           (simulationID, config, timestamp, num_pax)
+            cursor.execute("INSERT INTO Simulation (SimulationID, Config, Timestamp, NumPax, Reward) VALUES (?, ?, ?, ?, ?)", 
+                           (simulationID, config, timestamp, num_pax, reward)
             )
         else:
-            cursor.execute("UPDATE Simulation SET Timestamp = ?, Config = ?, NumPax = ? WHERE SimulationID = ?", (timestamp, config, num_pax, simulationID))
+            cursor.execute("UPDATE Simulation SET Timestamp = ?, Config = ?, NumPax = ?, Reward = ? WHERE SimulationID = ?", (timestamp, config, num_pax, reward, simulationID))
             
     except sqlite3.Error as err:
         print(f"Error: {err}")
@@ -274,6 +303,77 @@ def save_performance_metrics(simulation_params: dict,
         conn.close()
 
         return os.getcwd() + output_path
+    
+def write_metrics_to_postgres(dbname: str,
+                              performance_metrics: defaultdict,
+                              simulationID: str,
+                              flight_directions: list,
+                              simulated_date: str,
+                              num_pax: int,
+                              algorithm: str,
+                              num_aircraft: int) -> None:
+    """Main function to write metrics to PostgreSQL."""
+    metrics = return_brief_metrics(performance_metrics=performance_metrics,
+                                    simulationID=simulationID,
+                                    flight_directions=flight_directions,
+                                    simulated_date=simulated_date,
+                                    num_pax=num_pax,
+                                    algorithm=algorithm,
+                                    num_aircraft=num_aircraft)
+    conn = create_postgres_connection(dbname)
+    if conn is None:
+        return
+    
+    try:
+        create_metrics_table(conn)
+        insert_metrics(conn, metrics)
+        print("Metrics successfully written to the database.")
+    except psycopg2.Error as e:
+        print(f"Error writing to database: {e}")
+    finally:
+        conn.close()
+
+def create_metrics_table(conn):
+    """Create a table to store the metrics if it doesn't exist."""
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS simulation_metrics (
+        id SERIAL PRIMARY KEY,
+        SimulationID VARCHAR(255),
+        SimulatedDate VARCHAR(255),
+        Algorithm VARCHAR(255),
+        NumAircraft INTEGER,
+        NSpilled INTEGER,
+        NFlights INTEGER,
+        NumPax INTEGER,
+        Reward FLOAT
+    );
+    """
+    with conn.cursor() as cur:
+        cur.execute(create_table_query)
+    conn.commit()
+
+def insert_metrics(conn, metrics: dict):
+    """Insert metrics into the database."""
+    insert_query = sql.SQL("""
+    INSERT INTO simulation_metrics 
+    (SimulationID, SimulatedDate, Algorithm, NumAircraft, NSpilled, NFlights, NumPax, Reward)
+    VALUES 
+    (%s, %s, %s, %s, %s, %s, %s, %s)
+    """)
+    
+    with conn.cursor() as cur:
+        cur.execute(insert_query, (
+            metrics['SimulationID'],
+            metrics['SimulatedDate'],
+            metrics['Algorithm'],
+            metrics['NumAircraft'],
+            metrics['NSpilled'],
+            metrics['NFlights'],
+            metrics['NumPax'],
+            metrics['Reward']
+        ))
+    conn.commit()
+
 
 def return_brief_metrics(performance_metrics: defaultdict,
                          simulationID: str,

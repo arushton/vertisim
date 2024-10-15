@@ -14,19 +14,21 @@ from queue import Empty
 import time
 import re
 import pandas as pd
+from tqdm import tqdm
 
 # Constants for database
 QUEUE_TIMEOUT = 1  # Timeout in seconds for reading from queue
 
-def runner(config, results_list=None, passenger_schedule_file_path=None):
-    config['network_and_demand_params']['passenger_schedule_file_path'] = passenger_schedule_file_path
-    print(f"Running simulation for pax file: {passenger_schedule_file_path}")
+def runner(config, passenger_schedule_file_path=None):
+    if passenger_schedule_file_path is not None:
+        config['network_and_demand_params']['passenger_schedule_file_path'] = passenger_schedule_file_path
+        print(f"Running simulation for pax file: {passenger_schedule_file_path}")
     env = simpy.Environment()
     vertisim = VertiSim(env=env, config=config)
-    results = vertisim.run()
+    vertisim.run()
 
-    if results and results_list is not None:
-        results_list.append(results)
+    # if results and results_list is not None:
+    #     results_list.append(results)
 
 def run_simulation_with_config(config_path, base_config, results_list):
     config = base_config.copy()
@@ -112,17 +114,6 @@ def save_results_to_db(cursor, results):
 def create_multi_process_runner(env_config, args):
 
     if args.batch_run:
-        # Create a Manager for the queue
-        manager = Manager()
-        results_list = manager.list()
-        # queue = manager.Queue()
-
-        # # Start the database writer process
-        # db_file = f"{env_config['output_params']['performance_metrics_db_name']}.sqlite"
-        # db_process = Process(target=db_writer, args=(queue, db_file))
-        # db_process.start()
-
-
         passenger_schedule_file = args.passenger_schedule_file
         csv_files = glob.glob(os.path.join(passenger_schedule_file, "*.csv"))
 
@@ -133,19 +124,17 @@ def create_multi_process_runner(env_config, args):
         
         # Create a pool of workers and run the simulations in parallel
         with Pool(processes=args.n_cores) as pool:
-            pool.starmap(runner, [(env_config, results_list, passenger_schedule_file_path) for passenger_schedule_file_path in csv_files])
+            # Wrap the starmap with tqdm for progress
+            list(tqdm(pool.starmap(runner, [(env_config, passenger_schedule_file_path) for passenger_schedule_file_path in csv_files]), 
+                      total=len(csv_files), desc="Simulations Progress", unit="simulation"))
+
 
         # Signal the database writer process to shut down
         # queue.put(None)
         # db_process.join()
-        df = pd.DataFrame(list(results_list))
-        df.to_csv("results.csv", index=False)
         print("All simulations completed, and database writer has shut down.")
     else:
-        queue = None
-        if args.passenger_schedule_file:
-            env_config['network_and_demand_params']['passenger_schedule_file_path'] = args.passenger_schedule_file
-        runner(env_config, queue)
+        runner(env_config)
 
     end_time = time.time()  # End time of the code execution
     run_time = end_time - start_time  # Calculate the code run time
@@ -185,6 +174,10 @@ if __name__ == '__main__':
                 create_multi_process_runner(config, args)
             else:
                 print(f"Filename {file_name} does not match the pattern {pattern}")
+        
+    elif args.batch_run:
+        env_config = read_config_file(args.env_config)
+        create_multi_process_runner(env_config, args)
 
 
     elif args.env_config:

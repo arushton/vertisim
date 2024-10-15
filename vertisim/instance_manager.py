@@ -17,6 +17,7 @@ class InstanceManager:
 
     def reset(self):
         self._setup_sim_instance(reset=True)
+        # self.sim_instance.close()
         self.status = False
         self.sim_instance = VertiSim(
             env=simpy.Environment(),

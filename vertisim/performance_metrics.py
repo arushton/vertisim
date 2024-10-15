@@ -703,7 +703,7 @@ class PerformanceMetrics:
 
     def print_energy_consumption_stats(self):
         print(" ")
-        print("Energy consumption statistics in kWh:")
+        print("Energy consumption statistics in SoC %:")
         print("-----------------------------")
         df = pd.DataFrame(
             {
