@@ -111,28 +111,18 @@ class BaseSystemManager:
         return ChargerModel(charger_max_charge_rate=charger_max_charge_rate,
                             charger_efficiency=charger_efficiency)
     
-    def _initialize_avg_flight_durations(self):
-        # def inner_dict():
-        #     return {'average_flight_duration': None, 'num_flights': 0, 'total_duration': 0}
-    
-        # # The outer defaultdict
-        # dd = defaultdict(inner_dict)
-        # for flight_direction in self.airspace.flight_directions:
-        #     dd[flight_direction]
-        # return dd
-    
+    def _initialize_avg_flight_durations(self):    
         def inner_dict(estimated_time):
             return {'average_flight_duration': estimated_time, 'num_flights': 0, 'total_duration': 0}
     
         # The outer defaultdict
         dd = defaultdict(lambda: inner_dict(None))
-        # TODO: Use flight_directions_dict keys and don't loop
-        for origin_id in self.vertiport_ids:
-            for destination_id in self.vertiport_ids:
-                if origin_id != destination_id:
-                    estimated_time = self.initial_flight_duration_estimate(origin_id, destination_id, self.aircraft_params['cruise_speed'])
-                    dd[f"{origin_id}_{destination_id}"] = inner_dict(estimated_time)
-        return dd    
+        for flight_direction in self.flight_directions_dict.keys():
+            origin_id, destination_id = flight_direction.split('_')
+            estimated_time = self.initial_flight_duration_estimate(origin_id, destination_id, self.aircraft_params['cruise_speed'])
+            dd[flight_direction] = inner_dict(estimated_time)
+        return dd
+
     
     def update_flight_duration(self, flight_direction: str, flight_duration: float, alpha: float = 0.1):
         """
