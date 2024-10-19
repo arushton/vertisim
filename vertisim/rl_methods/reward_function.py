@@ -88,7 +88,7 @@ class RewardFunction:
                 final_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
                     charge_time=sec_to_ms(self.config['external_optimization_params']['charge_time_per_charge_event']),
                     initial_soc=aircraft.soc,
-                    df=aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id])
+                    df=aircraft.system_manager.aircraft_battery_models)
                 # Calculate the energy draw using the SoC difference
                 energy_draw_soc = final_soc - aircraft.soc
                 # Convert the energy draw from SoC to kWh

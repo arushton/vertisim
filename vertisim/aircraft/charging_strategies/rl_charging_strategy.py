@@ -48,7 +48,7 @@ class RLChargingStrategy(BaseChargingStrategy):
             Charge time required to reach the target soc level.
         """
         if check_magnitude_order(init_soc, target_soc):
-            df = aircraft.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
+            df = aircraft.system_manager.aircraft_battery_models
             init_soc_time = df[df.soc == init_soc]['time_sec'].values[0]
             target_soc_time = df[df.soc == target_soc]['time_sec'].values[0]
             return sec_to_ms(target_soc_time - init_soc_time)

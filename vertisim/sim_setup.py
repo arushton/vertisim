@@ -550,6 +550,7 @@ class SimSetup:
             # Load or generate passenger arrival schedule and start the passenger arrival process
             self.passenger_arrival_process = PassengerArrivalSetup(
                 env=self.env,
+                sim_params=self.sim_params,
                 network_and_demand=self.network_and_demand_params,
                 passenger_params=self.passenger_params,
                 vertiport_ids=self.vertiport_ids,

@@ -10,6 +10,7 @@ from .passenger import Passenger
 class PassengerArrivalSetup:
     def __init__(self,
                  env: object,
+                 sim_params: Dict,
                  network_and_demand: Dict,
                  passenger_params: Dict,
                  vertiport_ids: List,
@@ -18,6 +19,7 @@ class PassengerArrivalSetup:
                  network_simulation: bool = False,
                  passenger_logger: object = None):
         self.env = env
+        self.sim_params = sim_params
         self.network_and_demand = network_and_demand
         self.vertiport_configs = network_and_demand['vertiports']
         self.passenger_params = passenger_params

@@ -101,6 +101,8 @@ class EventSaver:
         }
 
     def update_flying_aircraft_counter(self, flight_update: int):
+        if self.sim_params['light_simulation']:
+            return
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.flying_aircraft_counter)
@@ -108,6 +110,8 @@ class EventSaver:
         self.flying_aircraft_counter[time] = last_value + flight_update 
 
     def update_ground_aircraft_counter(self, aircraft_count: Dict):
+        if self.sim_params['light_simulation']:
+            return
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.ground_aircraft_counter)

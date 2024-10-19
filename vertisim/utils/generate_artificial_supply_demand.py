@@ -21,6 +21,7 @@ def generate_aircraft_network_schedule(vertiport_configs: Dict,
     network_schedule = pd.DataFrame(columns=['tail_number', 'aircraft_arrival_time', 'aircraft_pushback_time', 
                                              'interarrival_time', 'origin_vertiport_id', 'destination_vertiport_id', 
                                              'passengers_onboard', 'location', 'soc'])
+    schedules = []
     for vertiport_id, vertiport_config in vertiport_configs.items():
         vertiport_schedule = generate_artificial_aircraft_supply(
             aircraft_arrival_process=vertiport_config['aircraft_arrival_process'],
@@ -29,8 +30,9 @@ def generate_aircraft_network_schedule(vertiport_configs: Dict,
             vertiport_layout=vertiport_layouts[vertiport_id],
             network_simulation=network_simulation
         )
+        schedules.append(vertiport_schedule)
 
-        network_schedule = pd.concat([network_schedule, vertiport_schedule], ignore_index=True)
+    network_schedule = pd.concat(schedules, ignore_index=True)
 
     # Sort the network_schedule by aircraft_arrival_time
     network_schedule.sort_values(by='aircraft_arrival_time', inplace=True)
@@ -77,13 +79,13 @@ def generate_artificial_aircraft_supply(aircraft_arrival_process: Dict,
         soc = [max_init_soc for _ in range(num_aircraft)]
         # TODO: These things are kind of hardcoded.
         parking_pad_ids = vertiport_layout.parking_pad_ids.copy()
-        location = [f'{parking_pad_ids.pop()}' for _ in range(num_aircraft)]
+        location = np.array([f'{parking_pad_ids.pop()}' for _ in range(num_aircraft)])
 
 
     aircraft_arrival_times = cumulative_sum_array(interarrival_times)
     aircraft_pushback_times = [None for _ in range(num_aircraft)]
-    origin_vertiport_id = [vertiport_id for _ in range(num_aircraft)]
-    destination_vertiport_id = [vertiport_id for _ in range(num_aircraft)]
+    origin_vertiport_id = np.full(num_aircraft, vertiport_id)
+    destination_vertiport_id = np.full(num_aircraft, vertiport_id)
     passengers_onboard = [[] for _ in range(num_aircraft)]
     serviced_time_at_the_location = [0 for _ in range(num_aircraft)]
     priority = [1 for _ in range(num_aircraft)]

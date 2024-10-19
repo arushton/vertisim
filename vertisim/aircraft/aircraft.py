@@ -1374,7 +1374,7 @@ class Aircraft:
         if self.status == AircraftStatus.CHARGE:
             if self.charging_start_time is not None:
                 charge_time = self.env.now - self.charging_start_time
-                charge_lookup_table = self.system_manager.aircraft_battery_models[self.current_vertiport_id]
+                charge_lookup_table = self.system_manager.aircraft_battery_models
                 new_soc = self.charging_strategy.calc_soc_from_charge_time(charge_time=charge_time, 
                                                                         initial_soc=self.soc,
                                                                         df=charge_lookup_table)

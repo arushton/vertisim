@@ -92,7 +92,7 @@ class ActionMask:
             if self.soc_increment_per_charge_event is not None:
                 soc_increment = self.soc_increment_per_charge_event
             elif self.charge_time_per_charge_event is not None:
-                charge_lookup_table = self.system_manager.aircraft_battery_models[current_vertiport_id]
+                charge_lookup_table = self.system_manager.aircraft_battery_models
                 new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
                     charge_time=sec_to_ms(self.charge_time_per_charge_event),
                     initial_soc=aircraft.soc,
@@ -237,7 +237,7 @@ class ActionMask:
     #         soc_increment = np.zeros(self.num_aircraft)
     #         for idx, aircraft in enumerate(self.aircraft_agents.values()):
     #             current_vertiport_id = aircraft.current_vertiport_id
-    #             charge_lookup_table = self.system_manager.aircraft_battery_models[current_vertiport_id]
+    #             charge_lookup_table = self.system_manager.aircraft_battery_models
     #             new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
     #                 charge_time=sec_to_ms(self.charge_time_per_charge_event),
     #                 initial_soc=aircraft.soc,
@@ -374,7 +374,7 @@ class ActionMask:
             if self.soc_increment_per_charge_event is not None:
                 soc_increment = self.soc_increment_per_charge_event
             elif self.charge_time_per_charge_event is not None:
-                charge_lookup_table = self.system_manager.aircraft_battery_models[current_vertiport_id]
+                charge_lookup_table = self.system_manager.aircraft_battery_models
                 new_soc = aircraft.charging_strategy.calc_soc_from_charge_time(
                     charge_time=sec_to_ms(self.charge_time_per_charge_event),
                     initial_soc=aircraft.soc,
@@ -606,6 +606,7 @@ class ActionMask:
         ])
         aircraft_status = aircraft_data[:, 0]
         aircraft_soc = aircraft_data[:, 1].astype(float)
+        # Warning: You need to check the status of the aircraft for location actions
         aircraft_location = aircraft_data[:, 2].astype(int)
 
         # Vectorized SOC increment calculation
@@ -616,7 +617,7 @@ class ActionMask:
                 aircraft.charging_strategy.calc_soc_from_charge_time(
                     charge_time=sec_to_ms(self.charge_time_per_charge_event),
                     initial_soc=aircraft.soc,
-                    df=self.system_manager.aircraft_battery_models[aircraft.current_vertiport_id]
+                    df=self.system_manager.aircraft_battery_models
                 ) - aircraft.soc
                 for aircraft in self.aircraft_agents.values()
             ])
@@ -629,32 +630,44 @@ class ActionMask:
         can_fly_and_do_nothing = idle_mask & (aircraft_soc > 95 - soc_increment)
         can_only_charge = idle_mask & (aircraft_soc < min_soc_required)
 
+        # Central hub can fly to any vertiport. This will be satisfied through these constrants.
         # Set flight masks for aircraft that can fly
         mask[can_do_any | can_fly_and_do_nothing, :self.num_vertiports] = 1
-        mask[np.arange(self.num_aircraft), aircraft_location] = 0  # Mask current location
+        mask[np.arange(self.num_aircraft), aircraft_location] = 0  # Mask out current location
 
         # Set non-flight actions
         mask[can_do_any | can_only_charge, self.num_vertiports] = 1  # Can charge
         mask[can_do_any | can_fly_and_do_nothing, self.num_vertiports + 1] = 1  # Can do nothing
 
-        # Apply SOC constraints for flights
-        for i, (origin, dest) in enumerate(itertools.product(self.vertiport_ids, repeat=2)):
-            if origin != dest:
-                soc_required = flight_soc_required_map.get(f"{origin}_{dest}", 0)
-                dest_index = self.vertiport_id_to_index_map[dest]
-                mask[aircraft_soc < soc_required, dest_index] = 0
-
-        # Apply star network constraints
+        # Apply star network constraints. The SoC constraints will be applied later.
         central_hub_index = self.vertiport_id_to_index_map[self.central_hub_id]
         non_hub_mask = aircraft_location != central_hub_index
         mask[non_hub_mask, :self.num_vertiports] = 0
-        mask[non_hub_mask, central_hub_index] = 1
+        # TODO: Check! Fly to hub if possible
+        mask[non_hub_mask & (can_do_any | can_fly_and_do_nothing), central_hub_index] = 1
 
         # Repositioning logic for aircraft not at the central hub
         for dest in self.vertiport_ids:
+            # TODO: (1) DEST != ORIGIN. (2) Check SoC requirement
             if dest != self.central_hub_id and self.check_repositioning_need(dest):
                 dest_index = self.vertiport_id_to_index_map[dest]
-                mask[non_hub_mask, dest_index] = 1
+                cp_non_hub_mask = non_hub_mask.copy()
+                cp_non_hub_mask[dest_index] = 0
+                mask[cp_non_hub_mask & (can_do_any | can_fly_and_do_nothing), dest_index] = 1
+
+        # TODO: This is probably problematic!!! Apply SOC constraints for flights
+        # UPDATED: Check again
+        # Apply SoC constraints per aircraft per OD pair
+        for idx in range(self.num_aircraft):
+            origin_index = aircraft_location[idx]
+            for dest_index in range(self.num_vertiports):
+                if origin_index == dest_index:
+                    mask[idx, dest_index] = 0  # Cannot fly to the same vertiport
+                    continue
+                od_pair = f"{self.vertiport_ids[origin_index]}_{self.vertiport_ids[dest_index]}"
+                soc_required = flight_soc_required_map.get(od_pair, 0)
+                if aircraft_soc[idx] < soc_required:
+                    mask[idx, dest_index] = 0  # Mask action due to insufficient SoC
 
         # Process enforced flights if required
         if "waiting_time_bins" in self.config['sim_params']['simulation_states']['vertiport_states'] and \
@@ -662,7 +675,6 @@ class ActionMask:
             mask = self.process_enforced_flights(mask, aircraft_soc, aircraft_location, flight_soc_required_map)
 
         return mask.flatten().tolist()
-
 
     def process_enforced_flights(self, mask, aircraft_soc, aircraft_location, flight_soc_required_map):
         enforced_od_pairs = set()

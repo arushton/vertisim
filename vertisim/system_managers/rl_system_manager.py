@@ -159,7 +159,7 @@ class RLSystemManager(BaseSystemManager):
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=aircraft.current_vertiport_id, passengers=aircraft.passengers_onboard) 
-        self.passenger_logger.info(f"Passenger waiting times for flight from {aircraft.current_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
+        # self.passenger_logger.info(f"Passenger waiting times for flight from {aircraft.current_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
 
         # Start the passenger departure process
         if departing_passengers:
@@ -238,7 +238,7 @@ class RLSystemManager(BaseSystemManager):
             yield self.env.timeout(sec_to_ms(aircraft.aircraft_params['soc_update_interval']))  # Wait for X seconds
             if aircraft.status == AircraftStatus.HOLD:
                 aircraft.update_holding_energy_consumption(sec_to_ms(aircraft.aircraft_params['soc_update_interval']))  # Update SoC for X seconds of holding
-                self.logger.debug(f'Aircraft {aircraft.tail_number} updated SoC during holding at {aircraft.destination_vertiport_id}. Current SoC: {careful_round(aircraft.soc, 2)}')
+                # self.logger.debug(f'Aircraft {aircraft.tail_number} updated SoC during holding at {aircraft.destination_vertiport_id}. Current SoC: {careful_round(aircraft.soc, 2)}')
 
     def fato_and_parking_pad_usage_process(self, aircraft: object):
         if aircraft.parking_space_id is None and \
@@ -268,17 +268,17 @@ class RLSystemManager(BaseSystemManager):
 
             aircraft.status = AircraftStatus.IDLE  
 
-            self.logger.info(f"Aircraft {aircraft.tail_number} arrived with passengers: "
-                                f"{RLSystemManager.get_pax_ids_onboard(aircraft)} at "
-                                f"{aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. "
-                                f"Available aircraft at {aircraft.destination_vertiport_id}: "
-                                f"{self.get_available_aircraft_ids_at_vertiport(aircraft.destination_vertiport_id)}. "
-                                f"Number of aircraft at {aircraft.destination_vertiport_id}: "
-                                f"{self.get_num_aircraft_at_vertiport(aircraft.destination_vertiport_id)}. "
-                                f"Aircraft status at {aircraft.destination_vertiport_id}: "
-                                f"{self.get_status_of_aircraft_at_vertiport(aircraft.destination_vertiport_id)}.")
+            # self.logger.info(f"Aircraft {aircraft.tail_number} arrived with passengers: "
+            #                     f"{RLSystemManager.get_pax_ids_onboard(aircraft)} at "
+            #                     f"{aircraft.destination_vertiport_id} at time : {miliseconds_to_hms(self.env.now)}. "
+            #                     f"Available aircraft at {aircraft.destination_vertiport_id}: "
+            #                     f"{self.get_available_aircraft_ids_at_vertiport(aircraft.destination_vertiport_id)}. "
+            #                     f"Number of aircraft at {aircraft.destination_vertiport_id}: "
+            #                     f"{self.get_num_aircraft_at_vertiport(aircraft.destination_vertiport_id)}. "
+            #                     f"Aircraft status at {aircraft.destination_vertiport_id}: "
+            #                     f"{self.get_status_of_aircraft_at_vertiport(aircraft.destination_vertiport_id)}.")
 
-            self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
+            # self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
 
             # Set the FLY process complition True
             aircraft.is_process_completed = True 
@@ -313,7 +313,7 @@ class RLSystemManager(BaseSystemManager):
                                                             aircraft=aircraft)   
 
             # Trigger the stopping event
-            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
+            # self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)   
 
         # If the aircraft is not assigned to a parking pad but its starting location is a FATO
@@ -332,15 +332,15 @@ class RLSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
+            # self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Put aircraft into available aircraft store
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft) 
             aircraft.status = AircraftStatus.IDLE
-            self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')         
+            # self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')         
             # Trigger the stopping event
-            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
+            # self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number)
         
         # Only FATO case and the starting location is a FATO
@@ -348,7 +348,7 @@ class RLSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
+            # self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Get FATO
             yield self.env.process(self.fato_pad_request(aircraft=aircraft, operation_type='arrival', fato_id=aircraft.assigned_fato_id))
@@ -358,10 +358,10 @@ class RLSystemManager(BaseSystemManager):
 
             self.put_aircraft_into_available_aircraft_store(vertiport_id=aircraft.destination_vertiport_id,
                                                             aircraft=aircraft) 
-            self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
+            # self.logger.debug(f'|{duplicate_str(aircraft.tail_number)}| Aircraft {aircraft.tail_number} is now ready for allocation.')
             aircraft.status = AircraftStatus.IDLE            
             # Trigger the stopping event
-            self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
+            # self.logger.debug(f'aircraft_parking_pad_arrival_event is triggered for {aircraft.tail_number} time {self.env.now}')
             self.trigger_stopping_event(event_name="aircraft_parking_pad_arrival_event", id=aircraft.tail_number) 
             
         # If the aircraft is assigned to a parking pad
@@ -369,7 +369,7 @@ class RLSystemManager(BaseSystemManager):
             # Update number of aircraft status at the vertiports
             self.update_ground_aircraft_count(vertiport_id=aircraft.destination_vertiport_id, update=1)
 
-            self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
+            # self.logger.debug(f'Created: Aircraft {aircraft.tail_number} created at {aircraft.origin_vertiport_id} with SOC: {aircraft.soc}, location: {aircraft.location}. Config: Parking pad: {aircraft.parking_space_id}, FATO: {aircraft.assigned_fato_id}')
 
             # Get Parking pad
             yield self.env.process(self.parking_pad_request(aircraft=aircraft, parking_space_id=aircraft.parking_space_id))
@@ -426,10 +426,10 @@ class RLSystemManager(BaseSystemManager):
         passengers_waiting_room.put(passenger)
         passenger.waiting_room_store = passengers_waiting_room
         # Log the passenger's arrival
-        self.passenger_logger.info(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
+        # self.passenger_logger.info(f'Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}.')
 
         event_name=f"passenger_arrival_event_{passenger.passenger_id % 100}"
-        self.logger.info(f'passenger_arrival_event is triggered for passenger {passenger.passenger_id} time: {self.env.now}')
+        # self.logger.info(f'passenger_arrival_event is triggered for passenger {passenger.passenger_id} time: {self.env.now}')
         # print(f"Passenger {passenger.passenger_id} entered the waiting room at {passenger.origin_vertiport_id}. Currently waiting passengers: {[p.passenger_id for p in passengers_waiting_room.items]}. Time (sec): {round(self.env.now/1000)}")        
         self.trigger_stopping_event(event_name=event_name)
 
@@ -447,6 +447,7 @@ class RLSystemManager(BaseSystemManager):
         # self.logger.debug(f'Checking potential spilled passengers at {miliseconds_to_hms(self.env.now)}')
 
         max_waiting_time_threshold = sec_to_ms(self.sim_params['max_passenger_waiting_time']) 
+        waiting_time_threshold_check = max_waiting_time_threshold - min_to_sec(1) - self.decision_making_interval
         # First identify which flights are scheduled and the capacity of each flight direction
         scheduled_flights = {(origin, destination): 0 for origin in self.vertiport_ids for destination in self.vertiport_ids if origin != destination}
         for aircraft_id, aircraft in self.aircraft_agents.items():
@@ -463,7 +464,7 @@ class RLSystemManager(BaseSystemManager):
                     # Identify passengers that have waited too long
                     over_waiting_passengers = [
                         passenger for passenger in wr_store.items
-                        if self.env.now - passenger.waiting_room_arrival_time + self.decision_making_interval > max_waiting_time_threshold + ms_to_sec(1) # To account for the included flying pax waiting time
+                        if self.env.now - passenger.waiting_room_arrival_time > waiting_time_threshold_check # To account for the included flying pax waiting time
                     ]
                     num_over_waiting_passengers = len(over_waiting_passengers)
 
@@ -484,12 +485,6 @@ class RLSystemManager(BaseSystemManager):
                                 # self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
                                 # self.logger.info(f'Excess passenger {spilled_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - spilled_passenger.waiting_room_arrival_time)} min.')
                                 # self.logger.info(f'Flight capacity: {flight_capacity}. Number of over-waiting passengers: {num_over_waiting_passengers}. Number of excess passengers: {excess_passengers}. Flights scheduled: {scheduled_flights}')
-                                # # Remove the passenger from the waiting room store
-                                # wr_store.get(lambda x: x.passenger_id == spilled_passenger.passenger_id)
-                                # # Penalize for passenger spill
-                                # self.spill_counter[(origin, destination)] += 1
-                                # # Update the spilled passenger counter at the vertiport
-                                # self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
                         else:
                             # If there's enough capacity, keep the passengers
                             continue
@@ -499,14 +494,6 @@ class RLSystemManager(BaseSystemManager):
                             self.spill_passenger(waiting_passenger, origin, destination)
                             # self.logger.info(f'Passenger {waiting_passenger.passenger_id} has been spilled at {origin} vertiport after waiting {ms_to_min(self.env.now - waiting_passenger.waiting_room_arrival_time)} min.')
                             # self.logger.info(f'Number of over-waiting passengers: {num_over_waiting_passengers}. Flights scheduled: {scheduled_flights}')
-
-                            # # Remove the passenger from the waiting room store
-                            # wr_store.get(lambda x: x.passenger_id == waiting_passenger.passenger_id)
-                            # self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
-                            # # Penalize for passenger spill
-                            # self.spill_counter[(origin, destination)] += 1
-                            # # Update the spilled passenger counter at the vertiport
-                            # self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)]
         # yield self.env.timeout(0)
 
     def check_passenger_max_waiting_time_threshold(self):
@@ -519,10 +506,10 @@ class RLSystemManager(BaseSystemManager):
             yield self.env.timeout(min_to_ms(1))
             # Do not operate at the multiples of 5 minutes
             if self.env.now % sec_to_ms(self.external_optimization_params['periodic_time_step']) == 0:
-                self.logger.debug(f'Skipping passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
+                # self.logger.debug(f'Skipping passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
                 continue
 
-            self.logger.debug(f'Checking passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
+            # self.logger.debug(f'Checking passenger waiting time threshold at {miliseconds_to_hms(self.env.now)}')
 
             for origin, vertiport in self.vertiports.items():
                 for destination, wr_store in vertiport.waiting_room_stores.items():
@@ -552,7 +539,7 @@ class RLSystemManager(BaseSystemManager):
         Remove the passenger from the waiting room.
         """
         self.vertiports[origin].waiting_room_stores[destination].get(lambda x: x.passenger_id == passenger.passenger_id)
-        self.logger.debug(f'Passenger {passenger.passenger_id} has been removed from the waiting room at {origin} vertiport.')
+        # self.logger.debug(f'Passenger {passenger.passenger_id} has been removed from the waiting room at {origin} vertiport.')
 
     def trigger_stopping_event(self, event_name: str, id: int = None):
         """

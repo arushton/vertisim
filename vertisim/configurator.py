@@ -3,7 +3,6 @@ import random
 from typing import Dict, Any, Union, List, Optional
 from collections import defaultdict
 from .utils.helpers import flatten, extract_dict_values
-from .charger_model import ChargerModel
 from .aircraft.aircraft import AircraftStatus
 import numpy as np
 from enum import Enum
@@ -60,11 +59,12 @@ class VertiportConfig:
         self.aircraft_capacity = aircraft_capacity
         self.pax_waiting_time_threshold = pax_waiting_time_threshold
         self.num_waiting_time_bins = num_waiting_time_bins
+        self.charger_max_charge_rate = self.network_and_demand['vertiports'][self.vertiport_id]['charger_max_charge_rate']
+        self.charger_efficiency = self.network_and_demand['vertiports'][self.vertiport_id]['charger_efficiency']
         self.demand_type = self.get_demand_type()         
         self.pax_arrival_df = None
         self.vertiport_index = self.map_vertiport_id_to_index(vertiport_id)        
         self.shared_charger_sets = self.vertiport_data['shared_charger_sets']
-        self.charger_model = self.set_charger_model()
         self.fato_store = self.add_fato_ids_to_store()
         self.parking_space_store = self.check_charger_resource_type()
         self.taxiway_node_store = self.add_taxiway_nodes_to_store()
@@ -575,11 +575,6 @@ class VertiportConfig:
         #     return charger_resources
         else:
             raise TypeError("Charger set input type is not correct")
-        
-    def set_charger_model(self):
-        # This method sets the charger model for the chargers in the vertiport.
-        return ChargerModel(charger_max_charge_rate=self.vertiport_data['charger_max_charge_rate'],
-                            charger_efficiency=self.vertiport_data['charger_efficiency'])
 
     def add_parking_spaces_and_chargers_to_store(self):
         # Add parking space IDs to parking_space_store

@@ -7,6 +7,7 @@ from ..utils.weighted_random_chooser import random_choose_exclude_element
 from ..utils.helpers import get_passenger_ids_from_passenger_list, miliseconds_to_hms, duplicate_str, \
     get_random_process_id, calculate_passenger_consolidation_time, check_whether_node_exists, careful_round
 from ..aircraft.battery_model import BatteryModel
+from ..charger_model import ChargerModel
 from ..aircraft.aircraft import Aircraft, AircraftStatus
 import pandas as pd
 from enum import Enum
@@ -67,6 +68,8 @@ class BaseSystemManager:
         self.aircraft_battery_models = self.build_aircraft_battery_models()
         self.passenger_arrival_complete = False
         self.last_passenger_id = None
+        self.taxi_length_cache = defaultdict(dict)
+        self.taxi_route_cache = defaultdict(dict)  # Cache for taxi route nodes and edges
 
     def get_aircraft_count(self) -> int:
         return sum(
@@ -87,14 +90,27 @@ class BaseSystemManager:
         """
         Builds the battery charging lookup tables for the aircraft model for each vertiport.
         """
-        # TODO: Currently, we support single aircraft model for all vertiports. However, each vertiport can
-        # have different charger models. We might need to support different aircraft models in the future but not urgent/crucial
-        return {vertiport_name: 
-            BatteryModel(charger_model=vertiport.charger_model).
-                        charge_process(battery_capacity=self.aircraft_params['battery_capacity'])
-                for vertiport_name, vertiport in self.vertiports.items()
-        }
+        # # TODO: Currently, we support single aircraft model for all vertiports. However, each vertiport can
+        # # have different charger models. We might need to support different aircraft models in the future but not urgent/crucial
+        # return {vertiport_name: 
+        #     BatteryModel(charger_model=vertiport.charger_model).
+        #                 charge_process(battery_capacity=self.aircraft_params['battery_capacity'])
+        #         for vertiport_name, vertiport in self.vertiports.items()
+        # }
+    
+        # Build only one battery model
+        # Get the max charge rate and charger efficiency from the first vertiport
+        charger_max_charge_rate = self.vertiports[self.vertiport_ids[0]].charger_max_charge_rate
+        charger_efficiency = self.vertiports[self.vertiport_ids[0]].charger_efficiency
+        charger_model = self.set_charger_model(charger_max_charge_rate=charger_max_charge_rate,
+                                               charger_efficiency=charger_efficiency)
+        return BatteryModel(charger_model=charger_model).charge_process(battery_capacity=self.aircraft_params['battery_capacity'])
 
+    def set_charger_model(self, charger_max_charge_rate: float, charger_efficiency: float) -> ChargerModel:
+        # This method sets the charger model for the chargers in the vertiport.
+        return ChargerModel(charger_max_charge_rate=charger_max_charge_rate,
+                            charger_efficiency=charger_efficiency)
+    
     def _initialize_avg_flight_durations(self):
         # def inner_dict():
         #     return {'average_flight_duration': None, 'num_flights': 0, 'total_duration': 0}
@@ -110,6 +126,7 @@ class BaseSystemManager:
     
         # The outer defaultdict
         dd = defaultdict(lambda: inner_dict(None))
+        # TODO: Use flight_directions_dict keys and don't loop
         for origin_id in self.vertiport_ids:
             for destination_id in self.vertiport_ids:
                 if origin_id != destination_id:
@@ -213,27 +230,32 @@ class BaseSystemManager:
             return fato_id
 
         num_parking_pad = self.vertiports[vertiport_id].vertiport_layout.num_parking_pad
-        if  num_parking_pad == 0:
+        if num_parking_pad == 0:
             fato_pads = {}
             for fato in self.vertiports[vertiport_id].fato_store.items:
-                # Choose the fato resource with the zero users or the least queued users
+                # Choose the FATO resource with zero users or the least queued users
                 fato_pads[fato.resource_id] = len(fato.fato_resource.queue)
                 if fato.fato_resource.count == 0:
                     return fato.resource_id
             return min(fato_pads, key=fato_pads.get)
-                    
 
         available_fato_pads = {}
         for fato in self.vertiports[vertiport_id].fato_store.items:
-            # If that edge exists reserve the FATO
+            # If that edge exists, reserve the FATO
             if self.vertiports[vertiport_id].vertiport_layout.G.has_edge(fato.resource_id, parking_space):
-                # FATO id's last digit needs to match with the parking pad's second to last digit
-                # if (fato.resource_id[-1] == parking_space[-2])
-                taxi_length = round(nx.dijkstra_path_length(self.vertiports[vertiport_id].vertiport_layout.G,
-                                                      parking_space, fato.resource_id))
+                # Check the cache first
+                if (parking_space, fato.resource_id) in self.taxi_length_cache[vertiport_id]:
+                    taxi_length = self.taxi_length_cache[vertiport_id][(parking_space, fato.resource_id)]
+                else:
+                    # Calculate taxi length if not cached
+                    taxi_length = round(nx.dijkstra_path_length(self.vertiports[vertiport_id].vertiport_layout.G,
+                                                                parking_space, fato.resource_id))
+                    # Store in cache
+                    self.taxi_length_cache[vertiport_id][(parking_space, fato.resource_id)] = taxi_length
+
                 available_fato_pads[fato.resource_id] = taxi_length
 
-        # Find the key of shortest distance
+        # Find the key of the shortest or longest distance
         if rule == 'min':
             return min(available_fato_pads, key=available_fato_pads.get)
         else:
@@ -308,14 +330,18 @@ class BaseSystemManager:
         num_parking_pad = self.vertiports[vertiport_id].vertiport_layout.num_parking_pad
         if  num_parking_pad == 0:
             return [], []        
-        # Get the taxi route nodes from vertiport manager
-        taxi_route, _ = self.generate_taxi_route_nodes(vertiport_id, 
-                                                       assigned_fato_id, 
-                                                       parking_space_id)
+        # Use cache to get the taxi route if available
+        cache_key = (assigned_fato_id, parking_space_id)
+        if cache_key in self.taxi_route_cache[vertiport_id]:
+            return self.taxi_route_cache[vertiport_id][cache_key]
 
-        # Get the taxi route edges from vertiport manager
-        taxi_route_edges = self.generate_taxi_route_edges(vertiport_id=vertiport_id, 
-                                                          taxi_route=taxi_route)
+        # If not in cache, generate the route nodes and edges
+        taxi_route, _ = self.generate_taxi_route_nodes(vertiport_id, assigned_fato_id, parking_space_id)
+        taxi_route_edges = self.generate_taxi_route_edges(vertiport_id, taxi_route)
+
+        # Cache the result for future use
+        self.taxi_route_cache[vertiport_id][cache_key] = (taxi_route, taxi_route_edges)
+
         return taxi_route, taxi_route_edges
 
     def request_taxi_resource(self, vertiport_id: Any) -> Optional[simpy.resources.resource.Request]:
@@ -466,11 +492,21 @@ class BaseSystemManager:
             Total taxi length
         """
         num_parking_pad = self.vertiports[vertiport_id].vertiport_layout.num_parking_pad
-        if  num_parking_pad == 0:
+        if num_parking_pad == 0:
             return [], 0
-        
+
+        # Cache the taxi route if it doesn't exist already
+        cache_key = (source, target)
+        if cache_key in self.taxi_route_cache[vertiport_id]:
+            return self.taxi_route_cache[vertiport_id][cache_key][0], \
+                   self.taxi_route_cache[vertiport_id][cache_key][1]
+
+        # Calculate the taxi route and length if not cached
         taxi_route = nx.astar_path(self.vertiports[vertiport_id].vertiport_layout.G, source, target)
         total_taxi_length = nx.astar_path_length(self.vertiports[vertiport_id].vertiport_layout.G, source, target)
+
+        # Cache the taxi route and total taxi length
+        self.taxi_route_cache[vertiport_id][cache_key] = (taxi_route, round(total_taxi_length, 2))
 
         return taxi_route, round(total_taxi_length, 2)
 
@@ -577,7 +613,7 @@ class BaseSystemManager:
         self.vertiports[origin_vertiport_id].num_flight_requests += 1           
         # Log the aircraft allocation process
         flight_id = get_random_process_id()
-        self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {tail_number}, required SOC: {soc}')
+        # self.logger.debug(f'|{flight_id}| Started: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {tail_number}, required SOC: {soc}')
         # Get the intended pushback time of the aircraft
         pushback_time = self.env.now             
         # Retrieve aircraft from the store
@@ -600,7 +636,7 @@ class BaseSystemManager:
         # Check the waiting room for additional passengers if there is still space on the aircraft
         departing_passengers = self.add_additional_passengers_if_needed(origin_vertiport_id, destination_vertiport_id, departing_passengers)
 
-        self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
+        # self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {origin_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
         # Save aircraft allocation and idle times
         self.save_aircraft_times(origin_vertiport_id, aircraft)
@@ -610,7 +646,7 @@ class BaseSystemManager:
 
         # Save total passenger waiting time and flight assignment time
         self.save_passenger_times(origin_vertiport_id=origin_vertiport_id, passengers=aircraft.passengers_onboard) 
-        self.passenger_logger.info(f"Passenger waiting times for flight from {origin_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
+        # self.passenger_logger.info(f"Passenger waiting times for flight from {origin_vertiport_id} to {destination_vertiport_id}: Passenger ids : {[p.passenger_id for p in departing_passengers]} waiting times: {[miliseconds_to_hms(self.env.now - passenger.waiting_room_arrival_time) for passenger in departing_passengers]}")
 
         # Start the passenger departure process
         if departing_passengers:
@@ -627,16 +663,16 @@ class BaseSystemManager:
 
     def add_additional_passengers_if_needed(self, origin_vertiport_id, destination_vertiport_id, departing_passengers):
         waiting_room = self.vertiports[origin_vertiport_id].waiting_room_stores[destination_vertiport_id]
-        self.passenger_logger.debug(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
-                                    f" Passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}"
-                                    f" Their waiting room arrival times: {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}"
-                                    f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in waiting_room.items]}") 
+        # self.passenger_logger.debug(f"Checking for additional passengers to fill the aircraft at {origin_vertiport_id}."
+        #                             f" Passengers in the waiting room: {[p.passenger_id for p in waiting_room.items]}"
+        #                             f" Their waiting room arrival times: {[miliseconds_to_hms(p.waiting_room_arrival_time) for p in waiting_room.items]}"
+        #                             f" Their waiting times (min): {[ms_to_min(self.env.now - passenger.waiting_room_arrival_time) for passenger in waiting_room.items]}") 
                
         if len(departing_passengers) < self.aircraft_params['pax'] and len(waiting_room.items) > 0:
             departing_passengers.extend(self.scheduler.last_call_check(
                 current_waiting_room=waiting_room,
                 num_departing_passengers=len(departing_passengers))) 
-        self.passenger_logger.debug(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
+        # self.passenger_logger.debug(f"Num additional passengers can be allocated: {self.aircraft_params['pax'] - len(departing_passengers)}")  
         return departing_passengers        
 
     def retrieve_aircraft(self, origin_vertiport_id, tail_number=None) -> object:
@@ -962,4 +998,4 @@ class BaseSystemManager:
                 for passenger in waiting_room.items:
                     if self.env.now - passenger.waiting_room_arrival_time > self.sim_params['max_passenger_waiting_time']:
                         waiting_room.remove(passenger)
-                        self.logger.info(f"Passenger {passenger.passenger_id} has been removed from the waiting room at vertiport {vertiport_id} due to long waiting time.")
+                        # self.logger.info(f"Passenger {passenger.passenger_id} has been removed from the waiting room at vertiport {vertiport_id} due to long waiting time.")

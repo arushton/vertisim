@@ -69,20 +69,17 @@ class AircraftArrivalSetup:
         :param check_none_columns: A list of column names to check for None values.
         :return: dataframe.
         """
-        for column in required_columns:
-            # Check if the column exists
-            if column not in dataframe.columns:
-                raise ValueError(f'{column} column does not exist in the aircraft arrival process file.')
+        missing_cols = [col for col in required_columns if col not in dataframe.columns]
+        if missing_cols:
+            raise ValueError(f"Missing columns: {', '.join(missing_cols)}")
         
-        for column in check_none_columns:
-            # Check for None values in the column
-            if check_if_none_exists(dataframe[column]):
-                raise ValueError(f'{column} column has None value.')
+        for col in check_none_columns:
+            if dataframe[col].isnull().any():
+                raise ValueError(f"{col} column has None value.")
         
-        for column, default_value in optional_columns.items():
-            if column not in dataframe.columns:
-                dataframe[column] = default_value
-        return dataframe
+        for col, default_value in optional_columns.items():
+            if col not in dataframe.columns:
+                dataframe[col] = default_value
                 # if column not in ['interarrival_time', 'passengers_onboard']:
                 #     print(
                 #         f"{column} is not defined in the input file. The default value of {default_value} is used. If you "
