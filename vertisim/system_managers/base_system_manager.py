@@ -320,18 +320,14 @@ class BaseSystemManager:
         num_parking_pad = self.vertiports[vertiport_id].vertiport_layout.num_parking_pad
         if  num_parking_pad == 0:
             return [], []        
-        # Use cache to get the taxi route if available
-        cache_key = (assigned_fato_id, parking_space_id)
-        if cache_key in self.taxi_route_cache[vertiport_id]:
-            return self.taxi_route_cache[vertiport_id][cache_key]
+        # Get the taxi route nodes from vertiport manager
+        taxi_route, _ = self.generate_taxi_route_nodes(vertiport_id, 
+                                                       assigned_fato_id, 
+                                                       parking_space_id)
 
-        # If not in cache, generate the route nodes and edges
-        taxi_route, _ = self.generate_taxi_route_nodes(vertiport_id, assigned_fato_id, parking_space_id)
-        taxi_route_edges = self.generate_taxi_route_edges(vertiport_id, taxi_route)
-
-        # Cache the result for future use
-        self.taxi_route_cache[vertiport_id][cache_key] = (taxi_route, taxi_route_edges)
-
+        # Get the taxi route edges from vertiport manager
+        taxi_route_edges = self.generate_taxi_route_edges(vertiport_id=vertiport_id, 
+                                                          taxi_route=taxi_route)
         return taxi_route, taxi_route_edges
 
     def request_taxi_resource(self, vertiport_id: Any) -> Optional[simpy.resources.resource.Request]:
@@ -482,21 +478,11 @@ class BaseSystemManager:
             Total taxi length
         """
         num_parking_pad = self.vertiports[vertiport_id].vertiport_layout.num_parking_pad
-        if num_parking_pad == 0:
+        if  num_parking_pad == 0:
             return [], 0
-
-        # Cache the taxi route if it doesn't exist already
-        cache_key = (source, target)
-        if cache_key in self.taxi_route_cache[vertiport_id]:
-            return self.taxi_route_cache[vertiport_id][cache_key][0], \
-                   self.taxi_route_cache[vertiport_id][cache_key][1]
-
-        # Calculate the taxi route and length if not cached
+        
         taxi_route = nx.astar_path(self.vertiports[vertiport_id].vertiport_layout.G, source, target)
         total_taxi_length = nx.astar_path_length(self.vertiports[vertiport_id].vertiport_layout.G, source, target)
-
-        # Cache the taxi route and total taxi length
-        self.taxi_route_cache[vertiport_id][cache_key] = (taxi_route, round(total_taxi_length, 2))
 
         return taxi_route, round(total_taxi_length, 2)
 
