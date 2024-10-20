@@ -97,7 +97,9 @@ class VertiSim:
         # self.sim_setup.print_passenger_trip_time_stats()
 
     def finalize_simulation(self):
-        if self.config['sim_mode']['rl'] and self.config['sim_params']['print_brief_metrics']:
+        if self.config['sim_mode']['rl'] and \
+            self.config['sim_params']['algorithm'] != 'RandomPolicy' and \
+            self.config['sim_params']['print_brief_metrics']:
             self.sim_setup.log_brief_metrics(print_metrics=self.config['sim_params']['print_brief_metrics'])
                     
         if (not self.sim_setup.sim_mode['rl'] or self.sim_setup.output_params['save_output']):
@@ -382,6 +384,8 @@ class VertiSim:
         return self.get_current_state(), round(self.reward_function.reward, 3), self.is_terminated(), self.is_truncated(), self.action_mask(final_state=True)
 
     def _should_continue_simulation(self):
+        if self.env.peek() >= self.max_sim_time:
+            self.terminal_event.succeed()
         return (self.env.peek() < self.max_sim_time and 
                 (not self.terminal_event.triggered and 
                 not self.truncation_event.triggered and
@@ -591,8 +595,11 @@ class VertiSim:
         # Set the max simulation time
         self.max_sim_time = sec_to_ms(self.sim_setup.sim_params['max_sim_time'])
 
+        self.num_aircraft = self.get_aircraft_count()
+
         if self.config['sim_mode']['rl']:
             self.setup_for_rl()
 
         self.status = True
         self.last_decision_time = -1
+        self.decision_making_interval = sec_to_ms(self.config['external_optimization_params']['periodic_time_step'])     

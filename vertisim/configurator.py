@@ -549,6 +549,9 @@ class VertiportConfig:
     
     def get_total_waiting_passenger_count(self):
         return sum(self.get_waiting_passenger_count().values())
+    
+    def get_waiting_passenger_count_for_destination(self, destination):
+        return self.get_waiting_passenger_count()[destination]
 
     def check_charger_resource_type(self):
         # Based on the charger resource specification, this method changes the structure of the parking pads.

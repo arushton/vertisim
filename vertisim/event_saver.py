@@ -157,7 +157,7 @@ class EventSaver:
             self.average_energy_consumption_per_od_pair[flight_direction]['average'] = new_average_energy_consumption
 
     def save_flight_phase_energy(self, flight_direction, flight_id, flight_phase, energy):
-        if self.sim_params['light_simulation'] and len(self.flight_phase_energy_consumption_tracker[flight_direction]) > 20:
+        if self.sim_params['light_simulation'] or len(self.flight_phase_energy_consumption_tracker[flight_direction]) > 20:
             return
         # If the value exists, add the new value to the existing value
         if flight_phase in self.flight_phase_energy_consumption_tracker[flight_direction][flight_id]:
