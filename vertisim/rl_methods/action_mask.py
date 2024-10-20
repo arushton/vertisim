@@ -627,7 +627,9 @@ class ActionMask:
 
     # Repositioning logic for aircraft not at the central hub
         for dest in self.vertiport_ids:
-            if dest != self.central_hub_id and self.check_repositioning_need(dest):
+            # Check if "expected_pax_arr_per_od" is in the configuration
+            reposition_check_required = "expected_pax_arr_per_od" in self.config['sim_params']['simulation_states']['vertiport_states']
+            if dest != self.central_hub_id and (self.check_repositioning_need(dest) if reposition_check_required else True):
                 dest_index = self.vertiport_id_to_index_map[dest]
 
                 # Exclude aircraft where origin and destination are the same
