@@ -56,8 +56,11 @@ Small circular shapes are parking pads and large circular shapes are FATO. The l
 
 For questions and collaborations, please email eminburak_onat@berkeley.edu. Thanks!
 
-Please cite: Onat, E. B. (2024). Urban Air Mobility: Infrastructure and Operations (Doctoral dissertation, University of California, Berkeley).
-
+# Citation
+Please cite based on your application: 
+1. Onat, E. B. (2024). Urban Air Mobility: Infrastructure and Operations (Doctoral dissertation, University of California, Berkeley).
+2. Onat, E. B., Bulusu, V., Chakrabarty, A., Hansen, M., Sengupta, R., & Sridhar, B. (2024). Evaluating evtol network performance and fleet dynamics through simulation-based analysis. In AIAA Scitech 2024 Forum (p. 0336).
+3. Onat, E. B., Cao, S., Rizwan, R., Jiang, X., Hansen, M., Sengupta, R., & Chakrabarty, A. (2024). A simulation-optimization framework for developing wind-resilient AAM networks. arXiv preprint arXiv:2405.11118.
 
 
 # How To Run
