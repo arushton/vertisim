@@ -67,3 +67,5 @@ b) Run many configuration serially: `loop_runner.py` <br>
 c) Run many configuration in parallel (CPU parallelization by multiprocessing): `loop_runner_multiprocess.py`
 
 
+Please cite: Onat, E. B. (2024). Urban Air Mobility: Infrastructure and Operations (Doctoral dissertation, University of California, Berkeley).
+
