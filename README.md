@@ -56,6 +56,10 @@ Small circular shapes are parking pads and large circular shapes are FATO. The l
 
 For questions and collaborations, please email eminburak_onat@berkeley.edu. Thanks!
 
+Please cite: Onat, E. B. (2024). Urban Air Mobility: Infrastructure and Operations (Doctoral dissertation, University of California, Berkeley).
+
+
+
 # How To Run
 1. Activate the vertisim environment (for conda users `conda activate vertisim`)
 2. Create config.json file
@@ -65,7 +69,4 @@ a) Run a single configuration: `python3 -m vertisim.runner --config vertisim/con
 Currently, the below methods are not maintained and won't work.  <br>
 b) Run many configuration serially: `loop_runner.py` <br>
 c) Run many configuration in parallel (CPU parallelization by multiprocessing): `loop_runner_multiprocess.py`
-
-
-Please cite: Onat, E. B. (2024). Urban Air Mobility: Infrastructure and Operations (Doctoral dissertation, University of California, Berkeley).
 
