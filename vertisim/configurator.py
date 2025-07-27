@@ -201,7 +201,7 @@ class VertiportConfig:
                     waiting_time = ms_to_min(self.env.now - passenger.waiting_room_arrival_time)
                     
                     # Place passengers in bins, with those waiting exactly 10 minutes in the last bin
-                    if waiting_time < 10:
+                    if waiting_time < sec_to_min(self.pax_waiting_time_threshold):
                         bin_index = int(waiting_time // bin_size)
                     else:
                         bin_index = self.num_waiting_time_bins - 1

@@ -82,6 +82,7 @@ class OnDemandChargingStrategy(BaseChargingStrategy):
         charge_time = self.get_charging_time(aircraft=aircraft)
         yield aircraft.env.timeout(round(charge_time))
         aircraft.save_process_time(event='charge', process_time=charge_time)
+        aircraft.event_saver.save_charge_time_rl(charge_time=charge_time, aircraft_id=aircraft.tail_number)
         aircraft.detailed_status = 'idle'
         self.end_charging_process(aircraft=aircraft)
 

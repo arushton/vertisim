@@ -371,7 +371,7 @@ class OnDemandSystemManager(BaseSystemManager):
         """
         Decides whether to create repositioning flights based on current and future demand and aircraft distribution.
         """
-        REPOSITIONING_THRESHOLD = 0.1  # Adjust this value as needed
+        REPOSITIONING_THRESHOLD = 0.5  # Adjust this value as needed
 
         total_aircraft_count = sum(self.check_num_available_aircraft(v_id) for v_id in self.vertiport_ids)
         total_demand = sum(self.get_adjusted_demand(v_id) for v_id in self.vertiport_ids)
@@ -402,16 +402,16 @@ class OnDemandSystemManager(BaseSystemManager):
         yield self.env.timeout(0)
 
     def calculate_repositioning_score(self, origin, destination, ideal_distribution, total_aircraft_count):
+        adjusted_demand = self.get_adjusted_demand(destination)
+        
+        if adjusted_demand == 0:
+            return -1.0  # No need for repositioning if there's no adjusted demand
+        
         current_aircraft_count = self.check_num_available_aircraft(destination)
         flying_to_destination = self.count_aircraft_flying_to_destination(destination)
         
         total_incoming_aircraft = current_aircraft_count + flying_to_destination
         ideal_aircraft_count = ideal_distribution[destination] * total_aircraft_count
-        
-        adjusted_demand = self.get_adjusted_demand(destination)
-        
-        if adjusted_demand == 0:
-            return -1.0  # No need for repositioning if there's no adjusted demand
 
         demand_satisfaction_rate = min(1, total_incoming_aircraft / max(1, adjusted_demand / self.aircraft_params['pax']))
         network_balance_score = (ideal_aircraft_count - total_incoming_aircraft) / max(1, ideal_aircraft_count)
@@ -423,9 +423,11 @@ class OnDemandSystemManager(BaseSystemManager):
         demand_weight = 0.5 + (0.1 * demand_growth_rate)
         balance_weight = 1 - demand_weight
 
-        score = (1 - demand_satisfaction_rate) * demand_weight + network_balance_score * balance_weight
+        # score = (1 - demand_satisfaction_rate) * demand_weight + network_balance_score * balance_weight
+        # TODO: Check this formula!!!
+        score = demand_satisfaction_rate * 0.7 + network_balance_score * 0.5
 
-        if abs(network_balance_score) < 0.15 and abs(1 - demand_satisfaction_rate) < 0.15:
+        if abs(network_balance_score) < 0.3 and abs(1 - demand_satisfaction_rate) < 0.3:
             return -1  # Demand is perfectly balanced
 
         origin_surplus = self.check_num_available_aircraft(origin) - (ideal_distribution[origin] * total_aircraft_count)

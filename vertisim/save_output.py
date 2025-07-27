@@ -11,6 +11,7 @@ from .utils.json_formatter import create_trajectory_json
 from .utils.helpers import get_str_before_first_occurrence_of_char
 import psycopg2
 from psycopg2 import sql
+import numpy as np
 
 def create_sqlite_connection(db_file: str, timeout: int = 30):
     """Create a database connection to the SQLite database specified by db_file with the specified timeout."""
@@ -42,7 +43,10 @@ def save_output(simulation_params: dict,
                 performance_metrics: defaultdict, 
                 simulationID: str, 
                 flight_directions: list,
-                num_pax: int) -> str:
+                num_pax: int,
+                aircraft_idle_time_tracker_rl: Dict,
+                aircraft_charge_time_tracker_rl: Dict,
+                aircraft_fly_time_tracker_rl: Dict) -> str:
 
     # Save trajectories
     if simulation_params['sim_params']['save_trajectories']:
@@ -63,7 +67,10 @@ def save_output(simulation_params: dict,
                           simulated_date=simulated_date,
                           num_pax=num_pax,
                           algorithm=simulation_params['sim_params']['algorithm'],
-                          num_aircraft=num_aircraft)
+                          num_aircraft=num_aircraft,
+                          aircraft_idle_time_tracker_rl=aircraft_idle_time_tracker_rl,
+                          aircraft_charge_time_tracker_rl=aircraft_charge_time_tracker_rl,
+                          aircraft_fly_time_tracker_rl=aircraft_fly_time_tracker_rl)
         return
 
     elif simulation_params['output_params']['only_return_brief_metrics']:
@@ -311,25 +318,68 @@ def write_metrics_to_postgres(dbname: str,
                               simulated_date: str,
                               num_pax: int,
                               algorithm: str,
-                              num_aircraft: int) -> None:
+                              num_aircraft: int,
+                              aircraft_idle_time_tracker_rl,
+                              aircraft_charge_time_tracker_rl,
+                              aircraft_fly_time_tracker_rl) -> None:
     """Main function to write metrics to PostgreSQL."""
-    metrics = return_brief_metrics(performance_metrics=performance_metrics,
-                                    simulationID=simulationID,
-                                    flight_directions=flight_directions,
-                                    simulated_date=simulated_date,
-                                    num_pax=num_pax,
-                                    algorithm=algorithm,
-                                    num_aircraft=num_aircraft)
     conn = create_postgres_connection(dbname)
     if conn is None:
         return
     
     try:
+        # Create tables if they don't exist
         create_metrics_table(conn)
+        create_aircraft_utilization_table(conn)
+        create_vertiport_metrics_table(conn)
+        create_vertiport_statistics_table(conn)
+        create_network_statistics_table(conn)
+        
+        # Prepare vertiport metrics
+        vertiport_metrics = {}
+        vertiport_stats = {}
+
+        # Using flight_directions get the vertiport ids. flight_directions are in the format 'origin_destination'. Create a set of unique vertiport ids
+        vertiport_ids = set([flight_dir.split('_')[0] for flight_dir in flight_directions])
+        
+        for vertiport_id in vertiport_ids:
+            vertiport_metrics[vertiport_id] = {
+                'parking_pad_utilization': performance_metrics['parking_pad_utilization'][vertiport_id],
+            }
+            
+            # Prepare statistics
+            vertiport_stats[vertiport_id] = {
+                'arrival_queue': performance_metrics[vertiport_id]['aircraft_arrival_queue_count'],
+                'holding_time': performance_metrics[vertiport_id]['aircraft_holding_times']
+            }
+        
+        # Prepare network-wide statistics
+        network_stats = {
+            'load_factor_all_flights': performance_metrics['load_factor']['all_flights'],
+            'load_factor_non_empty': performance_metrics['load_factor']['non_empty_flights']
+        }
+        
+        # Insert metrics
+        metrics = return_brief_metrics(performance_metrics, simulationID, flight_directions,
+                                     simulated_date, num_pax, algorithm, num_aircraft)
+        # Add average load factor for non-empty and all flights to metrics
+        metrics['AvgOccupancyNonEmptyFlights'] = performance_metrics['load_factor']['non_empty_flights']['mean']
+        metrics['AvgOccupancyAllFlights'] = performance_metrics['load_factor']['all_flights']['mean']
         insert_metrics(conn, metrics)
-        print("Metrics successfully written to the database.")
-    except psycopg2.Error as e:
-        print(f"Error writing to database: {e}")
+        
+        # Insert aircraft utilization
+        insert_aircraft_utilization(conn, simulationID, aircraft_idle_time_tracker_rl,
+                                  aircraft_charge_time_tracker_rl, aircraft_fly_time_tracker_rl)
+        
+        # Insert vertiport metrics and statistics
+        insert_vertiport_metrics(conn, simulationID, vertiport_metrics)
+        insert_vertiport_statistics(conn, simulationID, vertiport_stats)
+        
+        # Insert network-wide statistics
+        insert_network_statistics(conn, simulationID, network_stats)
+        
+    except Exception as e:
+        print(f"Error writing to PostgreSQL: {e}")
     finally:
         conn.close()
 
@@ -345,6 +395,8 @@ def create_metrics_table(conn):
         NSpilled INTEGER,
         NFlights INTEGER,
         NumPax INTEGER,
+        AvgOccupancyNonEmptyFlights FLOAT,
+        AvgOccupancyAllFlights FLOAT,
         Reward FLOAT
     );
     """
@@ -356,9 +408,9 @@ def insert_metrics(conn, metrics: dict):
     """Insert metrics into the database."""
     insert_query = sql.SQL("""
     INSERT INTO simulation_metrics 
-    (SimulationID, SimulatedDate, Algorithm, NumAircraft, NSpilled, NFlights, NumPax, Reward)
+    (SimulationID, SimulatedDate, Algorithm, NumAircraft, NSpilled, NFlights, NumPax, AvgOccupancyNonEmptyFlights, AvgOccupancyAllFlights, Reward)
     VALUES 
-    (%s, %s, %s, %s, %s, %s, %s, %s)
+    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """)
     
     with conn.cursor() as cur:
@@ -370,6 +422,8 @@ def insert_metrics(conn, metrics: dict):
             metrics['NSpilled'],
             metrics['NFlights'],
             metrics['NumPax'],
+            metrics['AvgOccupancyNonEmptyFlights'],
+            metrics['AvgOccupancyAllFlights'],
             metrics['Reward']
         ))
     conn.commit()
@@ -399,7 +453,187 @@ def return_brief_metrics(performance_metrics: defaultdict,
             'NumPax': num_pax,
             'Reward': reward
         }
-                         
+
+def create_aircraft_utilization_table(conn):
+    """Create a table to store aircraft utilization metrics if it doesn't exist."""
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS aircraft_utilization (
+        id SERIAL PRIMARY KEY,
+        aircraft_id INTEGER,
+        SimulationID VARCHAR(255),
+        idle_time INTEGER,
+        charge_time INTEGER,
+        fly_time INTEGER
+    );
+    """
+    with conn.cursor() as cur:
+        cur.execute(create_table_query)
+    conn.commit()
+
+
+def insert_aircraft_utilization(conn, simulationID, idle_tracker, charge_tracker, fly_tracker):
+    """Insert aircraft utilization metrics into the database."""
+    insert_query = sql.SQL("""
+    INSERT INTO aircraft_utilization 
+    (aircraft_id, SimulationID, idle_time, charge_time, fly_time)
+    VALUES 
+    (%s, %s, %s, %s, %s)
+    """)
+
+    with conn.cursor() as cur:
+        for aircraft_id in idle_tracker.keys():
+            cur.execute(insert_query, (
+                aircraft_id,
+                simulationID,
+                idle_tracker.get(aircraft_id, 0),
+                charge_tracker.get(aircraft_id, 0),
+                fly_tracker.get(aircraft_id, 0)
+            ))
+    conn.commit()
+
+def create_vertiport_metrics_table(conn):
+    """Create a table to store vertiport-specific metrics if it doesn't exist."""
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS vertiport_metrics (
+                simulation_id VARCHAR(255),
+                vertiport_id VARCHAR(255),
+                parking_pad_utilization FLOAT,
+                PRIMARY KEY (simulation_id, vertiport_id)
+            );
+        """)
+    conn.commit()
+
+def create_vertiport_statistics_table(conn):
+    """Create a table to store vertiport-specific statistics if it doesn't exist."""
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS vertiport_statistics (
+                simulation_id VARCHAR(255),
+                vertiport_id VARCHAR(255),
+                arrival_queue_mean FLOAT,
+                arrival_queue_median FLOAT,
+                arrival_queue_min FLOAT,
+                arrival_queue_max FLOAT,
+                arrival_queue_std FLOAT,
+                holding_time_mean FLOAT,
+                holding_time_median FLOAT,
+                holding_time_min FLOAT,
+                holding_time_max FLOAT,
+                holding_time_std FLOAT,
+                PRIMARY KEY (simulation_id, vertiport_id)
+            );
+        """)
+    conn.commit()
+
+def create_network_statistics_table(conn):
+    """Create a table to store network-wide statistics if it doesn't exist."""
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS network_statistics (
+                simulation_id VARCHAR(255),
+                load_factor_all_flights_mean FLOAT,
+                load_factor_all_flights_median FLOAT,
+                load_factor_all_flights_min FLOAT,
+                load_factor_all_flights_max FLOAT,
+                load_factor_all_flights_std FLOAT,
+                load_factor_non_empty_mean FLOAT,
+                load_factor_non_empty_median FLOAT,
+                load_factor_non_empty_min FLOAT,
+                load_factor_non_empty_max FLOAT,
+                load_factor_non_empty_std FLOAT,
+                PRIMARY KEY (simulation_id)
+            );
+        """)
+    conn.commit()
+
+def insert_vertiport_metrics(conn, simulationID, vertiport_metrics):
+    """Insert vertiport metrics into the database."""
+    insert_query = sql.SQL("""
+    INSERT INTO vertiport_metrics 
+    (simulation_id, vertiport_id, parking_pad_utilization)
+    VALUES 
+    (%s, %s, %s)
+    """)
+    
+    with conn.cursor() as cur:
+        for vertiport_id in vertiport_metrics.keys():
+            cur.execute(insert_query, (
+                simulationID,
+                vertiport_id,
+                vertiport_metrics[vertiport_id]['parking_pad_utilization']
+            ))
+    conn.commit()
+
+def insert_vertiport_statistics(conn, simulationID, vertiport_stats):
+    """Insert vertiport statistics into the database."""
+    insert_query = sql.SQL("""
+    INSERT INTO vertiport_statistics 
+    (simulation_id, vertiport_id, arrival_queue_mean, arrival_queue_median, arrival_queue_min, arrival_queue_max, arrival_queue_std, 
+     holding_time_mean, holding_time_median, holding_time_min, holding_time_max, holding_time_std)
+    VALUES 
+    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """)
+    
+    with conn.cursor() as cur:
+        for vertiport_id in vertiport_stats.keys():
+            cur.execute(insert_query, (
+                simulationID,
+                vertiport_id,
+                vertiport_stats[vertiport_id]['arrival_queue']['mean'],
+                vertiport_stats[vertiport_id]['arrival_queue']['median'],
+                vertiport_stats[vertiport_id]['arrival_queue']['min'],
+                vertiport_stats[vertiport_id]['arrival_queue']['max'],
+                vertiport_stats[vertiport_id]['arrival_queue']['std'],
+                vertiport_stats[vertiport_id]['holding_time']['mean'],
+                vertiport_stats[vertiport_id]['holding_time']['median'],
+                vertiport_stats[vertiport_id]['holding_time']['min'],
+                vertiport_stats[vertiport_id]['holding_time']['max'],
+                vertiport_stats[vertiport_id]['holding_time']['std']
+            ))
+    conn.commit()
+
+def insert_network_statistics(conn, simulationID, network_stats):
+    """Insert network statistics into the database."""
+    insert_query = sql.SQL("""
+    INSERT INTO network_statistics
+    (simulation_id, load_factor_all_flights_mean, load_factor_all_flights_median, load_factor_all_flights_min, 
+     load_factor_all_flights_max, load_factor_all_flights_std,
+     load_factor_non_empty_mean, load_factor_non_empty_median, load_factor_non_empty_min, 
+     load_factor_non_empty_max, load_factor_non_empty_std)
+    VALUES
+    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """)
+    
+    with conn.cursor() as cur:
+        cur.execute(insert_query, (
+            simulationID,
+            network_stats['load_factor_all_flights']['mean'],
+            network_stats['load_factor_all_flights']['median'],
+            network_stats['load_factor_all_flights']['min'],
+            network_stats['load_factor_all_flights']['max'],
+            network_stats['load_factor_all_flights']['std'],
+            network_stats['load_factor_non_empty']['mean'],
+            network_stats['load_factor_non_empty']['median'],
+            network_stats['load_factor_non_empty']['min'],
+            network_stats['load_factor_non_empty']['max'],
+            network_stats['load_factor_non_empty']['std']
+        ))
+    conn.commit()
+
+def calculate_statistics(values):
+    """Calculate statistical measures for a list of values."""
+    if not values:
+        return {'mean': 0, 'median': 0, 'std': 0, 'min': 0, 'max': 0}
+    
+    values_array = np.array(values)
+    return {
+        'mean': float(np.mean(values_array)),
+        'median': float(np.median(values_array)),
+        'std': float(np.std(values_array)) if len(values_array) > 1 else 0,
+        'min': float(np.min(values_array)),
+        'max': float(np.max(values_array))
+    }
 
 def save_trajectories(trajectories: Dict,
                       simulation_params: Dict,

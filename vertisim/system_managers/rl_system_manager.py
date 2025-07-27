@@ -65,7 +65,7 @@ class RLSystemManager(BaseSystemManager):
                         flight_directions_dict=flight_directions_dict
                         )
         
-        self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
+        # self.average_flight_durations_per_od_pair = self._initialize_avg_flight_durations()
         self.external_optimization_params = external_optimization_params
         self.periodic_stopping = periodic_stopping
         self.periodic_and_event_driven = periodic_and_event_driven
@@ -77,6 +77,7 @@ class RLSystemManager(BaseSystemManager):
         self.trip_counter = 0
         self.trip_counter_tracker = 0
         self.spill_counter = {(origin, destination): 0 for origin in vertiport_ids for destination in vertiport_ids if origin != destination}
+        self.spill_distance_counter = 0
         self.total_demand = None
         self.trip_time_counter = 0
         self.holding_time_counter = 0
@@ -138,9 +139,9 @@ class RLSystemManager(BaseSystemManager):
         # Log the aircraft allocation process
         # self.logger.debug(f'|{flight_id}| Completed: Aircraft allocation process at vertiport {aircraft.current_vertiport_id} for {destination_vertiport_id}. Aircraft tail number: {aircraft.tail_number}, SOC: {careful_round(aircraft.soc, 2)}, Departing passengers: {len(departing_passengers)}')
 
-        # Save aircraft allocation and idle times
-        if not self.sim_params['light_simulation']:
-            self.save_aircraft_times(origin_vertiport_id=aircraft.current_vertiport_id, aircraft=aircraft)
+        # # Save aircraft allocation and idle times
+        # if not self.sim_params['light_simulation']:
+        #     self.save_aircraft_times(origin_vertiport_id=aircraft.current_vertiport_id, aircraft=aircraft)
 
         # Assign passengers to the aircraft
         aircraft.passengers_onboard = departing_passengers     
@@ -529,7 +530,10 @@ class RLSystemManager(BaseSystemManager):
         """
         self.event_saver.update_spilled_passenger_counter(flight_dir=f"{origin}_{destination}")
         self.logger.info(f'Passenger {passenger.passenger_id} spilled at {origin} after waiting {ms_to_min(self.env.now - passenger.waiting_room_arrival_time)} min. Waiting time of the passengers: {[ms_to_min(self.env.now - p.waiting_room_arrival_time) for p in self.vertiports[origin].waiting_room_stores[destination].items]}')
+        # Get the distance between the origin and destination vertiports
+        distance = self.get_mission_length(origin, destination)
         self.spill_counter[(origin, destination)] += 1
+        self.spill_distance_counter += distance
         self.vertiports[origin].spilled_passengers_dict[destination] = self.spill_counter[(origin, destination)] 
         self.logger.debug(f"Spilled passenger dict: {self.vertiports[origin].spilled_passengers_dict}")
         self.remove_pax_from_waiting_room(origin, destination, passenger)

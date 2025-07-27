@@ -89,6 +89,7 @@ class VertiSim:
         self.run_uninterrupted_simulation()          
 
         if self.config['output_params']['only_return_brief_metrics']:
+
             return self.finalize_simulation()
         
         self.finalize_simulation()
@@ -97,6 +98,8 @@ class VertiSim:
         # self.sim_setup.print_passenger_trip_time_stats()
 
     def finalize_simulation(self):
+        performance_metrics = self.sim_setup.calculate_performance_metrics()
+        
         if self.config['sim_mode']['rl'] and \
             self.config['sim_params']['algorithm'] != 'RandomPolicy' and \
             self.config['sim_params']['print_brief_metrics']:
@@ -193,9 +196,15 @@ class VertiSim:
             if actions[aircraft_id] == self.reverse_action_dict['CHARGE']:
                 aircraft.status = AircraftStatus.CHARGE
                 aircraft.is_process_completed = False
+                # Update the charge time tracker
+                self.sim_setup.event_saver.save_charge_time_rl(charge_time=sec_to_ms(self.config['external_optimization_params']['charge_time_per_charge_event']+1),
+                                                               aircraft_id=aircraft_id)
             # Do nothing
             elif actions[aircraft_id] == self.reverse_action_dict['DO_NOTHING']:
                 aircraft.is_process_completed = True
+                # Update the idle time tracker
+                self.sim_setup.event_saver.save_idle_time_rl(idle_time=self.decision_making_interval,
+                                                             aircraft_id=aircraft_id)
             # Fly to the vertiport
             elif actions[aircraft_id] < self.sim_setup.num_vertiports():
                 aircraft.current_vertiport_id = aircraft.get_aircraft_vertiport()
@@ -208,6 +217,12 @@ class VertiSim:
                 aircraft.is_process_completed = False
                 aircraft.flight_direction = f"{aircraft.origin_vertiport_id}_{aircraft.destination_vertiport_id}"
                 self.sim_setup.logger.debug(f"Aircraft {aircraft_id} will fly from {aircraft.origin_vertiport_id} to {aircraft.destination_vertiport_id}")
+
+                # Update the flight time tracker
+                od_pair = f"{aircraft.origin_vertiport_id}_{aircraft.destination_vertiport_id}"
+                flight_duration = self.sim_setup.system_manager.average_flight_durations_per_od_pair[od_pair]['average_flight_duration']
+                self.sim_setup.event_saver.save_fly_time_rl(flight_duration=sec_to_ms(flight_duration),
+                                                             aircraft_id=aircraft_id)
             else:
                 raise ValueError(f"Invalid action: {actions[aircraft_id]}")
                 
@@ -395,11 +410,11 @@ class VertiSim:
         """
         Return the state, reward, and action mask.
         """
-        if self.config['external_optimization_params']['periodic_time_step'] != 60:
-            # Need to calculate spill separeately
-            self.reward_function.add_spill_cost()
+        # if self.config['external_optimization_params']['periodic_time_step'] != 60:
+        #     # Need to calculate spill separeately
+        #     self.reward_function.add_spill_cost()
 
-        reward = round(self.reward_function.reward, 3)
+        reward = round(self.reward_function.reward, 2)
         current_state = self.get_current_state()
         action_mask = self.action_mask()
         self.reward_function.reset_rewards()
@@ -468,7 +483,8 @@ class VertiSim:
                                     aircraft_agents=self.sim_setup.system_manager.aircraft_agents,
                                     num_initial_aircraft=self.sim_setup.system_manager.num_initial_aircraft,
                                     simulation_states=self.config['sim_params']['simulation_states'],
-                                    reward_function_parameters=self.config['external_optimization_params']['reward_function_parameters'])
+                                    reward_function_parameters=self.config['external_optimization_params']['reward_function_parameters'],
+                                    decision_interval_min=int(ms_to_min(self.decision_making_interval)))
     
     def get_initial_state(self):
         """
@@ -492,9 +508,6 @@ class VertiSim:
         self.sim_setup.event_saver.rl_reward_tracker['step'] += 1
         # Add the reward to the cumulative sum
         self.sim_setup.event_saver.rl_reward_tracker['total_reward'] += reward
-        # Update the mean reward
-        self.sim_setup.event_saver.rl_reward_tracker['mean_reward'] = \
-            self.sim_setup.event_saver.rl_reward_tracker['total_reward'] / self.sim_setup.event_saver.rl_reward_tracker['step']
 
     @staticmethod
     def multidiscrete_to_discrete(action, n_actions=3):

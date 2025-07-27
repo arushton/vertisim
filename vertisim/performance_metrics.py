@@ -25,6 +25,7 @@ class PerformanceMetrics:
                 sim_mode,
                 output_params,
                 client_server_mode,
+                vertiports_dict,
                 verbose=False):
         self.sim_start_timestamp = sim_start_timestamp
         self.aircraft_params = aircraft_params
@@ -34,6 +35,7 @@ class PerformanceMetrics:
         self.sim_params = sim_params
         self.output_params = output_params
         self.sim_mode = sim_mode
+        self.vertiports_dict = vertiports_dict
         self.performance_metric_trackers = performance_metric_trackers
         self.passenger_consolidation_time = performance_metric_trackers['passenger_consolidation_time']
         self.passenger_departure_queue_count = performance_metric_trackers['passenger_departure_queue_count']
@@ -61,6 +63,9 @@ class PerformanceMetrics:
         self.total_charge_time_counter = performance_metric_trackers['total_charge_time_counter']
         self.rl_reward_tracker = performance_metric_trackers['rl_reward_tracker']
         self.ondemand_reward_tracker = performance_metric_trackers['ondemand_reward_tracker']
+        self.aircraft_idle_time_tracker_rl = performance_metric_trackers['aircraft_idle_time_tracker_rl']
+        self.aircraft_charge_time_tracker_rl = performance_metric_trackers['aircraft_charge_time_tracker_rl']
+        self.aircraft_fly_time_tracker_rl = performance_metric_trackers['aircraft_fly_time_tracker_rl']
         self.output_folder_path = self.get_save_path()
         self.vertiport_ids = vertiport_ids
         self.flight_directions = flight_directions
@@ -68,6 +73,7 @@ class PerformanceMetrics:
         self.sim_end_timestamp = sim_end_timestamp
         self.hour = 60 * 60 * 1000
         self.performance_metrics = defaultdict(lambda: defaultdict(dict))
+        self.performance_metrics['parking_pad_utilization'] = {}
         # TODO: Remove this. Temporary fix
         # path = '../../output/performance_metrics'
         # if not os.path.exists(path):
@@ -102,6 +108,7 @@ class PerformanceMetrics:
         self.compute_average_taxi_time()
         self.compute_turnaround_duration()
         self.compute_tlof_reservation_duration()
+        self.compute_parking_pad_utilization()
 
         if verbose and not self.client_server_mode:
             self.print_verbose_performance_metrics()
@@ -142,7 +149,7 @@ class PerformanceMetrics:
     def save_reward_stats(self):
         if self.sim_mode['rl']:
             for flight_dir in self.flight_directions:
-                self.performance_metrics[flight_dir]['mean_reward'] = self.rl_reward_tracker['mean_reward']
+                self.performance_metrics[flight_dir]['mean_reward'] = self.rl_reward_tracker['total_reward'] / self.rl_reward_tracker['step']
                 self.performance_metrics[flight_dir]['total_reward'] = self.rl_reward_tracker['total_reward']
         elif self.sim_mode['ondemand']:
             for flight_dir in self.flight_directions:
@@ -273,14 +280,56 @@ class PerformanceMetrics:
                 'passenger_departure_queue_waiting_times']['min'] = ms_to_min(np.min(waiting_times))
 
     def calculate_aircraft_arrival_queue_count_stats(self):
-        # Creates a dataframe for aircraft arrival queue count statistics including mean, median, standard deviation,
-        for vertiport_id, data in self.aircraft_arrival_queue_count.items():
-            aircraft_arrival_queue_count = np.array(list(data.values()))
-            self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count']['mean'] = np.mean(aircraft_arrival_queue_count)
-            self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count']['median'] = np.median(aircraft_arrival_queue_count)
-            self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count']['std'] = np.std(aircraft_arrival_queue_count)
-            self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count']['max'] = np.max(aircraft_arrival_queue_count)
-            self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count']['min'] = np.min(aircraft_arrival_queue_count)
+        """Calculate time-weighted average of aircraft arrival queue count for each vertiport."""
+        for vertiport_id, time_series in self.aircraft_arrival_queue_count.items():
+            # Initialize the metrics dictionary if it doesn't exist
+            if vertiport_id not in self.performance_metrics:
+                self.performance_metrics[vertiport_id] = {}
+            if 'aircraft_arrival_queue_count' not in self.performance_metrics[vertiport_id]:
+                self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count'] = {}
+
+            # Convert the time series to sorted list of (timestamp, value) pairs
+            time_series_list = sorted(time_series.items())
+            if len(time_series_list) < 2:
+                # Not enough data points
+                self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count'] = {
+                    'mean': 0, 'median': 0, 'std': 0, 'min': 0, 'max': 0
+                }
+                continue
+
+            # Calculate time-weighted statistics
+            total_time = 0
+            weighted_sum = 0
+            values = []
+            
+            # Calculate time-weighted sum and collect values for other statistics
+            for i in range(len(time_series_list) - 1):
+                current_time, current_value = time_series_list[i]
+                next_time = time_series_list[i + 1][0]
+                
+                # Calculate duration this value was held
+                duration = (next_time - current_time)
+                if duration > 0:  # Avoid division by zero
+                    total_time += duration
+                    weighted_sum += current_value * duration
+                    values.append(current_value)
+
+            # Add the last value
+            values.append(time_series_list[-1][1])
+
+            # Convert to numpy array for statistics
+            values = np.array(values)
+
+            # Calculate statistics
+            time_weighted_mean = ms_to_min(weighted_sum / self.sim_end_timestamp if total_time > 0 else 0)
+            
+            self.performance_metrics[vertiport_id]['aircraft_arrival_queue_count'] = {
+                'mean': round(float(time_weighted_mean), 2),
+                'median': round(float(np.median(values)), 2),
+                'std': round(float(np.std(values)), 2),
+                'min': round(float(np.min(values)), 2),
+                'max': round(float(np.max(values)), 2)
+            }
 
     def calculate_aircraft_departure_queue_count_stats(self):
         # Creates a dataframe for aircraft departure queue count statistics including mean, median, standard deviation,
@@ -323,13 +372,63 @@ class PerformanceMetrics:
             self.performance_metrics[vertiport_id]['aircraft_holding_times']['min'] = ms_to_min(np.min(waiting_times))
 
     def compute_load_factor_stats(self):
-        for vertiport_id, data in self.load_factor_tracker.items():
-            load_factors = np.array(data)
-            self.performance_metrics[vertiport_id]['load_factor']['mean'] = np.mean(load_factors)
-            self.performance_metrics[vertiport_id]['load_factor']['median'] = np.median(load_factors)
-            self.performance_metrics[vertiport_id]['load_factor']['std'] = np.std(load_factors)
-            self.performance_metrics[vertiport_id]['load_factor']['max'] = np.max(load_factors)
-            self.performance_metrics[vertiport_id]['load_factor']['min'] = np.min(load_factors)
+        """
+        Computes network-wide load factor statistics, separating empty and non-empty flights.
+        - Empty flights: flights with load factor = 0
+        - Non-empty flights: flights with load factor > 0
+        """
+        # Combine load factors from all vertiports into a single array
+        all_load_factors = []
+        for data in self.load_factor_tracker.values():
+            all_load_factors.extend(data)
+        
+        if not all_load_factors:
+            self.performance_metrics['load_factor'] = {
+                'all_flights': {'mean': 0.0, 'median': 0.0, 'std': 0.0, 'max': 0.0, 'min': 0.0, 'count': 0},
+                'non_empty_flights': {'mean': 0.0, 'median': 0.0, 'std': 0.0, 'max': 0.0, 'min': 0.0, 'count': 0},
+                'empty_flight_ratio': 0.0
+            }
+            return
+
+        load_factors = np.array(all_load_factors)
+        
+        # Count empty flights
+        empty_flights = np.sum(load_factors == 0)
+        self.performance_metrics['empty_flights'] = int(empty_flights)
+        
+        # Calculate stats for non-empty flights
+        non_empty_flights = load_factors[load_factors > 0]
+        
+        # Initialize the metrics dictionary
+        self.performance_metrics['load_factor'] = {
+        'all_flights': {},
+            'non_empty_flights': {},
+            'empty_flight_ratio': 0.0
+        }
+        
+        # Stats for all flights
+        all_flights_stats = self.performance_metrics['load_factor']['all_flights']
+        all_flights_stats['mean'] = round(float(np.mean(load_factors)), 2)
+        all_flights_stats['median'] = round(float(np.median(load_factors)), 2)
+        all_flights_stats['std'] = round(float(np.std(load_factors)), 2)
+        all_flights_stats['max'] = round(float(np.max(load_factors)), 2)
+        all_flights_stats['min'] = round(float(np.min(load_factors)), 2)
+        all_flights_stats['count'] = len(load_factors)
+        
+        # Stats for non-empty flights
+        if len(non_empty_flights) > 0:
+            non_empty_stats = self.performance_metrics['load_factor']['non_empty_flights']
+            non_empty_stats['mean'] = round(float(np.mean(non_empty_flights)), 2)
+            non_empty_stats['median'] = round(float(np.median(non_empty_flights)), 2)
+            non_empty_stats['std'] = round(float(np.std(non_empty_flights)), 2)
+            non_empty_stats['max'] = round(float(np.max(non_empty_flights)), 2)
+            non_empty_stats['min'] = round(float(np.min(non_empty_flights)), 2)
+            non_empty_stats['count'] = len(non_empty_flights)
+        else:
+            # If there are no non-empty flights, set all stats to 0
+            self.performance_metrics['load_factor']['non_empty_flights'] = {
+                'mean': 0.0, 'median': 0.0, 'std': 0.0, 'max': 0.0, 'min': 0.0, 'count': 0
+            }
 
     def compute_aircraft_idle_time_stats(self):
         for vertiport_id, data in self.aircraft_idle_time_tracker.items():
@@ -410,9 +509,9 @@ class PerformanceMetrics:
                 total_passengers = sum(
                     value
                     for key, value in self.passenger_time_tracker[vertiport_id].items()
-                    if self.sim_start_timestamp + self.hour * first
+                    if self.hour * first
                     <= key
-                    <= self.sim_start_timestamp + second * self.hour
+                    <= second * self.hour
                 )
                 self.performance_metrics[vertiport_id]['average_passenger_throughput'] = round(total_passengers / interval_length, 2)
 
@@ -479,9 +578,9 @@ class PerformanceMetrics:
                 total_aircraft += sum(
                     value
                     for key, value in self.flight_and_time_tracker[vertiport_id].items()
-                    if self.sim_start_timestamp + self.hour * first
+                    if self.hour * first
                     <= key
-                    <= self.sim_start_timestamp + second * self.hour
+                    <= second * self.hour
                 )
                 self.performance_metrics[vertiport_id]['aircraft_throughput']['mean'] = total_aircraft / interval_length
                 # Get the values from flight_count_tracker keys that start with vertiport_id. The keys are in the format of origin_destination
@@ -499,7 +598,7 @@ class PerformanceMetrics:
                 for time_interval in range(int(total_sim_time)):
                     total_aircraft_at_each_hour[vertiport_id][time_interval] = 0
                     for key, value in self.flight_and_time_tracker[vertiport_id].items():
-                        if self.sim_start_timestamp + self.hour * time_interval <= key <= self.sim_start_timestamp + self.hour * (time_interval + 1):
+                        if  self.hour * time_interval <= key <= self.hour * (time_interval + 1):
                             total_aircraft_at_each_hour[vertiport_id][time_interval] += 1             
         else:
             first, second = self.get_time_interval(total_sim_time)
@@ -507,7 +606,7 @@ class PerformanceMetrics:
                 for time_interval in range(first, second):
                     total_aircraft_at_each_hour[vertiport_id][time_interval] = 0
                     for key, value in self.flight_and_time_tracker[vertiport_id].items():
-                        if self.sim_start_timestamp + self.hour * time_interval <= key <= self.sim_start_timestamp + self.hour * (time_interval + 1):
+                        if self.hour * time_interval <= key <= self.hour * (time_interval + 1):
                             total_aircraft_at_each_hour[vertiport_id][time_interval] += 1
         return total_aircraft_at_each_hour
 
@@ -530,13 +629,43 @@ class PerformanceMetrics:
                 keys = list(data.keys())
                 values = list(data.values())
                 for i in range(len(keys)):
-                    if keys[i] >= self.sim_start_timestamp + self.hour:
+                    if keys[i] >= self.hour:
                         if values[i] == 1:
                             time_fato_empty += keys[i] - keys[occupancy_index]
                             occupancy_index = i+1
 
             fato_utilization = round((hr_to_ms(total_sim_time) - time_fato_empty) / hr_to_ms(total_sim_time) * 100, 2)
             self.performance_metrics[vertiport_id]['fato_utilization'] = fato_utilization
+
+    def compute_parking_pad_utilization(self):
+        """
+        Computes the parking pad utilization for each vertiport.
+        Utilization = total time pads were occupied / (total simulation time * number of pads)
+        """
+        for vertiport_id in self.vertiport_ids:
+            pad_usage = self.performance_metric_trackers['parking_pad_usage_tracker'].get(vertiport_id, {})
+            if not pad_usage:
+                self.performance_metrics['parking_pad_utilization'][vertiport_id] = 0
+                continue
+
+            total_occupied_time = 0
+            # Get total number of pads from vertiport layout
+            num_pads = self.vertiports_dict[vertiport_id].vertiport_layout.num_parking_pad
+
+            for pad_id, usage_periods in pad_usage.items():
+                for start_time, end_time in usage_periods:
+                    if end_time is None:  # If pad is still occupied at end of simulation
+                        end_time = self.sim_end_timestamp
+                    total_occupied_time += abs(end_time - start_time)
+
+            utilization = total_occupied_time / (self.sim_end_timestamp * num_pads)
+            self.performance_metrics['parking_pad_utilization'][vertiport_id] = round(utilization * 100, 2)  # Convert to percentage utilization
+        
+    def print_parking_pad_utilization(self):
+        """Prints the parking pad utilization for each vertiport"""
+        print("\nParking Pad Utilization:")
+        for vertiport_id, utilization in self.performance_metrics['parking_pad_utilization'].items():
+            print(f"Vertiport {vertiport_id}: {utilization:.2%}")
 
     def print_passenger_consolidation_time_stats(self):
         print("Passenger consolidation time statistics in minutes:")
@@ -755,8 +884,9 @@ class PerformanceMetrics:
         print(f"{self.calculate_total_simulated_time()} hours simulated")
 
     def print_avg_load_factor(self):
-        for vertiport_id in self.vertiport_ids:
-            print(f"Average load factor for non-empty flights at {vertiport_id}: {round(self.performance_metrics[vertiport_id]['load_factor']['mean'], 2)}")
+        """Print network-wide average load factor for non-empty flights"""
+        print(f"Network-wide average load factor (non-empty flights): {round(self.performance_metrics['load_factor']['non_empty_flights']['mean'], 2)}")
+        print(f"Empty flight ratio: {self.performance_metrics['load_factor']['empty_flight_ratio']:.1%}")
 
     def print_total_aircraft_throughput(self):
         for vertiport_id in self.vertiport_ids:
@@ -815,6 +945,7 @@ class PerformanceMetrics:
         self.print_aircraft_throughput_stats_for_each_hr_verbose()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
+        self.print_parking_pad_utilization()
         self.print_total_empty_flights()
 
     def print_performance_metrics(self):
@@ -827,5 +958,5 @@ class PerformanceMetrics:
         self.print_total_aircraft_throughput()
         self.print_average_aircraft_throughput()
         self.print_fato_utilization()
+        self.print_parking_pad_utilization()
         self.print_total_empty_flights()
-        

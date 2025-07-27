@@ -1,5 +1,5 @@
 from collections import defaultdict
-from .utils.helpers import timestamp_to_datetime
+from .utils.helpers import timestamp_to_datetime, miliseconds_to_hms
 from .utils.units import ms_to_sec, hr_to_ms
 from typing import Dict, Any, Union
 
@@ -30,6 +30,9 @@ class EventSaver:
         self.aircraft_holding_time = defaultdict(dict)
         self.aircraft_idle_time_tracker = defaultdict(dict)
         self.aircraft_charging_times = defaultdict(dict)
+        self.aircraft_idle_time_tracker_rl = defaultdict(dict)        
+        self.aircraft_charge_time_tracker_rl = defaultdict(dict)
+        self.aircraft_fly_time_tracker_rl = defaultdict(dict)
         self.total_charge_time_counter = 0
         self.aircraft_taxi_times = defaultdict(dict)
         self.fato_usage_tracker = defaultdict(dict)
@@ -44,6 +47,7 @@ class EventSaver:
         self.flight_phase_energy_consumption_tracker = defaultdict(lambda: defaultdict(dict))
         self.ground_aircraft_counter = defaultdict(dict)
         self.flying_aircraft_counter = defaultdict(dict)
+        self.parking_pad_usage_tracker = defaultdict(lambda: defaultdict(list))  # Tracks (start_time, end_time) for each pad at each vertiport
         self.passenger_trip_time_tracker = defaultdict(dict)
         self.aircraft_process_time_tracker = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
         self.average_energy_consumption_per_od_pair = {flight_direction: {'sum': 0, 'count': 0, 'average': 15} for flight_direction in flight_directions}
@@ -97,7 +101,11 @@ class EventSaver:
             'aircraft_process_time_tracker': self.aircraft_process_time_tracker,
             'flight_phase_energy_consumption_tracker': self.flight_phase_energy_consumption_tracker,
             'rl_reward_tracker': self.rl_reward_tracker,
-            'ondemand_reward_tracker': self.ondemand_reward_tracker
+            'ondemand_reward_tracker': self.ondemand_reward_tracker,
+            'aircraft_idle_time_tracker_rl': self.aircraft_idle_time_tracker_rl,
+            'aircraft_charge_time_tracker_rl': self.aircraft_charge_time_tracker_rl,
+            'aircraft_fly_time_tracker_rl': self.aircraft_fly_time_tracker_rl,
+            'parking_pad_usage_tracker': self.parking_pad_usage_tracker
         }
 
     def update_flying_aircraft_counter(self, flight_update: int):
@@ -128,15 +136,15 @@ class EventSaver:
             return
         
         # Convert the energy consumption from kWh to SoC
-        energy_consumption_soc = energy_consumption * self.battery_capacity / 100
+        energy_consumption_soc = round(energy_consumption / self.battery_capacity * 100, 2)
         time = timestamp_to_datetime(sim_start_time=self.sim_start_timestamp,
                                      sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='tracker', tracker=self.aircraft_energy_consumption_tracker[flight_direction])
         self.aircraft_energy_consumption_tracker[flight_direction][time] = energy_consumption_soc
 
-        self.update_average_energy_consumption(flight_direction, energy_consumption_soc)
+        self.update_average_energy_consumption_soc(flight_direction, energy_consumption_soc)
 
-    def update_average_energy_consumption(self, flight_direction: str, new_energy_consumption: float, alpha: float = 0.1):
+    def update_average_energy_consumption_soc(self, flight_direction: str, new_energy_consumption: float, alpha: float = 0.1):
         """
         Update the average energy consumption using an exponentially weighted average (EWA).
         
@@ -185,9 +193,8 @@ class EventSaver:
                                         sim_time=self.env.now)
             time = self.is_time_overlapping(time=time, agent_type='aircraft')
             self.passenger_time_tracker[vertiport_id][time] = load_factor
-            if load_factor > 0:
-                self.load_factor_tracker[vertiport_id].append(load_factor)
-                self.passenger_count_tracker[vertiport_id] += load_factor
+            self.load_factor_tracker[vertiport_id].append(load_factor)
+            self.passenger_count_tracker[vertiport_id] += load_factor
     
     def update_fato_usage_tracker(self, vertiport_id, fato_usage):
         if not self.sim_params['light_simulation']:
@@ -295,6 +302,24 @@ class EventSaver:
                                     sim_time=self.env.now)
         time = self.is_time_overlapping(time=time, agent_type='aircraft')
         self.aircraft_idle_time_tracker[vertiport_id][time] = idle_time
+
+    def save_idle_time_rl(self, idle_time: int, aircraft_id: int) -> None:
+        if aircraft_id in self.aircraft_idle_time_tracker_rl:
+            self.aircraft_idle_time_tracker_rl[aircraft_id] += idle_time
+        else:
+            self.aircraft_idle_time_tracker_rl[aircraft_id] = idle_time
+
+    def save_charge_time_rl(self, charge_time: int, aircraft_id: int) -> None:
+        if aircraft_id in self.aircraft_charge_time_tracker_rl:
+            self.aircraft_charge_time_tracker_rl[aircraft_id] += charge_time
+        else:
+            self.aircraft_charge_time_tracker_rl[aircraft_id] = charge_time
+
+    def save_fly_time_rl(self, flight_duration: int, aircraft_id: int) -> None:
+        if aircraft_id in self.aircraft_fly_time_tracker_rl:
+            self.aircraft_fly_time_tracker_rl[aircraft_id] += flight_duration
+        else:
+            self.aircraft_fly_time_tracker_rl[aircraft_id] = flight_duration
     
     def save_aircraft_process_times(self, 
                                     agent_id: str, 
@@ -406,3 +431,29 @@ class EventSaver:
             return self.is_time_overlapping(time=time, agent_type=agent_type, tracker=tracker)
         else:
             raise ValueError('agent_type must be either aircraft, passenger or tracker')
+
+    def update_parking_pad_usage(self, vertiport_id: str, pad_id: str, start_time: float, end_time: float = None):
+        """
+        Updates the parking pad usage tracker with a new occupation period.
+        
+        Args:
+            vertiport_id: ID of the vertiport
+            pad_id: ID of the parking pad
+            start_time: Time when the pad became occupied
+            end_time: Time when the pad became available again (None if still occupied)
+        """
+        if start_time and end_time:
+            raise ValueError('start_time and end_time cannot both be provided')
+        if end_time is None and start_time is None:
+            raise ValueError('start_time and end_time cannot both be None')
+        if end_time is None:
+            # Just store the start time if pad is becoming occupied
+            self.parking_pad_usage_tracker[vertiport_id][pad_id].append((start_time, None))
+        else:
+            # Update the last entry with the end time when pad becomes available
+            if self.parking_pad_usage_tracker[vertiport_id][pad_id]:
+                last_entry = self.parking_pad_usage_tracker[vertiport_id][pad_id][-1]
+                if last_entry[0] is None:
+                    raise ValueError('The start time of the last entry cannot be None')
+                if last_entry[1] is None:  # If there's an incomplete occupation period
+                    self.parking_pad_usage_tracker[vertiport_id][pad_id][-1] = (last_entry[0], end_time)

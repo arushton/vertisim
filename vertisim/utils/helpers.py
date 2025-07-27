@@ -526,6 +526,8 @@ def check_magnitude_order(value1, value2, max_val=100):
     return value2 <= max_val
     
 def miliseconds_to_hms(milliseconds):
+    if milliseconds is None:
+        return None
     seconds = milliseconds // 1000
     hours = seconds // 3600
     seconds %= 3600

@@ -119,6 +119,7 @@ class BaseSystemManager:
         dd = defaultdict(lambda: inner_dict(None))
         for flight_direction in self.flight_directions_dict.keys():
             origin_id, destination_id = flight_direction.split('_')
+            # Returns estimated flight time in seconds
             estimated_time = self.initial_flight_duration_estimate(origin_id, destination_id, self.aircraft_params['cruise_speed'])
             dd[flight_direction] = inner_dict(estimated_time)
         return dd
@@ -546,6 +547,13 @@ class BaseSystemManager:
         -------
         None
         """
+        # Track parking pad release
+        self.event_saver.update_parking_pad_usage(
+            vertiport_id=vertiport_id,
+            pad_id=departure_parking_space.resource_id,
+            start_time=None,
+            end_time=self.env.now
+        )
         self.vertiports[vertiport_id].parking_space_store.put(departure_parking_space)
 
     def put_aircraft_into_available_aircraft_store(self, vertiport_id: Any, aircraft: object) -> None:
@@ -677,6 +685,9 @@ class BaseSystemManager:
                 self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                         idle_time=idle_time)
                 aircraft.save_process_time(event='idle', process_time=idle_time)
+                if self.sim_mode['ondemand']:
+                    self.event_saver.save_idle_time_rl(idle_time=round(idle_time, 2),
+                                                    aircraft_id=aircraft.tail_number)
                 # self.logger.debug(f'Saved idle time of {miliseconds_to_hms(idle_time)} between initial arrival and first flight for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')
         else:
             if not aircraft.charged_during_turnaround:
@@ -687,6 +698,9 @@ class BaseSystemManager:
             self.event_saver.save_aircraft_idle_time(vertiport_id=origin_vertiport_id,
                                                      idle_time=aircraft.idle_time)
             aircraft.save_process_time(event='idle', process_time=idle_time)
+            if self.sim_mode['ondemand']:
+                self.event_saver.save_idle_time_rl(idle_time=round(idle_time, 2),
+                                                    aircraft_id=aircraft.tail_number)
             # self.logger.debug(f'Saved idle time {miliseconds_to_hms(idle_time)} between charging end or arrival and the flight allocation for aircraft {aircraft.tail_number} at {origin_vertiport_id}.')            
 
     def parking_pad_request(self, aircraft: object, parking_space_id: Any = None):
@@ -696,6 +710,13 @@ class BaseSystemManager:
         # Save them to use for departure
         aircraft.parking_space = parking_space
         aircraft.parking_space_id = parking_space_id
+        # Track parking pad occupation
+        self.event_saver.update_parking_pad_usage(
+            vertiport_id=aircraft.destination_vertiport_id,
+            pad_id=parking_space_id,
+            start_time=self.env.now,
+            end_time=None
+        )
 
     def fato_pad_request(self, aircraft: object, operation_type: str, fato_id: str = None):
         if operation_type == 'arrival':

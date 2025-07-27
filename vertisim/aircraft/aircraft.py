@@ -912,13 +912,13 @@ class Aircraft:
 
         self.vertical_velocity = self.aircraft_params['climb_phase_vertical_velocity']
 
-        climb_time = round(vertical_distance / self.vertical_velocity)
+        average_climb_speed = round((self.forward_velocity + self.aircraft_params['climb_phase_end_forward_velocity']) / 2, 2)
+        self.forward_velocity = self.aircraft_params['climb_phase_end_forward_velocity']
+
+        climb_time = round(horizontal_distance / average_climb_speed)
         with first_waypoint_resource.request() as req:
             yield req
             yield self.env.timeout(sec_to_ms(climb_time))
-
-        average_climb_speed = round((self.forward_velocity + self.aircraft_params['climb_phase_end_forward_velocity']) / 2, 2)
-        self.forward_velocity = self.aircraft_params['climb_phase_end_forward_velocity']
 
         # Update destination heading
         self.destination_heading = self.compute_destination_heading(first_waypoint)
@@ -1085,12 +1085,12 @@ class Aircraft:
         if self.soc-self.convert_kwh_soc(kwh) < 1:
             soc_update = self.soc
             if self.system_manager.sim_mode['rl'] and self.soc_at_zero_event_triggered == False:
-                print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(max(self.soc-self.convert_kwh_soc(kwh),0), 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
+                # print(f"Warning: Aircraft {self.tail_number}'s SOC is 0. SOC: {round(max(self.soc-self.convert_kwh_soc(kwh),0), 2)}, at time: {self.env.now} during {self.detailed_status} at {self.location}")
                 self.soc_at_zero_event_triggered = True
                 self.system_manager.truncation_penalty += 1
-                # self.logger.warning(f'soc_at_zero_event is triggered for {self.tail_number} time {self.env.now}')
-                self.system_manager.trigger_truncation_event(event_name='soc_at_zero_event',
-                                                             id=self.tail_number)
+                self.logger.warning(f'soc_at_zero_event is triggered for {self.tail_number} time {self.env.now}')
+                # self.system_manager.trigger_truncation_event(event_name='soc_at_zero_event',
+                #                                              id=self.tail_number)
         else:
             soc_update = self.convert_kwh_soc(kwh)
         self.update_soc(-soc_update)
@@ -1285,6 +1285,9 @@ class Aircraft:
         self.flight_duration = self.arrival_time - self.departure_time
         self.event_saver.update_flight_duration_tracker(flight_direction=self.flight_direction, flight_duration=self.flight_duration)
         self.system_manager.update_flight_duration(flight_direction=self.flight_direction, flight_duration=ms_to_sec(self.flight_duration))
+        # This is correct. We use rl tracker for the flight duration save --> Aircraft utilization db
+        if self.system_manager.sim_mode['ondemand']:
+            self.event_saver.save_fly_time_rl(flight_duration=self.flight_duration, aircraft_id=self.tail_number)
 
     def save_process_time(self, event, process_time):
         self.event_saver.save_aircraft_process_times(agent_id=self.tail_number,

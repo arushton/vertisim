@@ -32,7 +32,8 @@ def get_simulator_states(
     aircraft_agents: Dict[int, Any],
     num_initial_aircraft: int,
     simulation_states: Dict[str, Any],
-    reward_function_parameters: Dict[str, Any]
+    reward_function_parameters: Dict[str, Any],
+    decision_interval_min: int
 ) -> Dict:
     """
     Get the states for simulation entities.
@@ -62,7 +63,7 @@ def get_simulator_states(
 
     # Scale down the soc values to 0-10 for each aircraft in the aircraft_states
     for aircraft_id, aircraft_state in aircraft_states.items():
-        aircraft_states[aircraft_id]['soc'] = round(aircraft_state['soc'] / 10, 3)
+        aircraft_states[aircraft_id]['soc'] = round(aircraft_state['soc'] / 10, 1)
 
     departing_passengers = system_manager.departing_passenger_tracker
 
@@ -80,7 +81,7 @@ def get_simulator_states(
                                                                time=system_manager.env.now)
     
     additional_states = {
-        'sim_time': round(ms_to_hr(system_manager.env.now), 3) if 'sim_time' in simulation_states['additional_states'] else 0,
+        'sim_time': round(ms_to_min(system_manager.env.now)/decision_interval_min) if 'sim_time' in simulation_states['additional_states'] else 0,
     }
 
     simulator_states = {

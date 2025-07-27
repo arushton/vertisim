@@ -36,7 +36,8 @@ class RewardFunction:
         # FLight action reward/penalty
         # flight_rewards = self._flight_rewards(actions)
         # Calculate the reward
-        self.reward = revenue - (energy_cost + spill_cost + operating_cost)
+        truncation_penalty = self.sim_setup.system_manager.truncation_penalty * self.config['external_optimization_params']['reward_function_parameters']['truncation_penalty']
+        self.reward = revenue - (energy_cost + spill_cost + operating_cost) + truncation_penalty
 
     def simplified_spill_reward(self, actions: List[int]) -> None:
         # Spit cost
@@ -114,8 +115,9 @@ class RewardFunction:
         """
         Calculate the spill cost for the given actions.
         """
-        return np.sum(extract_dict_values(self.sim_setup.system_manager.spill_counter)) * \
-            self.config['external_optimization_params']['reward_function_parameters']['spill_cost']
+        # return np.sum(extract_dict_values(self.sim_setup.system_manager.spill_counter)) * \
+        #     self.config['external_optimization_params']['reward_function_parameters']['spill_cost']
+        return self.sim_setup.system_manager.spill_distance_counter
 
     def _calculate_revenue(self, actions: List[int]) -> float:
         """
@@ -205,6 +207,7 @@ class RewardFunction:
           there are enough aircraft to serve the demand at the destination vertiport.
           
           """
+        pass
     
     def _apply_simplified_flight_rewards(self, actions: List[int], departing_passengers: Set[int]) -> None:
         pax_count = len(departing_passengers)

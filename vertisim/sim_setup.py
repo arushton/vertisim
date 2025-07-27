@@ -581,6 +581,7 @@ class SimSetup:
                                   sim_params=self.sim_params,
                                   sim_mode=self.sim_mode,
                                   output_params=self.output_params,
+                                  vertiports_dict=self.vertiports,
                                   verbose=self.sim_params['verbose']).performance_metrics
     
     def log_brief_metrics(self, print_metrics=False):
@@ -616,7 +617,10 @@ class SimSetup:
                         performance_metrics=performance_metrics,
                         simulationID=self.sim_id,
                         flight_directions=self.flight_directions_list,
-                        num_pax=self.passenger_arrival_process.total_demand
+                        num_pax=self.passenger_arrival_process.total_demand,
+                        aircraft_idle_time_tracker_rl=self.event_saver.performance_metrics()['aircraft_idle_time_tracker_rl'],
+                        aircraft_charge_time_tracker_rl=self.event_saver.performance_metrics()['aircraft_charge_time_tracker_rl'],
+                        aircraft_fly_time_tracker_rl=self.event_saver.performance_metrics()['aircraft_fly_time_tracker_rl']
                     )
         else:
             # Save the results
@@ -635,7 +639,10 @@ class SimSetup:
                         performance_metrics=performance_metrics,
                         simulationID=self.sim_id,
                         flight_directions=self.flight_directions_list,
-                        num_pax=self.passenger_arrival_process.total_demand
+                        num_pax=self.passenger_arrival_process.total_demand,
+                        aircraft_idle_time_tracker_rl=self.event_saver.performance_metrics()['aircraft_idle_time_tracker_rl'],
+                        aircraft_charge_time_tracker_rl=self.event_saver.performance_metrics()['aircraft_charge_time_tracker_rl'],
+                        aircraft_fly_time_tracker_rl=self.event_saver.performance_metrics()['aircraft_fly_time_tracker_rl']
                     )
         
         # print(f"Success: Results are saved in {output_path}.")
