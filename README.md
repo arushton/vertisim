@@ -49,8 +49,8 @@ Small circular shapes are parking pads and large circular shapes are FATO. The l
 # Installation
 1. Download all of the files.
 2. Open your terminal and cd to vertisim folder
-3. Create a virtual environment: If you are using conda write `conda create -n vertisim python=3.11`
-4. After you create your environment activate your environment by writing `conda activate vertisim` to your terminal.
+3. Create a virtual environment: If you are using conda write `conda create -n vertisim-py311 python=3.11`
+4. After you create your environment activate your environment by writing `conda activate vertisim-py311` to your terminal.
 5. Install the requirements with `pip install -r requirements.txt`
 6. Done!
 
@@ -58,11 +58,11 @@ For questions and collaborations, please email eminburak_onat@berkeley.edu. Than
 
 
 # How To Run
-1. Activate the vertisim environment (for conda users `conda activate vertisim`)
+1. Activate the vertisim-py311 environment (for conda users `conda activate vertisim-py311`)
 2. Create config.json file
 3. There are three ways of running vertisim. <br>
 (inside VertiSim folder): <br>
-a) Run a single configuration: `python3 -m vertisim.runner --config vertisim/config.json` <br>
+a) Run a single configuration: `python3 -m vertisim.runner --env_config vertisim/config.json` <br>
 Currently, the below methods are not maintained and won't work.  <br>
 b) Run many configuration serially: `loop_runner.py` <br>
 c) Run many configuration in parallel (CPU parallelization by multiprocessing): `loop_runner_multiprocess.py`

@@ -222,7 +222,12 @@ class SimSetup:
         # if self.sim_params['flush_cache']:
         # Get the root folder path
         root_folder_path = os.getcwd()
-        vertiport_distances.to_csv(os.path.join(root_folder_path, f'cache/{cache_key}_distances.csv'), index=False)
+        cache_folder_path = os.path.join(root_folder_path, 'cache')
+        os.makedirs(cache_folder_path, exist_ok=True)
+        vertiport_distances.to_csv(
+            os.path.join(cache_folder_path, f'{cache_key}_distances.csv'),
+            index=False
+        )
 
         return vertiport_distances
     

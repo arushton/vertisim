@@ -139,6 +139,10 @@ def save_performance_metrics(simulation_params: dict,
     conn = create_sqlite_connection(output_path)
     assert conn, 'Could not establish database connection.'
     cursor = conn.cursor()
+    reward = sum(
+        performance_metrics[flight_dir]['total_reward']
+        for flight_dir in flight_directions
+    )
     
     # --- SIMULATION TABLE ---        
     try:
@@ -217,7 +221,7 @@ def save_performance_metrics(simulation_params: dict,
                 # Flight direction is in the format 'origin_destination'. Split it into two separate columns
                 origin, _ = flight_dir.split('_')
                 waiting_time_metrics = performance_metrics[origin]['passenger_waiting_time']
-                mean_reward = metrics_for_flight['mean_reward']
+                mean_reward = metrics_for_flight.get('mean_reward')
                 total_reward = metrics_for_flight['total_reward']
                 metric_values = [
                     simulated_date,
