@@ -65,12 +65,19 @@ conda activate vertisim-py311
 python -m vertisim.runner --env_config examples/sfo_sjc.json
 ```
 
-The example uses bundled network, layout, aircraft-energy, wind, and passenger-schedule inputs.
+The example uses bundled network, layout, wind, and passenger-schedule inputs.
 It prints simulation metrics to the terminal and creates runtime files under `output/sfo_sjc_example/`.
 The USD reward coefficients are set to zero; configure these values for your own economic assumptions
 before interpreting rewards. The example uses a fixed random seed for repeatability.
 
 The legacy batch runners are not maintained.
+
+## Project organization
+
+- [`examples/`](examples/) contains runnable scenario configurations.
+- [`docs/configuration.md`](docs/configuration.md) explains how to customize a scenario.
+- [`experiments/`](experiments/) is for research sweeps; older, unsupported configuration and loop files are archived in [`experiments/legacy/`](experiments/legacy/).
+- [`api/`](api/) is an optional RL/HTTP adapter, separate from the core simulation package.
 
 
 # Citation
