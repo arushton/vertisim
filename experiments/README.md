@@ -1,6 +1,6 @@
 # Research experiments
 
-Use this directory for scripts and metadata that define research runs: parameter sweeps, repeated seeds, comparisons, and post-run analysis. Keep the simulator implementation in `vertisim/` and keep each individual run's settings in a scenario configuration such as [`examples/sfo_sjc.json`](../examples/sfo_sjc.json).
+Use this directory for scripts and metadata that define research runs: parameter sweeps, repeated seeds, comparisons, and post-run analysis. Keep the simulator implementation in `vertisim/` and keep each individual run's settings in a scenario configuration such as [`examples/sfo_sjc/config.json`](../examples/sfo_sjc/config.json).
 
 ## Legacy files
 

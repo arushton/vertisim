@@ -12,6 +12,7 @@ import functools
 import pickle
 import json
 import yaml
+from pathlib import Path
 
 
 def set_seed(seed=None, how='instant'):
@@ -45,14 +46,39 @@ def cache_to_file(filename):
         return wrapper
     return decorator
 
-def read_config_file(file_path: str) -> bool:
-    if file_path.endswith(".yaml"):
-        rl_config = read_yaml_file(file_path)
-    elif file_path.endswith(".json"):
-        rl_config = read_json_file(file_path)
+def read_config_file(file_path: str) -> Dict:
+    config_path = Path(file_path).expanduser().resolve()
+    if not config_path.is_file():
+        raise FileNotFoundError(f"Simulation configuration file does not exist: {config_path}")
+
+    suffix = config_path.suffix.lower()
+    if suffix == ".json":
+        config = read_json_file(str(config_path))
+    elif suffix in {".yaml", ".yml"}:
+        config = read_yaml_file(str(config_path))
     else:
-        raise ValueError(f"config path must be either yaml or json file. Received {file_path}")
-    return rl_config
+        raise ValueError(f"Config path must end in .json, .yaml, or .yml: {config_path}")
+
+    return resolve_config_paths(config, config_path.parent)
+
+
+def resolve_config_paths(value: Any, config_directory: Path, key: str = "") -> Any:
+    if isinstance(value, dict):
+        return {
+            child_key: resolve_config_paths(child_value, config_directory, child_key)
+            for child_key, child_value in value.items()
+        }
+    if isinstance(value, list):
+        return [resolve_config_paths(item, config_directory, key) for item in value]
+    is_path = key.endswith(("_path", "_file_path", "_files_path", "_folder_path"))
+    if not is_path or value is None:
+        return value
+    if not isinstance(value, str):
+        raise ValueError(f"Configuration path {key} must be a string or null.")
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = config_directory / path
+    return str(path.resolve())
 
 
 def read_json_file(json_path: str) -> Dict:

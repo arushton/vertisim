@@ -5,10 +5,10 @@
 From the repository root, run:
 
 ```bash
-python -m vertisim.runner --env_config examples/sfo_sjc.json
+python -m vertisim.runner --env_config examples/sfo_sjc/config.json
 ```
 
-Use [`examples/sfo_sjc.json`](../examples/sfo_sjc.json) as the current reference for a complete configuration. It is an on-demand, one-day, two-vertiport run using the included SFO-SJC network, layout, wind, and passenger schedule.
+Use [`examples/sfo_sjc/config.json`](../examples/sfo_sjc/config.json) as the current reference for a complete configuration. It is an on-demand, one-day, two-vertiport run. Its required network, layout, wind, and passenger schedule files are colocated under [`examples/sfo_sjc/data/`](../examples/sfo_sjc/data/).
 
 ## What the configuration controls
 
@@ -27,7 +27,7 @@ Keep values and units explicit. Time-valued scenario inputs are generally specif
 
 ## Input paths and reproducibility
 
-The example's relative input paths are intended to be run from the repository root. When creating a scenario that references files elsewhere, use paths that resolve consistently for all users; avoid absolute paths tied to a particular machine. Keep source inputs unchanged, and write generated results under `output/`.
+Relative input and output paths are resolved from the directory containing the config file, so the example can be launched from any working directory. When creating a scenario that references files elsewhere, use relative paths from that config file; avoid absolute paths tied to a particular machine. Paths are resolved when the CLI loads the config, but the current loader does not validate the full configuration schema or pre-check every input file. Keep source inputs unchanged, and write generated results under `output/`.
 
 The example sets `random_seed` to `42`. Preserve the scenario file with reported results and record any changes to its assumptions. A fixed seed makes stochastic runs repeatable within the limits of the simulator and dependency versions; it does not by itself guarantee bit-for-bit reproducibility across environments.
 
@@ -38,3 +38,5 @@ The example's USD reward coefficients are zero. Set values appropriate to the st
 A scenario config describes one simulation run. Parameter combinations, repeated seeds, and analysis scripts belong under `experiments/`, rather than in the simulator package. See [`experiments/README.md`](../experiments/README.md) for the status of the archived loop scripts.
 
 The files in `experiments/legacy/` are retained for historical reference and are not supported entry points. Do not copy their settings into new studies without checking them against the current example and simulator.
+
+The other historical input datasets remain under `vertisim/input/` for now. Only the four files needed by this example have been moved; other scenarios may still rely on those legacy paths.

@@ -82,11 +82,11 @@
     "periodic_and_event_driven": false
   },
   "network_and_demand_params": {
-    "vertiport_network_file_path": "vertisim/input/network/network_SFO_SJC.csv",
-    "vertiport_layout_file_path": "vertisim/input/vertiport_layouts/vertiport_layout_aiaa.xlsx",
+    "vertiport_network_file_path": "data/network/network_SFO_SJC.csv",
+    "vertiport_layout_file_path": "data/layout/vertiport_layout_aiaa.xlsx",
     "charge_schedule_file_path": null,
     "flight_schedule_file_path": null,
-    "passenger_schedule_file_path": "vertisim/input/passenger/demand_SFO_SJC.csv",
+    "passenger_schedule_file_path": "data/passenger/demand_SFO_SJC.csv",
     "passenger_arrival_rates_path": null,
     "demand_probabilities": null,
     "autoregressive_demand_files_path": null,
@@ -153,7 +153,7 @@
     "holding_unit_capacity": 20,
     "cruise_altitude": 450,
     "static_wind": false,
-    "wind_data_file_path": "vertisim/input/airspace/SJC_SFO_wind_data.csv",
+    "wind_data_file_path": "data/wind/SJC_SFO_wind_data.csv",
     "fixed_num_airlinks": null,
     "wind_magnitude_mph": 0,
     "wind_angle_degrees": 180
@@ -233,14 +233,14 @@
       },
       "max_val_in_dist": null
     },
-    "aircraft_energy_consumption_data_folder_path": "vertisim/input/aircraft/energy_consumption",
+    "aircraft_energy_consumption_data_folder_path": null,
     "min_init_soc": 20,
     "max_init_soc": 100,
     "min_reserve_soc": 40,
     "soc_update_interval": 60
   },
   "output_params": {
-    "output_folder_path": "output/sfo_sjc_example",
+    "output_folder_path": "../../output/sfo_sjc_example",
     "config_output_file_name": "config",
     "performance_metrics_output_file_name": "performance_metrics",
     "only_return_brief_metrics": true,
