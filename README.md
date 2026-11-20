@@ -58,14 +58,19 @@ For questions and collaborations, please email eminburak_onat@berkeley.edu. Than
 
 
 # How To Run
-1. Activate the vertisim-py311 environment (for conda users `conda activate vertisim-py311`)
-2. Create config.json file
-3. There are three ways of running vertisim. <br>
-(inside VertiSim folder): <br>
-a) Run a single configuration: `python3 -m vertisim.runner --env_config vertisim/config.json` <br>
-Currently, the below methods are not maintained and won't work.  <br>
-b) Run many configuration serially: `loop_runner.py` <br>
-c) Run many configuration in parallel (CPU parallelization by multiprocessing): `loop_runner_multiprocess.py`
+From the repository root, activate the environment and run the included one-day SFO-SJC example:
+
+```bash
+conda activate vertisim-py311
+python -m vertisim.runner --env_config examples/sfo_sjc.json
+```
+
+The example uses bundled network, layout, aircraft-energy, wind, and passenger-schedule inputs.
+It prints simulation metrics to the terminal and creates runtime files under `output/sfo_sjc_example/`.
+The USD reward coefficients are set to zero; configure these values for your own economic assumptions
+before interpreting rewards. The example uses a fixed random seed for repeatability.
+
+The legacy batch runners are not maintained.
 
 
 # Citation

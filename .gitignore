@@ -131,6 +131,9 @@ dmypy.json
 # Database
 *.sqlite
 
+# Simulation outputs
+/output/
+
 # Private simulation inputs
 /local_simulation_inputs/
 
