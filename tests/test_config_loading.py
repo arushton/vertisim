@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from .utils.helpers import read_config_file
+from vertisim.utils.helpers import read_config_file
+from vertisim.utils.defaults import DEFAULT_AIRCRAFT_PARAMS, DEFAULT_NETWORK_AND_DEMAND
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -11,6 +12,17 @@ EXAMPLE_CONFIG = REPOSITORY_ROOT / "examples" / "sfo_sjc" / "config.json"
 
 
 class ConfigLoadingTests(unittest.TestCase):
+    def test_default_input_paths_resolve_inside_installed_package(self):
+        self.assertTrue(
+            Path(DEFAULT_NETWORK_AND_DEMAND["vertiport_network_file_path"]).is_file()
+        )
+        self.assertTrue(
+            Path(DEFAULT_NETWORK_AND_DEMAND["vertiport_layout_file_path"]).is_file()
+        )
+        self.assertTrue(
+            Path(DEFAULT_AIRCRAFT_PARAMS["aircraft_energy_consumption_data_folder_path"]).is_dir()
+        )
+
     def test_example_input_paths_resolve_to_scenario_data(self):
         config = read_config_file(str(EXAMPLE_CONFIG))
         scenario_data = EXAMPLE_CONFIG.parent / "data"

@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pandas as pd
 from typing import List, Dict
 from .distance import haversine_dist
@@ -48,10 +48,7 @@ def calc_vertiport_distances(vertiport_network_file_path: str,
     else:
         fato_coords_list = get_fato_coordinates(vertiport_ids, vertiport_layouts)
         
-        # Get the current working directory
-        cwd = os.getcwd()
-        # Set input location
-        input_location = os.path.join(cwd, 'vertisim/vertisim/input/network')
+        input_location = str(Path(__file__).resolve().parents[1] / "input" / "network")
 
         vertiport_network = create_vertiport_network_file(fato_coords_list=fato_coords_list, 
                                                           vertiport_ids=vertiport_ids, 

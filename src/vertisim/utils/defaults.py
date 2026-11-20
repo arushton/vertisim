@@ -1,5 +1,8 @@
 import os
+from pathlib import Path
+
 cwd = os.getcwd()
+package_input = Path(__file__).resolve().parents[1] / "input"
 
 DEFAULT_SIM_PARAMS = {
     'sim_time': 60 * 60 * 100,  # seconds
@@ -24,8 +27,8 @@ DEFAULT_SIM_PARAMS = {
 # Network and Trips
 # -----------------
 DEFAULT_NETWORK_AND_DEMAND = {
-    'vertiport_network_file_path': f'{cwd}/vertisim/input/network_of_2_vertiports.csv',
-    'vertiport_layout_file_path': f'{cwd}/vertisim/input/skyport_layouts/skyport_layout.xls',
+    'vertiport_network_file_path': str(package_input / "network" / "network_of_2_vertiports.csv"),
+    'vertiport_layout_file_path': str(package_input / "vertiport_layouts" / "vertiport_layout.xls"),
 
     # DEMAND FILES.
     # ---------------------------------------------------------------
@@ -187,7 +190,7 @@ DEFAULT_AIRCRAFT_PARAMS = {
         'max_val_in_dist': None,  # sec. This parameter is used as the max charge time for the charging
         # time distribution generation.
     },
-    'aircraft_energy_consumption_data_folder_path': f'{cwd}/input/aircraft_energy_consumption',
+    'aircraft_energy_consumption_data_folder_path': str(package_input / "aircraft" / "energy_consumption"),
     'min_init_soc': 20,  # Minimum initial SOC of the aircraft at the arrival to the vertiport
     'max_init_soc': 100,  # Maximum initial SOC of the aircraft at the arrival to the vertiport
     'min_reserve_soc': 20  # This is the minimum acceptable SoC that the aircraft should have at the end of the mission.

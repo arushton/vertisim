@@ -51,7 +51,7 @@ Small circular shapes are parking pads and large circular shapes are FATO. The l
 2. Open your terminal and cd to vertisim folder
 3. Create a virtual environment: If you are using conda write `conda create -n vertisim-py311 python=3.11`
 4. After you create your environment activate your environment by writing `conda activate vertisim-py311` to your terminal.
-5. Install the requirements with `pip install -r requirements.txt`
+5. Install VertiSim and its dependencies with `pip install -e .`
 6. Done!
 
 For questions and collaborations, please email eminburak_onat@berkeley.edu. Thanks!
@@ -74,10 +74,24 @@ The legacy batch runners are not maintained.
 
 ## Project organization
 
+- `src/vertisim/` is the installable simulator package; its `input/` directory contains legacy packaged inputs.
+- `tests/` contains the test suite.
 - [`examples/sfo_sjc/`](examples/sfo_sjc/) contains the runnable scenario config and its input data.
 - [`docs/configuration.md`](docs/configuration.md) explains how to customize a scenario.
 - [`experiments/`](experiments/) is for research sweeps; older, unsupported configuration and loop files are archived in [`experiments/legacy/`](experiments/legacy/).
-- [`api/`](api/) is an optional RL/HTTP adapter, separate from the core simulation package.
+- [`src/vertisim/api/`](src/vertisim/api/) contains the optional RL/HTTP adapter.
+
+The API reads its configuration from `VERTISIM_CONFIG`; in a source checkout it defaults to
+the SFO-SJC example. Install the project in editable mode to make the src-layout package
+importable from the checkout.
+
+## Tests
+
+After installing the project in editable mode, run the test suite with:
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 
 # Citation

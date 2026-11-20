@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.py[cod]
+*.egg-info
+build
+dist
+cache
+database_service
+local_simulation_inputs
+output

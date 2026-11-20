@@ -6,6 +6,8 @@ This static review covered repository structure, README, configuration, dependen
 
 The intended users are researchers running local simulations. The FastAPI interface is an optional local RL integration, is not reachable outside a trusted machine/network, and is not intended for real-time flight control or operational aviation decisions. The user confirmed that the aircraft performance data has no restrictions on use.
 
+**Structure update:** The package now lives under `src/vertisim/`, tests under `tests/`, and the API under `src/vertisim/api/`. The Dockerfile was changed to run the example simulation instead of the previously broken API container path. The earlier Docker finding below describes the reviewed snapshot; a Docker build remains unverified because the local Docker daemon was unavailable. Other findings have not been reassessed and their paths refer to the reviewed snapshot.
+
 ## 1. Blockers to sharing the code
 
 | Severity | Location | Finding and impact | Recommended action | Blocks |

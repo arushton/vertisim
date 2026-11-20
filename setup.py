@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -6,8 +6,8 @@ with open("README.md", "r") as fh:
 setup(
     name='vertisim',
     version='1.0.0',
-    # package_dir={"": "vertisim"},
-    packages=find_packages(),
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
     include_package_data=True,
     install_requires=[
         "setuptools<81",

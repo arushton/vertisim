@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
-from ..wind.wind import Wind
-from ..utils.vectorMath import vector_to_heading, swap_angle_relative_x_axis_north, magnitude, convert_to_range_zero_to_two_pi
+from vertisim.wind.wind import Wind
+from vertisim.utils.vectorMath import vector_to_heading, swap_angle_relative_x_axis_north, magnitude, convert_to_range_zero_to_two_pi
 from math import pi, cos, sin
 
 class TestWind(unittest.TestCase):

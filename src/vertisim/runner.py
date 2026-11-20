@@ -15,6 +15,7 @@ import time
 import re
 import pandas as pd
 from tqdm import tqdm
+from pathlib import Path
 
 # Constants for database
 QUEUE_TIMEOUT = 1  # Timeout in seconds for reading from queue
@@ -168,7 +169,13 @@ if __name__ == '__main__':
                 hub = int(match.group(1))
                 spoke = int(match.group(2))
                 demand = int(match.group(3))
-                args.passenger_schedule_file = f"vertisim/vertisim/input/passenger/spill_demand/{hub}_hub_{spoke}_spoke_{demand}"
+                args.passenger_schedule_file = str(
+                    Path(__file__).resolve().parent
+                    / "input"
+                    / "passenger"
+                    / "spill_demand"
+                    / f"{hub}_hub_{spoke}_spoke_{demand}"
+                )
                 config = read_config_file(config_file)
                 print(f"Running simulation with config: {config_file}")
                 create_multi_process_runner(config, args)
@@ -186,4 +193,3 @@ if __name__ == '__main__':
         create_multi_process_runner(env_config, args)
     else:
         raise ValueError("Please provide a configuration file")
-

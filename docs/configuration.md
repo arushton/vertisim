@@ -39,4 +39,4 @@ A scenario config describes one simulation run. Parameter combinations, repeated
 
 The files in `experiments/legacy/` are retained for historical reference and are not supported entry points. Do not copy their settings into new studies without checking them against the current example and simulator.
 
-The other historical input datasets remain under `vertisim/input/` for now. Only the four files needed by this example have been moved; other scenarios may still rely on those legacy paths.
+The other historical input datasets remain under `src/vertisim/input/` for now. Only the four files needed by this example have been moved; other scenarios may still rely on those legacy paths.

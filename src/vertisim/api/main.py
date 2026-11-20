@@ -2,12 +2,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from typing import List
-import sys
-sys.path.append('/app')
 
-from vertisim.vertisim.instance_manager import InstanceManager
-from .models import create_action_models
-from .config import CONFIG  # Import the loaded configuration
+from vertisim.instance_manager import InstanceManager
+from .config import CONFIG
 
 class Actions(BaseModel):
     actions: List[int]
@@ -67,4 +64,3 @@ def get_performance_metrics():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001) 
-
